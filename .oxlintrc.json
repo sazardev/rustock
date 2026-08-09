@@ -58,6 +58,7 @@
     "sort-imports": "off",
     "id-length": "off",
     "no-magic-numbers": "off",
+    "no-misleading-character-class": "off",
     "no-loop-func": "off",
     "no-continue": "off",
     "init-declarations": "off",

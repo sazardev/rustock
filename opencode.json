@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "rustock",
+  "instructions": ["AGENTS.md", "SPEC.md", "DESIGN.md", "STACK.md"],
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git add*": "allow",
+      "git show*": "allow",
+      "git * --no-verify*": "deny",
+      "git push*": "deny",
+      "rm -rf *": "deny",
+      "*": "ask"
+    },
+    "webfetch": "allow",
+    "todowrite": "allow",
+    "question": "allow"
+  },
+  "agent": {
+    "build": {
+      "permission": {
+        "bash": {
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git add*": "allow",
+          "git show*": "allow",
+          "git * --no-verify*": "deny",
+          "git push*": "deny",
+          "rm -rf *": "deny",
+          "*": "ask"
+        }
+      }
+    }
+  }
+}

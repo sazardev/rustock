@@ -2,12 +2,14 @@
 
 ## What this is
 
-**Rustock** — a self-hosted warehouse/inventory management (mini-WMS) desktop app. Frontend is React + Tailwind in `src/`, backend is a Tauri v2 Rust shell in `src-tauri/`. Currently a scaffolded foundation: no business logic implemented yet, no router, no data layer, no tests.
+**Rustock** — a self-hosted warehouse/inventory management (mini-WMS) desktop app. Frontend is React + a custom modular CSS design system in `src/` (no Tailwind), backend is a Tauri v2 Rust shell in `src-tauri/`. UI component library lives in `src/shared/ui/`. No business logic / data layer / router yet — see `ROADMAP.md` for the implementation order.
 
 ## Source-of-truth docs (READ FIRST)
 
 - `SPEC.md` — complete business logic (entities, movements, stock rules, inventory, roles, universal query standard). Write UI/data behavior against this.
 - `DESIGN.md` — complete UI design system. Its rules are **non-negotiable** and easy to violate by default.
+- `STACK.md` — declared tech stack and performance rules (logic in Rust, SQLite/rusqlite, indexed queries, no unneeded deps).
+- `ROADMAP.md` — phased implementation order derived from SPEC. Work phases in order; don't jump ahead.
 
 Key DESIGN.md constraints (all enforced):
 - `border-radius: 0` everywhere; no shadows, gradients, blur, 3D effects.
@@ -71,6 +73,15 @@ Custom gates that run in both hooks:
 - `dist/` and `src-tauri/target/` are build artifacts (gitignored). `src-tauri/gen/schemas/` is generated (gitignored); regenerate via a tauri build/dev if missing.
 - `typescript-eslint` is NOT used — it rejects TS 7.0.2 (peer `<6.1.0`). The linter is **oxlint + oxlint-tsgolint**, which supports TS 7. Don't re-add typescript-eslint.
 - lefthook glob matching defaults to `gobwas` which mishandles `{ts,tsx}`; `lefthook.yml` sets `glob_matcher: doublestar`. Keep that setting if you edit patterns.
+
+## opencode guardrails (project config)
+
+- `opencode.json` — loads AGENTS/SPEC/DESIGN/STACK as mandatory instructions every session; permission rules: `git push*`, `git * --no-verify*` and `rm -rf *` are **denied**, most other bash is `ask`, git read/add is allowed. Default agent is `rustock`.
+- `.opencode/agent/rustock.md` — primary agent with the full discipline prompt (read specs first, no modals, no emojis, logic in Rust, never bypass hooks).
+- `.opencode/command/verify.md` — run the full quality pipeline (`/verify`).
+- `.opencode/command/feature.md` — implement a SPEC feature end-to-end (`/feature`).
+- `.opencode/command/fix.md` — fix root cause + verify (`/fix`).
+- Config changes are not hot-reloaded: after editing anything under `.opencode/` or `opencode.json`, the user must restart opencode.
 
 ## Skills
 
