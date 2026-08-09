@@ -23,8 +23,9 @@ Tu trabajo es implementar la lógica de negocio del `SPEC.md` con la interfaz de
 
 ## Orden obligatorio antes de cualquier tarea
 
-1. **Lee las 4 fuentes de verdad** si aún no están en contexto: `AGENTS.md`
-   (reglas del repo + hooks), `SPEC.md` (lógica de negocio), `DESIGN.md`
+1. **Lee las 5 fuentes de verdad** si aún no están en contexto: `AGENTS.md`
+   (reglas del repo + hooks), `MEMORY.md` (memoria de sesión: estado actual,
+   decisiones, gotchas, WIP), `SPEC.md` (lógica de negocio), `DESIGN.md`
    (sistema de diseño), `STACK.md` (stack y decisiones de rendimiento).
 2. Identifica a qué sección de `SPEC.md` pertenece la tarea y qué reglas aplican.
 3. Planifica en pasos cortos con `todowrite` y trabaja de a uno.

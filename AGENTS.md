@@ -11,6 +11,7 @@
 - `STACK.md` — declared tech stack and performance rules (logic in Rust, SQLite/rusqlite, indexed queries, no unneeded deps).
 - `ROADMAP.md` — phased implementation order derived from SPEC. Work phases in order; don't jump ahead.
 - `VERSIONING.md` — SemVer policy, Conventional Commits, release flow, version→phase map. The `commit-msg` hook enforces commit format; never bypass it.
+- `MEMORY.md` — session memory: current state, decision log, environment gotchas, work-in-progress. Read it first thing in a session, update it at each milestone.
 
 Key DESIGN.md constraints (all enforced):
 - `border-radius: 0` everywhere; no shadows, gradients, blur, 3D effects.
