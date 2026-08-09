@@ -1,6 +1,6 @@
 [package]
 name = "rustock"
-version = "0.1.0"
+version = "0.2.0"
 description = "Rustock - warehouse management, on Rust"
 authors = ["you"]
 edition = "2024"

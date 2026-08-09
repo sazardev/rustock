@@ -4,6 +4,21 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [Unreleased]
+
+### Documentación
+
+- Regenera CHANGELOG.md anclado al tag v0.1.0
+
+- Agrega MEMORY.md como memoria de sesion y estado versionado del proyecto
+
+
+### Features
+
+- **backend:** Capa de datos SQLite en Rust con movimientos, inventario y permisos
+
+- **frontend:** Router react-router con deep-linking, paginas del shell y route-guard
+
 ## [0.1.0] - 2026-08-09
 
 ### Features
