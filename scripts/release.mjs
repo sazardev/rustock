@@ -74,6 +74,14 @@ if (!changelogOnly) {
   conf = conf.replace(/"version": "[^"]+"/, `"version": "${next}"`);
   write("src-tauri/tauri.conf.json", conf);
 
+  // --- sync Cargo.lock (package name = "rustock") ---
+  let lock = read("src-tauri/Cargo.lock");
+  lock = lock.replace(
+    /^name = "rustock"\nversion = "[^"]+"/m,
+    `name = "rustock"\nversion = "${next}"`,
+  );
+  write("src-tauri/Cargo.lock", lock);
+
   console.log(`Versión: ${current} -> ${next}`);
 }
 
@@ -84,7 +92,7 @@ console.log("CHANGELOG.md regenerado.");
 // --- tag ---
 if (wantTag) {
   const tag = `v${next}`;
-  run(`git add CHANGELOG.md package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json`);
+  run(`git add CHANGELOG.md package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json`);
   run(`git commit -m "chore(release): prepare for ${next}"`);
   run(`git tag -a ${tag} -m "Rustock ${next}"`);
   console.log(`Tag ${tag} creado y commit de release hecho.`);
