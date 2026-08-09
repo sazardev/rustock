@@ -6,6 +6,11 @@
 min_version: 2.1.0
 glob_matcher: doublestar
 
+commit-msg:
+  commands:
+    conventional-commit:
+      run: node scripts/check-commit.mjs {1}
+
 pre-commit:
   parallel: true
   commands:

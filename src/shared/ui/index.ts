@@ -35,7 +35,7 @@ export { Radio } from "./Radio";
 export type { RadioProps } from "./Radio";
 
 export { Card } from "./Card";
-export type { CardProps } from "./Card";
+export type { CardProps, CardHeaderProps, CardBodyProps } from "./Card";
 
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";

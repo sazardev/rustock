@@ -10,6 +10,7 @@
 - `DESIGN.md` — complete UI design system. Its rules are **non-negotiable** and easy to violate by default.
 - `STACK.md` — declared tech stack and performance rules (logic in Rust, SQLite/rusqlite, indexed queries, no unneeded deps).
 - `ROADMAP.md` — phased implementation order derived from SPEC. Work phases in order; don't jump ahead.
+- `VERSIONING.md` — SemVer policy, Conventional Commits, release flow, version→phase map. The `commit-msg` hook enforces commit format; never bypass it.
 
 Key DESIGN.md constraints (all enforced):
 - `border-radius: 0` everywhere; no shadows, gradients, blur, 3D effects.
@@ -46,6 +47,14 @@ Hooks are installed via `lefthook.yml` (`npm run hooks` to re-install). `--no-ve
 
 - **pre-commit** (fast, parallel, only staged files): prettier --write + oxlint on staged TS, DesignGuard on staged CSS/TS, `cargo fmt --check` + `cargo clippy -D warnings` on staged `.rs`.
 - **pre-push** (full, sequential): `npm run typecheck`, `npm run build`, `npx oxlint src`, DesignGuard, `cargo fmt --all --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo check --all-targets`.
+- **commit-msg**: validates Conventional Commits format via `scripts/check-commit.mjs`. Allowed types: feat, fix, perf, refactor, docs, test, build, ci, chore, revert, style, wip. Example: `feat(movimientos): agrega traslados`.
+
+## Versioning (SemVer + git-cliff)
+
+- Version lives in 3 places that must stay in sync: `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`. Never edit them separately — use `npm run release:patch|minor|major` (or `node scripts/release.mjs <X.Y.Z> --tag`).
+- Releases: sync versions → regenerate `CHANGELOG.md` via git-cliff (`cliff.toml`) → commit `chore(release): prepare for X.Y.Z` → annotated tag `vX.Y.Z`.
+- `npm run changelog` regenerates CHANGELOG.md; `npm run changelog:unreleased` previews pending changes.
+- Full policy + version→phase map in `VERSIONING.md`. Do not jump ahead of the roadmap's current phase.
 
 Custom gates that run in both hooks:
 - **`scripts/design-guard.mjs`** — blocks code violating DESIGN.md: zero emojis, zero border-radius>0, zero box-shadow/gradients/blur, no `alert/confirm/prompt`, fonts only Open Sans/JetBrains Mono, icons only from `lucide-react`.
