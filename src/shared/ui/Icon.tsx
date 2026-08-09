@@ -1,0 +1,112 @@
+import {
+  AlertTriangle,
+  ArrowDownToLine,
+  ArrowLeft,
+  ArrowLeftRight,
+  ArrowUpDown,
+  ArrowUpFromLine,
+  BarChart3,
+  Boxes,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardList,
+  Download,
+  Eye,
+  FileText,
+  Filter,
+  FolderTree,
+  History,
+  Layers,
+  LayoutDashboard,
+  LayoutGrid,
+  Lock,
+  LogOut,
+  type LucideIcon,
+  MapPin,
+  Menu,
+  MessageSquare,
+  Move,
+  Package,
+  PackageOpen,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Ruler,
+  ScanBarcode,
+  Search,
+  Settings,
+  Shield,
+  SlidersHorizontal,
+  Trash2,
+  Truck,
+  User,
+  Users,
+  Warehouse,
+  X,
+  XCircle,
+} from "lucide-react";
+
+export const ICON_MAP = {
+  dashboard: LayoutDashboard,
+  movements: ArrowLeftRight,
+  entrada: ArrowDownToLine,
+  salida: ArrowUpFromLine,
+  traslado: Move,
+  ajuste: SlidersHorizontal,
+  inventario: ClipboardList,
+  alerta: AlertTriangle,
+  stock: Package,
+  producto: Boxes,
+  caja: PackageOpen,
+  lote: Layers,
+  almacen: Warehouse,
+  zona: LayoutGrid,
+  ubicacion: MapPin,
+  proveedor: Truck,
+  cliente: Users,
+  usuario: User,
+  rol: Shield,
+  categoria: FolderTree,
+  uom: Ruler,
+  comentario: MessageSquare,
+  historial: History,
+  buscar: Search,
+  filtrar: Filter,
+  ordenar: ArrowUpDown,
+  ver: Eye,
+  editar: Pencil,
+  eliminar: Trash2,
+  aprobar: CheckCircle2,
+  anular: XCircle,
+  cerrar: Lock,
+  exportar: Download,
+  agregar: Plus,
+  atras: ArrowLeft,
+  refrescar: RefreshCw,
+  calendario: CalendarDays,
+  nota: FileText,
+  codigoBarras: ScanBarcode,
+  configuracion: Settings,
+  reportes: BarChart3,
+  cerrarSesion: LogOut,
+  menu: Menu,
+  chevronDown: ChevronDown,
+  cerrarPanel: X,
+} as const satisfies Record<string, LucideIcon>;
+
+export type IconName = keyof typeof ICON_MAP;
+
+export interface IconProps {
+  name: IconName;
+  size?: number;
+  strokeWidth?: number;
+  className?: string;
+  "aria-hidden"?: boolean | "true" | "false";
+  "aria-label"?: string;
+}
+
+export function Icon({ name, size = 16, strokeWidth, className, ...rest }: IconProps) {
+  const LucideIcon = ICON_MAP[name];
+  return <LucideIcon size={size} strokeWidth={strokeWidth} className={className} {...rest} />;
+}

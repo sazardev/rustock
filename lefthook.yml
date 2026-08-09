@@ -1,0 +1,50 @@
+# Lefthook — git hooks para Rustock
+# Referencia: https://github.com/evilmartians/lefthook
+# Filosofía: pre-commit rápido (solo lo afectado), pre-push completo (todo el proyecto).
+# Ningún hook puede omitirse con --no-verify (ver AGENTS.md: disciplina no negociable).
+
+min_version: 2.1.0
+glob_matcher: doublestar
+
+pre-commit:
+  parallel: true
+  commands:
+    frontend-format:
+      glob: "src/**/*.{ts,tsx}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    frontend-lint:
+      glob: "src/**/*.{ts,tsx}"
+      run: npx oxlint {staged_files}
+    design-guard:
+      glob: "src/**/*.{ts,tsx,css}"
+      run: node scripts/design-guard.mjs
+    rust-format:
+      root: "src-tauri/"
+      glob: "*.rs"
+      run: cargo fmt --check -- --config format_code_in_doc_comments=false
+    rust-clippy:
+      root: "src-tauri/"
+      glob: "*.rs"
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+pre-push:
+  parallel: false
+  commands:
+    frontend-typecheck:
+      run: npm run typecheck
+    frontend-build:
+      run: npm run build
+    frontend-lint-all:
+      run: npx oxlint src
+    design-guard-all:
+      run: node scripts/design-guard.mjs
+    rust-fmt-check:
+      root: "src-tauri/"
+      run: cargo fmt --all -- --check
+    rust-clippy-all:
+      root: "src-tauri/"
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    rust-check:
+      root: "src-tauri/"
+      run: cargo check --all-targets

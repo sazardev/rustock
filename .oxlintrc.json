@@ -1,0 +1,76 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "react-perf", "jsx-a11y", "typescript", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "deny",
+    "suspicious": "deny",
+    "perf": "warn",
+    "style": "warn",
+    "pedantic": "warn"
+  },
+  "rules": {
+    "no-console": "warn",
+    "no-debugger": "deny",
+    "no-alert": "deny",
+    "eqeqeq": "deny",
+    "no-shadow": "warn",
+
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-boolean-value": "deny",
+    "react/jsx-curly-brace-presence": "warn",
+    "react/jsx-key": "deny",
+    "react/no-array-index-key": "warn",
+    "react/no-danger": "deny",
+    "react/no-unescaped-entities": "warn",
+    "react/self-closing-comp": "warn",
+    "react/no-unstable-nested-components": "warn",
+    "react/display-name": "off",
+
+    "react-perf/jsx-no-new-object-as-prop": "warn",
+    "react-perf/jsx-no-new-array-as-prop": "warn",
+    "react-perf/jsx-no-new-function-as-prop": "warn",
+
+    "jsx-a11y/alt-text": "warn",
+    "jsx-a11y/no-autofocus": "warn",
+    "jsx-a11y/aria-props": "deny",
+    "jsx-a11y/aria-role": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+
+    "unicorn/filename-case": [
+      "warn",
+      {
+        "case": "camelCase",
+        "ignore": ["^vite-env\\.d\\.ts$", "\\.tsx$"]
+      }
+    ],
+    "unicorn/prefer-ternary": "off",
+    "unicorn/no-null": "off",
+
+    "typescript/no-unused-vars": ["warn", { "args": "after-used" }],
+    "typescript/no-explicit-any": "warn",
+    "typescript/consistent-type-imports": ["warn", { "prefer": "type-imports" }],
+
+    "sort-keys": "off",
+    "func-style": "off",
+    "max-lines-per-function": "off",
+    "no-ternary": "off",
+    "jsx-max-depth": "off",
+    "sort-imports": "off",
+    "id-length": "off",
+    "no-magic-numbers": "off",
+    "no-loop-func": "off",
+    "no-continue": "off",
+    "init-declarations": "off",
+    "prefer-query-selector": "off",
+    "prefer-template": "off",
+    "prefer-named-capture-group": "off",
+    "require-unicode-regexp": "off",
+    "prefer-set-has": "off",
+    "prefer-destructuring": "off",
+    "no-nested-ternary": "off",
+    "unicorn/prefer-ternary": "off",
+    "jsx-props-no-spreading": "off",
+    "typescript/array-type": "off"
+  },
+  "ignorePatterns": ["dist", "node_modules", "src-tauri/target", "src-tauri/gen", "public"]
+}

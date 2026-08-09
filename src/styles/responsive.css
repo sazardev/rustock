@@ -1,0 +1,103 @@
+.show-sm,
+.show-md,
+.show-lg,
+.show-xl,
+.show-2xl {
+  display: none;
+}
+
+.show-portrait,
+.show-landscape,
+.show-square {
+  display: none;
+}
+
+@media (max-width: 39.99rem) {
+  .hide-sm {
+    display: none;
+  }
+}
+
+@media (min-width: 40rem) {
+  .show-sm {
+    display: revert;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .hide-md {
+    display: none;
+  }
+}
+
+@media (min-width: 48rem) {
+  .show-md {
+    display: revert;
+  }
+}
+
+@media (max-width: 63.99rem) {
+  .hide-lg {
+    display: none;
+  }
+}
+
+@media (min-width: 64rem) {
+  .show-lg {
+    display: revert;
+  }
+}
+
+@media (max-width: 79.99rem) {
+  .hide-xl {
+    display: none;
+  }
+}
+
+@media (min-width: 80rem) {
+  .show-xl {
+    display: revert;
+  }
+}
+
+@media (max-width: 95.99rem) {
+  .hide-2xl {
+    display: none;
+  }
+}
+
+@media (min-width: 96rem) {
+  .show-2xl {
+    display: revert;
+  }
+}
+
+@media (orientation: portrait) {
+  .hide-portrait {
+    display: none;
+  }
+
+  .show-portrait {
+    display: revert;
+  }
+}
+
+@media (orientation: landscape) {
+  .hide-landscape {
+    display: none;
+  }
+
+  .show-landscape {
+    display: revert;
+  }
+}
+
+@media (aspect-ratio: 1 / 1) {
+  .hide-square {
+    display: none;
+  }
+
+  .show-square {
+    display: revert;
+  }
+}

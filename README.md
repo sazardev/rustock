@@ -2,14 +2,14 @@
 
 Warehouse management, on Rust.
 
-Rustock es una aplicación de gestión de almacenes (WMS) de escritorio construida con **Tauri v2**, **React**, **TypeScript** y **Tailwind CSS**, con el backend en **Rust**.
+Rustock es una aplicación de gestión de almacenes (WMS) de escritorio construida con **Tauri v2**, **React**, **TypeScript** y **CSS puro** (sistema de diseño modular), con el backend en **Rust**.
 
 ## Stack
 
 - [Tauri v2](https://tauri.app) — shell de escritorio con backend en Rust
 - [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org)
 - [Vite](https://vite.dev) — bundler del frontend
-- [Tailwind CSS v4](https://tailwindcss.com)
+- [CSS puro](src/styles/index.css) — sistema de diseño modular (tokens, layout, componentes) sin frameworks
 
 ## Requisitos
 
