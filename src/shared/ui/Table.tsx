@@ -105,22 +105,28 @@ export function Table<T>({
                 />
               </th>
             ) : null}
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                style={column.width ? { width: column.width } : undefined}
-                className={cn(
-                  column.align === "right" && "text-right",
-                  column.align === "center" && "text-center",
-                  column.sortable && "th--sortable",
-                )}
-                onClick={column.sortable ? () => handleSort(column) : undefined}
-              >
-                {column.header}
-                {renderSortIcon(column)}
-              </th>
-            ))}
+            {columns.map((column) => {
+              const active = sort?.key === column.key;
+              return (
+                <th
+                  key={column.key}
+                  scope="col"
+                  style={column.width ? { width: column.width } : undefined}
+                  className={cn(
+                    column.align === "right" && "text-right",
+                    column.align === "center" && "text-center",
+                    column.sortable && "th--sortable",
+                  )}
+                  aria-sort={
+                    active ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
+                  }
+                  onClick={column.sortable ? () => handleSort(column) : undefined}
+                >
+                  {column.header}
+                  {renderSortIcon(column)}
+                </th>
+              );
+            })}
             {actions ? (
               <th scope="col" className="cell--actions">
                 <span className="sr-only">Acciones</span>

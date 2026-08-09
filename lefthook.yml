@@ -24,6 +24,9 @@ pre-commit:
     design-guard:
       glob: "src/**/*.{ts,tsx,css}"
       run: node scripts/design-guard.mjs
+    route-guard:
+      glob: "src/app/**/*.{ts,tsx}"
+      run: node scripts/route-guard.mjs
     rust-format:
       root: "src-tauri/"
       glob: "*.rs"
@@ -44,6 +47,8 @@ pre-push:
       run: npx oxlint src
     design-guard-all:
       run: node scripts/design-guard.mjs
+    route-guard-all:
+      run: node scripts/route-guard.mjs
     rust-fmt-check:
       root: "src-tauri/"
       run: cargo fmt --all -- --check

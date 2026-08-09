@@ -1,14 +1,18 @@
-import type { AnchorHTMLAttributes, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Link as RouterLink } from "react-router";
 import { cn } from "../lib/cn";
 
-export interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
+export interface LinkProps {
+  href: string;
+  className?: string;
   children: ReactNode;
+  ariaLabel?: string;
 }
 
-export function Link({ className, children, ...rest }: LinkProps) {
+export function Link({ href, className, children, ariaLabel }: LinkProps) {
   return (
-    <a className={cn("link", className)} {...rest}>
+    <RouterLink to={href} className={cn("link", className)} aria-label={ariaLabel}>
       {children}
-    </a>
+    </RouterLink>
   );
 }

@@ -73,25 +73,25 @@
 
 ## 1. Filosofía de diseño
 
-Rustock es una herramienta de trabajo: **precisa, sobria y sin ruido**. El diseño no compite con los datos; los ordena.
+Rustock es una herramienta de trabajo: **precisa, moderna y con personalidad**. El diseño no compite con los datos; los ordena con elegancia.
 
-- **Plano** — sin gradientes, sin relieve, sin sombras. La profundidad se comunica solo con bordes, espaciado y color.
-- **Cuadrado** — `border-radius: 0` en todo. Nada redondeado. La esquina recta es una firma visual.
-- **Minimal** — cada pantalla responde a una sola tarea. Sin decoración, sin elementos "de relleno".
-- **Elegante y sofisticado** — paleta azul sobria, tipografía Open Sans legible, mucho espacio en blanco y jerarquía clara.
+- **Redondeado** — esquinas suaves (`--radius-md`/`--radius-lg`) en todos los componentes. Nada de bordes duros ni esquinas agresivas; la curva suave es la firma visual.
+- **Plano pero vivo** — sin gradientes, sin relieve, sin sombras. La profundidad se comunica con radio, espaciado, color y bordes sutiles de 1px.
+- **Moderno y vibrante** — paleta azul intensa y luminosa, tipografía Open Sans legible, mucho espacio en blanco y jerarquía clara.
+- **Elegante y sofisticado** — los acentos azules vibrantes se reservan para acciones primarias y elementos activos; los neutros fríos dan calma.
 - **Con foco en el dato** — los valores, códigos y cantidades son los protagonistas; se muestran con JetBrains Mono para distinguirlos del texto narrativo.
 - **Cero modales** — cada acción (ver, crear, editar, eliminar, aprobar, anular) vive en **su propia página**. No existen ventanas emergentes, diálogos superpuestos ni confirmaciones flotantes.
 
 ### 1.1 Filosofía de profesionalismo
 
-Rustock es una herramienta de negocio que representa la **seriedad de la operación logística** que administra. La interfaz es un reflejo del profesionalismo del dominio: **precisa, técnica, sobria y sin frivolidad**.
+Rustock es una herramienta de negocio que representa la **seriedad de la operación logística** que administra, pero con una estética **contemporánea, limpia y amable**. El profesionalismo no está reñido con un diseño moderno: la interfaz es **precisa, técnica y elegante**, sin frivolidad.
 
 Este compromiso se traduce en reglas declaradas e innegociables:
 
-- **Tolerancia cero a los emojis.** ❌ **Emojis prohibidos en toda la interfaz, sin excepción ni justificación**: textos, botones, mensajes de éxito/error, notificaciones, estados, placeholders, documentación visible al usuario o cualquier otro canal de la UI. Un emoji es una expresión informal que rompe la seriedad, la consistencia y el estilo plano/elegante de la aplicación. Donde otro producto usaría un emoji, Rustock usa un **icono del set oficial** (§6.13) o texto plano.
+- **Tolerancia cero a los emojis.** ❌ **Emojis prohibidos en toda la interfaz, sin excepción ni justificación**: textos, botones, mensajes de éxito/error, notificaciones, estados, placeholders, documentación visible al usuario o cualquier otro canal de la UI. Un emoji es una expresión informal que rompe la seriedad, la consistencia y el estilo elegante de la aplicación. Donde otro producto usaría un emoji, Rustock usa un **icono del set oficial** (§6.13) o texto plano.
 - **Iconografía profesional única y declarada.** Todos los símbolos de la interfaz provienen de **un único paquete de iconos moderno y profesional** diseñado para producto/business: **Lucide** (`lucide-react`). Es el set canónico, cerrado y obligatorio. Queda prohibido mezclar conjuntos de iconos, usar SVGs aislados de otros orígenes o introducir iconos de stock no derivados de Lucide.
 - **Semántica de iconos estricta.** Cada icono tiene un significado único y estable en toda la aplicación (ver tabla canónica §6.13). Los iconos nunca se usan como decoración caprichosa: siempre comunican una acción, un estado o un dato.
-- **Cero decoración lúdica.** Sin ilustraciones, sin mascotas, sin personajes, sin doodles, sin "alegría visual" artificial. La confianza se transmite con datos claros, orden y precisión tipográfica, no con entretenimiento.
+- **Cero decoración lúdica.** Sin ilustraciones, sin mascotas, sin personajes, sin doodles. La confianza se transmite con datos claros, orden y precisión tipográfica, no con entretenimiento.
 - **Tono comunicacional profesional.** Los mensajes son directos, técnicos y respetuosos (ver §9.1). Sin chistes, sin exclamaciones innecesarias, sin lenguaje coloquial ni emotivo.
 
 La "Filosofía de profesionalismo" es parte integral de la identidad visual: cualquier pantalla que no respete estas reglas se considera **defectuosa por diseño** y debe corregirse antes de ser aceptada.
@@ -101,8 +101,8 @@ La "Filosofía de profesionalismo" es parte integral de la identidad visual: cua
 ## 2. Principios no negociables
 
 1. **Cero modales, cero popovers, cero tooltips de bloqueo, cero confirmaciones flotantes.** Toda decisión que modifique datos ocurre en una página dedicada con URL propia.
-2. **Cero radio en esquinas.** `border-radius` es 0 en todos los componentes, siempre.
-3. **Cero gradientes, cero sombras, cero blur, cero efectos 3D.** La elevación se logra con borde de 1px y fondo diferenciado.
+2. **Esquinas suaves.** El `border-radius` usa exclusivamente los tokens de radio (§3.4): `--radius-sm/md/lg/xl/full`. Ningún componente usa esquinas a 0 ni radio arbitrario.
+3. **Cero gradientes, cero sombras, cero blur, cero efectos 3D.** La elevación se logra con radio, borde de 1px y fondo diferenciado.
 4. **Todo es navegable y enlazable.** Cualquier elemento de datos es un enlace a su página de detalle. Cualquier página es alcanzable por URL directa (deep-link) y por enlaces internos.
 5. **Una tarea por página.** Ver, crear, editar, eliminar y anular son páginas separadas.
 6. **Consistencia absoluta.** El mismo componente se ve idéntico en todas las pantallas. Se usan exclusivamente los tokens y componentes definidos aquí.
@@ -117,36 +117,36 @@ La "Filosofía de profesionalismo" es parte integral de la identidad visual: cua
 
 ### 3.1 Color
 
-Paleta base azul, de baja a alta saturación. Los azules neutros dominan; los acentos azules intensos se reservan para acciones primarias y elementos activos.
+Paleta base azul **vibrante y luminosa**, de baja a alta saturación. Los azules claros dominan los fondos; los acentos azules intensos y eléctricos se reservan para acciones primarias, enlaces y elementos activos. El resultado es moderno, atractivo y con energía, sin caer en lo estridente.
 
 **Escala de azul (semántica primaria):**
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-blue-50` | `#F0F5FF` | Fondos de paneles sobre azul, resaltados muy suaves |
-| `--color-blue-100` | `#DCE9FF` | Fondos de selección ligera, hover de filas |
-| `--color-blue-200` | `#B8D0FF` | Bordes de componentes activos, fondos de insignias |
-| `--color-blue-300` | `#8FB5FF` | Acentos de información, bordes de foco |
-| `--color-blue-400` | `#6698FF` | Enlaces en hover |
-| `--color-blue-500` | `#3D7BFF` | **Acciones primarias, enlaces, elementos activos** |
-| `--color-blue-600` | `#2F5FD8` | Hover/pressed de acciones primarias |
-| `--color-blue-700` | `#2449A8` | Acentos oscuros sobre fondos claros |
-| `--color-blue-800` | `#1B367F` | Textos azul oscuro, fondos de header sobre oscuro |
-| `--color-blue-900` | `#14285F` | Fondo de barra lateral / superficies oscuras |
-| `--color-blue-950` | `#0E1C45` | Fondo más oscuro (footer, áreas de énfasis) |
+| `--color-blue-50` | `#EFF5FF` | Fondos de paneles sobre azul, resaltados muy suaves |
+| `--color-blue-100` | `#DBE8FF` | Fondos de selección ligera, hover de filas |
+| `--color-blue-200` | `#B8D0FE` | Bordes de componentes activos, fondos de insignias |
+| `--color-blue-300` | `#8FB3FB` | Acentos de información, bordes de foco |
+| `--color-blue-400` | `#6090FA` | Enlaces en hover |
+| `--color-blue-500` | `#3B71F6` | **Acciones primarias, enlaces, elementos activos** |
+| `--color-blue-600` | `#2C57DD` | Hover/pressed de acciones primarias |
+| `--color-blue-700` | `#2246B5` | Acentos oscuros sobre fondos claros |
+| `--color-blue-800` | `#1D3A91` | Textos azul oscuro, fondos de header sobre oscuro |
+| `--color-blue-900` | `#172B6E` | Fondo de barra lateral / superficies oscuras |
+| `--color-blue-950` | `#0F1D4D` | Fondo más oscuro (footer, áreas de énfasis) |
 
 **Neutros (grises con tinte azul frío):**
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-gray-50` | `#F8FAFC` | Fondo general de la aplicación |
-| `--color-gray-100` | `#EEF2F7` | Fondos alternados de filas, paneles secundarios |
-| `--color-gray-200` | `#E0E6EE` | Bordes de componentes, separadores |
-| `--color-gray-300` | `#C7D0DC` | Bordes en hover, inputs deshabilitados |
-| `--color-gray-400` | `#98A3B3` | Texto secundario, placeholders |
-| `--color-gray-500` | `#6B7688` | Texto atenuado, metadatos |
-| `--color-gray-600` | `#4A5568` | Texto principal secundario |
-| `--color-gray-700` | `#344054` | Texto principal |
+| `--color-gray-50` | `#F7F9FC` | Fondo general de la aplicación |
+| `--color-gray-100` | `#EEF2F8` | Fondos alternados de filas, paneles secundarios |
+| `--color-gray-200` | `#DFE5EF` | Bordes de componentes, separadores |
+| `--color-gray-300` | `#C6CFDD` | Bordes en hover, inputs deshabilitados |
+| `--color-gray-400` | `#97A3B5` | Texto secundario, placeholders |
+| `--color-gray-500` | `#6B768A` | Texto atenuado, metadatos |
+| `--color-gray-600` | `#49556A` | Texto principal secundario |
+| `--color-gray-700` | `#333F54` | Texto principal |
 | `--color-gray-800` | `#1D2939` | Texto de títulos, cabeceras |
 | `--color-gray-900` | `#101828` | Texto más oscuro, contenido crítico |
 
@@ -156,8 +156,8 @@ Paleta base azul, de baja a alta saturación. Los azules neutros dominan; los ac
 |---|---|---|
 | `--color-white` | `#FFFFFF` | Fondos de tarjetas, paneles, inputs |
 | `--color-surface` | `#FFFFFF` | Superficie por defecto |
-| `--color-surface-muted` | `#F8FAFC` | Superficie secundaria |
-| `--color-surface-inverse` | `#14285F` | Superficie oscura (sidebar) |
+| `--color-surface-muted` | `#F7F9FC` | Superficie secundaria |
+| `--color-surface-inverse` | `#172B6E` | Superficie oscura (sidebar) |
 
 **Semántico (estados y acciones):**
 
@@ -169,7 +169,7 @@ Paleta base azul, de baja a alta saturación. Los azules neutros dominan; los ac
 | `--color-warning-600` | `#B45309` | Hover/pressed de advertencia |
 | `--color-danger-500` | `#E11D48` | Eliminar, anular, error, merma |
 | `--color-danger-600` | `#BE123C` | Hover/pressed de peligro |
-| `--color-info-500` | `#3D7BFF` | Información, enlaces |
+| `--color-info-500` | `#3B71F6` | Información, enlaces |
 
 **Fondos de estado (superficies tintadas para insignias y paneles de estado):**
 
@@ -178,7 +178,7 @@ Paleta base azul, de baja a alta saturación. Los azules neutros dominan; los ac
 | `--color-success-bg` | `#F0FBF4` | Insignia "aprobado / entrada" |
 | `--color-warning-bg` | `#FFFBEB` | Insignia "pendiente / bajo" |
 | `--color-danger-bg` | `#FFF1F2` | Insignia "anulado / error / merma" |
-| `--color-info-bg` | `#F0F5FF` | Insignia "información" |
+| `--color-info-bg` | `#EFF5FF` | Insignia "información" |
 
 **Texto sobre fondos tintados:**
 
@@ -243,22 +243,29 @@ Reglas:
 
 ### 3.4 Bordes y radio
 
+El radio es **la firma visual** del rediseño: esquinas suaves y modernas, nunca duras. Se usan exclusivamente los tokens de radio; ningún componente declara un radio literal.
+
 | Token | Valor | Uso |
 |---|---|---|
-| `--radius-none` | `0` | **Todos** los componentes |
+| `--radius-sm` | `0.375rem` (6px) | Inputs, botones compactos, insignias pequeñas |
+| `--radius-md` | `0.5rem` (8px) | **Radio estándar**: botones, inputs, selects, checkbox, foco |
+| `--radius-lg` | `0.75rem` (12px) | Tarjetas, paneles, toasts, tablas |
+| `--radius-xl` | `1rem` (16px) | Tarjetas de detalle, estados vacíos, avatares |
+| `--radius-full` | `9999px` | Píldoras: badges, toggles, avatares, botones de icono |
 | `--border-width` | `1px` | Bordes estándar |
 | `--border-width-2` | `2px` | Bordes de foco, estado activo |
 | `--border-color` | `--color-gray-200` | Borde por defecto |
 | `--border-color-strong` | `--color-gray-300` | Borde de inputs en hover |
 
-**Regla absoluta:** `border-radius` es `0` en botones, inputs, tarjetas, badges, tablas, toasts, paneles, avatares, iconos y cualquier otro elemento. **No existe excepción.**
+**Regla absoluta:** todo componente usa radio de los tokens (`--radius-md` como base; `--radius-lg` para contenedores; `--radius-full` para píldoras). Queda prohibido `border-radius: 0` y cualquier valor literal fuera de tokens.
 
 ### 3.5 Sombras y elevación
 
 - **No se usan sombras.** `box-shadow` queda prohibido en la UI (excepto en pruebas de accesibilidad de contraste, donde no se aplica).
 - La jerarquía espacial se comunica con:
-  - Fondo diferenciado (`--color-surface-muted`, `--color-blue-900`).
-  - Bordes de 1px.
+  - Radio suave (`--radius-lg`/`--radius-xl`) que hace "respirar" los contenedores.
+  - Fondo diferenciado (`--color-surface-muted`, `--color-blue-50`).
+  - Bordes sutiles de 1px.
   - Espaciado.
 - No existe elevación "flotante"; los elementos viven en el flujo de la página.
 
@@ -479,22 +486,22 @@ Para un recurso genérico `recurso`:
 
 ### 6.1 Principios de componentes
 
-- Cada componente es **cuadrado** (`radius: 0`), plano, con borde de 1px y fondo liso.
+- Cada componente es **suave y redondeado** (`--radius-md` o superior), plano, con borde sutil de 1px y fondo liso.
 - Los componentes tienen **estados** explícitos: `default`, `hover`, `focus`, `disabled`, `error`, `active`.
 - No existen variantes "sombreadas", "elevadas" ni "vidriosas".
 - Los componentes de control miden `--size-md` (40px) de alto por defecto.
 
 ### 6.2 Botones
 
-**Estructura:** fondo liso, borde 1px, texto `--text-sm`, padding `0 --space-4`, alto `--size-md`. Icono opcional de 16px a la izquierda. **Sin radio, sin sombra.**
+**Estructura:** fondo liso, radio `--radius-md`, borde 1px, texto `--text-sm`, padding `0 --space-4`, alto `--size-md`. Icono opcional de 16px a la izquierda. **Sin sombra, sin 3D.**
 
 | Variante | Fondo | Borde | Texto | Uso |
 |---|---|---|---|---|
-| `primary` | `--color-blue-500` | `--color-blue-500` | blanco | Acción principal de la página |
+| `primary` | `--color-blue-500` | transparente | blanco | Acción principal de la página |
 | `secondary` | `--color-white` | `--color-gray-300` | `--color-gray-700` | Acción secundaria / cancelar |
-| `danger` | `--color-danger-500` | `--color-danger-500` | blanco | Eliminar, anular, merma |
-| `ghost` | transparente | transparente | `--color-blue-500` | Acciones de bajo énfasis en tablas |
-| `link` | transparente | sin borde | `--color-blue-500` | Enlace con apariencia de botón |
+| `danger` | `--color-danger-500` | transparente | blanco | Eliminar, anular, merma |
+| `ghost` | transparente | transparente | `--color-blue-600` | Acciones de bajo énfasis en tablas |
+| `link` | transparente | sin borde | `--color-blue-600` | Enlace con apariencia de botón |
 
 **Estados:**
 - `hover`: `primary` → `--color-blue-600`; `secondary` → fondo `--color-gray-100`; `danger` → `--color-danger-600`; `ghost` → fondo `--color-blue-50`.
@@ -506,17 +513,18 @@ Para un recurso genérico `recurso`:
 - Una página tiene **un solo** botón `primary` (la acción principal).
 - Las acciones destructivas **solo** usan `danger` y viven en la página de confirmación de eliminación/anulación.
 - Los botones dentro de tablas se muestran como `ghost`/`link` (acciones ligeras); las acciones fuertes viven en la página de detalle.
+- El botón `primary` puede presentarse en píldora (`--radius-full`) cuando es el CTA principal de una página de listado.
 
 ### 6.3 Enlaces
 
-- Texto `--color-blue-500`, sin subrayado; `hover` → `--color-blue-400` + subrayado.
+- Texto `--color-blue-600`, sin subrayado; `hover` → `--color-blue-500` + subrayado.
 - Con foco: borde de foco de 2px a ras del borde.
 - Dentro de párrafos pueden subrayarse siempre para ser claramente distinguibles.
 
 ### 6.4 Campos de formulario (input, select, textarea, fecha)
 
 **Estructura común:**
-- Alto `--size-md`, fondo `--color-white`, borde `1px --color-gray-300`, texto `--text-base` (`--text-sm` en listas densas), padding `0 --space-3`.
+- Alto `--size-md`, fondo `--color-white`, radio `--radius-md`, borde `1px --color-gray-300`, texto `--text-base` (`--text-sm` en listas densas), padding `0 --space-3`.
 - **Label** `--text-sm` `--color-gray-600`, con `--space-1` de separación.
 - **Mensaje de ayuda** `--text-xs` `--color-gray-500` bajo el campo.
 - **Mensaje de error** `--text-xs` `--color-danger-600` con ícono.
@@ -531,20 +539,20 @@ Para un recurso genérico `recurso`:
 
 **Campos específicos:**
 - **Input de código/SKU** (códigos de ubicación, SKU, lote): se muestra en **mono**.
-- **Select**: mismo estilo; la flecha es un ícono propio cuadrado, no una pseudo-flecha del navegador.
-- **Date**: se usan pickers propios, estilo plano, sin calendario flotante que ocupe la pantalla; la selección de fecha se abre en un panel en línea dentro del formulario.
+- **Select**: mismo estilo; la flecha es un ícono propio, no una pseudo-flecha del navegador.
+- **Date**: se usan pickers propios, estilo plano y redondeado, sin calendario flotante que ocupe la pantalla; la selección de fecha se abre en un panel en línea dentro del formulario.
 - **Número/cantidad**: texto mono, alineado a la derecha cuando representa cantidad.
 - **Textarea**: `--text-base`, min-height `--size-lg`, padding `--space-3`.
 
 ### 6.5 Tablas y listados
 
 **Estructura:**
-- Fondo `--color-white`, borde `1px --color-gray-200`.
+- Contenedor con fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg` (esquinas superiores redondeadas).
 - **Header**: `--text-xs` mayúsculas, `--color-gray-500`, fondo `--color-gray-50`, fila con borde inferior `--color-gray-200`.
 - **Filas**: `--text-sm`; borde inferior `1px --color-gray-100`.
 - **Hover de fila**: fondo `--color-blue-50`.
 - **Fila clickeable**: la fila navega al detalle (cursor pointer).
-- **Selección múltiple** (cuando aplica): checkbox cuadrado a la izquierda; las filas seleccionadas se marcan con fondo `--color-blue-50` y borde izquierdo 2px `--color-blue-500`.
+- **Selección múltiple** (cuando aplica): checkbox redondeado a la izquierda; las filas seleccionadas se marcan con fondo `--color-blue-50` y borde izquierdo 2px `--color-blue-500`.
 
 **Columna de acciones:**
 - Iconos `ghost`: ver, editar, eliminar (solo si el usuario tiene permiso).
@@ -558,16 +566,16 @@ Para un recurso genérico `recurso`:
 
 ### 6.6 Tarjetas y paneles
 
-- Fondo `--color-white`, borde `1px --color-gray-200`, padding `--space-4`.
+- Fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, padding `--space-4`.
 - Título del panel: `--text-lg`, `--color-gray-800`, con borde inferior `--color-gray-200` opcional.
-- Sin radio, sin sombra.
+- Sin sombra. La elevación se logra con el radio suave y el borde sutil.
 - Los paneles pueden ser "secciones" de una página de detalle (ej. "Datos generales", "Saldo por lote", "Historial de movimientos").
 
 ### 6.7 Insignias y etiquetas
 
-- Fondo tintado + texto tintado (ver tabla 3.1), padding `0 --space-2`, alto `--size-xs`, `--text-xs`, **cuadradas**, borde `1px` del mismo matiz.
+- Fondo tintado + texto tintado (ver tabla 3.1), padding `0 --space-2`, alto `--size-xs`, `--text-xs`, radio `--radius-full` (píldora), borde `1px` del mismo matiz.
 - Se usan para estados: `Aprobado`, `Pendiente`, `Anulado`, `Borrador`, `Entrada`, `Salida`, `Stock bajo`, `Vence pronto`.
-- Ícono pequeño opcional (cuadrado de 12px) cuando refuerza el estado.
+- Ícono pequeño opcional (12px) cuando refuerza el estado.
 
 ### 6.8 Encabezados de página
 
@@ -592,28 +600,28 @@ Todo encabezado de página sigue la misma estructura:
 ### 6.10 Búsqueda global y barra de filtros
 
 **Búsqueda global** (barra superior):
-- Input con ícono de lupa; al escribir, muestra resultados agrupados por tipo (Productos, Ubicaciones, Movimientos, Lotes, Proveedores, Clientes).
+- Input con ícono de lupa, radio `--radius-full` (píldora); al escribir, muestra resultados agrupados por tipo (Productos, Ubicaciones, Movimientos, Lotes, Proveedores, Clientes).
 - Resultados en **mono** para códigos; navegan al detalle de cada resultado.
 - El Enter ejecuta la búsqueda y navega a la página de búsqueda global (listado agregado).
 
 **Barra de filtros (listados):**
 - Fila de controles sobre la tabla: campo de búsqueda `q`, selector de campo, operador y valor para filtros avanzados.
-- Los filtros activos se muestran como badges removibles bajo la barra.
+- Los filtros activos se muestran como badges píldora removibles bajo la barra.
 - Se aplican de inmediato o con botón "Aplicar" (consistente dentro del mismo listado).
 - Orden, búsqueda, filtros y paginación se reflejan en la **URL** (query params) para permitir deep-link y compartir estados de filtrado.
 
 ### 6.11 Estados vacíos
 
-- Sin datos: ícono cuadrado de 32px + mensaje "No hay X todavía" + botón/enlace para crear el primero.
+- Sin datos: ícono redondeado (`--radius-xl`) de 32px + mensaje "No hay X todavía" + botón/enlace para crear el primero.
 - Sin resultados con filtros: ícono + "No se encontraron resultados" + botón "Limpiar filtros".
-- **Skeleton de carga**: bloques rectangulares planos, grises, sin shimmer ni animación de brillo; se anima solo con opacidad pulsante sutil (o estática).
+- **Skeleton de carga**: bloques redondeados (`--radius-sm`), grises, sin shimmer ni animación de brillo; se anima solo con opacidad pulsante sutil (o estática).
 
 ### 6.12 Notificaciones (toasts)
 
 - **Usados solo para feedback transitorio** (no para confirmaciones de decisión):
   - "Movimiento aprobado" → éxito.
   - "No se pudo guardar: campo obligatorio faltante" → error.
-- Se ubican en la esquina inferior derecha, fondo `--color-gray-800` o el color semántico, texto blanco, **cuadradas**, borde 1px del matiz.
+- Se ubican en la esquina inferior derecha, fondo `--color-gray-800` o el color semántico, texto blanco, radio `--radius-lg`, borde 1px del matiz.
 - Desaparecen solos (5s) o con botón cerrar.
 - **Nunca** sustituyen una página de confirmación (eliminar, anular, aprobar siguen siendo páginas).
 
@@ -843,7 +851,7 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 
 ### 9.4 Prohibiciones
 
-- ❌ Cualquier `border-radius > 0`.
+- ❌ `border-radius: 0` ni valores de radio literales fuera de los tokens (§3.4).
 - ❌ `box-shadow`, gradientes, `backdrop-filter`, `filter: blur`.
 - ❌ Modales, drawers, popovers, confirmaciones flotantes.
 - ❌ Alertas nativas (`alert`, `confirm`, `prompt`).
@@ -874,8 +882,8 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 ## 11. Checklist de calidad visual
 
 Antes de dar una pantalla por terminada, debe cumplir:
-- [ ] Radio 0 en todos los elementos visibles.
-- [ ] Sin sombras, sin gradientes, sin blur.
+- [ ] Radio suave en todos los elementos visibles (tokens `--radius-sm/md/lg/xl/full`, nunca 0).
+- [ ] Sin sombras, sin gradientes, sin blur, sin 3D.
 - [ ] Colores solo de la paleta/tokens.
 - [ ] Fuentes solo Open Sans / JetBrains Mono.
 - [ ] Códigos/SKU/cantidades en mono.

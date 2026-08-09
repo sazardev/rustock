@@ -13,6 +13,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "design": "node scripts/design-guard.mjs",
+    "routes": "node scripts/route-guard.mjs",
     "hooks": "lefthook install",
     "changelog": "git-cliff --output CHANGELOG.md",
     "changelog:unreleased": "git-cliff --output CHANGELOG.md --unreleased",
@@ -27,7 +28,8 @@
     "@tauri-apps/plugin-opener": "^2.5.4",
     "lucide-react": "^1.30.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",

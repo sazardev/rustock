@@ -1,3 +1,4 @@
+import { Link as RouterLink } from "react-router";
 import { cn } from "../lib/cn";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
@@ -10,10 +11,10 @@ export interface BrandProps {
 
 export function Brand({ name = "Rustock", href = "/", className }: BrandProps) {
   return (
-    <a href={href} className={cn("topbar__brand", className)}>
+    <RouterLink to={href} className={cn("topbar__brand", className)}>
       <span className="topbar__logo" aria-hidden="true" />
       <span>{name}</span>
-    </a>
+    </RouterLink>
   );
 }
 

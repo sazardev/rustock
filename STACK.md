@@ -195,11 +195,13 @@ Las capacidades de permisos se declaran en `src-tauri/capabilities/` (mínimo ne
 **✅ Ya instalado y verificado (compila/build OK):**
 - React 19.2.8, TypeScript 7.0.2, Vite 8.2.1, @vitejs/plugin-react 6.0.5
 - Fundación de diseño en **CSS puro** (tokens, reset, base, layout, componentes, utilidades, responsive) + esbuild 0.28.2
+- Librería UI `src/shared/ui/` (barrel `index.ts`) con todos los componentes de DESIGN §6 + mapa canónico de iconos Lucide (§6.13)
+- **react-router 8.3.0** (enrutamiento real + deep-linking, DESIGN §5; layout en `src/app/AppLayout.tsx`, rutas en `src/app/router.tsx`, páginas en `src/pages/`)
 - @tauri-apps/api 2.11.1, @tauri-apps/cli 2.11.4, @tauri-apps/plugin-opener 2.5.4
 - Rust/Tauri: tauri 2.11.5, tauri-build 2.6.3, serde 1.0.229, serde_json 1.0.151
 
 **📦 Declarado (a instalar al implementar, con estas versiones verificadas):**
-- react-router 8.3.0 · @tanstack/react-query 5.101.4 · zustand 5.0.14
+- @tanstack/react-query 5.101.4 · zustand 5.0.14
 - react-hook-form 7.85.0 · zod 4.4.3 · date-fns 4.4.0
 - @tanstack/react-virtual 3.14.9 · lucide-react 1.30.0
 - rusqlite 0.40.2 (SQLite embebido, desde Rust)

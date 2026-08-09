@@ -3,6 +3,7 @@ body,
 #root {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -11,6 +12,10 @@ body {
   line-height: var(--text-base--lh);
   color: var(--color-gray-600);
   background-color: var(--color-gray-50);
+}
+
+::selection {
+  background-color: var(--color-blue-100);
 }
 
 h1 {
@@ -76,7 +81,8 @@ kbd {
 
 :focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: 0;
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar {

@@ -1,12 +1,15 @@
-import type { AnchorHTMLAttributes, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Link as RouterLink } from "react-router";
 import { cn } from "../lib/cn";
 import { Icon, type IconName } from "./Icon";
 import type { ButtonSize, ButtonVariant } from "./Button";
 
-export interface ButtonLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
+export interface ButtonLinkProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: IconName;
+  href: string;
+  className?: string;
   children: ReactNode;
 }
 
@@ -29,14 +32,17 @@ export function ButtonLink({
   variant = "primary",
   size = "md",
   icon,
+  href,
   className,
   children,
-  ...rest
 }: ButtonLinkProps) {
   return (
-    <a className={cn("btn", VARIANT_CLASS[variant], SIZE_CLASS[size], className)} {...rest}>
+    <RouterLink
+      to={href}
+      className={cn("btn", VARIANT_CLASS[variant], SIZE_CLASS[size], className)}
+    >
       {icon ? <Icon name={icon} className="btn__icon" aria-hidden="true" /> : null}
       {children}
-    </a>
+    </RouterLink>
   );
 }

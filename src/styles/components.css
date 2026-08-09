@@ -12,6 +12,7 @@
   white-space: nowrap;
   border: var(--border-width) solid transparent;
   background-color: transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
   user-select: none;
   transition: var(--transition);
@@ -26,13 +27,18 @@
 
 .btn--primary {
   background-color: var(--color-blue-500);
-  border-color: var(--color-blue-500);
+  border-color: transparent;
   color: var(--color-white);
 }
 
 .btn--primary:hover {
   background-color: var(--color-blue-600);
-  border-color: var(--color-blue-600);
+  border-color: transparent;
+}
+
+.btn--primary:active {
+  background-color: var(--color-blue-700);
+  border-color: transparent;
 }
 
 .btn--primary:active {
@@ -56,24 +62,24 @@
 
 .btn--danger {
   background-color: var(--color-danger-500);
-  border-color: var(--color-danger-500);
+  border-color: transparent;
   color: var(--color-white);
 }
 
 .btn--danger:hover {
   background-color: var(--color-danger-600);
-  border-color: var(--color-danger-600);
+  border-color: transparent;
 }
 
 .btn--danger:active {
   background-color: var(--color-danger-600);
-  border-color: var(--color-danger-600);
+  border-color: transparent;
 }
 
 .btn--ghost {
   background-color: transparent;
   border-color: transparent;
-  color: var(--color-blue-500);
+  color: var(--color-blue-600);
 }
 
 .btn--ghost:hover {
@@ -85,11 +91,11 @@
   padding: 0;
   background-color: transparent;
   border-color: transparent;
-  color: var(--color-blue-500);
+  color: var(--color-blue-600);
 }
 
 .btn--link:hover {
-  color: var(--color-blue-400);
+  color: var(--color-blue-500);
   text-decoration: underline;
 }
 
@@ -107,6 +113,7 @@
 .btn--icon {
   width: var(--size-md);
   padding: 0;
+  border-radius: var(--radius-full);
 }
 
 .btn--icon.btn--sm {
@@ -156,6 +163,7 @@
 .card {
   background-color: var(--color-white);
   border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
 }
 
 .card__header {
@@ -214,6 +222,7 @@
   color: var(--color-gray-700);
   background-color: var(--color-white);
   border: var(--border-width) solid var(--color-gray-300);
+  border-radius: var(--radius-md);
   transition: var(--transition);
 }
 
@@ -332,6 +341,14 @@
   cursor: pointer;
 }
 
+.checkbox__input {
+  border-radius: var(--radius-sm);
+}
+
+.radio__input {
+  border-radius: var(--radius-full);
+}
+
 .checkbox__input:checked,
 .radio__input:checked {
   background-color: var(--color-blue-500);
@@ -355,7 +372,10 @@
   width: 100%;
   background-color: var(--color-white);
   border: var(--border-width) solid var(--color-gray-200);
-  border-collapse: collapse;
+  border-radius: var(--radius-lg);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
 }
 
 .table th {
@@ -473,6 +493,7 @@
   font-weight: var(--fw-medium);
   white-space: nowrap;
   border: var(--border-width) solid transparent;
+  border-radius: var(--radius-full);
 }
 
 .badge__icon {
@@ -540,6 +561,7 @@
   height: var(--space-8);
   color: var(--color-gray-400);
   margin-bottom: var(--space-2);
+  border-radius: var(--radius-xl);
 }
 
 .empty__title {
@@ -563,6 +585,7 @@
 .skeleton {
   display: block;
   background-color: var(--color-gray-100);
+  border-radius: var(--radius-sm);
   animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
@@ -603,6 +626,7 @@
   padding: var(--space-3) var(--space-4);
   background-color: var(--color-gray-800);
   border: var(--border-width) solid var(--color-gray-700);
+  border-radius: var(--radius-lg);
   color: var(--color-white);
   font-size: var(--text-sm);
   line-height: var(--text-sm--lh);
@@ -682,6 +706,7 @@
   padding: var(--space-4);
   background-color: var(--color-danger-bg);
   border: var(--border-width) solid var(--color-danger-500);
+  border-radius: var(--radius-lg);
   color: var(--color-danger-text);
 }
 
@@ -852,13 +877,13 @@
 }
 
 .link {
-  color: var(--color-blue-500);
+  color: var(--color-blue-600);
   text-decoration: none;
   transition: color var(--duration-fast) ease;
 }
 
 .link:hover {
-  color: var(--color-blue-400);
+  color: var(--color-blue-500);
   text-decoration: underline;
 }
 
@@ -868,6 +893,7 @@
 
 .search .field__control {
   padding-right: var(--space-8);
+  border-radius: var(--radius-full);
 }
 
 .search .icon {

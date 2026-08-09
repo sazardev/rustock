@@ -68,11 +68,18 @@ for (const filePath of FILES) {
   if (rel.endsWith(".css")) {
     let m;
     RADIUS_RE.lastIndex = 0;
+    const ALLOWED_RADIUS = [
+      "var(--radius-sm)",
+      "var(--radius-md)",
+      "var(--radius-lg)",
+      "var(--radius-xl)",
+      "var(--radius-full)",
+    ];
     while ((m = RADIUS_RE.exec(content)) !== null) {
       const value = m[1].trim();
       const lineNo = content.slice(0, m.index).split("\n").length;
-      if (value !== "0" && value !== "var(--radius-none)") {
-        errors.push(`${ctx(lineNo - 1)} — border-radius no permitido: "${value}" (DESIGN §3.4, debe ser 0)`);
+      if (!ALLOWED_RADIUS.includes(value)) {
+        errors.push(`${ctx(lineNo - 1)} — border-radius fuera de tokens: "${value}" (DESIGN §3.4, usar --radius-sm/md/lg/xl/full)`);
       }
     }
     if (SHADOW_RE.test(content)) {

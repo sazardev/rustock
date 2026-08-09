@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link as RouterLink, NavLink } from "react-router";
 import { cn } from "../lib/cn";
 import { Icon, type IconName } from "./Icon";
 
@@ -15,16 +16,32 @@ export function AlertsIndicator({
   onClick,
   className,
 }: AlertsIndicatorProps) {
+  const content = (
+    <>
+      <Icon name="alerta" size={16} aria-hidden="true" />
+      {count > 0 ? <span className="topbar__alerts-badge">{count}</span> : null}
+    </>
+  );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={cn("topbar__alerts", className)}
+        onClick={onClick}
+        aria-label={`${count} alertas activas`}
+      >
+        {content}
+      </button>
+    );
+  }
   return (
-    <a
-      href={onClick ? undefined : href}
-      onClick={onClick}
+    <RouterLink
+      to={href}
       className={cn("topbar__alerts", className)}
       aria-label={`${count} alertas activas`}
     >
-      <Icon name="alerta" size={16} aria-hidden="true" />
-      {count > 0 ? <span className="topbar__alerts-badge">{count}</span> : null}
-    </a>
+      {content}
+    </RouterLink>
   );
 }
 
@@ -38,7 +55,7 @@ export interface TopbarUserProps {
 
 export function TopbarUser({ name, role, initials, href = "/perfil", className }: TopbarUserProps) {
   return (
-    <a href={href} className={cn("topbar__user", className)}>
+    <RouterLink to={href} className={cn("topbar__user", className)}>
       <span className="topbar__user-avatar" aria-hidden="true">
         {initials ?? name.charAt(0).toUpperCase()}
       </span>
@@ -46,7 +63,7 @@ export function TopbarUser({ name, role, initials, href = "/perfil", className }
         <span className="topbar__user-name-text">{name}</span>
         {role ? <span className="topbar__user-role">{role}</span> : null}
       </span>
-    </a>
+    </RouterLink>
   );
 }
 
@@ -68,9 +85,9 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
               </span>
             ) : null}
             {item.href && !isCurrent ? (
-              <a className="breadcrumbs__item" href={item.href}>
+              <RouterLink className="breadcrumbs__item" to={item.href}>
                 {item.label}
-              </a>
+              </RouterLink>
             ) : (
               <span
                 className="breadcrumbs__item breadcrumbs__item--current"
@@ -90,7 +107,7 @@ export interface SidebarItem {
   label: string;
   href: string;
   icon: IconName;
-  active?: boolean;
+  end?: boolean;
 }
 
 export interface SidebarGroup {
@@ -100,27 +117,29 @@ export interface SidebarGroup {
 
 export interface SidebarProps {
   groups: SidebarGroup[];
+  onNavigate?: () => void;
   className?: string;
 }
 
-export function Sidebar({ groups, className }: SidebarProps) {
+export function Sidebar({ groups, onNavigate, className }: SidebarProps) {
   return (
     <nav className={cn("sidebar", className)} aria-label="Navegación principal">
       {groups.map((group) => (
         <div className="sidebar__group" key={group.title}>
           <h2 className="sidebar__group-title">{group.title}</h2>
           {group.items.map((item) => (
-            <a
+            <NavLink
               key={item.href}
-              href={item.href}
-              className={cn("sidebar__item", item.active && "sidebar__item--active")}
-              aria-current={item.active ? "page" : undefined}
+              to={item.href}
+              end={item.end}
+              className={({ isActive }) => cn("sidebar__item", isActive && "sidebar__item--active")}
+              onClick={onNavigate}
             >
               <span className="sidebar__item-icon">
                 <Icon name={item.icon} size={16} aria-hidden="true" />
               </span>
               <span className="sidebar__item-label">{item.label}</span>
-            </a>
+            </NavLink>
           ))}
         </div>
       ))}
