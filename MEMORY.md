@@ -13,7 +13,8 @@
 |---|---|
 | **Versión activa** | `0.1.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.1.0` |
-| **Fase del roadmap** | Fase 0 — Fundación ✅ · Fase 1 (capa de datos) ⏳ siguiente |
+| **Fase del roadmap** | Fase 0 — Fundación ✅ · Fase 1 (capa de datos SQLite) ✅ implementada · Fase 2 (catálogos CRUD completo) ⏳ siguiente |
+| **Backend Rust** | Capa de datos completa: esquema SQLite, repositorios, movimientos, inventario, permisos. 12 tests pasan, clippy y fmt limpios |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
 | **Repo** | Git en `main`, limpio salvo 2 archivos en progreso (ver §6) |
@@ -84,6 +85,39 @@ Cada hito está anclado a un commit. El changelog completo vive en
 - Durante el cierre se corrigió de nuevo el typecheck (Card `Omit<...,"title">`,
   se quitaron demos sin uso `DemoBadges`).
 
+### Hito 6 — Capa de datos SQLite en Rust (Fase 1 del ROADMAP)
+
+- **rusqlite 0.40.2 (bundled)**: SQLite embebido self-hosted. `db.rs` con
+  migraciones y esquema completo: seguridad (roles, usuarios, permisos,
+  auditoría), árbol físico (almacén→zona→rack→sección→ubicación→caja),
+  catálogos (producto, categoría, UOM, proveedor, cliente, lote),
+  movimientos + líneas, **saldos materializados**, sesiones de inventario +
+  conteos, comentarios, alertas.
+- **`error.rs`**: `AppError` con mensajes en español del SPEC (saldo
+  insuficiente con ubicación/disponible/intentado, lote vencido, motivo
+  requerido, transiciones inválidas, etc.).
+- **`domain/`**: tipos de entidades + enums (tipo/sub-tipo/estado de
+  movimiento, tipo de ubicación, roles, permisos granulares).
+- **`repo/`**: CRUD con validaciones del SPEC (códigos únicos/normalizados,
+  producto inactivo rechaza movimientos, controla_lote obliga lote,
+  capacidad de ubicación, lote vencido no sale a cliente).
+- **`repo/movimiento.rs`**: ciclo de vida completo (BORRADOR →
+  PENDIENTE_APROBACION → APROBADO → ANULADO), aprobación atómica que actualiza
+  saldos, anulación que **genera el inverso**, invariante de saldo ≥ 0.
+- **`repo/inventario.rs`**: sesiones (completo/cíclico), conteos, diferencias,
+  cierre que genera ajustes de diferencias.
+- **`security.rs`**: matriz de permisos del SPEC §4.4 + seed de roles por
+  defecto + bootstrap ADMIN.
+- **`commands.rs`**: 40+ comandos Tauri (listar/crear/obtener para catálogos,
+  usuarios, movimientos, saldos, sesiones, conteos).
+- **12 tests de integración** (`src/tests.rs`) que verifican: normalización de
+  códigos, duplicados rechazados, entrada→saldo, salida sin saldo rechazada,
+  traslado atómico, motivo de ajuste, anulación con inverso, cierre de
+  inventario con ajustes, control de lote.
+- **Bugs de diseño corregidos durante el desarrollo**: `saldos.lote_key` ('' 
+  para lote NULL) para que UNIQUE/ON CONFLICT funcione en SQLite; inversión de
+  sentido al anular; valor neto + ON CONFLICT suma en saldos.
+
 ---
 
 ## 3. Decisiones de diseño del stack (recordatorio)
@@ -143,9 +177,10 @@ Cada hito está anclado a un commit. El changelog completo vive en
 - `src/shared/ui/Chrome.tsx` — Sidebar: añade prop `onNavigate` (cierre de nav
   móvil al hacer clic).
 - `src/shared/ui/Table.tsx` — modificado (no revisado aún).
+- `src/styles/*` — ajustes de tokens/layout del usuario.
 
-**Siguiente hito recomendado:** Fase 1 del ROADMAP (capa de datos SQLite),
-que correspondería a la **v0.2.0**.
+**Siguiente hito recomendado:** Fase 2 del ROADMAP (CRUD completo de catálogos
+con la UI por página), que correspondería a la **v0.3.0**.
 
 ---
 
