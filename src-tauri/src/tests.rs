@@ -13,7 +13,7 @@ fn setup() -> std::sync::Arc<DbState> {
     {
         let conn = db.conn();
         crate::security::seed_roles(&conn).expect("roles");
-        crate::repo::seguridad::bootstrap_admin(&conn, "admin", "Administrador", "hash")
+        crate::repo::seguridad::bootstrap_admin(&conn, "admin", "Administrador", "admin1234")
             .expect("admin");
     }
     db
@@ -28,7 +28,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             nombre: "Almacén Central".into(),
             descripcion: None,
             direccion: None,
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("almacen");
@@ -39,7 +39,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             nombre: "Zona Norte".into(),
             descripcion: None,
             almacen_id: almacen.id.clone(),
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("zona");
@@ -50,7 +50,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             nombre: None,
             tipo: None,
             zona_id: zona.id.clone(),
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("rack");
@@ -62,7 +62,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             nivel: Some("N1".into()),
             rack_id: rack.id.clone(),
             descripcion: None,
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("seccion");
@@ -74,7 +74,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             seccion_id: seccion.id.clone(),
             tipo: Some("STANDARD".into()),
             capacidad_maxima: Some(1000),
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("ubicacion");
@@ -86,7 +86,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             seccion_id: seccion.id.clone(),
             tipo: Some("STANDARD".into()),
             capacidad_maxima: Some(1000),
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("ubicacion2");
@@ -103,6 +103,7 @@ fn crear_uom_y_producto(conn: &rusqlite::Connection) -> (String, String) {
             factor: 1,
             base: true,
         },
+        "admin",
     )
     .expect("uom");
     let p = repo::catalogo::crear_producto(
@@ -123,7 +124,7 @@ fn crear_uom_y_producto(conn: &rusqlite::Connection) -> (String, String) {
             controla_lote: false,
             controla_vencimiento: false,
             perecedero: false,
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("producto");
@@ -141,7 +142,7 @@ fn crear_almacen_normaliza_codigo() {
             nombre: "Almacén".into(),
             descripcion: None,
             direccion: None,
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("crear");
@@ -157,7 +158,7 @@ fn codigo_duplicado_rechazado() {
         nombre: "A".into(),
         descripcion: None,
         direccion: None,
-        created_by: None,
+        created_by: Some("admin".into()),
     };
     repo::catalogo::crear_almacen(&conn, &n).expect("primero");
     let err = repo::catalogo::crear_almacen(&conn, &n).expect_err("segundo debe fallar");
@@ -502,6 +503,7 @@ fn producto_que_controla_lote_exige_lote() {
             factor: 1,
             base: true,
         },
+        "admin",
     )
     .expect("uom");
     let p = repo::catalogo::crear_producto(
@@ -522,7 +524,7 @@ fn producto_que_controla_lote_exige_lote() {
             controla_lote: true,
             controla_vencimiento: false,
             perecedero: false,
-            created_by: None,
+            created_by: Some("admin".into()),
         },
     )
     .expect("producto");
@@ -602,4 +604,140 @@ fn historial_registra_invocaciones_con_metricas() {
     let saldos = repo::movimiento::listar_saldos(&conn, Some(&ubi1), None).expect("saldos");
     let _ = prod;
     assert!(saldos.is_empty());
+}
+
+// ============ Autenticación y sesión (SPEC §4.1) ============
+
+#[test]
+fn login_con_password_correcto_actualiza_ultimo_acceso() {
+    let db = setup();
+    let conn = db.conn();
+    let usuario =
+        repo::seguridad::verificar_credenciales(&conn, "admin", "admin1234").expect("login");
+    assert_eq!(usuario.nombre_usuario, "admin");
+    assert!(usuario.ultimo_acceso_at.is_some());
+}
+
+#[test]
+fn login_con_password_incorrecto_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    let err = repo::seguridad::verificar_credenciales(&conn, "admin", "incorrecta")
+        .expect_err("debe fallar");
+    assert!(err.to_string().contains("incorrectos"));
+}
+
+#[test]
+fn login_con_usuario_inexistente_no_revela_si_existe() {
+    let db = setup();
+    let conn = db.conn();
+    let err = repo::seguridad::verificar_credenciales(&conn, "fantasma", "cualquiera")
+        .expect_err("debe fallar");
+    // Mismo mensaje que una contraseña incorrecta: no delata si el usuario existe.
+    assert!(err.to_string().contains("incorrectos"));
+}
+
+#[test]
+fn password_nunca_se_serializa_al_frontend() {
+    let db = setup();
+    let conn = db.conn();
+    let usuario =
+        repo::seguridad::verificar_credenciales(&conn, "admin", "admin1234").expect("login");
+    let json = serde_json::to_string(&usuario).expect("serializar");
+    assert!(!json.contains("password"));
+}
+
+#[test]
+fn sin_sesion_ninguna_accion_esta_permitida() {
+    let db = setup();
+    let conn = db.conn();
+    let err = crate::security::puede(&conn, None, "producto", "ver").expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::NoAutenticado));
+}
+
+#[test]
+fn no_se_puede_suplantar_un_usuario_inexistente() {
+    let db = setup();
+    let conn = db.conn();
+    // Un id/nombre de usuario inventado no puede usarse para operar: no hay
+    // forma de "ser" alguien que no existe ni de colarse con un id arbitrario.
+    let err = crate::security::puede(&conn, Some("usuario-inventado"), "producto", "ver")
+        .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::NoAutenticado));
+}
+
+#[test]
+fn usuario_inactivo_no_puede_operar() {
+    let db = setup();
+    let conn = db.conn();
+    let rol_operador: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'OPERADOR'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol");
+    let usuario = repo::seguridad::crear_usuario(
+        &conn,
+        &crate::domain::seguridad::NuevoUsuario {
+            nombre_usuario: "operador1".into(),
+            nombre_completo: "Operador Uno".into(),
+            email: None,
+            password: "clave1234".into(),
+            rol_id: rol_operador,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear operador");
+    conn.execute(
+        "UPDATE usuarios SET activo = 0 WHERE id = ?1",
+        [&usuario.id],
+    )
+    .expect("desactivar");
+    let err = repo::seguridad::verificar_credenciales(&conn, "operador1", "clave1234")
+        .expect_err("debe fallar");
+    assert!(err.to_string().contains("incorrectos"));
+    let err2 = crate::security::puede(&conn, Some(&usuario.id), "producto", "ver")
+        .expect_err("debe fallar");
+    assert!(matches!(err2, crate::error::AppError::NoAutenticado));
+}
+
+#[test]
+fn bootstrap_admin_es_idempotente() {
+    let db = setup();
+    let conn = db.conn();
+    // El setup() ya hizo bootstrap; un segundo intento no debe crear otro ADMIN
+    // ni fallar.
+    repo::seguridad::bootstrap_admin(&conn, "otro", "Otro Admin", "otraclave1")
+        .expect("no debe fallar");
+    let total_admins: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM usuarios WHERE rol_id = (SELECT id FROM roles WHERE codigo = 'ADMIN')",
+            [],
+            |r| r.get(0),
+        )
+        .expect("count");
+    assert_eq!(total_admins, 1);
+}
+
+#[test]
+fn password_debil_rechazada() {
+    let db = setup();
+    let conn = db.conn();
+    let rol_lector: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'LECTOR'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol");
+    let err = repo::seguridad::crear_usuario(
+        &conn,
+        &crate::domain::seguridad::NuevoUsuario {
+            nombre_usuario: "lector1".into(),
+            nombre_completo: "Lector Uno".into(),
+            email: None,
+            password: "corta".into(),
+            rol_id: rol_lector,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("debe fallar");
+    assert!(err.to_string().contains("contraseña"));
 }

@@ -38,23 +38,6 @@ pub fn crear_sesion(
     Ok(obtener_sesion(conn, &id)?.expect("recién insertada"))
 }
 
-pub fn listar_sesiones(
-    conn: &Connection,
-    estado: Option<&str>,
-) -> AppResult<Vec<SesionInventario>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, numero, tipo, estado, almacen_id, alcance, fecha_inicio, fecha_fin,
-                responsable_id, conteo_ciego, exige_doble_conteo, created_by, created_at, closed_by, closed_at
-         FROM sesiones_inventario
-         WHERE (?1 IS NULL OR estado = ?1)
-         ORDER BY created_at DESC",
-    )?;
-    let rows = stmt
-        .query_map([estado], map_sesion)?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
-}
-
 pub fn obtener_sesion(conn: &Connection, id: &str) -> AppResult<Option<SesionInventario>> {
     let mut stmt = conn.prepare(
         "SELECT id, numero, tipo, estado, almacen_id, alcance, fecha_inicio, fecha_fin,

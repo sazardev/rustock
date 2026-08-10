@@ -11,18 +11,24 @@ pub fn puede(
     recurso: &str,
     accion: &str,
 ) -> AppResult<()> {
+    // No hay bypass: toda acción exige un usuario autenticado y activo. El
+    // único camino sin sesión es el bootstrap del primer ADMIN, que nunca pasa
+    // por esta función (ver `repo::seguridad::bootstrap_admin`).
     let Some(usuario_id) = usuario_id else {
-        // Bootstrap: sin usuario aún se permite (primera configuración).
-        return Ok(());
+        return Err(AppError::NoAutenticado);
     };
 
-    let rol_codigo: String = conn.query_row(
-        "SELECT r.codigo
-         FROM usuarios u JOIN roles r ON r.id = u.rol_id
-         WHERE (u.id = ?1 OR u.nombre_usuario = ?1) AND u.activo = 1",
-        [usuario_id],
-        |r| r.get(0),
-    )?;
+    let rol_codigo: String = conn
+        .query_row(
+            "SELECT r.codigo
+             FROM usuarios u JOIN roles r ON r.id = u.rol_id
+             WHERE (u.id = ?1 OR u.nombre_usuario = ?1) AND u.activo = 1",
+            [usuario_id],
+            |r| r.get(0),
+        )
+        // Usuario inexistente/inactivo (p. ej. desactivado tras iniciar sesión):
+        // se trata como sesión inválida, nunca como error interno.
+        .map_err(|_| AppError::NoAutenticado)?;
 
     if rol_codigo == RolSistema::Admin.codigo() {
         return Ok(());

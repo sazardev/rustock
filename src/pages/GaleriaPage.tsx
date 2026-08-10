@@ -527,12 +527,14 @@ function DemoIconos() {
 
 function DemoPaleta() {
   const swatches = [
+    ["ink-900", "var(--color-ink-900)"],
+    ["ink-700", "var(--color-ink-700)"],
+    ["ink-400", "var(--color-ink-400)"],
     ["blue-500", "var(--color-blue-500)"],
     ["blue-600", "var(--color-blue-600)"],
     ["blue-700", "var(--color-blue-700)"],
     ["blue-800", "var(--color-blue-800)"],
     ["blue-900", "var(--color-blue-900)"],
-    ["blue-950", "var(--color-blue-950)"],
     ["gray-100", "var(--color-gray-100)"],
     ["gray-300", "var(--color-gray-300)"],
     ["gray-500", "var(--color-gray-500)"],
@@ -545,13 +547,59 @@ function DemoPaleta() {
   ] as const;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-4 gap-3">
       {swatches.map(([name, value]) => (
-        <div key={name} className="border border-gray-200 bg-white">
-          <div className="h-12" style={{ backgroundColor: value }} />
+        <div
+          key={name}
+          className="bg-white"
+          style={{ border: "1px solid var(--color-gray-200)", borderRadius: "var(--radius-md)" }}
+        >
+          <div
+            style={{
+              height: "3rem",
+              backgroundColor: value,
+              borderRadius: "var(--radius-md) var(--radius-md) 0 0",
+            }}
+          />
           <div className="p-2">
             <Code size="xs">{name}</Code>
           </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DemoSombras() {
+  const levels = [
+    ["shadow-xs", "var(--shadow-xs)"],
+    ["shadow-sm", "var(--shadow-sm)"],
+    ["shadow-md", "var(--shadow-md)"],
+    ["shadow-lg", "var(--shadow-lg)"],
+    ["shadow-glow-primary", "var(--shadow-glow-primary)"],
+  ] as const;
+
+  return (
+    <div
+      className="grid grid-cols-3 gap-6"
+      style={{
+        backgroundColor: "var(--color-gray-100)",
+        borderRadius: "var(--radius-lg)",
+        padding: "var(--space-6)",
+      }}
+    >
+      {levels.map(([name, value]) => (
+        <div key={name} className="flex flex-col items-center gap-2">
+          <div
+            className="w-full bg-white"
+            style={{
+              height: "4rem",
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--color-gray-200)",
+              boxShadow: value,
+            }}
+          />
+          <Code size="xs">{name}</Code>
         </div>
       ))}
     </div>
@@ -600,15 +648,23 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="paleta"
         title="Paleta de colores"
-        description="Tokens de color declarados en DESIGN §3.1."
+        description="Tokens de color declarados en DESIGN §3.1 — familias Ink, Signal y Gray."
       >
         <DemoPaleta />
       </ShowcaseSection>
 
       <ShowcaseSection
+        id="sombras"
+        title="Sombras y elevación"
+        description="Elevación deliberada con tinte frío, nunca decorativa (DESIGN §3.5)."
+      >
+        <DemoSombras />
+      </ShowcaseSection>
+
+      <ShowcaseSection
         id="tipografia"
         title="Tipografía"
-        description="Open Sans para la interfaz y JetBrains Mono para códigos (§3.2)."
+        description="Geist Sans para la interfaz y Geist Mono para códigos, con cifras tabulares (§3.2)."
       >
         <DemoTipografia />
       </ShowcaseSection>

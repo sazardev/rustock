@@ -1,6 +1,6 @@
 # DESIGN.md — Rustock
 
-> **Sistema de diseño de la interfaz de Rustock.**
+> **Sistema de diseño de la interfaz de Rustock — "Ink & Signal".**
 > Complementa al `SPEC.md` (lógica de negocio). Este documento define **cómo se ve y cómo se siente** la aplicación: tokens, layout, navegación, componentes, patrones de página, experiencia y las reglas de consistencia que no admiten excepción.
 
 ---
@@ -55,7 +55,7 @@
    - 7.6 Página de anulación de movimiento
    - 7.7 Página de ajuste
    - 7.8 Página de inventario (sesión de conteo)
-7.9. [Experiencia de usuario (UX)](#8-experiencia-de-usuario-ux)
+8. [Experiencia de usuario (UX)](#8-experiencia-de-usuario-ux)
    - 8.1 Flujos clave
    - 8.2 Teclado y accesibilidad de acciones
    - 8.3 Retroalimentación
@@ -73,25 +73,29 @@
 
 ## 1. Filosofía de diseño
 
-Rustock es una herramienta de trabajo: **precisa, moderna y con personalidad**. El diseño no compite con los datos; los ordena con elegancia.
+Rustock es una herramienta de trabajo: **precisa, moderna y con carácter**. El diseño no compite con los datos; los ordena con elegancia y les da un escenario a la altura de la operación que representan.
 
-- **Redondeado** — esquinas suaves (`--radius-md`/`--radius-lg`) en todos los componentes. Nada de bordes duros ni esquinas agresivas; la curva suave es la firma visual.
-- **Plano pero vivo** — sin gradientes, sin relieve, sin sombras. La profundidad se comunica con radio, espaciado, color y bordes sutiles de 1px.
-- **Moderno y vibrante** — paleta azul intensa y luminosa, tipografía Open Sans legible, mucho espacio en blanco y jerarquía clara.
-- **Elegante y sofisticado** — los acentos azules vibrantes se reservan para acciones primarias y elementos activos; los neutros fríos dan calma.
-- **Con foco en el dato** — los valores, códigos y cantidades son los protagonistas; se muestran con JetBrains Mono para distinguirlos del texto narrativo.
+La identidad se llama **"Ink & Signal"**: superficies de tinta profunda (`ink`) que anclan la navegación, y un acento indigo vibrante (`signal`) que marca exactamente lo que importa — la acción principal, el elemento activo, el dato que cambia. Todo lo demás se queda en calma.
+
+- **Contraste de superficie con propósito** — la barra lateral vive en una superficie oscura de tinta (`--color-ink-900`); el contenido vive en un lienzo claro y cálido. El contraste separa "dónde navego" de "qué estoy viendo", sin necesidad de líneas ni decoración adicional.
+- **Redondeado con precisión** — esquinas suaves (`--radius-md`/`--radius-lg`) en todos los componentes, pero comedidas: ni agresivas ni infantiles. La curva es una firma, no un capricho.
+- **Elevación deliberada, nunca decorativa** — se permite una **sombra suave, difusa y de tinte frío** (§3.5) para separar capas (tarjetas, menús, toasts) de su fondo. La sombra siempre comunica jerarquía real (esto flota sobre esto); nunca se usa para "decorar".
+- **Un acento, una función** — el indigo `--color-blue-500` ("signal") se reserva exclusivamente para: acción primaria, elemento activo, foco y enlaces. Si algo no es la acción principal ni un enlace, no lleva el acento.
+- **Tipografía como sistema, no como decoración** — una sola familia para interfaz (**Geist Sans**) y una sola familia mono para datos (**Geist Mono**), de la misma fundición, con métricas armónicas entre sí. Los números tabulares se alinean siempre en columna.
+- **Con foco en el dato** — códigos, SKU, cantidades y fechas técnicas se muestran en mono con cifras tabulares; son el protagonista visual de cada pantalla.
+- **Microdetalle sin ruido** — transiciones cortas, un leve desplazamiento vertical al pasar el cursor sobre tarjetas y filas, un resplandor sutil en el elemento activo. Elegancia hecha de detalles casi imperceptibles, no de efectos.
 - **Cero modales** — cada acción (ver, crear, editar, eliminar, aprobar, anular) vive en **su propia página**. No existen ventanas emergentes, diálogos superpuestos ni confirmaciones flotantes.
 
 ### 1.1 Filosofía de profesionalismo
 
-Rustock es una herramienta de negocio que representa la **seriedad de la operación logística** que administra, pero con una estética **contemporánea, limpia y amable**. El profesionalismo no está reñido con un diseño moderno: la interfaz es **precisa, técnica y elegante**, sin frivolidad.
+Rustock es una herramienta de negocio que representa la **seriedad de la operación logística** que administra, con una estética **contemporánea, precisa y con carácter propio**. El profesionalismo no está reñido con un diseño moderno y con personalidad: la interfaz es **técnica y elegante**, sin frivolidad.
 
 Este compromiso se traduce en reglas declaradas e innegociables:
 
 - **Tolerancia cero a los emojis.** ❌ **Emojis prohibidos en toda la interfaz, sin excepción ni justificación**: textos, botones, mensajes de éxito/error, notificaciones, estados, placeholders, documentación visible al usuario o cualquier otro canal de la UI. Un emoji es una expresión informal que rompe la seriedad, la consistencia y el estilo elegante de la aplicación. Donde otro producto usaría un emoji, Rustock usa un **icono del set oficial** (§6.13) o texto plano.
 - **Iconografía profesional única y declarada.** Todos los símbolos de la interfaz provienen de **un único paquete de iconos moderno y profesional** diseñado para producto/business: **Lucide** (`lucide-react`). Es el set canónico, cerrado y obligatorio. Queda prohibido mezclar conjuntos de iconos, usar SVGs aislados de otros orígenes o introducir iconos de stock no derivados de Lucide.
 - **Semántica de iconos estricta.** Cada icono tiene un significado único y estable en toda la aplicación (ver tabla canónica §6.13). Los iconos nunca se usan como decoración caprichosa: siempre comunican una acción, un estado o un dato.
-- **Cero decoración lúdica.** Sin ilustraciones, sin mascotas, sin personajes, sin doodles. La confianza se transmite con datos claros, orden y precisión tipográfica, no con entretenimiento.
+- **Cero decoración lúdica.** Sin ilustraciones, sin mascotas, sin personajes, sin doodles. La confianza se transmite con datos claros, orden, precisión tipográfica y una elevación medida — no con entretenimiento.
 - **Tono comunicacional profesional.** Los mensajes son directos, técnicos y respetuosos (ver §9.1). Sin chistes, sin exclamaciones innecesarias, sin lenguaje coloquial ni emotivo.
 
 La "Filosofía de profesionalismo" es parte integral de la identidad visual: cualquier pantalla que no respete estas reglas se considera **defectuosa por diseño** y debe corregirse antes de ser aceptada.
@@ -102,53 +106,66 @@ La "Filosofía de profesionalismo" es parte integral de la identidad visual: cua
 
 1. **Cero modales, cero popovers, cero tooltips de bloqueo, cero confirmaciones flotantes.** Toda decisión que modifique datos ocurre en una página dedicada con URL propia.
 2. **Esquinas suaves.** El `border-radius` usa exclusivamente los tokens de radio (§3.4): `--radius-sm/md/lg/xl/full`. Ningún componente usa esquinas a 0 ni radio arbitrario.
-3. **Cero gradientes, cero sombras, cero blur, cero efectos 3D.** La elevación se logra con radio, borde de 1px y fondo diferenciado.
-4. **Todo es navegable y enlazable.** Cualquier elemento de datos es un enlace a su página de detalle. Cualquier página es alcanzable por URL directa (deep-link) y por enlaces internos.
-5. **Una tarea por página.** Ver, crear, editar, eliminar y anular son páginas separadas.
-6. **Consistencia absoluta.** El mismo componente se ve idéntico en todas las pantallas. Se usan exclusivamente los tokens y componentes definidos aquí.
-7. **Primero legibilidad, después estética.** Contraste suficiente, tipografía clara, datos formateados.
-8. **El usuario nunca pierde contexto.** Las rutas "hijas" (editar, eliminar) siempre son navegables hacia la página padre.
+3. **Elevación solo con los tokens de sombra.** `box-shadow` se usa **exclusivamente** con `--shadow-xs/sm/md/lg` (§3.5); ninguna sombra literal, ningún efecto 3D, ningún `filter: blur` decorativo. El **único** uso permitido de `backdrop-filter` es el desenfoque de cristal en la barra superior al hacer scroll (§4.2) — en ningún otro lugar.
+4. **Cero gradientes.** El color es plano en toda superficie; la profundidad se logra con `--shadow-*`, no con degradados.
+5. **Todo es navegable y enlazable.** Cualquier elemento de datos es un enlace a su página de detalle. Cualquier página es alcanzable por URL directa (deep-link) y por enlaces internos.
+6. **Una tarea por página.** Ver, crear, editar, eliminar y anular son páginas separadas.
+7. **Consistencia absoluta.** El mismo componente se ve idéntico en todas las pantallas. Se usan exclusivamente los tokens y componentes definidos aquí.
+8. **Primero legibilidad, después estética.** Contraste suficiente, tipografía clara, datos formateados.
+9. **El usuario nunca pierde contexto.** Las rutas "hijas" (editar, eliminar) siempre son navegables hacia la página padre.
 
 ---
 
 ## 3. Tokens de diseño
 
-> Los tokens son la única fuente de valores visuales. Están declarados como variables de diseño (CSS custom properties) y **nunca** se hardcodea un color, espaciado o medida en un componente.
+> Los tokens son la única fuente de valores visuales. Están declarados como variables de diseño (CSS custom properties) y **nunca** se hardcodea un color, espaciado, sombra o medida en un componente.
 
 ### 3.1 Color
 
-Paleta base azul **vibrante y luminosa**, de baja a alta saturación. Los azules claros dominan los fondos; los acentos azules intensos y eléctricos se reservan para acciones primarias, enlaces y elementos activos. El resultado es moderno, atractivo y con energía, sin caer en lo estridente.
+La paleta tiene tres familias con roles distintos y no intercambiables: **Ink** (superficies oscuras de navegación), **Signal** (el único acento vibrante) y **Gray** (neutros de contenido). Esta separación es lo que da coherencia: el acento nunca se usa como fondo grande, y los neutros nunca cargan significado por sí mismos.
 
-**Escala de azul (semántica primaria):**
-
-| Token | Valor | Uso |
-|---|---|---|
-| `--color-blue-50` | `#EFF5FF` | Fondos de paneles sobre azul, resaltados muy suaves |
-| `--color-blue-100` | `#DBE8FF` | Fondos de selección ligera, hover de filas |
-| `--color-blue-200` | `#B8D0FE` | Bordes de componentes activos, fondos de insignias |
-| `--color-blue-300` | `#8FB3FB` | Acentos de información, bordes de foco |
-| `--color-blue-400` | `#6090FA` | Enlaces en hover |
-| `--color-blue-500` | `#3B71F6` | **Acciones primarias, enlaces, elementos activos** |
-| `--color-blue-600` | `#2C57DD` | Hover/pressed de acciones primarias |
-| `--color-blue-700` | `#2246B5` | Acentos oscuros sobre fondos claros |
-| `--color-blue-800` | `#1D3A91` | Textos azul oscuro, fondos de header sobre oscuro |
-| `--color-blue-900` | `#172B6E` | Fondo de barra lateral / superficies oscuras |
-| `--color-blue-950` | `#0F1D4D` | Fondo más oscuro (footer, áreas de énfasis) |
-
-**Neutros (grises con tinte azul frío):**
+**Escala Ink (superficies oscuras — sidebar, encabezados de énfasis):**
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-gray-50` | `#F7F9FC` | Fondo general de la aplicación |
-| `--color-gray-100` | `#EEF2F8` | Fondos alternados de filas, paneles secundarios |
-| `--color-gray-200` | `#DFE5EF` | Bordes de componentes, separadores |
-| `--color-gray-300` | `#C6CFDD` | Bordes en hover, inputs deshabilitados |
-| `--color-gray-400` | `#97A3B5` | Texto secundario, placeholders |
-| `--color-gray-500` | `#6B768A` | Texto atenuado, metadatos |
-| `--color-gray-600` | `#49556A` | Texto principal secundario |
-| `--color-gray-700` | `#333F54` | Texto principal |
-| `--color-gray-800` | `#1D2939` | Texto de títulos, cabeceras |
-| `--color-gray-900` | `#101828` | Texto más oscuro, contenido crítico |
+| `--color-ink-950` | `#080D1A` | Fondo de énfasis máximo (raro; solo bloques destacados) |
+| `--color-ink-900` | `#0E1526` | **Fondo de la barra lateral** |
+| `--color-ink-800` | `#161E35` | Fondo de ítem de sidebar en hover |
+| `--color-ink-700` | `#212B47` | Bordes y separadores sobre superficie oscura |
+| `--color-ink-600` | `#38446B` | Bordes activos, iconos secundarios sobre oscuro |
+| `--color-ink-400` | `#7986AD` | Texto secundario sobre superficie oscura |
+| `--color-ink-200` | `#B7C0DE` | Texto de ítems inactivos del sidebar |
+| `--color-ink-50` | `#F1F3FC` | Texto de ítems activos/hover sobre oscuro |
+
+**Escala Signal (acento único — indigo vibrante):**
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--color-blue-50` | `#EEF1FF` | Fondos de resaltado muy suave, insignias de información |
+| `--color-blue-100` | `#DCE3FF` | Fondos de selección ligera, hover de filas |
+| `--color-blue-200` | `#B9C7FF` | Bordes de componentes activos |
+| `--color-blue-300` | `#8FA3FF` | Anillo de foco, acentos de información |
+| `--color-blue-400` | `#6480FF` | Enlaces en hover |
+| `--color-blue-500` | `#4C5FF7` | **Acción primaria, enlaces, elemento activo — el único acento** |
+| `--color-blue-600` | `#3B49DE` | Hover/pressed de acciones primarias |
+| `--color-blue-700` | `#2E37B0` | Acentos oscuros sobre fondos claros |
+| `--color-blue-800` | `#242C87` | Textos de énfasis en indigo oscuro |
+| `--color-blue-900` | `#1C2266` | Reservado — no usar como fondo grande |
+
+**Neutros (grises con tinte azul frío — contenido):**
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--color-gray-50` | `#F7F8FB` | Fondo general del área de contenido |
+| `--color-gray-100` | `#EEF0F6` | Fondos alternados de filas, paneles secundarios |
+| `--color-gray-200` | `#DFE2EC` | Bordes de componentes, separadores |
+| `--color-gray-300` | `#C5CAD9` | Bordes en hover, inputs deshabilitados |
+| `--color-gray-400` | `#9AA2B5` | Texto secundario, placeholders |
+| `--color-gray-500` | `#6D7690` | Texto atenuado, metadatos |
+| `--color-gray-600` | `#4B5570` | Texto principal secundario |
+| `--color-gray-700` | `#333C54` | Texto principal |
+| `--color-gray-800` | `#1C2338` | Texto de títulos, cabeceras |
+| `--color-gray-900` | `#0F1424` | Texto más oscuro, contenido crítico |
 
 **Blanco / superficies:**
 
@@ -156,8 +173,9 @@ Paleta base azul **vibrante y luminosa**, de baja a alta saturación. Los azules
 |---|---|---|
 | `--color-white` | `#FFFFFF` | Fondos de tarjetas, paneles, inputs |
 | `--color-surface` | `#FFFFFF` | Superficie por defecto |
-| `--color-surface-muted` | `#F7F9FC` | Superficie secundaria |
-| `--color-surface-inverse` | `#172B6E` | Superficie oscura (sidebar) |
+| `--color-surface-muted` | `#F7F8FB` | Superficie secundaria, fondo de página |
+| `--color-surface-sunken` | `#EEF0F6` | Superficie hundida (bloques de código, celdas de resumen) |
+| `--color-surface-inverse` | `#0E1526` | Superficie oscura (sidebar) — alias de `--color-ink-900` |
 
 **Semántico (estados y acciones):**
 
@@ -169,16 +187,16 @@ Paleta base azul **vibrante y luminosa**, de baja a alta saturación. Los azules
 | `--color-warning-600` | `#B45309` | Hover/pressed de advertencia |
 | `--color-danger-500` | `#E11D48` | Eliminar, anular, error, merma |
 | `--color-danger-600` | `#BE123C` | Hover/pressed de peligro |
-| `--color-info-500` | `#3B71F6` | Información, enlaces |
+| `--color-info-500` | `#4C5FF7` | Información, enlaces — alias de `--color-blue-500` |
 
 **Fondos de estado (superficies tintadas para insignias y paneles de estado):**
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-success-bg` | `#F0FBF4` | Insignia "aprobado / entrada" |
-| `--color-warning-bg` | `#FFFBEB` | Insignia "pendiente / bajo" |
-| `--color-danger-bg` | `#FFF1F2` | Insignia "anulado / error / merma" |
-| `--color-info-bg` | `#EFF5FF` | Insignia "información" |
+| `--color-success-bg` | `#EFFBF3` | Insignia "aprobado / entrada" |
+| `--color-warning-bg` | `#FFF8EB` | Insignia "pendiente / bajo" |
+| `--color-danger-bg` | `#FFF0F2` | Insignia "anulado / error / merma" |
+| `--color-info-bg` | `#EEF1FF` | Insignia "información" |
 
 **Texto sobre fondos tintados:**
 
@@ -187,36 +205,42 @@ Paleta base azul **vibrante y luminosa**, de baja a alta saturación. Los azules
 | `--color-success-text` | `#166534` |
 | `--color-warning-text` | `#92400E` |
 | `--color-danger-text` | `#9F1239` |
-| `--color-info-text` | `#1D4ED8` |
+| `--color-info-text` | `#2E37B0` |
+
+**Regla de uso de familias:** `Ink` solo aparece en el sidebar y en bloques de énfasis puntuales explícitamente definidos en este documento. `Signal` solo aparece en elementos activos, foco, enlaces y el botón primario. Ningún otro componente usa estas dos familias como fondo extenso.
 
 ### 3.2 Tipografía
+
+Una sola pareja tipográfica, de la misma fundición, para que UI y datos compartan altura de x, proporciones y ritmo — la coherencia tipográfica es en sí misma una señal de elegancia.
 
 **Familia sans (UI principal):**
 
 | Token | Valor |
 |---|---|
-| `--font-sans` | `"Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif` |
+| `--font-sans` | `"Geist", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif` |
 
 **Familia mono (datos):**
 
 | Token | Valor |
 |---|---|
-| `--font-mono` | `"JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace` |
+| `--font-mono` | `"Geist Mono", "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace` |
 
 **Escala tipográfica (rem):**
 
-| Token | Tamaño | Línea-alto | Peso | Uso |
-|---|---|---|---|---|
-| `--text-xs` | `0.75rem` | `1rem` | 400 | Metadatos, códigos de pie, labels de campos |
-| `--text-sm` | `0.875rem` | `1.25rem` | 400 | Cuerpo secundario, celdas de tabla |
-| `--text-base` | `1rem` | `1.5rem` | 400 | Cuerpo principal |
-| `--text-lg` | `1.125rem` | `1.625rem` | 600 | Subtítulos de panel |
-| `--text-xl` | `1.375rem` | `1.75rem` | 600 | Títulos de página |
-| `--text-2xl` | `1.75rem` | `2.25rem` | 700 | Títulos de sección grandes |
+| Token | Tamaño | Línea-alto | Peso | Tracking | Uso |
+|---|---|---|---|---|---|
+| `--text-xs` | `0.75rem` | `1rem` | 400 | `0` | Metadatos, códigos de pie, labels de campos |
+| `--text-sm` | `0.875rem` | `1.25rem` | 400 | `0` | Cuerpo secundario, celdas de tabla |
+| `--text-base` | `1rem` | `1.5rem` | 400 | `0` | Cuerpo principal |
+| `--text-lg` | `1.125rem` | `1.625rem` | 600 | `-0.01em` | Subtítulos de panel |
+| `--text-xl` | `1.375rem` | `1.75rem` | 600 | `-0.015em` | Títulos de página |
+| `--text-2xl` | `1.75rem` | `2.25rem` | 700 | `-0.02em` | Títulos de sección grandes |
 
 **Reglas tipográficas:**
-- Cuerpo y títulos → Open Sans.
-- **Solo** códigos, SKU, números de documento, cantidades, fechas ISO, identificadores y valores técnicos → JetBrains Mono.
+- Cuerpo y títulos → Geist Sans.
+- **Solo** códigos, SKU, números de documento, cantidades, fechas ISO, identificadores y valores técnicos → Geist Mono.
+- Todo número mostrado en mono usa cifras tabulares (`font-variant-numeric: tabular-nums`) para que las columnas de cantidades alineen perfectamente entre filas.
+- Los títulos (`--text-lg` en adelante) llevan un tracking negativo sutil — nunca perceptible como "apretado", solo más afilado.
 - Los códigos (SKU, ubicación, lote, número de movimiento) se muestran **siempre** en mono, con `--text-sm`.
 - Los títulos usan color `--color-gray-800`; el cuerpo `--color-gray-600`; los metadatos `--color-gray-500`.
 - Sin font-weight por debajo de 400 ni por encima de 700 en UI.
@@ -243,7 +267,7 @@ Reglas:
 
 ### 3.4 Bordes y radio
 
-El radio es **la firma visual** del rediseño: esquinas suaves y modernas, nunca duras. Se usan exclusivamente los tokens de radio; ningún componente declara un radio literal.
+El radio es **la firma visual** del sistema: esquinas suaves, medidas y consistentes, nunca duras ni exageradas. Se usan exclusivamente los tokens de radio; ningún componente declara un radio literal.
 
 | Token | Valor | Uso |
 |---|---|---|
@@ -261,13 +285,23 @@ El radio es **la firma visual** del rediseño: esquinas suaves y modernas, nunca
 
 ### 3.5 Sombras y elevación
 
-- **No se usan sombras.** `box-shadow` queda prohibido en la UI (excepto en pruebas de accesibilidad de contraste, donde no se aplica).
-- La jerarquía espacial se comunica con:
-  - Radio suave (`--radius-lg`/`--radius-xl`) que hace "respirar" los contenedores.
-  - Fondo diferenciado (`--color-surface-muted`, `--color-blue-50`).
-  - Bordes sutiles de 1px.
-  - Espaciado.
-- No existe elevación "flotante"; los elementos viven en el flujo de la página.
+La elevación es un lenguaje deliberado: cada nivel de sombra corresponde a una distancia real entre capas, nunca a un capricho decorativo. Las sombras son siempre **suaves, difusas y con un tinte frío** (nunca negro puro) para que se sientan como luz ambiental, no como un recorte pegado encima.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--shadow-xs` | `0 1px 2px rgba(15, 20, 40, 0.04)` | Inputs y botones en reposo (apenas perceptible) |
+| `--shadow-sm` | `0 1px 3px rgba(15, 20, 40, 0.06), 0 1px 2px rgba(15, 20, 40, 0.04)` | Tarjetas y paneles en reposo |
+| `--shadow-md` | `0 6px 16px -4px rgba(15, 20, 40, 0.10), 0 2px 4px -2px rgba(15, 20, 40, 0.05)` | Tarjetas en hover, filas seleccionadas, dropdowns |
+| `--shadow-lg` | `0 16px 32px -8px rgba(15, 20, 40, 0.14), 0 4px 8px -4px rgba(15, 20, 40, 0.06)` | Toasts, menús flotantes de bajo compromiso (búsqueda global) |
+| `--shadow-focus-ring` | `0 0 0 2px var(--color-white), 0 0 0 4px var(--color-blue-300)` | Anillo de foco de dos capas sobre cualquier fondo |
+| `--shadow-glow-primary` | `0 0 0 1px rgba(76, 95, 247, 0.16), 0 6px 16px -2px rgba(76, 95, 247, 0.22)` | Ítem activo del sidebar, botón primario en hover |
+
+**Reglas:**
+- `box-shadow` **solo** con estos tokens. Prohibido cualquier valor de sombra literal o `box-shadow` negro puro.
+- Cada componente declara **un** nivel de sombra en reposo y, como máximo, **un** nivel superior en hover/activo (nunca salta más de un nivel).
+- Los elementos que viven "en el flujo" de la página sin jerarquía especial (celdas de tabla, texto, badges) **no** llevan sombra.
+- `backdrop-filter: blur(8px)` está permitido **únicamente** en la barra superior cuando el contenido hace scroll debajo de ella (§4.2); en cualquier otro lugar queda prohibido.
+- Sin gradientes en ningún caso: la profundidad es sombra + superficie, nunca degradado de color.
 
 ### 3.6 Alturas, anchos y medidas
 
@@ -287,15 +321,15 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 ### 3.7 Densidad y jerarquía visual
 
 - Densidad media: cómoda para lectura y suficiente para mostrar muchos registros.
-- Jerarquía por: tamaño de fuente → peso → color → espaciado → fondo. (En ese orden de prioridad; primero tipografía, nunca color aislado.)
-- Un nivel de jerarquía se comunica con máximo una o dos señales a la vez.
+- Jerarquía por: tamaño de fuente → peso → color → elevación → espaciado → fondo. (En ese orden de prioridad; primero tipografía, la sombra se usa antes que el color aislado, nunca al revés.)
+- Un nivel de jerarquía se comunica con máximo dos señales a la vez.
 
 ### 3.8 Zonas de estado / color semántico
 
 - `success` → entradas, aprobado, saldo positivo, conciliado.
 - `warning` → stock bajo, por vencer, pendiente de aprobación.
 - `danger` → anulado, merma, error, eliminar.
-- `info` → información, enlaces, ayudas.
+- `info` → información, enlaces, ayudas (comparte hue con `signal`).
 - Los estados **nunca** se comunican solo con color: siempre acompañan un ícono y/o texto (ver §10 Accesibilidad).
 
 ---
@@ -305,30 +339,31 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 ### 4.1 Estructura general
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│ Barra superior (breadcrumb + búsqueda global + usuario)      │
-├──────────────┬─────────────────────────────────────────────┤
-│              │                                              │
-│  Sidebar     │   Área de contenido                          │
-│  (navegación │   (una sola tarea por página)                │
-│  principal)  │                                              │
+┌──────────────┬─────────────────────────────────────────────┐
+│              │  Barra superior (breadcrumb + búsqueda + usuario) │
+│  Sidebar     ├─────────────────────────────────────────────┤
+│  tinta oscura│                                              │
+│  (navegación │   Área de contenido — lienzo claro           │
+│  principal)  │   (una sola tarea por página)                │
 │              │                                              │
 └──────────────┴─────────────────────────────────────────────┘
 ```
 
-- **Barra superior**: fija, altura `--topbar-height` (56px), fondo `--color-white`, borde inferior `1px --color-gray-200`.
-- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-white` con borde derecho `1px --color-gray-200`. Items redondeados (`--radius-lg`); el activo usa `--color-blue-500` con texto blanco.
-- **Área de contenido**: scroll vertical, padding `--space-6`, ancho máximo `--width-max-content` centrado.
+- **Barra superior**: fija, altura `--topbar-height` (56px), fondo `--color-white`, borde inferior `1px --color-gray-200`. Al hacer scroll, adopta `backdrop-filter: blur(8px)` y `background: rgba(255,255,255,0.85)` con `--shadow-xs` — el único uso de blur permitido en toda la interfaz.
+- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-ink-900`. Es la única superficie oscura de la aplicación y ancla visualmente la navegación. Items redondeados (`--radius-lg`); el activo usa `--color-blue-500` con texto blanco y `--shadow-glow-primary`.
+- **Área de contenido**: fondo `--color-surface-muted`, scroll vertical, padding `--space-6`, ancho máximo `--width-max-content` centrado.
 - La barra superior y la sidebar **no** flotan sobre el contenido: ocupan su propio espacio (nada de overlay ni scroll separado sobre ellas en desktop).
 
 ### 4.2 Barra superior
 
 Contenido (de izquierda a derecha):
-1. **Marca Rustock** (logo cuadrado redondeado de 32px + palabra en Open Sans bold azul). Es un enlace a `/`.
+1. **Marca Rustock** (logo cuadrado redondeado de 32px sobre `--color-blue-500` + palabra en Geist Sans semibold `--color-gray-800`). Es un enlace a `/`.
 2. **Breadcrumbs** del nivel actual (ver §4.5).
 3. **Búsqueda global** (input píldora con ícono, mono para resultados) — ver §6.10.
-4. **Indicador de alertas activas** (contador, enlace a página de alertas).
+4. **Indicador de alertas activas** (contador en insignia `--color-danger-500`, enlace a página de alertas).
 5. **Usuario actual** (avatar circular + nombre + rol, enlace a su página de perfil).
+
+Al hacer scroll en el contenido, la barra adopta el efecto de cristal descrito en §4.1: es la única concesión de transparencia de todo el sistema, y su función es puramente de legibilidad (separar el contenido que se desliza debajo).
 
 ### 4.3 Barra lateral de navegación
 
@@ -353,16 +388,18 @@ Contenido (de izquierda a derecha):
   - Configuración
 
 Reglas:
-- El sidebar es **claro** (`--color-white`) con borde derecho sutil y títulos de grupo en `--text-xs` mayúsculas gris.
-- El ítem activo usa `--color-blue-500` con texto blanco y radio `--radius-lg`. Hover: `--color-blue-50` con texto `--color-blue-700`.
+- El sidebar es **oscuro** (`--color-ink-900`) con títulos de grupo en `--text-xs` mayúsculas `--color-ink-400`, separados por `--space-6`.
+- Los ítems inactivos usan texto `--color-ink-200`; el icono hereda el mismo color.
+- El ítem activo usa fondo `--color-blue-500`, texto blanco, radio `--radius-lg` y `--shadow-glow-primary` (un resplandor sutil de la propia acción, no una sombra genérica).
+- Hover de un ítem inactivo: fondo `--color-ink-800`, texto `--color-ink-50` — sin sombra, solo cambio de superficie.
 - Cada ítem es un **enlace real** (no un botón).
-- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda con su propia marca en el encabezado.
+- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda con su propia marca en el encabezado, misma superficie `--color-ink-900`.
 
 ### 4.4 Área de contenido
 
-- Padding uniforme `--space-6`.
+- Fondo `--color-surface-muted`, padding uniforme `--space-6`.
 - Contenido máximo `--width-max-content`, centrado con `margin: 0 auto`.
-- Las páginas se componen de bloques: encabezado de página + contenido.
+- Las páginas se componen de bloques: encabezado de página + contenido, cada tarjeta/panel se apoya sobre el fondo muted con `--shadow-sm` para separarse visualmente sin necesidad de bordes gruesos.
 
 ### 4.5 Migas de pan (breadcrumbs)
 
@@ -370,7 +407,7 @@ Reglas:
 - Formato: `Almacenes / Almacén Central / Editar`.
 - Cada nivel es un enlace salvo el actual.
 - Siempre reflejan la **ruta de profundidad** real (ver §5), lo que garantiza que el usuario siempre pueda volver un nivel arriba.
-- Separador: `/` (slashe) en `--color-gray-400`, texto `--text-sm`.
+- Separador: `/` (slash) en `--color-gray-400`, texto `--text-sm`.
 
 ---
 
@@ -468,7 +505,7 @@ Para un recurso genérico `recurso`:
 ### 5.5 Reglas de enlaces y navegación
 
 - **Todo** dato identificable es un enlace: SKU → `/productos/:id`, ubicación → `/ubicaciones/:id`, usuario → `/usuarios/:id`, número de movimiento → `/movimientos/:id`.
-- Los enlaces dentro de tablas usan el estilo "texto azul, sin subrayado, hover con subrayado" (o se marca la fila entera como clickable con navegación).
+- Los enlaces dentro de tablas usan el estilo "texto indigo, sin subrayado, hover con subrayado" (o se marca la fila entera como clickable con navegación).
 - La navegación **nunca** abre pestañas nuevas salvo enlaces externos documentales.
 - Al guardar con éxito desde una página de creación → se navega al **detalle** del registro creado.
 - Al guardar con éxito desde una página de edición → se navega al **detalle** (o permanece en edición si hay ediciones consecutivas; se define por pantalla y debe ser consistente dentro de la misma pantalla).
@@ -487,28 +524,28 @@ Para un recurso genérico `recurso`:
 
 ### 6.1 Principios de componentes
 
-- Cada componente es **suave y redondeado** (`--radius-md` o superior), plano, con borde sutil de 1px y fondo liso.
+- Cada componente es **suave y redondeado** (`--radius-md` o superior), con borde sutil de 1px, fondo liso y, cuando corresponde a una capa elevada, un nivel de `--shadow-*` (§3.5).
 - Los componentes tienen **estados** explícitos: `default`, `hover`, `focus`, `disabled`, `error`, `active`.
-- No existen variantes "sombreadas", "elevadas" ni "vidriosas".
+- No existen variantes "vidriosas" ni con degradado; la única concesión de transparencia del sistema es la barra superior en scroll (§4.2).
 - Los componentes de control miden `--size-md` (40px) de alto por defecto.
 
 ### 6.2 Botones
 
-**Estructura:** fondo liso, radio `--radius-md`, borde 1px, texto `--text-sm`, padding `0 --space-4`, alto `--size-md`. Icono opcional de 16px a la izquierda. **Sin sombra, sin 3D.**
+**Estructura:** fondo liso, radio `--radius-md`, borde 1px, texto `--text-sm`, padding `0 --space-4`, alto `--size-md`. Icono opcional de 16px a la izquierda.
 
-| Variante | Fondo | Borde | Texto | Uso |
-|---|---|---|---|---|
-| `primary` | `--color-blue-500` | transparente | blanco | Acción principal de la página |
-| `secondary` | `--color-white` | `--color-gray-300` | `--color-gray-700` | Acción secundaria / cancelar |
-| `danger` | `--color-danger-500` | transparente | blanco | Eliminar, anular, merma |
-| `ghost` | transparente | transparente | `--color-blue-600` | Acciones de bajo énfasis en tablas |
-| `link` | transparente | sin borde | `--color-blue-600` | Enlace con apariencia de botón |
+| Variante | Fondo | Borde | Texto | Sombra en reposo | Uso |
+|---|---|---|---|---|---|
+| `primary` | `--color-blue-500` | transparente | blanco | `--shadow-xs` | Acción principal de la página |
+| `secondary` | `--color-white` | `--color-gray-300` | `--color-gray-700` | ninguna | Acción secundaria / cancelar |
+| `danger` | `--color-danger-500` | transparente | blanco | `--shadow-xs` | Eliminar, anular, merma |
+| `ghost` | transparente | transparente | `--color-blue-600` | ninguna | Acciones de bajo énfasis en tablas |
+| `link` | transparente | sin borde | `--color-blue-600` | ninguna | Enlace con apariencia de botón |
 
 **Estados:**
-- `hover`: `primary` → `--color-blue-600`; `secondary` → fondo `--color-gray-100`; `danger` → `--color-danger-600`; `ghost` → fondo `--color-blue-50`.
-- `focus`: anillo de foco de `2px` en `--color-blue-300` (sin desplazamiento, a ras del borde; no es sombra, es borde).
-- `disabled`: opacidad `0.5`, cursor `not-allowed`, sin estados hover.
-- `active` (presionado): fondo 1 tono más oscuro que hover.
+- `hover`: `primary` → fondo `--color-blue-600` + `--shadow-glow-primary`; `secondary` → fondo `--color-gray-100`; `danger` → fondo `--color-danger-600` + `--shadow-sm`; `ghost` → fondo `--color-blue-50`. El botón `primary` y `danger` además se desplazan `-1px` en el eje vertical (transform sutil, 150ms) al pasar el cursor.
+- `focus`: `--shadow-focus-ring` (anillo de dos capas, §3.5), sin desplazamiento.
+- `disabled`: opacidad `0.5`, cursor `not-allowed`, sin estados hover ni sombra.
+- `active` (presionado): vuelve a `transform: translateY(0)` y pierde el nivel de sombra elevado (efecto de "presión" real).
 
 **Reglas:**
 - Una página tiene **un solo** botón `primary` (la acción principal).
@@ -519,7 +556,7 @@ Para un recurso genérico `recurso`:
 ### 6.3 Enlaces
 
 - Texto `--color-blue-600`, sin subrayado; `hover` → `--color-blue-500` + subrayado.
-- Con foco: borde de foco de 2px a ras del borde.
+- Con foco: `--shadow-focus-ring` a ras del texto.
 - Dentro de párrafos pueden subrayarse siempre para ser claramente distinguibles.
 
 ### 6.4 Campos de formulario (input, select, textarea, fecha)
@@ -531,24 +568,24 @@ Para un recurso genérico `recurso`:
 - **Mensaje de error** `--text-xs` `--color-danger-600` con ícono.
 
 **Estados:**
-- `default` → borde `--color-gray-300`.
+- `default` → borde `--color-gray-300`, sin sombra.
 - `hover` → borde `--color-gray-400`.
-- `focus` → borde `--color-blue-500` + anillo de foco 2px `--color-blue-300`.
+- `focus` → borde `--color-blue-500` + `--shadow-focus-ring`.
 - `error` → borde `--color-danger-500` + mensaje de error.
 - `disabled` → fondo `--color-gray-100`, borde `--color-gray-200`, opacidad 0.6.
-- `readonly` → fondo `--color-gray-50`, sin estado hover.
+- `readonly` → fondo `--color-surface-sunken`, sin estado hover.
 
 **Campos específicos:**
-- **Input de código/SKU** (códigos de ubicación, SKU, lote): se muestra en **mono**.
+- **Input de código/SKU** (códigos de ubicación, SKU, lote): se muestra en **mono** con cifras tabulares.
 - **Select**: mismo estilo; la flecha es un ícono propio, no una pseudo-flecha del navegador.
-- **Date**: se usan pickers propios, estilo plano y redondeado, sin calendario flotante que ocupe la pantalla; la selección de fecha se abre en un panel en línea dentro del formulario.
-- **Número/cantidad**: texto mono, alineado a la derecha cuando representa cantidad.
+- **Date**: se usan pickers propios, estilo plano y redondeado con `--shadow-sm`, sin calendario flotante que ocupe la pantalla; la selección de fecha se abre en un panel en línea dentro del formulario.
+- **Número/cantidad**: texto mono con cifras tabulares, alineado a la derecha cuando representa cantidad.
 - **Textarea**: `--text-base`, min-height `--size-lg`, padding `--space-3`.
 
 ### 6.5 Tablas y listados
 
 **Estructura:**
-- Contenedor con fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg` (esquinas superiores redondeadas).
+- Contenedor con fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, `--shadow-sm`.
 - **Header**: `--text-xs` mayúsculas, `--color-gray-500`, fondo `--color-gray-50`, fila con borde inferior `--color-gray-200`.
 - **Filas**: `--text-sm`; borde inferior `1px --color-gray-100`.
 - **Hover de fila**: fondo `--color-blue-50`.
@@ -561,15 +598,15 @@ Para un recurso genérico `recurso`:
 
 **Reglas:**
 - Toda tabla tiene cabecera de columnas **ordenables** cuando aplica (clic en la columna alterna asc/desc; el orden actual se marca con un chevron plano).
-- Las columnas numéricas de cantidad se alinean a la derecha en mono.
+- Las columnas numéricas de cantidad se alinean a la derecha en mono con cifras tabulares.
 - Los códigos/SKU/números se muestran en mono.
 - El listado incluye controles de paginación (ver §7.1) y un resumen "Mostrando X–Y de Z".
 
 ### 6.6 Tarjetas y paneles
 
-- Fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, padding `--space-4`.
+- Fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, padding `--space-4`, `--shadow-sm` en reposo.
 - Título del panel: `--text-lg`, `--color-gray-800`, con borde inferior `--color-gray-200` opcional.
-- Sin sombra. La elevación se logra con el radio suave y el borde sutil.
+- Las tarjetas interactivas (ej. tarjetas de resumen clickeables en el dashboard) suben a `--shadow-md` y se desplazan `-2px` en hover.
 - Los paneles pueden ser "secciones" de una página de detalle (ej. "Datos generales", "Saldo por lote", "Historial de movimientos").
 
 ### 6.7 Insignias y etiquetas
@@ -588,7 +625,7 @@ Todo encabezado de página sigue la misma estructura:
 [Breadcrumb implícito arriba en la barra superior]
 ```
 
-- Título en `--text-xl`, semibold, `--color-gray-800`.
+- Título en `--text-xl`, semibold, `--color-gray-800`, tracking `-0.015em`.
 - Subtexto descriptivo en `--text-base` `--color-gray-500`.
 - Acciones principales a la derecha, alineadas a la línea del título.
 
@@ -601,7 +638,7 @@ Todo encabezado de página sigue la misma estructura:
 ### 6.10 Búsqueda global y barra de filtros
 
 **Búsqueda global** (barra superior):
-- Input con ícono de lupa, radio `--radius-full` (píldora); al escribir, muestra resultados agrupados por tipo (Productos, Ubicaciones, Movimientos, Lotes, Proveedores, Clientes).
+- Input con ícono de lupa, radio `--radius-full` (píldora); al escribir, despliega un panel de resultados con `--shadow-lg` agrupados por tipo (Productos, Ubicaciones, Movimientos, Lotes, Proveedores, Clientes).
 - Resultados en **mono** para códigos; navegan al detalle de cada resultado.
 - El Enter ejecuta la búsqueda y navega a la página de búsqueda global (listado agregado).
 
@@ -613,16 +650,16 @@ Todo encabezado de página sigue la misma estructura:
 
 ### 6.11 Estados vacíos
 
-- Sin datos: ícono redondeado (`--radius-xl`) de 32px + mensaje "No hay X todavía" + botón/enlace para crear el primero.
+- Sin datos: ícono redondeado (`--radius-xl`) de 32px sobre `--color-blue-50` + mensaje "No hay X todavía" + botón/enlace para crear el primero.
 - Sin resultados con filtros: ícono + "No se encontraron resultados" + botón "Limpiar filtros".
-- **Skeleton de carga**: bloques redondeados (`--radius-sm`), grises, sin shimmer ni animación de brillo; se anima solo con opacidad pulsante sutil (o estática).
+- **Skeleton de carga**: bloques redondeados (`--radius-sm`), `--color-gray-100`, sin shimmer ni brillo; se anima solo con opacidad pulsante sutil (o estática).
 
 ### 6.12 Notificaciones (toasts)
 
 - **Usados solo para feedback transitorio** (no para confirmaciones de decisión):
   - "Movimiento aprobado" → éxito.
   - "No se pudo guardar: campo obligatorio faltante" → error.
-- Se ubican en la esquina inferior derecha, fondo `--color-gray-800` o el color semántico, texto blanco, radio `--radius-lg`, borde 1px del matiz.
+- Se ubican en la esquina inferior derecha, fondo `--color-gray-800` o el color semántico, texto blanco, radio `--radius-lg`, `--shadow-lg`.
 - Desaparecen solos (5s) o con botón cerrar.
 - **Nunca** sustituyen una página de confirmación (eliminar, anular, aprobar siguen siendo páginas).
 
@@ -636,7 +673,7 @@ Todo encabezado de página sigue la misma estructura:
 
 **Reglas del set:**
 - Todo icono proviene de **Lucide** (`lucide-react`). Es el único set permitido; queda prohibido importar iconos de otros paquetes, SVGs sueltos o iconos custom no derivados de Lucide (§1.1).
-- Estilo **lineal** (stroke), grosor de trazo consistente, sin relleno, sin gradiente, sin sombra. Lucide por defecto cumple con la estética plana.
+- Estilo **lineal** (stroke), grosor de trazo consistente, sin relleno, sin gradiente. Lucide por defecto cumple con la estética del sistema.
 - Tamaño base 16px (`--size-xs`); 20px en controles grandes; 24px máximo solo en estados vacíos/404.
 - El trazo hereda `currentColor`; el color del icono proviene siempre del contexto (token de texto del contenedor).
 - **Semántica estable**: la misma acción usa siempre el mismo icono en toda la aplicación (tabla canónica abajo). No se cambia un icono por capricho visual.
@@ -803,7 +840,7 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 - **Enter**: envío de formularios.
 - **Esc**: en formularios con selector de fecha en línea, lo cierra (sin acciones destructivas).
 - **Atajos** (documentados en la página de configuración/ayuda): `/` enfoca búsqueda global; `N` nueva entidad en listados.
-- Foco visible en **todos** los elementos interactivos (anillo 2px `--color-blue-300`).
+- Foco visible en **todos** los elementos interactivos (`--shadow-focus-ring`).
 
 ### 8.3 Retroalimentación
 
@@ -820,9 +857,10 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 
 ### 8.5 Consistencia de microinteracciones
 
-- Transiciones: solo `background-color`, `border-color`, `color` y `opacity`, con duración corta (`150ms`) y sin easing exóticos.
-- Sin animaciones de entrada/salida de páginas ni de elementos.
-- Sin paralaje, sin micro-animaciones decorativas, sin hover que mueva elementos.
+- Transiciones: `background-color`, `border-color`, `color`, `opacity`, `box-shadow` y `transform` (solo `translateY` de 1–2px), con duración `150–180ms` y easing `cubic-bezier(0.2, 0, 0, 1)` — entrada rápida, salida suave, sin rebote.
+- El único desplazamiento permitido es el de tarjetas/botones interactivos al hacer hover (§6.2, §6.6); ningún otro elemento se mueve.
+- Sin animaciones de entrada/salida de páginas.
+- Sin paralaje, sin partículas, sin easing con rebote ("bounce") ni efectos elásticos.
 
 ---
 
@@ -838,7 +876,7 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 ### 9.2 Reglas de datos mostrados
 
 - Códigos, SKU, números de documento, ids → **mono**.
-- Cantidades → **mono**, alineadas a la derecha, con su UOM abreviada.
+- Cantidades → **mono**, cifras tabulares, alineadas a la derecha, con su UOM abreviada.
 - Fechas → formato `DD MMM YYYY` (ej. `08 ago 2026`) en zona configurada.
 - Estados → badges con ícono + texto; el ícono proviene de la tabla canónica (§6.13).
 - Valores nulos → "—" (guion) en lugar de vacío o "null".
@@ -853,30 +891,33 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 ### 9.4 Prohibiciones
 
 - ❌ `border-radius: 0` ni valores de radio literales fuera de los tokens (§3.4).
-- ❌ `box-shadow`, gradientes, `backdrop-filter`, `filter: blur`.
+- ❌ `box-shadow` fuera de los tokens `--shadow-*` (§3.5); ningún valor literal ni sombra negra pura.
+- ❌ Gradientes en cualquier superficie.
+- ❌ `backdrop-filter`/`filter: blur` en cualquier lugar salvo la barra superior en scroll (§4.2).
 - ❌ Modales, drawers, popovers, confirmaciones flotantes.
 - ❌ Alertas nativas (`alert`, `confirm`, `prompt`).
-- ❌ Textos con `font-family` distinto a los tokens.
-- ❌ Colores fuera de la paleta declarada.
+- ❌ Textos con `font-family` distinto a los tokens (`--font-sans`/`--font-mono`).
+- ❌ Colores fuera de la paleta declarada; uso de `--color-ink-*` o `--color-blue-*` como fondo extenso fuera de sidebar/acento (§3.1).
 - ❌ Elementos "decorativos" sin función (imágenes, ilustraciones, doodles, mascotas).
 - ❌ **Emojis en la UI. Tolerancia cero: ningún carácter emoji en textos, botones, mensajes, estados, placeholders o notificaciones (§1.1).**
 - ❌ **Iconos fuera del set Lucide** (`lucide-react`): ningún SVG suelto, icono de otro paquete, icono custom o de stock (§6.13).
 - ❌ **Iconos con significado inconsistente**: un icono se usa siempre para la misma acción; no se reutiliza con otro sentido (§6.13).
 - ❌ Tono coloquial, emotivo o lúdico en mensajes; sin exclamaciones innecesarias ni chistes (§1.1, §9.1).
-- ❌ Animaciones exóticas, parallax, partículas.
+- ❌ Animaciones exóticas, parallax, partículas, easing con rebote.
 
 ---
 
 ## 10. Accesibilidad
 
-- Contraste: todo texto cumple WCAG AA (mínimo 4.5:1 en texto normal; 3:1 en texto grande y UI).
+- Contraste: todo texto cumple WCAG AA (mínimo 4.5:1 en texto normal; 3:1 en texto grande y UI) — incluyendo texto sobre la superficie oscura del sidebar (`--color-ink-*`).
 - El color nunca es el único canal: estados con ícono + texto.
 - Elementos interactivos con área de 40px mínimo (ya cubierto por `--size-md`).
 - Etiquetas `label` asociadas a cada campo (`for`/`id`).
 - Tablas con `<th scope="col">`, captions donde aporte.
 - Iconos decorativos con `aria-hidden`; iconos informativos con `aria-label`.
-- Rutas y páginas son navegables solo con teclado; el foco es siempre visible.
+- Rutas y páginas son navegables solo con teclado; el foco es siempre visible (`--shadow-focus-ring`).
 - Breadcrumbs y enlaces "skip to content".
+- `prefers-reduced-motion: reduce` desactiva el desplazamiento de hover (§8.5); las transiciones de color permanecen.
 
 ---
 
@@ -884,18 +925,18 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 
 Antes de dar una pantalla por terminada, debe cumplir:
 - [ ] Radio suave en todos los elementos visibles (tokens `--radius-sm/md/lg/xl/full`, nunca 0).
-- [ ] Sin sombras, sin gradientes, sin blur, sin 3D.
-- [ ] Colores solo de la paleta/tokens.
-- [ ] Fuentes solo Open Sans / JetBrains Mono.
-- [ ] Códigos/SKU/cantidades en mono.
+- [ ] Sombras solo de los tokens `--shadow-*`; sin gradientes, sin blur fuera de la barra superior.
+- [ ] Colores solo de la paleta/tokens; `ink` y `signal` usados únicamente en sus roles definidos.
+- [ ] Fuentes solo Geist Sans / Geist Mono (con sus fallbacks declarados).
+- [ ] Códigos/SKU/cantidades en mono con cifras tabulares.
 - [ ] Toda tabla con filtros, orden, búsqueda y paginación.
 - [ ] Todo dato identificable es un enlace a su detalle.
 - [ ] Ver/Crear/Editar/Eliminar en páginas propias, sin modales.
 - [ ] Un solo botón primario por página.
 - [ ] Estados vacíos presentes (sin datos / sin resultados).
 - [ ] Errores bajo los campos y panel de error, sin alertas nativas.
-- [ ] Foco visible en todos los controles.
-- [ ] Contraste AA verificado.
+- [ ] Foco visible en todos los controles (`--shadow-focus-ring`).
+- [ ] Contraste AA verificado, incluyendo sidebar oscuro.
 - [ ] Sin emojis en ningún texto o mensaje (tolerancia cero).
 - [ ] Todos los iconos provienen del set Lucide y usan la semántica canónica (§6.13).
 - [ ] Sin iconos custom, SVG sueltos ni sets mezclados.
@@ -903,4 +944,4 @@ Antes de dar una pantalla por terminada, debe cumplir:
 
 ---
 
-*Fin del DESIGN — Rustock v0.1. Este documento es la única fuente de verdad del aspecto y la experiencia de la interfaz.*
+*Fin del DESIGN — Rustock v0.2 "Ink & Signal". Este documento es la única fuente de verdad del aspecto y la experiencia de la interfaz.*

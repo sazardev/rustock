@@ -29,21 +29,22 @@
   background-color: var(--color-blue-500);
   border-color: transparent;
   color: var(--color-white);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-elevate);
 }
 
 .btn--primary:hover {
   background-color: var(--color-blue-600);
   border-color: transparent;
-}
-
-.btn--primary:active {
-  background-color: var(--color-blue-700);
-  border-color: transparent;
+  box-shadow: var(--shadow-glow-primary);
+  transform: translateY(-1px);
 }
 
 .btn--primary:active {
   background-color: var(--color-blue-700);
   border-color: var(--color-blue-700);
+  box-shadow: var(--shadow-xs);
+  transform: translateY(0);
 }
 
 .btn--secondary {
@@ -64,16 +65,22 @@
   background-color: var(--color-danger-500);
   border-color: transparent;
   color: var(--color-white);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-elevate);
 }
 
 .btn--danger:hover {
   background-color: var(--color-danger-600);
   border-color: transparent;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .btn--danger:active {
   background-color: var(--color-danger-600);
   border-color: transparent;
+  box-shadow: var(--shadow-xs);
+  transform: translateY(0);
 }
 
 .btn--ghost {
@@ -164,6 +171,18 @@
   background-color: var(--color-white);
   border: var(--border-width) solid var(--color-gray-200);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--interactive {
+  cursor: pointer;
+  transition: var(--transition-elevate);
+}
+
+.card--interactive:hover {
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .card__header {
@@ -236,6 +255,7 @@
 
 .field__control:focus {
   border-color: var(--color-blue-500);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .field__control:disabled {
@@ -288,6 +308,7 @@
 .field__control--number {
   font-family: var(--font-mono);
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .field__control--textarea {
@@ -376,6 +397,7 @@
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .table th {
@@ -630,6 +652,7 @@
   color: var(--color-white);
   font-size: var(--text-sm);
   line-height: var(--text-sm--lh);
+  box-shadow: var(--shadow-lg);
 }
 
 .toast--success {
@@ -771,6 +794,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--color-gray-600);
+  font-variant-numeric: tabular-nums;
 }
 
 .filter-bar {

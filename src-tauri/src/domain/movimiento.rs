@@ -188,6 +188,8 @@ pub struct NuevoMovimiento {
     #[serde(default)]
     pub notas: Option<String>,
     pub lineas: Vec<NuevaLinea>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: String,
 }
 

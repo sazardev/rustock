@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 /**
- * DesignGuard — valida que el código fuente respete el DESIGN.md de Rustock.
+ * DesignGuard — valida que el código fuente respete el DESIGN.md de Rustock ("Ink & Signal").
  *
  * Restricciones verificadas:
  *  1. Cero emojis en la UI (fuentes de código).
- *  2. Sin border-radius > 0 en CSS.
- *  3. Sin sombras, gradientes, blur ni backdrop-filter en CSS.
- *  4. Sin ventanas nativas de JS (alert/confirm/prompt) que funcionen como modales.
- *  5. Sin fuentes fuera de Open Sans / JetBrains Mono.
- *  6. Iconos solo desde lucide-react (otros sets de iconos prohibidos).
+ *  2. Sin border-radius fuera de los tokens --radius-sm/md/lg/xl/full.
+ *  3. box-shadow solo con los tokens --shadow-xs/sm/md/lg/focus-ring/glow-primary (o "none").
+ *  4. Sin gradientes en CSS.
+ *  5. Sin filter: blur() en ningún lugar; backdrop-filter: blur() solo permitido en layout.css
+ *     (el cristal de la barra superior al hacer scroll, DESIGN §3.5/§4.2).
+ *  6. Sin ventanas nativas de JS (alert/confirm/prompt) que funcionen como modales.
+ *  7. Sin fuentes fuera de Geist Sans / Geist Mono (y sus fallbacks declarados).
+ *  8. Iconos solo desde lucide-react (otros sets de iconos prohibidos).
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -33,14 +36,41 @@ const FILES = collect(ROOT);
 const EMOJI_RE =
   /[\u{1F300}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{2764}\u{1F004}]/u;
 const RADIUS_RE = /border-radius:\s*([^;]+)/g;
-const SHADOW_RE = /box-shadow\s*:/;
+const SHADOW_RE = /box-shadow:\s*([^;]+)/g;
 const GRADIENT_RE = /(linear|radial|conic)-gradient\s*\(/;
-const BLUR_RE = /(backdrop-filter|filter)\s*:\s*[^;]*blur\s*\(/;
+const FILTER_BLUR_RE = /(?<!backdrop-)filter\s*:\s*[^;]*blur\s*\(/;
+const BACKDROP_BLUR_RE = /backdrop-filter\s*:\s*[^;]*blur\s*\(/;
 const NATIVE_DIALOG_RE = /\b(alert|confirm|prompt)\s*\(/;
 const FONT_RE = /font-family\s*:\s*[^;]+/g;
 const LUCIDE_IMPORT_RE = /from\s+["']lucide-react["']/;
 
-const ALLOWED_FONTS = ["Open Sans", "JetBrains Mono", "system-ui", "Segoe UI", "SFMono-Regular", "Menlo", "Consolas", "monospace", "sans-serif", "-apple-system", "ui-sans-serif", "var(--font-sans)", "var(--font-mono)"];
+const ALLOWED_SHADOWS = [
+  "none",
+  "var(--shadow-xs)",
+  "var(--shadow-sm)",
+  "var(--shadow-md)",
+  "var(--shadow-lg)",
+  "var(--shadow-focus-ring)",
+  "var(--shadow-glow-primary)",
+];
+
+const ALLOWED_FONTS = [
+  "Geist Sans",
+  "Geist Mono",
+  "Inter",
+  "JetBrains Mono",
+  "system-ui",
+  "Segoe UI",
+  "SFMono-Regular",
+  "Menlo",
+  "Consolas",
+  "monospace",
+  "sans-serif",
+  "-apple-system",
+  "ui-sans-serif",
+  "var(--font-sans)",
+  "var(--font-mono)",
+];
 
 const FORBIDDEN_ICON_SETS = [
   "react-icons",
@@ -82,17 +112,26 @@ for (const filePath of FILES) {
         errors.push(`${ctx(lineNo - 1)} — border-radius fuera de tokens: "${value}" (DESIGN §3.4, usar --radius-sm/md/lg/xl/full)`);
       }
     }
-    if (SHADOW_RE.test(content)) {
-      const lineNo = content.slice(0, content.match(SHADOW_RE).index).split("\n").length;
-      errors.push(`${ctx(lineNo - 1)} — box-shadow prohibido (DESIGN §3.5)`);
+    let sm;
+    SHADOW_RE.lastIndex = 0;
+    while ((sm = SHADOW_RE.exec(content)) !== null) {
+      const value = sm[1].trim();
+      const lineNo = content.slice(0, sm.index).split("\n").length;
+      if (!ALLOWED_SHADOWS.includes(value)) {
+        errors.push(`${ctx(lineNo - 1)} — box-shadow fuera de tokens: "${value}" (DESIGN §3.5, usar --shadow-xs/sm/md/lg/focus-ring/glow-primary)`);
+      }
     }
     if (GRADIENT_RE.test(content)) {
       const lineNo = content.slice(0, content.match(GRADIENT_RE).index).split("\n").length;
       errors.push(`${ctx(lineNo - 1)} — gradiente prohibido (DESIGN §2)`);
     }
-    if (BLUR_RE.test(content)) {
-      const lineNo = content.slice(0, content.match(BLUR_RE).index).split("\n").length;
-      errors.push(`${ctx(lineNo - 1)} — blur/backdrop-filter prohibido (DESIGN §2)`);
+    if (FILTER_BLUR_RE.test(content)) {
+      const lineNo = content.slice(0, content.match(FILTER_BLUR_RE).index).split("\n").length;
+      errors.push(`${ctx(lineNo - 1)} — filter: blur prohibido (DESIGN §3.5)`);
+    }
+    if (BACKDROP_BLUR_RE.test(content) && !rel.endsWith("layout.css")) {
+      const lineNo = content.slice(0, content.match(BACKDROP_BLUR_RE).index).split("\n").length;
+      errors.push(`${ctx(lineNo - 1)} — backdrop-filter: blur solo permitido en layout.css (barra superior en scroll, DESIGN §3.5/§4.2)`);
     }
     let fm;
     FONT_RE.lastIndex = 0;

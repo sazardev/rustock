@@ -1,33 +1,42 @@
 :root {
   color-scheme: light;
 
-  --color-blue-50: #eff5ff;
-  --color-blue-100: #dbe8ff;
-  --color-blue-200: #b8d0fe;
-  --color-blue-300: #8fb3fb;
-  --color-blue-400: #6090fa;
-  --color-blue-500: #3b71f6;
-  --color-blue-600: #2c57dd;
-  --color-blue-700: #2246b5;
-  --color-blue-800: #1d3a91;
-  --color-blue-900: #172b6e;
-  --color-blue-950: #0f1d4d;
+  --color-ink-950: #080d1a;
+  --color-ink-900: #0e1526;
+  --color-ink-800: #161e35;
+  --color-ink-700: #212b47;
+  --color-ink-600: #38446b;
+  --color-ink-400: #7986ad;
+  --color-ink-200: #b7c0de;
+  --color-ink-50: #f1f3fc;
 
-  --color-gray-50: #f7f9fc;
-  --color-gray-100: #eef2f8;
-  --color-gray-200: #dfe5ef;
-  --color-gray-300: #c6cfdd;
-  --color-gray-400: #97a3b5;
-  --color-gray-500: #6b768a;
-  --color-gray-600: #49556a;
-  --color-gray-700: #333f54;
-  --color-gray-800: #1d2939;
-  --color-gray-900: #101828;
+  --color-blue-50: #eef1ff;
+  --color-blue-100: #dce3ff;
+  --color-blue-200: #b9c7ff;
+  --color-blue-300: #8fa3ff;
+  --color-blue-400: #6480ff;
+  --color-blue-500: #4c5ff7;
+  --color-blue-600: #3b49de;
+  --color-blue-700: #2e37b0;
+  --color-blue-800: #242c87;
+  --color-blue-900: #1c2266;
+
+  --color-gray-50: #f7f8fb;
+  --color-gray-100: #eef0f6;
+  --color-gray-200: #dfe2ec;
+  --color-gray-300: #c5cad9;
+  --color-gray-400: #9aa2b5;
+  --color-gray-500: #6d7690;
+  --color-gray-600: #4b5570;
+  --color-gray-700: #333c54;
+  --color-gray-800: #1c2338;
+  --color-gray-900: #0f1424;
 
   --color-white: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-muted: #f7f9fc;
-  --color-surface-inverse: #172b6e;
+  --color-surface-muted: #f7f8fb;
+  --color-surface-sunken: #eef0f6;
+  --color-surface-inverse: var(--color-ink-900);
 
   --color-success-500: #16a34a;
   --color-success-600: #128a3e;
@@ -35,20 +44,20 @@
   --color-warning-600: #b45309;
   --color-danger-500: #e11d48;
   --color-danger-600: #be123c;
-  --color-info-500: #3b71f6;
+  --color-info-500: var(--color-blue-500);
 
-  --color-success-bg: #f0fbf4;
-  --color-warning-bg: #fffbeb;
-  --color-danger-bg: #fff1f2;
-  --color-info-bg: #eff5ff;
+  --color-success-bg: #effbf3;
+  --color-warning-bg: #fff8eb;
+  --color-danger-bg: #fff0f2;
+  --color-info-bg: #eef1ff;
 
   --color-success-text: #166534;
   --color-warning-text: #92400e;
   --color-danger-text: #9f1239;
-  --color-info-text: #1d4ed8;
+  --color-info-text: #2e37b0;
 
-  --font-sans: "Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-sans: "Geist Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 
   --text-xs: 0.75rem;
   --text-xs--lh: 1rem;
@@ -88,6 +97,17 @@
   --border-color: var(--color-gray-200);
   --border-color-strong: var(--color-gray-300);
 
+  --shadow-xs: 0 1px 2px rgba(15, 20, 40, 0.04);
+  --shadow-sm:
+    0 1px 3px rgba(15, 20, 40, 0.06), 0 1px 2px rgba(15, 20, 40, 0.04);
+  --shadow-md:
+    0 6px 16px -4px rgba(15, 20, 40, 0.1), 0 2px 4px -2px rgba(15, 20, 40, 0.05);
+  --shadow-lg:
+    0 16px 32px -8px rgba(15, 20, 40, 0.14), 0 4px 8px -4px rgba(15, 20, 40, 0.06);
+  --shadow-focus-ring: 0 0 0 2px var(--color-white), 0 0 0 4px var(--color-blue-300);
+  --shadow-glow-primary:
+    0 0 0 1px rgba(76, 95, 247, 0.16), 0 6px 16px -2px rgba(76, 95, 247, 0.22);
+
   --size-xs: 1.5rem;
   --size-sm: 2rem;
   --size-md: 2.5rem;
@@ -110,8 +130,17 @@
   --z-toast: 300;
 
   --duration-fast: 150ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --transition:
-    background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+    background-color 150ms var(--ease-standard),
+    border-color 150ms var(--ease-standard),
+    color 150ms var(--ease-standard),
+    opacity 150ms var(--ease-standard);
+  --transition-elevate:
+    background-color 150ms var(--ease-standard),
+    border-color 150ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    transform 180ms var(--ease-standard);
 
   --focus-ring-width: 2px;
   --focus-ring-color: var(--color-blue-300);

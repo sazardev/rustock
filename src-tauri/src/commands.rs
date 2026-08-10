@@ -7,14 +7,21 @@ use crate::domain::catalogo::*;
 use crate::domain::inventario::*;
 use crate::domain::movimiento::*;
 use crate::domain::seguridad::*;
+use crate::domain::Listado;
 use crate::error::AppResult;
+use crate::query::{self, ListParams};
 use crate::repo;
+use crate::security::puede;
+use crate::sesion::{SesionActiva, SesionState};
 
-/// Ejecuta un comando de mutación, mide su duración y registra la invocación
-/// en el historial de auditoría (SPEC §4.5, §13). `$usuario` es el id del actor.
-macro_rules! audit_mutacion {
-    ($db:expr, $usuario:expr, $comando:expr, $origen:expr, $cuerpo:expr) => {{
+/// Ejecuta un comando, mide su duración y registra la invocación en el
+/// historial de auditoría (SPEC §4.5, §13) — incluye los intentos denegados
+/// (`SinPermiso`) y sin sesión (`NoAutenticado`), nunca solo los éxitos. El
+/// actor se lee de la sesión activa (nunca de un parámetro del invocador).
+macro_rules! con_auditoria {
+    ($db:expr, $sesion:expr, $comando:expr, $cuerpo:expr) => {{
         let inicio = std::time::Instant::now();
+        let actor = $sesion.actual().map(|s| s.usuario_id);
         let resultado = $cuerpo;
         let duracion_ms = inicio.elapsed().as_millis() as i64;
         let exito = resultado.is_ok();
@@ -22,37 +29,117 @@ macro_rules! audit_mutacion {
             let conn = $db.conn();
             let _ = repo::auditoria::registrar_invocacion(
                 &conn,
-                $usuario,
+                actor.as_deref(),
                 $comando,
                 duracion_ms,
                 exito,
-                $origen,
+                None,
             );
         }
         resultado
     }};
 }
 
-// ============ Almacén ============
+// ============ Autenticación y sesión (SPEC §4.1) ============
 
+/// Verifica credenciales y abre la sesión activa del proceso. Ningún otro
+/// comando acepta un id de usuario del invocador: todos leen el actor de aquí.
 #[tauri::command]
-pub fn listar_almacenes(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Almacen>> {
-    let conn = db.conn();
-    repo::catalogo::listar_almacenes(&conn)
+pub fn login(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    nombre_usuario: String,
+    password: String,
+) -> AppResult<Usuario> {
+    let resultado = {
+        let conn = db.conn();
+        repo::seguridad::verificar_credenciales(&conn, &nombre_usuario, &password)
+    };
+    let duracion_ms = 0;
+    let exito = resultado.is_ok();
+    {
+        let conn = db.conn();
+        let actor = resultado.as_ref().ok().map(|u: &Usuario| u.id.clone());
+        let _ = repo::auditoria::registrar_invocacion(
+            &conn,
+            actor.as_deref(),
+            "login",
+            duracion_ms,
+            exito,
+            None,
+        );
+    }
+    let usuario = resultado?;
+    let rol_codigo = {
+        let conn = db.conn();
+        repo::seguridad::rol_codigo_de_usuario(&conn, &usuario.id)?
+    };
+    sesion.iniciar(SesionActiva {
+        usuario_id: usuario.id.clone(),
+        nombre_usuario: usuario.nombre_usuario.clone(),
+        rol_codigo,
+    });
+    Ok(usuario)
 }
 
 #[tauri::command]
-pub fn crear_almacen(db: State<'_, Arc<DbState>>, nuevo: NuevoAlmacen) -> AppResult<Almacen> {
-    audit_mutacion!(db, nuevo.created_by.as_deref(), "crear_almacen", None, {
+pub fn logout(sesion: State<'_, Arc<SesionState>>) -> AppResult<()> {
+    sesion.cerrar();
+    Ok(())
+}
+
+/// Usuario de la sesión activa, o `None` si nadie ha iniciado sesión.
+#[tauri::command]
+pub fn quien_soy(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Option<Usuario>> {
+    let Some(actual) = sesion.actual() else {
+        return Ok(None);
+    };
+    let conn = db.conn();
+    repo::seguridad::obtener_usuario(&conn, &actual.usuario_id)
+}
+
+// ============ Almacén ============
+
+#[tauri::command]
+pub fn listar_almacenes(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_almacenes", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "almacen", "ver")?;
+        query::listar(&conn, &query::ALMACEN_SCHEMA, &params)
+    })
+}
+
+#[tauri::command]
+pub fn crear_almacen(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoAlmacen,
+) -> AppResult<Almacen> {
+    con_auditoria!(db, sesion, "crear_almacen", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::catalogo::crear_almacen(&conn, &nuevo)
     })
 }
 
 #[tauri::command]
-pub fn obtener_almacen(db: State<'_, Arc<DbState>>, id: String) -> AppResult<Option<Almacen>> {
-    let conn = db.conn();
-    repo::catalogo::obtener_almacen(&conn, &id)
+pub fn obtener_almacen(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Almacen>> {
+    con_auditoria!(db, sesion, "obtener_almacen", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "almacen", "ver")?;
+        repo::catalogo::obtener_almacen(&conn, &id)
+    })
 }
 
 // ============ Zona ============
@@ -60,30 +147,55 @@ pub fn obtener_almacen(db: State<'_, Arc<DbState>>, id: String) -> AppResult<Opt
 #[tauri::command]
 pub fn listar_zonas(
     db: State<'_, Arc<DbState>>,
-    almacen_id: Option<String>,
-) -> AppResult<Vec<Zona>> {
-    let conn = db.conn();
-    repo::catalogo::listar_zonas(&conn, almacen_id.as_deref())
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_zonas", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "zona", "ver")?;
+        query::listar(&conn, &query::ZONA_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_zona(db: State<'_, Arc<DbState>>, nuevo: NuevaZona) -> AppResult<Zona> {
-    let conn = db.conn();
-    repo::catalogo::crear_zona(&conn, &nuevo)
+pub fn crear_zona(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevaZona,
+) -> AppResult<Zona> {
+    con_auditoria!(db, sesion, "crear_zona", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_zona(&conn, &nuevo)
+    })
 }
 
 // ============ Rack ============
 
 #[tauri::command]
-pub fn listar_racks(db: State<'_, Arc<DbState>>, zona_id: Option<String>) -> AppResult<Vec<Rack>> {
-    let conn = db.conn();
-    repo::catalogo::listar_racks(&conn, zona_id.as_deref())
+pub fn listar_racks(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_racks", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "rack", "ver")?;
+        query::listar(&conn, &query::RACK_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_rack(db: State<'_, Arc<DbState>>, nuevo: NuevoRack) -> AppResult<Rack> {
-    let conn = db.conn();
-    repo::catalogo::crear_rack(&conn, &nuevo)
+pub fn crear_rack(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoRack,
+) -> AppResult<Rack> {
+    con_auditoria!(db, sesion, "crear_rack", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_rack(&conn, &nuevo)
+    })
 }
 
 // ============ Sección ============
@@ -91,16 +203,27 @@ pub fn crear_rack(db: State<'_, Arc<DbState>>, nuevo: NuevoRack) -> AppResult<Ra
 #[tauri::command]
 pub fn listar_secciones(
     db: State<'_, Arc<DbState>>,
-    rack_id: Option<String>,
-) -> AppResult<Vec<Seccion>> {
-    let conn = db.conn();
-    repo::catalogo::listar_secciones(&conn, rack_id.as_deref())
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_secciones", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "seccion", "ver")?;
+        query::listar(&conn, &query::SECCION_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_seccion(db: State<'_, Arc<DbState>>, nuevo: NuevaSeccion) -> AppResult<Seccion> {
-    let conn = db.conn();
-    repo::catalogo::crear_seccion(&conn, &nuevo)
+pub fn crear_seccion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevaSeccion,
+) -> AppResult<Seccion> {
+    con_auditoria!(db, sesion, "crear_seccion", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_seccion(&conn, &nuevo)
+    })
 }
 
 // ============ Ubicación ============
@@ -108,30 +231,40 @@ pub fn crear_seccion(db: State<'_, Arc<DbState>>, nuevo: NuevaSeccion) -> AppRes
 #[tauri::command]
 pub fn listar_ubicaciones(
     db: State<'_, Arc<DbState>>,
-    seccion_id: Option<String>,
-    tipo: Option<String>,
-) -> AppResult<Vec<Ubicacion>> {
-    let conn = db.conn();
-    let tipo_enum = tipo
-        .as_deref()
-        .and_then(crate::domain::TipoUbicacion::parse);
-    repo::catalogo::listar_ubicaciones(&conn, seccion_id.as_deref(), tipo_enum)
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_ubicaciones", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "ubicacion", "ver")?;
+        query::listar(&conn, &query::UBICACION_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_ubicacion(db: State<'_, Arc<DbState>>, nuevo: NuevaUbicacion) -> AppResult<Ubicacion> {
-    let conn = db.conn();
-    repo::catalogo::crear_ubicacion(&conn, &nuevo)
+pub fn crear_ubicacion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevaUbicacion,
+) -> AppResult<Ubicacion> {
+    con_auditoria!(db, sesion, "crear_ubicacion", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_ubicacion(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
 pub fn desactivar_ubicacion(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     id: String,
-    by: Option<String>,
 ) -> AppResult<()> {
-    let conn = db.conn();
-    repo::catalogo::desactivar_ubicacion(&conn, &id, by.as_deref())
+    con_auditoria!(db, sesion, "desactivar_ubicacion", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_ubicacion(&conn, &id, Some(&actor))
+    })
 }
 
 // ============ Caja ============
@@ -139,36 +272,68 @@ pub fn desactivar_ubicacion(
 #[tauri::command]
 pub fn listar_cajas(
     db: State<'_, Arc<DbState>>,
-    ubicacion_id: Option<String>,
-) -> AppResult<Vec<Caja>> {
-    let conn = db.conn();
-    repo::catalogo::listar_cajas(&conn, ubicacion_id.as_deref())
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_cajas", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "caja", "ver")?;
+        query::listar(&conn, &query::CAJA_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_caja(db: State<'_, Arc<DbState>>, nuevo: NuevaCaja) -> AppResult<Caja> {
-    let conn = db.conn();
-    repo::catalogo::crear_caja(&conn, &nuevo)
+pub fn crear_caja(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevaCaja,
+) -> AppResult<Caja> {
+    con_auditoria!(db, sesion, "crear_caja", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_caja(&conn, &nuevo)
+    })
 }
 
 // ============ Producto ============
 
 #[tauri::command]
-pub fn listar_productos(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Producto>> {
-    let conn = db.conn();
-    repo::catalogo::listar_productos(&conn)
+pub fn listar_productos(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_productos", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        query::listar(&conn, &query::PRODUCTO_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_producto(db: State<'_, Arc<DbState>>, nuevo: NuevoProducto) -> AppResult<Producto> {
-    let conn = db.conn();
-    repo::catalogo::crear_producto(&conn, &nuevo)
+pub fn crear_producto(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoProducto,
+) -> AppResult<Producto> {
+    con_auditoria!(db, sesion, "crear_producto", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_producto(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
-pub fn obtener_producto(db: State<'_, Arc<DbState>>, id: String) -> AppResult<Option<Producto>> {
-    let conn = db.conn();
-    repo::catalogo::obtener_producto(&conn, &id)
+pub fn obtener_producto(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Producto>> {
+    con_auditoria!(db, sesion, "obtener_producto", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        repo::catalogo::obtener_producto(&conn, &id)
+    })
 }
 
 // ============ Lote ============
@@ -176,101 +341,188 @@ pub fn obtener_producto(db: State<'_, Arc<DbState>>, id: String) -> AppResult<Op
 #[tauri::command]
 pub fn listar_lotes(
     db: State<'_, Arc<DbState>>,
-    producto_id: Option<String>,
-) -> AppResult<Vec<Lote>> {
-    let conn = db.conn();
-    repo::catalogo::listar_lotes(&conn, producto_id.as_deref())
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_lotes", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "lote", "ver")?;
+        query::listar(&conn, &query::LOTE_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_lote(db: State<'_, Arc<DbState>>, nuevo: NuevoLote) -> AppResult<Lote> {
-    let conn = db.conn();
-    repo::catalogo::crear_lote(&conn, &nuevo)
+pub fn crear_lote(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoLote,
+) -> AppResult<Lote> {
+    con_auditoria!(db, sesion, "crear_lote", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_lote(&conn, &nuevo)
+    })
 }
 
 // ============ Proveedor / Cliente ============
 
 #[tauri::command]
-pub fn listar_proveedores(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Proveedor>> {
-    let conn = db.conn();
-    repo::catalogo::listar_proveedores(&conn)
+pub fn listar_proveedores(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_proveedores", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "proveedor", "ver")?;
+        query::listar(&conn, &query::PROVEEDOR_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_proveedor(db: State<'_, Arc<DbState>>, nuevo: NuevoProveedor) -> AppResult<Proveedor> {
-    let conn = db.conn();
-    repo::catalogo::crear_proveedor(&conn, &nuevo)
+pub fn crear_proveedor(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoProveedor,
+) -> AppResult<Proveedor> {
+    con_auditoria!(db, sesion, "crear_proveedor", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_proveedor(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
-pub fn listar_clientes(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Cliente>> {
-    let conn = db.conn();
-    repo::catalogo::listar_clientes(&conn)
+pub fn listar_clientes(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_clientes", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "cliente", "ver")?;
+        query::listar(&conn, &query::CLIENTE_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_cliente(db: State<'_, Arc<DbState>>, nuevo: NuevoCliente) -> AppResult<Cliente> {
-    let conn = db.conn();
-    repo::catalogo::crear_cliente(&conn, &nuevo)
+pub fn crear_cliente(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoCliente,
+) -> AppResult<Cliente> {
+    con_auditoria!(db, sesion, "crear_cliente", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_cliente(&conn, &nuevo)
+    })
 }
 
 // ============ UOM / Categoría ============
 
 #[tauri::command]
-pub fn listar_uoms(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Uom>> {
-    let conn = db.conn();
-    repo::catalogo::listar_uoms(&conn)
+pub fn listar_uoms(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_uoms", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "uom", "ver")?;
+        query::listar(&conn, &query::UOM_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_uom(db: State<'_, Arc<DbState>>, nuevo: NuevaUom) -> AppResult<Uom> {
-    let conn = db.conn();
-    repo::catalogo::crear_uom(&conn, &nuevo)
+pub fn crear_uom(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    nuevo: NuevaUom,
+) -> AppResult<Uom> {
+    con_auditoria!(db, sesion, "crear_uom", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::crear_uom(&conn, &nuevo, &actor)
+    })
 }
 
 #[tauri::command]
-pub fn listar_categorias(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Categoria>> {
-    let conn = db.conn();
-    repo::catalogo::listar_categorias(&conn)
+pub fn listar_categorias(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_categorias", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "categoria", "ver")?;
+        query::listar(&conn, &query::CATEGORIA_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_categoria(db: State<'_, Arc<DbState>>, nuevo: NuevaCategoria) -> AppResult<Categoria> {
-    let conn = db.conn();
-    repo::catalogo::crear_categoria(&conn, &nuevo)
+pub fn crear_categoria(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevaCategoria,
+) -> AppResult<Categoria> {
+    con_auditoria!(db, sesion, "crear_categoria", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_categoria(&conn, &nuevo)
+    })
 }
 
 // ============ Usuarios / Roles ============
 
 #[tauri::command]
-pub fn listar_usuarios(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Usuario>> {
-    let conn = db.conn();
-    repo::seguridad::listar_usuarios(&conn)
+pub fn listar_usuarios(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_usuarios", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "usuario", "ver")?;
+        query::listar(&conn, &query::USUARIO_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn crear_usuario(db: State<'_, Arc<DbState>>, nuevo: NuevoUsuario) -> AppResult<Usuario> {
-    audit_mutacion!(db, nuevo.created_by.as_deref(), "crear_usuario", None, {
+pub fn crear_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoUsuario,
+) -> AppResult<Usuario> {
+    con_auditoria!(db, sesion, "crear_usuario", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::seguridad::crear_usuario(&conn, &nuevo)
     })
 }
 
 #[tauri::command]
-pub fn listar_roles(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Rol>> {
-    let conn = db.conn();
-    repo::seguridad::listar_roles(&conn)
+pub fn listar_roles(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<Rol>> {
+    con_auditoria!(db, sesion, "listar_roles", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "rol", "ver")?;
+        repo::seguridad::listar_roles(&conn)
+    })
 }
 
+/// Crea el primer ADMIN de la instalación (SPEC §4.1). No requiere sesión: es
+/// idempotente y solo actúa si todavía no existe ningún ADMIN.
 #[tauri::command]
 pub fn bootstrap_admin(
     db: State<'_, Arc<DbState>>,
     nombre_usuario: String,
     nombre_completo: String,
-    password_hash: String,
+    password: String,
 ) -> AppResult<()> {
     let conn = db.conn();
-    repo::seguridad::bootstrap_admin(&conn, &nombre_usuario, &nombre_completo, &password_hash)
+    repo::seguridad::bootstrap_admin(&conn, &nombre_usuario, &nombre_completo, &password)
 }
 
 // ============ Movimientos ============
@@ -278,9 +530,11 @@ pub fn bootstrap_admin(
 #[tauri::command]
 pub fn crear_movimiento(
     db: State<'_, Arc<DbState>>,
-    nuevo: NuevoMovimiento,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoMovimiento,
 ) -> AppResult<Movimiento> {
-    audit_mutacion!(db, Some(&nuevo.created_by), "crear_movimiento", None, {
+    con_auditoria!(db, sesion, "crear_movimiento", {
+        nuevo.created_by = sesion.usuario_id()?;
         let conn = db.conn();
         repo::movimiento::crear_movimiento(&conn, &nuevo)
     })
@@ -289,81 +543,112 @@ pub fn crear_movimiento(
 #[tauri::command]
 pub fn enviar_a_aprobacion(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     id: String,
-    by: String,
 ) -> AppResult<Movimiento> {
-    audit_mutacion!(db, Some(&by), "enviar_a_aprobacion", None, {
+    con_auditoria!(db, sesion, "enviar_a_aprobacion", {
+        let actor = sesion.usuario_id()?;
         let conn = db.conn();
-        repo::movimiento::enviar_a_aprobacion(&conn, &id, &by)
+        repo::movimiento::enviar_a_aprobacion(&conn, &id, &actor)
     })
 }
 
 #[tauri::command]
 pub fn aprobar_movimiento(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     id: String,
-    by: String,
 ) -> AppResult<Movimiento> {
-    audit_mutacion!(db, Some(&by), "aprobar_movimiento", None, {
+    con_auditoria!(db, sesion, "aprobar_movimiento", {
+        let actor = sesion.usuario_id()?;
         let conn = db.conn();
-        repo::movimiento::aprobar_movimiento(&conn, &id, &by)
+        repo::movimiento::aprobar_movimiento(&conn, &id, &actor)
     })
 }
 
 #[tauri::command]
 pub fn anular_movimiento(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     id: String,
-    by: String,
 ) -> AppResult<Movimiento> {
-    audit_mutacion!(db, Some(&by), "anular_movimiento", None, {
+    con_auditoria!(db, sesion, "anular_movimiento", {
+        let actor = sesion.usuario_id()?;
         let conn = db.conn();
-        repo::movimiento::anular_movimiento(&conn, &id, &by)
+        repo::movimiento::anular_movimiento(&conn, &id, &actor)
     })
 }
 
 #[tauri::command]
 pub fn listar_movimientos(
     db: State<'_, Arc<DbState>>,
-    tipo: Option<String>,
-    estado: Option<String>,
-) -> AppResult<Vec<Movimiento>> {
-    let conn = db.conn();
-    repo::movimiento::listar_movimientos(&conn, tipo.as_deref(), estado.as_deref())
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_movimientos", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "movimiento", "ver")?;
+        query::listar(&conn, &query::MOVIMIENTO_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
 pub fn obtener_movimiento(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     id: String,
 ) -> AppResult<Option<Movimiento>> {
-    let conn = db.conn();
-    repo::movimiento::obtener_movimiento(&conn, &id)
+    con_auditoria!(db, sesion, "obtener_movimiento", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "movimiento", "ver")?;
+        repo::movimiento::obtener_movimiento(&conn, &id)
+    })
 }
 
 #[tauri::command]
 pub fn listar_lineas_movimiento(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     movimiento_id: String,
-) -> AppResult<Vec<LineaMovimiento>> {
-    let conn = db.conn();
-    repo::movimiento::listar_lineas(&conn, &movimiento_id)
+    mut params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_lineas_movimiento", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "movimiento", "ver")?;
+        let mut filtros = params.filters.take().unwrap_or_default();
+        filtros.push(format!("movimiento_id:eq:{movimiento_id}"));
+        params.filters = Some(filtros);
+        query::listar(&conn, &query::MOVIMIENTO_LINEA_SCHEMA, &params)
+    })
 }
 
+/// Saldos por (ubicación, producto, lote) — se rige por el permiso de
+/// `producto:ver` (SPEC §5.2: el stock es una vista derivada del producto).
 #[tauri::command]
 pub fn listar_saldos(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     ubicacion_id: Option<String>,
     producto_id: Option<String>,
 ) -> AppResult<Vec<Saldo>> {
-    let conn = db.conn();
-    repo::movimiento::listar_saldos(&conn, ubicacion_id.as_deref(), producto_id.as_deref())
+    con_auditoria!(db, sesion, "listar_saldos", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        repo::movimiento::listar_saldos(&conn, ubicacion_id.as_deref(), producto_id.as_deref())
+    })
 }
 
 #[tauri::command]
-pub fn stock_total_producto(db: State<'_, Arc<DbState>>, producto_id: String) -> AppResult<i64> {
-    let conn = db.conn();
-    repo::movimiento::stock_total_producto(&conn, &producto_id)
+pub fn stock_total_producto(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    producto_id: String,
+) -> AppResult<i64> {
+    con_auditoria!(db, sesion, "stock_total_producto", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        repo::movimiento::stock_total_producto(&conn, &producto_id)
+    })
 }
 
 // ============ Inventario físico ============
@@ -371,67 +656,78 @@ pub fn stock_total_producto(db: State<'_, Arc<DbState>>, producto_id: String) ->
 #[tauri::command]
 pub fn crear_sesion_inventario(
     db: State<'_, Arc<DbState>>,
-    nuevo: NuevaSesionInventario,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevaSesionInventario,
 ) -> AppResult<SesionInventario> {
-    audit_mutacion!(
-        db,
-        Some(&nuevo.created_by),
-        "crear_sesion_inventario",
-        None,
-        {
-            let conn = db.conn();
-            repo::inventario::crear_sesion(&conn, &nuevo)
-        }
-    )
+    con_auditoria!(db, sesion, "crear_sesion_inventario", {
+        nuevo.created_by = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::inventario::crear_sesion(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
 pub fn listar_sesiones_inventario(
     db: State<'_, Arc<DbState>>,
-    estado: Option<String>,
-) -> AppResult<Vec<SesionInventario>> {
-    let conn = db.conn();
-    repo::inventario::listar_sesiones(&conn, estado.as_deref())
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_sesiones_inventario", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
+        query::listar(&conn, &query::SESION_INVENTARIO_SCHEMA, &params)
+    })
 }
 
 #[tauri::command]
-pub fn registrar_conteo(db: State<'_, Arc<DbState>>, nuevo: NuevoConteo) -> AppResult<Conteo> {
-    audit_mutacion!(
-        db,
-        Some(&nuevo.usuario_contador_id),
-        "registrar_conteo",
-        None,
-        {
-            let conn = db.conn();
-            repo::inventario::registrar_conteo(&conn, &nuevo)
-        }
-    )
+pub fn registrar_conteo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoConteo,
+) -> AppResult<Conteo> {
+    con_auditoria!(db, sesion, "registrar_conteo", {
+        nuevo.usuario_contador_id = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::inventario::registrar_conteo(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
-pub fn listar_conteos(db: State<'_, Arc<DbState>>, sesion_id: String) -> AppResult<Vec<Conteo>> {
-    let conn = db.conn();
-    repo::inventario::listar_conteos(&conn, &sesion_id)
+pub fn listar_conteos(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    sesion_id: String,
+) -> AppResult<Vec<Conteo>> {
+    con_auditoria!(db, sesion, "listar_conteos", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
+        repo::inventario::listar_conteos(&conn, &sesion_id)
+    })
 }
 
 #[tauri::command]
 pub fn diferencias_sesion(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     sesion_id: String,
 ) -> AppResult<Vec<DiferenciaInventario>> {
-    let conn = db.conn();
-    repo::inventario::diferencias_sesion(&conn, &sesion_id)
+    con_auditoria!(db, sesion, "diferencias_sesion", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
+        repo::inventario::diferencias_sesion(&conn, &sesion_id)
+    })
 }
 
 #[tauri::command]
 pub fn cerrar_sesion_inventario(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     sesion_id: String,
-    by: String,
 ) -> AppResult<Vec<String>> {
-    audit_mutacion!(db, Some(&by), "cerrar_sesion_inventario", None, {
+    con_auditoria!(db, sesion, "cerrar_sesion_inventario", {
+        let actor = sesion.usuario_id()?;
         let conn = db.conn();
-        repo::inventario::cerrar_sesion(&conn, &sesion_id, &by)
+        repo::inventario::cerrar_sesion(&conn, &sesion_id, &actor)
     })
 }
 
@@ -439,6 +735,9 @@ pub fn cerrar_sesion_inventario(
 /// Uso: `.invoke_handler(commands::handler())`
 pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
+        login,
+        logout,
+        quien_soy,
         listar_almacenes,
         crear_almacen,
         obtener_almacen,
@@ -492,10 +791,13 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
 
 // ============ Historial y métricas (SPEC §4.5, §13, §16) ============
 
-/// Lista el historial de actividad del usuario (filtrable).
+/// Lista el historial de actividad del usuario (filtrable). Gateado por el
+/// permiso del reporte de auditoría (SPEC §16.2).
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn listar_historial(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
     usuario_id: Option<String>,
     comando: Option<String>,
     nivel: Option<String>,
@@ -503,23 +805,30 @@ pub fn listar_historial(
     hasta: Option<String>,
     limit: Option<i64>,
 ) -> AppResult<Vec<crate::domain::seguridad::EventoAuditoria>> {
-    let conn = db.conn();
-    repo::auditoria::listar_historial(
-        &conn,
-        usuario_id.as_deref(),
-        comando.as_deref(),
-        nivel.as_deref(),
-        desde.as_deref(),
-        hasta.as_deref(),
-        limit.unwrap_or(100),
-    )
+    con_auditoria!(db, sesion, "listar_historial", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::auditoria::listar_historial(
+            &conn,
+            usuario_id.as_deref(),
+            comando.as_deref(),
+            nivel.as_deref(),
+            desde.as_deref(),
+            hasta.as_deref(),
+            limit.unwrap_or(100),
+        )
+    })
 }
 
 /// Métricas agregadas del historial (conteos, tasas, por comando/día).
 #[tauri::command]
 pub fn metricas_historial(
     db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
 ) -> AppResult<repo::auditoria::MetricasHistorial> {
-    let conn = db.conn();
-    repo::auditoria::metricas_historial(&conn)
+    con_auditoria!(db, sesion, "metricas_historial", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::auditoria::metricas_historial(&conn)
+    })
 }

@@ -36,6 +36,8 @@ pub struct NuevaSesionInventario {
     pub conteo_ciego: bool,
     #[serde(default)]
     pub exige_doble_conteo: bool,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: String,
 }
 
@@ -63,6 +65,8 @@ pub struct NuevoConteo {
     pub lote_id: Option<String>,
     pub cantidad_contada: i64,
     pub conteo_numero: i64,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub usuario_contador_id: String,
     #[serde(default)]
     pub nota: Option<String>,

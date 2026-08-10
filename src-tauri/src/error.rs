@@ -44,6 +44,18 @@ pub enum AppError {
     #[error("Acción no autorizada: se requiere permiso '{0}'")]
     SinPermiso(String),
 
+    #[error("No hay una sesión activa: inicia sesión para continuar")]
+    NoAutenticado,
+
+    #[error("Usuario o contraseña incorrectos")]
+    CredencialesInvalidas,
+
+    #[error("La contraseña debe tener al menos 8 caracteres")]
+    PasswordDebil,
+
+    #[error("El filtro '{0}' no es válido para este recurso")]
+    FiltroInvalido(String),
+
     #[error("La entidad {0} está inactiva y no admite esta operación")]
     EntidadInactiva(&'static str),
 

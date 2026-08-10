@@ -82,6 +82,19 @@
   padding: 0 var(--space-4);
   background-color: var(--color-white);
   border-bottom: var(--border-width) solid var(--color-gray-200);
+  box-shadow: none;
+  transition:
+    background-color 180ms var(--ease-standard),
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard);
+}
+
+/* Cristal sutil al hacer scroll bajo la barra superior — único uso de blur del sistema (DESIGN §3.5) */
+.app-shell__topbar--scrolled .topbar {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom-color: transparent;
+  box-shadow: var(--shadow-xs);
 }
 
 .topbar__brand {
@@ -212,9 +225,9 @@
   gap: var(--space-2);
   height: 100%;
   padding: var(--space-4) var(--space-3);
-  background-color: var(--color-white);
-  border-right: var(--border-width) solid var(--color-gray-200);
-  color: var(--color-gray-600);
+  background-color: var(--color-ink-900);
+  border-right: var(--border-width) solid var(--color-ink-900);
+  color: var(--color-ink-200);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -223,7 +236,16 @@
   display: none;
   align-items: center;
   padding: var(--space-1) var(--space-3) var(--space-3);
-  border-bottom: var(--border-width) solid var(--color-gray-100);
+  border-bottom: var(--border-width) solid var(--color-ink-700);
+}
+
+.sidebar__header .topbar__brand,
+.sidebar__header .topbar__brand:hover {
+  color: var(--color-ink-50);
+}
+
+.sidebar__header .topbar__brand-name {
+  color: var(--color-blue-300);
 }
 
 .sidebar__group {
@@ -243,7 +265,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-gray-400);
+  color: var(--color-ink-400);
 }
 
 .sidebar__item {
@@ -254,19 +276,25 @@
   padding: 0 var(--space-3);
   font-size: var(--text-sm);
   font-weight: var(--fw-medium);
-  color: var(--color-gray-600);
+  color: var(--color-ink-200);
   text-decoration: none;
   border-radius: var(--radius-lg);
-  transition: var(--transition);
+  transition: var(--transition-elevate);
 }
 
 .sidebar__item:hover {
-  background-color: var(--color-blue-50);
-  color: var(--color-blue-700);
+  background-color: var(--color-ink-800);
+  color: var(--color-ink-50);
   text-decoration: none;
 }
 
 .sidebar__item--active {
+  background-color: var(--color-blue-500);
+  color: var(--color-white);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.sidebar__item--active:hover {
   background-color: var(--color-blue-500);
   color: var(--color-white);
 }
@@ -442,7 +470,8 @@
   }
 
   .app-shell__sidebar .sidebar {
-    border-right: var(--border-width) solid var(--color-gray-200);
+    border-right: var(--border-width) solid var(--color-ink-700);
+    box-shadow: var(--shadow-lg);
   }
 
   .sidebar__header {

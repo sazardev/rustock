@@ -31,14 +31,12 @@ pub fn ahora() -> String {
 pub type FechaHora = String;
 
 /// Resultado paginado unificado (SPEC §15.10).
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Paginado<T> {
     pub data: Vec<T>,
     pub meta: PaginadoMeta,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaginadoMeta {
     pub total: i64,
@@ -50,7 +48,6 @@ pub struct PaginadoMeta {
 }
 
 impl<T> Paginado<T> {
-    #[allow(dead_code)]
     pub fn new(data: Vec<T>, total: i64, page: i64, page_size: i64) -> Self {
         let total_pages = if page_size <= 0 {
             1
@@ -70,6 +67,27 @@ impl<T> Paginado<T> {
             },
         }
     }
+}
+
+/// Resultado de agregación unificado (SPEC §15.7, §15.10).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Agregado<T> {
+    pub groups: Vec<T>,
+    pub meta: AgregadoMeta,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgregadoMeta {
+    pub total: i64,
+}
+
+/// Respuesta unificada de un listado universal (SPEC §15.10): filas paginadas
+/// o grupos agregados, según si la consulta pidió `group_by`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum Listado {
+    Filas(Paginado<serde_json::Value>),
+    Grupos(Agregado<serde_json::Value>),
 }
 
 /// Tipo de ubicación (SPEC §3.5).

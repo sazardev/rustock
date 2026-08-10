@@ -6,6 +6,7 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "title">
   actions?: ReactNode;
   muted?: boolean;
   flush?: boolean;
+  interactive?: boolean;
   children: ReactNode;
 }
 
@@ -36,9 +37,21 @@ function CardBody({ flush, className, children, ...rest }: CardBodyProps) {
   );
 }
 
-export function Card({ title, actions, muted, flush, className, children, ...rest }: CardProps) {
+export function Card({
+  title,
+  actions,
+  muted,
+  flush,
+  interactive,
+  className,
+  children,
+  ...rest
+}: CardProps) {
   return (
-    <section className={cn("card", muted && "card--muted", className)} {...rest}>
+    <section
+      className={cn("card", muted && "card--muted", interactive && "card--interactive", className)}
+      {...rest}
+    >
       {title || actions ? <CardHeader title={title} actions={actions} /> : null}
       {flush ? <CardBody flush>{children}</CardBody> : <CardBody>{children}</CardBody>}
     </section>

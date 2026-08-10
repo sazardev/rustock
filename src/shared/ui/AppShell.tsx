@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode, type UIEvent } from "react";
 import { cn } from "../lib/cn";
 
 export interface AppShellProps {
@@ -20,6 +20,12 @@ export function AppShell({
   sidebarCollapsed = false,
   className,
 }: AppShellProps) {
+  const [scrolled, setScrolled] = useState(false);
+
+  function handleContentScroll(event: UIEvent<HTMLElement>) {
+    setScrolled(event.currentTarget.scrollTop > 4);
+  }
+
   return (
     <div
       className={cn(
@@ -29,7 +35,9 @@ export function AppShell({
         className,
       )}
     >
-      <header className="app-shell__topbar">{topbar}</header>
+      <header className={cn("app-shell__topbar", scrolled && "app-shell__topbar--scrolled")}>
+        {topbar}
+      </header>
       <div
         className="app-shell__nav-backdrop"
         onClick={onCloseNav}
@@ -37,7 +45,7 @@ export function AppShell({
         role="presentation"
       />
       <aside className="app-shell__sidebar">{sidebar}</aside>
-      <main className="app-shell__content">
+      <main className="app-shell__content" onScroll={handleContentScroll}>
         <div className="content content__inner">{children}</div>
       </main>
     </div>

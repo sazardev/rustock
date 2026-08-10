@@ -160,6 +160,8 @@ pub struct Usuario {
     pub nombre_usuario: String,
     pub nombre_completo: String,
     pub email: Option<String>,
+    /// Nunca se envía al frontend (SPEC §4.1: solo el backend conoce el hash).
+    #[serde(skip_serializing)]
     pub password_hash: String,
     pub rol_id: String,
     pub activo: bool,
@@ -168,14 +170,19 @@ pub struct Usuario {
     pub auditoria: Auditoria,
 }
 
+/// Datos para crear un usuario. `password` viaja en texto plano por IPC local
+/// (proceso único, sin red) y se hashea en Rust antes de persistir — el
+/// frontend nunca calcula ni ve un hash. `created_by` nunca llega por IPC: lo
+/// resuelve el comando desde la sesión activa (SPEC §4.1).
 #[derive(Debug, Clone, Deserialize)]
 pub struct NuevoUsuario {
     pub nombre_usuario: String,
     pub nombre_completo: String,
     #[serde(default)]
     pub email: Option<String>,
-    pub password_hash: String,
+    pub password: String,
     pub rol_id: String,
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -191,10 +198,8 @@ impl NuevoUsuario {
                 "nombre_completo".into(),
             ));
         }
-        if self.password_hash.is_empty() {
-            return Err(crate::error::AppError::CampoRequerido(
-                "password_hash".into(),
-            ));
+        if self.password.len() < 8 {
+            return Err(crate::error::AppError::PasswordDebil);
         }
         if self.rol_id.trim().is_empty() {
             return Err(crate::error::AppError::CampoRequerido("rol_id".into()));

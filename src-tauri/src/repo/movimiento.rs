@@ -618,26 +618,6 @@ pub fn obtener_movimiento(conn: &Connection, id: &str) -> AppResult<Option<Movim
     rows.next().transpose().map_err(AppError::from)
 }
 
-pub fn listar_movimientos(
-    conn: &Connection,
-    tipo: Option<&str>,
-    estado: Option<&str>,
-) -> AppResult<Vec<Movimiento>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, tipo, sub_tipo, numero, estado, fecha_movimiento, motivo,
-                origen_ubicacion_id, destino_ubicacion_id, proveedor_id, cliente_id, sesion_inventario_id,
-                documento_referencia, notas, movimiento_inverso_id, created_by, created_at,
-                approved_by, approved_at, anulado_by, anulado_at
-         FROM movimientos
-         WHERE (?1 IS NULL OR tipo = ?1) AND (?2 IS NULL OR estado = ?2)
-         ORDER BY fecha_movimiento DESC",
-    )?;
-    let rows = stmt
-        .query_map(rusqlite::params![tipo, estado], map_movimiento)?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
-}
-
 fn map_movimiento(r: &rusqlite::Row<'_>) -> rusqlite::Result<Movimiento> {
     Ok(Movimiento {
         id: r.get(0)?,
@@ -662,30 +642,6 @@ fn map_movimiento(r: &rusqlite::Row<'_>) -> rusqlite::Result<Movimiento> {
         anulado_by: r.get(19)?,
         anulado_at: r.get(20)?,
     })
-}
-
-pub fn listar_lineas(conn: &Connection, movimiento_id: &str) -> AppResult<Vec<LineaMovimiento>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, movimiento_id, producto_id, lote_id, cantidad, origen_ubicacion_id, destino_ubicacion_id,
-                caja_origen_id, caja_destino_id
-         FROM movimiento_lineas WHERE movimiento_id = ?1",
-    )?;
-    let rows = stmt
-        .query_map([movimiento_id], |r| {
-            Ok(LineaMovimiento {
-                id: r.get(0)?,
-                movimiento_id: r.get(1)?,
-                producto_id: r.get(2)?,
-                lote_id: r.get(3)?,
-                cantidad: r.get(4)?,
-                origen_ubicacion_id: r.get(5)?,
-                destino_ubicacion_id: r.get(6)?,
-                caja_origen_id: r.get(7)?,
-                caja_destino_id: r.get(8)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
 }
 
 /// Saldos por (ubicación, producto, lote) — consulta canónica SPEC §5.2.

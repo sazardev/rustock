@@ -2,18 +2,22 @@ mod commands;
 mod db;
 mod domain;
 mod error;
+mod query;
 mod repo;
 mod security;
+mod sesion;
 
 #[cfg(test)]
 mod tests;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tauri::Manager;
 
 use db::DbState;
 use security::seed_roles;
+use sesion::SesionState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -34,6 +38,7 @@ pub fn run() {
                 seed_roles(&conn)?;
             }
             app.manage(db);
+            app.manage(Arc::new(SesionState::default()));
             Ok(())
         })
         .invoke_handler(commands::handler())

@@ -70,33 +70,6 @@ pub fn crear_almacen(conn: &Connection, nuevo: &NuevoAlmacen) -> AppResult<Almac
     Ok(obtener_almacen(conn, &id)?.expect("recién insertado"))
 }
 
-pub fn listar_almacenes(conn: &Connection) -> AppResult<Vec<Almacen>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, descripcion, direccion, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM almacenes ORDER BY codigo",
-    )?;
-    let rows = stmt
-        .query_map([], |r| {
-            Ok(Almacen {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                descripcion: r.get(3)?,
-                direccion: r.get(4)?,
-                activo: r.get::<_, i64>(5)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(6)?,
-                    created_at: r.get(7)?,
-                    updated_by: r.get(8)?,
-                    updated_at: r.get(9)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
-}
-
 pub fn obtener_almacen(conn: &Connection, id: &str) -> AppResult<Option<Almacen>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, descripcion, direccion, activo,
@@ -167,36 +140,17 @@ pub fn crear_zona(conn: &Connection, nuevo: &NuevaZona) -> AppResult<Zona> {
             id, codigo, nuevo.nombre.trim(), nuevo.descripcion, nuevo.almacen_id, ts, ts, nuevo.created_by
         ],
     )?;
-    Ok(obtener_zona(conn, &id)?.expect("recién insertada"))
-}
-
-pub fn listar_zonas(conn: &Connection, almacen_id: Option<&str>) -> AppResult<Vec<Zona>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, descripcion, almacen_id, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM zonas
-         WHERE (?1 IS NULL OR almacen_id = ?1)
-         ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "zona",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([almacen_id], |r| {
-            Ok(Zona {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                descripcion: r.get(3)?,
-                almacen_id: r.get(4)?,
-                activo: r.get::<_, i64>(5)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(6)?,
-                    created_at: r.get(7)?,
-                    updated_by: r.get(8)?,
-                    updated_at: r.get(9)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_zona(conn, &id)?.expect("recién insertada"))
 }
 
 pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
@@ -245,36 +199,17 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
          VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, ?8, ?8)",
         rusqlite::params![id, codigo, nuevo.nombre, nuevo.tipo, nuevo.zona_id, ts, ts, nuevo.created_by],
     )?;
-    Ok(obtener_rack(conn, &id)?.expect("recién insertado"))
-}
-
-pub fn listar_racks(conn: &Connection, zona_id: Option<&str>) -> AppResult<Vec<Rack>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, tipo, zona_id, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM racks
-         WHERE (?1 IS NULL OR zona_id = ?1)
-         ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "rack",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([zona_id], |r| {
-            Ok(Rack {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                tipo: r.get(3)?,
-                zona_id: r.get(4)?,
-                activo: r.get::<_, i64>(5)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(6)?,
-                    created_at: r.get(7)?,
-                    updated_by: r.get(8)?,
-                    updated_at: r.get(9)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_rack(conn, &id)?.expect("recién insertado"))
 }
 
 pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
@@ -325,37 +260,17 @@ pub fn crear_seccion(conn: &Connection, nuevo: &NuevaSeccion) -> AppResult<Secci
             id, codigo, nuevo.nombre, nuevo.nivel, nuevo.rack_id, nuevo.descripcion, ts, ts, nuevo.created_by
         ],
     )?;
-    Ok(obtener_seccion(conn, &id)?.expect("recién insertada"))
-}
-
-pub fn listar_secciones(conn: &Connection, rack_id: Option<&str>) -> AppResult<Vec<Seccion>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, nivel, rack_id, descripcion, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM secciones
-         WHERE (?1 IS NULL OR rack_id = ?1)
-         ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "seccion",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([rack_id], |r| {
-            Ok(Seccion {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                nivel: r.get(3)?,
-                rack_id: r.get(4)?,
-                descripcion: r.get(5)?,
-                activo: r.get::<_, i64>(6)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(7)?,
-                    created_at: r.get(8)?,
-                    updated_by: r.get(9)?,
-                    updated_at: r.get(10)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_seccion(conn, &id)?.expect("recién insertada"))
 }
 
 pub fn obtener_seccion(conn: &Connection, id: &str) -> AppResult<Option<Seccion>> {
@@ -409,42 +324,6 @@ pub fn crear_ubicacion(conn: &Connection, nuevo: &NuevaUbicacion) -> AppResult<U
         ],
     )?;
     Ok(obtener_ubicacion(conn, &id)?.expect("recién insertada"))
-}
-
-pub fn listar_ubicaciones(
-    conn: &Connection,
-    seccion_id: Option<&str>,
-    tipo: Option<TipoUbicacion>,
-) -> AppResult<Vec<Ubicacion>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, seccion_id, tipo, capacidad_maxima, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM ubicaciones
-         WHERE (?1 IS NULL OR seccion_id = ?1)
-           AND (?2 IS NULL OR tipo = ?2)
-         ORDER BY codigo",
-    )?;
-    let tipo_str = tipo.map(|t| t.as_str().to_string());
-    let rows = stmt
-        .query_map(rusqlite::params![seccion_id, tipo_str], |r| {
-            Ok(Ubicacion {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                seccion_id: r.get(3)?,
-                tipo: r.get(4)?,
-                capacidad_maxima: r.get(5)?,
-                activo: r.get::<_, i64>(6)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(7)?,
-                    created_at: r.get(8)?,
-                    updated_by: r.get(9)?,
-                    updated_at: r.get(10)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
 }
 
 pub fn obtener_ubicacion(conn: &Connection, id: &str) -> AppResult<Option<Ubicacion>> {
@@ -515,38 +394,17 @@ pub fn crear_caja(conn: &Connection, nuevo: &NuevaCaja) -> AppResult<Caja> {
             id, codigo, nuevo.nombre, nuevo.ubicacion_id, nuevo.producto_id, nuevo.lote_id, nuevo.etiqueta, ts, ts, nuevo.created_by
         ],
     )?;
-    Ok(obtener_caja(conn, &id)?.expect("recién insertada"))
-}
-
-pub fn listar_cajas(conn: &Connection, ubicacion_id: Option<&str>) -> AppResult<Vec<Caja>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, ubicacion_id, producto_id, lote_id, etiqueta, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM cajas
-         WHERE (?1 IS NULL OR ubicacion_id = ?1)
-         ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "caja",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([ubicacion_id], |r| {
-            Ok(Caja {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                ubicacion_id: r.get(3)?,
-                producto_id: r.get(4)?,
-                lote_id: r.get(5)?,
-                etiqueta: r.get(6)?,
-                activo: r.get::<_, i64>(7)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(8)?,
-                    created_at: r.get(9)?,
-                    updated_by: r.get(10)?,
-                    updated_at: r.get(11)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_caja(conn, &id)?.expect("recién insertada"))
 }
 
 pub fn obtener_caja(conn: &Connection, id: &str) -> AppResult<Option<Caja>> {
@@ -593,33 +451,17 @@ pub fn crear_categoria(conn: &Connection, nuevo: &NuevaCategoria) -> AppResult<C
         rusqlite::params![id, nombre, nuevo.parent_id, nuevo.descripcion, ts, ts, nuevo.created_by],
     )
     .map_err(|_| AppError::CodigoDuplicado(nombre.to_string()))?;
-    Ok(obtener_categoria(conn, &id)?.expect("recién insertada"))
-}
-
-pub fn listar_categorias(conn: &Connection) -> AppResult<Vec<Categoria>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, nombre, parent_id, descripcion, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM categorias ORDER BY nombre",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "categoria",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([], |r| {
-            Ok(Categoria {
-                id: r.get(0)?,
-                nombre: r.get(1)?,
-                parent_id: r.get(2)?,
-                descripcion: r.get(3)?,
-                activo: r.get::<_, i64>(4)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(5)?,
-                    created_at: r.get(6)?,
-                    updated_by: r.get(7)?,
-                    updated_at: r.get(8)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_categoria(conn, &id)?.expect("recién insertada"))
 }
 
 pub fn obtener_categoria(conn: &Connection, id: &str) -> AppResult<Option<Categoria>> {
@@ -648,8 +490,8 @@ pub fn obtener_categoria(conn: &Connection, id: &str) -> AppResult<Option<Catego
 
 // ============ UOM (SPEC §3.9) ============
 
-pub fn crear_uom(conn: &Connection, nuevo: &NuevaUom) -> AppResult<Uom> {
-    puede(conn, None, "uom", "crear")?;
+pub fn crear_uom(conn: &Connection, nuevo: &NuevaUom, actor: &str) -> AppResult<Uom> {
+    puede(conn, Some(actor), "uom", "crear")?;
     let id = Uuid::new_v4().to_string();
     let ts = ahora();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
@@ -668,29 +510,17 @@ pub fn crear_uom(conn: &Connection, nuevo: &NuevaUom) -> AppResult<Uom> {
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado(codigo))?;
-    Ok(obtener_uom(conn, &id)?.expect("recién insertada"))
-}
-
-pub fn listar_uoms(conn: &Connection) -> AppResult<Vec<Uom>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, tipo, factor, base, created_at, updated_at
-         FROM uoms ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "crear",
+        "uom",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([], |r| {
-            Ok(Uom {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                tipo: r.get(3)?,
-                factor: r.get(4)?,
-                base: r.get::<_, i64>(5)? != 0,
-                created_at: r.get(6)?,
-                updated_at: r.get(7)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_uom(conn, &id)?.expect("recién insertada"))
 }
 
 pub fn obtener_uom(conn: &Connection, id: &str) -> AppResult<Option<Uom>> {
@@ -729,36 +559,17 @@ pub fn crear_proveedor(conn: &Connection, nuevo: &NuevoProveedor) -> AppResult<P
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado(codigo))?;
-    Ok(obtener_proveedor(conn, &id)?.expect("recién insertado"))
-}
-
-pub fn listar_proveedores(conn: &Connection) -> AppResult<Vec<Proveedor>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, contacto_nombre, contacto_telefono, contacto_email, direccion, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM proveedores ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "proveedor",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([], |r| {
-            Ok(Proveedor {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                contacto_nombre: r.get(3)?,
-                contacto_telefono: r.get(4)?,
-                contacto_email: r.get(5)?,
-                direccion: r.get(6)?,
-                activo: r.get::<_, i64>(7)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(8)?,
-                    created_at: r.get(9)?,
-                    updated_by: r.get(10)?,
-                    updated_at: r.get(11)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_proveedor(conn, &id)?.expect("recién insertado"))
 }
 
 pub fn obtener_proveedor(conn: &Connection, id: &str) -> AppResult<Option<Proveedor>> {
@@ -804,36 +615,17 @@ pub fn crear_cliente(conn: &Connection, nuevo: &NuevoCliente) -> AppResult<Clien
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado(codigo))?;
-    Ok(obtener_cliente(conn, &id)?.expect("recién insertado"))
-}
-
-pub fn listar_clientes(conn: &Connection) -> AppResult<Vec<Cliente>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, contacto_nombre, contacto_telefono, contacto_email, direccion, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM clientes ORDER BY codigo",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "cliente",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([], |r| {
-            Ok(Cliente {
-                id: r.get(0)?,
-                codigo: r.get(1)?,
-                nombre: r.get(2)?,
-                contacto_nombre: r.get(3)?,
-                contacto_telefono: r.get(4)?,
-                contacto_email: r.get(5)?,
-                direccion: r.get(6)?,
-                activo: r.get::<_, i64>(7)? != 0,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(8)?,
-                    created_at: r.get(9)?,
-                    updated_by: r.get(10)?,
-                    updated_at: r.get(11)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_cliente(conn, &id)?.expect("recién insertado"))
 }
 
 pub fn obtener_cliente(conn: &Connection, id: &str) -> AppResult<Option<Cliente>> {
@@ -895,20 +687,6 @@ pub fn crear_producto(conn: &Connection, nuevo: &NuevoProducto) -> AppResult<Pro
     )
     .map_err(|_| AppError::CodigoDuplicado(sku))?;
     Ok(obtener_producto(conn, &id)?.expect("recién insertado"))
-}
-
-pub fn listar_productos(conn: &Connection) -> AppResult<Vec<Producto>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
-                codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
-                controla_lote, controla_vencimiento, perecedero, activo,
-                created_by, created_at, updated_by, updated_at
-         FROM productos ORDER BY sku",
-    )?;
-    let rows = stmt
-        .query_map([], map_producto)?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
 }
 
 pub fn obtener_producto(conn: &Connection, id: &str) -> AppResult<Option<Producto>> {
@@ -978,37 +756,17 @@ pub fn crear_lote(conn: &Connection, nuevo: &NuevoLote) -> AppResult<Lote> {
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado(numero.to_string()))?;
-    Ok(obtener_lote(conn, &id)?.expect("recién insertado"))
-}
-
-pub fn listar_lotes(conn: &Connection, producto_id: Option<&str>) -> AppResult<Vec<Lote>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, numero, producto_id, fecha_fabricacion, fecha_vencimiento, origen, notas,
-                created_by, created_at, updated_by, updated_at
-         FROM lotes
-         WHERE (?1 IS NULL OR producto_id = ?1)
-         ORDER BY COALESCE(fecha_vencimiento, fecha_fabricacion, created_at)",
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "lote",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
-    let rows = stmt
-        .query_map([producto_id], |r| {
-            Ok(Lote {
-                id: r.get(0)?,
-                numero: r.get(1)?,
-                producto_id: r.get(2)?,
-                fecha_fabricacion: r.get(3)?,
-                fecha_vencimiento: r.get(4)?,
-                origen: r.get(5)?,
-                notas: r.get(6)?,
-                auditoria: crate::domain::Auditoria {
-                    created_by: r.get(7)?,
-                    created_at: r.get(8)?,
-                    updated_by: r.get(9)?,
-                    updated_at: r.get(10)?,
-                },
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+    Ok(obtener_lote(conn, &id)?.expect("recién insertado"))
 }
 
 pub fn obtener_lote(conn: &Connection, id: &str) -> AppResult<Option<Lote>> {

@@ -24,6 +24,8 @@ pub struct NuevoAlmacen {
     pub descripcion: Option<String>,
     #[serde(default)]
     pub direccion: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -65,6 +67,8 @@ pub struct NuevaZona {
     #[serde(default)]
     pub descripcion: Option<String>,
     pub almacen_id: String,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -90,6 +94,8 @@ pub struct NuevoRack {
     #[serde(default)]
     pub tipo: Option<String>,
     pub zona_id: String,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -118,6 +124,8 @@ pub struct NuevaSeccion {
     pub rack_id: String,
     #[serde(default)]
     pub descripcion: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -146,6 +154,8 @@ pub struct NuevaUbicacion {
     pub tipo: Option<String>,
     #[serde(default)]
     pub capacidad_maxima: Option<i64>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -184,6 +194,8 @@ pub struct NuevaCaja {
     pub lote_id: Option<String>,
     #[serde(default)]
     pub etiqueta: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -207,6 +219,8 @@ pub struct NuevaCategoria {
     pub parent_id: Option<String>,
     #[serde(default)]
     pub descripcion: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -267,6 +281,8 @@ pub struct NuevoProveedor {
     pub contacto_email: Option<String>,
     #[serde(default)]
     pub direccion: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -298,6 +314,8 @@ pub struct NuevoCliente {
     pub contacto_email: Option<String>,
     #[serde(default)]
     pub direccion: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -355,6 +373,8 @@ pub struct NuevoProducto {
     pub controla_vencimiento: bool,
     #[serde(default)]
     pub perecedero: bool,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
@@ -410,5 +430,7 @@ pub struct NuevoLote {
     pub origen: Option<String>,
     #[serde(default)]
     pub notas: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
