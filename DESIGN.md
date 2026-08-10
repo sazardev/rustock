@@ -316,19 +316,19 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 └──────────────┴─────────────────────────────────────────────┘
 ```
 
-- **Barra superior**: fija, altura `--size-lg` (48px), fondo `--color-white`, borde inferior `1px --color-gray-200`.
-- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-blue-900`, texto claro. Sin sombra; se separa del contenido solo por contraste de fondo.
+- **Barra superior**: fija, altura `--topbar-height` (56px), fondo `--color-white`, borde inferior `1px --color-gray-200`.
+- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-white` con borde derecho `1px --color-gray-200`. Items redondeados (`--radius-lg`); el activo usa `--color-blue-500` con texto blanco.
 - **Área de contenido**: scroll vertical, padding `--space-6`, ancho máximo `--width-max-content` centrado.
 - La barra superior y la sidebar **no** flotan sobre el contenido: ocupan su propio espacio (nada de overlay ni scroll separado sobre ellas en desktop).
 
 ### 4.2 Barra superior
 
 Contenido (de izquierda a derecha):
-1. **Marca Rustock** (logo cuadrado 24px + palabra en Open Sans semibold). Es un enlace a `/`.
+1. **Marca Rustock** (logo cuadrado redondeado de 32px + palabra en Open Sans bold azul). Es un enlace a `/`.
 2. **Breadcrumbs** del nivel actual (ver §4.5).
-3. **Búsqueda global** (input con borde, mono para resultados) — ver §6.10.
+3. **Búsqueda global** (input píldora con ícono, mono para resultados) — ver §6.10.
 4. **Indicador de alertas activas** (contador, enlace a página de alertas).
-5. **Usuario actual** (nombre + rol, enlace a su página de perfil).
+5. **Usuario actual** (avatar circular + nombre + rol, enlace a su página de perfil).
 
 ### 4.3 Barra lateral de navegación
 
@@ -353,9 +353,10 @@ Contenido (de izquierda a derecha):
   - Configuración
 
 Reglas:
-- El ítem activo se marca con fondo `--color-blue-700` y borde izquierdo de 2px blanco. Sin iconos decorativos que no aporten.
+- El sidebar es **claro** (`--color-white`) con borde derecho sutil y títulos de grupo en `--text-xs` mayúsculas gris.
+- El ítem activo usa `--color-blue-500` con texto blanco y radio `--radius-lg`. Hover: `--color-blue-50` con texto `--color-blue-700`.
 - Cada ítem es un **enlace real** (no un botón).
-- Las secciones colapsables usan encabezado de grupo en `--text-xs` mayúsculas.
+- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda con su propia marca en el encabezado.
 
 ### 4.4 Área de contenido
 

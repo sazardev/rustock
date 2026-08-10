@@ -7,6 +7,7 @@ export interface AppShellProps {
   children: ReactNode;
   navOpen?: boolean;
   onCloseNav?: () => void;
+  sidebarCollapsed?: boolean;
   className?: string;
 }
 
@@ -16,10 +17,18 @@ export function AppShell({
   children,
   navOpen = false,
   onCloseNav,
+  sidebarCollapsed = false,
   className,
 }: AppShellProps) {
   return (
-    <div className={cn("app-shell", navOpen && "app-shell--nav-open", className)}>
+    <div
+      className={cn(
+        "app-shell",
+        navOpen && "app-shell--nav-open",
+        sidebarCollapsed && "app-shell--sidebar-collapsed",
+        className,
+      )}
+    >
       <header className="app-shell__topbar">{topbar}</header>
       <div
         className="app-shell__nav-backdrop"

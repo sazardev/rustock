@@ -29,6 +29,8 @@ import {
   Move,
   Package,
   PackageOpen,
+  PanelLeft,
+  PanelLeftClose,
   Pencil,
   Plus,
   RefreshCw,
@@ -93,6 +95,8 @@ export const ICON_MAP = {
   menu: Menu,
   chevronDown: ChevronDown,
   cerrarPanel: X,
+  panelIzquierdo: PanelLeft,
+  panelIzquierdoCerrar: PanelLeftClose,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;

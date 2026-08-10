@@ -9,7 +9,7 @@ export interface SearchProps extends InputHTMLAttributes<HTMLInputElement> {
 export function Search({ className, ...rest }: SearchProps) {
   return (
     <div className={cn("search", className)}>
-      <Icon name="buscar" size={16} aria-hidden="true" />
+      <Icon name="buscar" size={16} className="icon" aria-hidden="true" />
       <input type="search" className="field__control" {...rest} />
     </div>
   );

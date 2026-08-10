@@ -70,8 +70,8 @@ export type { AppShellProps } from "./AppShell";
 export { Topbar } from "./Topbar";
 export type { TopbarProps } from "./Topbar";
 
-export { Brand, TopbarNavToggle } from "./Brand";
-export type { BrandProps, TopbarNavToggleProps } from "./Brand";
+export { Brand, TopbarNavToggle, TopbarSidebarToggle } from "./Brand";
+export type { BrandProps, TopbarNavToggleProps, TopbarSidebarToggleProps } from "./Brand";
 
 export { AlertsIndicator, TopbarUser, Breadcrumbs, Sidebar, SkipLink } from "./Chrome";
 export type {

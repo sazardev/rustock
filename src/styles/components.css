@@ -889,10 +889,14 @@
 
 .search {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .search .field__control {
+  width: 100%;
   padding-right: var(--space-8);
+  padding-left: var(--space-8);
   border-radius: var(--radius-full);
 }
 
@@ -903,10 +907,6 @@
   transform: translateY(-50%);
   color: var(--color-gray-400);
   pointer-events: none;
-}
-
-.search .field__control {
-  padding-left: var(--space-8);
 }
 
 @media (max-width: 47.99rem) {
