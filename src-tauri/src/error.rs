@@ -56,6 +56,9 @@ pub enum AppError {
     #[error("El filtro '{0}' no es válido para este recurso")]
     FiltroInvalido(String),
 
+    #[error("La caja '{0}' está restringida a otro producto/lote")]
+    CajaRestringida(String),
+
     #[error("La entidad {0} está inactiva y no admite esta operación")]
     EntidadInactiva(&'static str),
 

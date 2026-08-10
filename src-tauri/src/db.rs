@@ -165,11 +165,16 @@ impl DbState {
                 UNIQUE(rack_id, codigo)
             );
 
+            -- Árbol simplificado (SPEC §3.5, §3.13): una ubicación cuelga de
+            -- EXACTAMENTE una sección, rack o zona (nunca más de una, nunca
+            -- ninguna); el CHECK lo hace innegociable también a nivel de dato.
             CREATE TABLE IF NOT EXISTS ubicaciones (
                 id TEXT PRIMARY KEY,
                 codigo TEXT NOT NULL,
                 nombre TEXT,
-                seccion_id TEXT NOT NULL REFERENCES secciones(id),
+                seccion_id TEXT REFERENCES secciones(id),
+                rack_id TEXT REFERENCES racks(id),
+                zona_id TEXT REFERENCES zonas(id),
                 tipo TEXT NOT NULL DEFAULT 'STANDARD',
                 capacidad_maxima INTEGER,
                 activo INTEGER NOT NULL DEFAULT 1,
@@ -177,9 +182,14 @@ impl DbState {
                 updated_at TEXT NOT NULL,
                 created_by TEXT,
                 updated_by TEXT,
-                UNIQUE(seccion_id, codigo)
+                CHECK (
+                    (seccion_id IS NOT NULL) + (rack_id IS NOT NULL) + (zona_id IS NOT NULL) = 1
+                )
             );
             CREATE INDEX IF NOT EXISTS idx_ubicaciones_activo ON ubicaciones(activo);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ubicaciones_codigo_seccion ON ubicaciones(seccion_id, codigo) WHERE seccion_id IS NOT NULL;
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ubicaciones_codigo_rack ON ubicaciones(rack_id, codigo) WHERE rack_id IS NOT NULL;
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ubicaciones_codigo_zona ON ubicaciones(zona_id, codigo) WHERE zona_id IS NOT NULL;
 
             CREATE TABLE IF NOT EXISTS cajas (
                 id TEXT PRIMARY KEY,

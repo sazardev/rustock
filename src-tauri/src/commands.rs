@@ -142,6 +142,33 @@ pub fn obtener_almacen(
     })
 }
 
+#[tauri::command]
+pub fn editar_almacen(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarAlmacen,
+) -> AppResult<Almacen> {
+    con_auditoria!(db, sesion, "editar_almacen", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_almacen(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_almacen(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_almacen", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_almacen(&conn, &id, Some(&actor))
+    })
+}
+
 // ============ Zona ============
 
 #[tauri::command]
@@ -167,6 +194,46 @@ pub fn crear_zona(
         nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::catalogo::crear_zona(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_zona(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Zona>> {
+    con_auditoria!(db, sesion, "obtener_zona", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "zona", "ver")?;
+        repo::catalogo::obtener_zona(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_zona(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarZona,
+) -> AppResult<Zona> {
+    con_auditoria!(db, sesion, "editar_zona", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_zona(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_zona(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_zona", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_zona(&conn, &id, &actor)
     })
 }
 
@@ -198,6 +265,46 @@ pub fn crear_rack(
     })
 }
 
+#[tauri::command]
+pub fn obtener_rack(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Rack>> {
+    con_auditoria!(db, sesion, "obtener_rack", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "rack", "ver")?;
+        repo::catalogo::obtener_rack(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_rack(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarRack,
+) -> AppResult<Rack> {
+    con_auditoria!(db, sesion, "editar_rack", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_rack(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_rack(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_rack", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_rack(&conn, &id, &actor)
+    })
+}
+
 // ============ Sección ============
 
 #[tauri::command]
@@ -226,6 +333,46 @@ pub fn crear_seccion(
     })
 }
 
+#[tauri::command]
+pub fn obtener_seccion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Seccion>> {
+    con_auditoria!(db, sesion, "obtener_seccion", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "seccion", "ver")?;
+        repo::catalogo::obtener_seccion(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_seccion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarSeccion,
+) -> AppResult<Seccion> {
+    con_auditoria!(db, sesion, "editar_seccion", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_seccion(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_seccion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_seccion", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_seccion(&conn, &id, &actor)
+    })
+}
+
 // ============ Ubicación ============
 
 #[tauri::command]
@@ -251,6 +398,33 @@ pub fn crear_ubicacion(
         nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::catalogo::crear_ubicacion(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_ubicacion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Ubicacion>> {
+    con_auditoria!(db, sesion, "obtener_ubicacion", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "ubicacion", "ver")?;
+        repo::catalogo::obtener_ubicacion(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_ubicacion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarUbicacion,
+) -> AppResult<Ubicacion> {
+    con_auditoria!(db, sesion, "editar_ubicacion", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_ubicacion(&conn, &id, &cambios, &actor)
     })
 }
 
@@ -295,6 +469,46 @@ pub fn crear_caja(
     })
 }
 
+#[tauri::command]
+pub fn obtener_caja(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Caja>> {
+    con_auditoria!(db, sesion, "obtener_caja", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "caja", "ver")?;
+        repo::catalogo::obtener_caja(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_caja(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarCaja,
+) -> AppResult<Caja> {
+    con_auditoria!(db, sesion, "editar_caja", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_caja(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_caja(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_caja", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_caja(&conn, &id, &actor)
+    })
+}
+
 // ============ Producto ============
 
 #[tauri::command]
@@ -336,6 +550,48 @@ pub fn obtener_producto(
     })
 }
 
+#[tauri::command]
+pub fn editar_producto(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarProducto,
+) -> AppResult<Producto> {
+    con_auditoria!(db, sesion, "editar_producto", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_producto(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_producto(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_producto", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_producto(&conn, &id, &actor)
+    })
+}
+
+/// Resuelve un producto por código de barras exacto (SPEC §14.3). El escaneo
+/// nunca crea datos: si no hay coincidencia, `None` para sugerir búsqueda manual.
+#[tauri::command]
+pub fn buscar_producto_por_codigo_barras(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    codigo_barras: String,
+) -> AppResult<Option<Producto>> {
+    con_auditoria!(db, sesion, "buscar_producto_por_codigo_barras", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        repo::catalogo::buscar_producto_por_codigo_barras(&conn, &codigo_barras)
+    })
+}
+
 // ============ Lote ============
 
 #[tauri::command]
@@ -361,6 +617,33 @@ pub fn crear_lote(
         nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::catalogo::crear_lote(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_lote(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Lote>> {
+    con_auditoria!(db, sesion, "obtener_lote", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "lote", "ver")?;
+        repo::catalogo::obtener_lote(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_lote(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarLote,
+) -> AppResult<Lote> {
+    con_auditoria!(db, sesion, "editar_lote", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_lote(&conn, &id, &cambios, &actor)
     })
 }
 
@@ -393,6 +676,46 @@ pub fn crear_proveedor(
 }
 
 #[tauri::command]
+pub fn obtener_proveedor(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Proveedor>> {
+    con_auditoria!(db, sesion, "obtener_proveedor", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "proveedor", "ver")?;
+        repo::catalogo::obtener_proveedor(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_proveedor(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarProveedor,
+) -> AppResult<Proveedor> {
+    con_auditoria!(db, sesion, "editar_proveedor", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_proveedor(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_proveedor(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_proveedor", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_proveedor(&conn, &id, &actor)
+    })
+}
+
+#[tauri::command]
 pub fn listar_clientes(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -415,6 +738,46 @@ pub fn crear_cliente(
         nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::catalogo::crear_cliente(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_cliente(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Cliente>> {
+    con_auditoria!(db, sesion, "obtener_cliente", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "cliente", "ver")?;
+        repo::catalogo::obtener_cliente(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_cliente(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarCliente,
+) -> AppResult<Cliente> {
+    con_auditoria!(db, sesion, "editar_cliente", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_cliente(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_cliente(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_cliente", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_cliente(&conn, &id, &actor)
     })
 }
 
@@ -469,6 +832,46 @@ pub fn crear_categoria(
         nuevo.created_by = Some(sesion.usuario_id()?);
         let conn = db.conn();
         repo::catalogo::crear_categoria(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_categoria(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Categoria>> {
+    con_auditoria!(db, sesion, "obtener_categoria", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "categoria", "ver")?;
+        repo::catalogo::obtener_categoria(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_categoria(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarCategoria,
+) -> AppResult<Categoria> {
+    con_auditoria!(db, sesion, "editar_categoria", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_categoria(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_categoria(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_categoria", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_categoria(&conn, &id, &actor)
     })
 }
 
@@ -741,30 +1144,60 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         listar_almacenes,
         crear_almacen,
         obtener_almacen,
+        editar_almacen,
+        desactivar_almacen,
         listar_zonas,
         crear_zona,
+        obtener_zona,
+        editar_zona,
+        desactivar_zona,
         listar_racks,
         crear_rack,
+        obtener_rack,
+        editar_rack,
+        desactivar_rack,
         listar_secciones,
         crear_seccion,
+        obtener_seccion,
+        editar_seccion,
+        desactivar_seccion,
         listar_ubicaciones,
         crear_ubicacion,
+        obtener_ubicacion,
+        editar_ubicacion,
         desactivar_ubicacion,
         listar_cajas,
         crear_caja,
+        obtener_caja,
+        editar_caja,
+        desactivar_caja,
         listar_productos,
         crear_producto,
         obtener_producto,
+        editar_producto,
+        desactivar_producto,
+        buscar_producto_por_codigo_barras,
         listar_lotes,
         crear_lote,
+        obtener_lote,
+        editar_lote,
         listar_proveedores,
         crear_proveedor,
+        obtener_proveedor,
+        editar_proveedor,
+        desactivar_proveedor,
         listar_clientes,
         crear_cliente,
+        obtener_cliente,
+        editar_cliente,
+        desactivar_cliente,
         listar_uoms,
         crear_uom,
         listar_categorias,
         crear_categoria,
+        obtener_categoria,
+        editar_categoria,
+        desactivar_categoria,
         listar_usuarios,
         crear_usuario,
         listar_roles,

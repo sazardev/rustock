@@ -46,6 +46,16 @@ impl NuevoAlmacen {
     }
 }
 
+/// Edición de un almacén. El `codigo` no es editable por este camino (se
+/// trata como estable una vez creado, igual que el `sku` de producto);
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarAlmacen {
+    pub nombre: Option<String>,
+    pub descripcion: Option<String>,
+    pub direccion: Option<String>,
+}
+
 // ============ Zona (SPEC §3.2) ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +80,13 @@ pub struct NuevaZona {
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
+}
+
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarZona {
+    pub nombre: Option<String>,
+    pub descripcion: Option<String>,
 }
 
 // ============ Rack (SPEC §3.3) ============
@@ -97,6 +114,13 @@ pub struct NuevoRack {
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
+}
+
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarRack {
+    pub nombre: Option<String>,
+    pub tipo: Option<String>,
 }
 
 // ============ Sección (SPEC §3.4) ============
@@ -129,14 +153,27 @@ pub struct NuevaSeccion {
     pub created_by: Option<String>,
 }
 
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarSeccion {
+    pub nombre: Option<String>,
+    pub nivel: Option<String>,
+    pub descripcion: Option<String>,
+}
+
 // ============ Ubicación (SPEC §3.5) ============
 
+/// El árbol físico admite simplificación (SPEC §3.13): una ubicación cuelga
+/// de **exactamente una** sección, rack o zona (nunca más de una, nunca
+/// ninguna). `almacen_id` se resuelve por transitividad, nunca se declara.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ubicacion {
     pub id: String,
     pub codigo: String,
     pub nombre: Option<String>,
-    pub seccion_id: String,
+    pub seccion_id: Option<String>,
+    pub rack_id: Option<String>,
+    pub zona_id: Option<String>,
     pub tipo: String,
     pub capacidad_maxima: Option<i64>,
     pub activo: bool,
@@ -149,7 +186,12 @@ pub struct NuevaUbicacion {
     pub codigo: String,
     #[serde(default)]
     pub nombre: Option<String>,
-    pub seccion_id: String,
+    #[serde(default)]
+    pub seccion_id: Option<String>,
+    #[serde(default)]
+    pub rack_id: Option<String>,
+    #[serde(default)]
+    pub zona_id: Option<String>,
     #[serde(default)]
     pub tipo: Option<String>,
     #[serde(default)]
@@ -164,6 +206,30 @@ impl NuevaUbicacion {
         let s = self.tipo.as_deref().unwrap_or("STANDARD");
         TipoUbicacion::parse(s).ok_or_else(|| crate::error::AppError::CampoRequerido("tipo".into()))
     }
+
+    /// Exactamente uno de `seccion_id`/`rack_id`/`zona_id` debe estar
+    /// presente (SPEC §3.5, §3.13: árbol simplificado, nunca ambiguo).
+    pub fn validar_padre(&self) -> Result<(), crate::error::AppError> {
+        let presentes = [&self.seccion_id, &self.rack_id, &self.zona_id]
+            .iter()
+            .filter(|v| v.is_some())
+            .count();
+        if presentes != 1 {
+            return Err(crate::error::AppError::CampoRequerido(
+                "seccion_id, rack_id o zona_id (exactamente uno)".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// `None` en un campo significa "no tocar". El padre (sección/rack/zona) y el
+/// `codigo` no se editan por este camino.
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarUbicacion {
+    pub nombre: Option<String>,
+    pub tipo: Option<String>,
+    pub capacidad_maxima: Option<i64>,
 }
 
 // ============ Caja (SPEC §3.6) ============
@@ -199,6 +265,15 @@ pub struct NuevaCaja {
     pub created_by: Option<String>,
 }
 
+/// `None` en un campo significa "no tocar". La restricción de
+/// producto/lote no se reasigna por este camino (crea ambigüedad con stock
+/// ya guardado); se recrea la caja si hace falta cambiarla.
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarCaja {
+    pub nombre: Option<String>,
+    pub etiqueta: Option<String>,
+}
+
 // ============ Categoría (SPEC §3.8) ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -222,6 +297,16 @@ pub struct NuevaCategoria {
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
+}
+
+/// `None` en un campo significa "no tocar". Cambiar `parent_id` re-valida
+/// que no se forme un ciclo (SPEC §3.8).
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarCategoria {
+    pub nombre: Option<String>,
+    pub descripcion: Option<String>,
+    #[serde(default)]
+    pub parent_id: Option<Option<String>>,
 }
 
 // ============ UOM (SPEC §3.9) ============
@@ -286,6 +371,16 @@ pub struct NuevoProveedor {
     pub created_by: Option<String>,
 }
 
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarProveedor {
+    pub nombre: Option<String>,
+    pub contacto_nombre: Option<String>,
+    pub contacto_telefono: Option<String>,
+    pub contacto_email: Option<String>,
+    pub direccion: Option<String>,
+}
+
 // ============ Cliente (SPEC §3.11) ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -317,6 +412,16 @@ pub struct NuevoCliente {
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
+}
+
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarCliente {
+    pub nombre: Option<String>,
+    pub contacto_nombre: Option<String>,
+    pub contacto_telefono: Option<String>,
+    pub contacto_email: Option<String>,
+    pub direccion: Option<String>,
 }
 
 // ============ Producto / SKU (SPEC §3.7) ============
@@ -403,6 +508,26 @@ impl NuevoProducto {
     }
 }
 
+/// Edición de un producto. El `sku` **no** es editable por este camino (SPEC
+/// §3.7: "único e inmutable una vez creado"). `None` en un campo significa
+/// "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarProducto {
+    pub nombre: Option<String>,
+    pub descripcion: Option<String>,
+    pub categoria_id: Option<String>,
+    pub uom_venta_id: Option<String>,
+    pub uom_compra_id: Option<String>,
+    pub codigo_barras: Option<String>,
+    pub peso_unitario: Option<f64>,
+    pub volumen_unitario: Option<f64>,
+    pub stock_minimo: Option<i64>,
+    pub stock_maximo: Option<i64>,
+    pub controla_lote: Option<bool>,
+    pub controla_vencimiento: Option<bool>,
+    pub perecedero: Option<bool>,
+}
+
 // ============ Lote (SPEC §3.12) ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -433,4 +558,14 @@ pub struct NuevoLote {
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
+}
+
+/// Edición de un lote. `numero`/`producto_id` no son editables por este
+/// camino (definen la identidad del lote). `None` significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarLote {
+    pub fecha_fabricacion: Option<String>,
+    pub fecha_vencimiento: Option<String>,
+    pub origen: Option<String>,
+    pub notas: Option<String>,
 }

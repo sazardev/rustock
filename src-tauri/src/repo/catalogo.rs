@@ -95,8 +95,37 @@ pub fn obtener_almacen(conn: &Connection, id: &str) -> AppResult<Option<Almacen>
     rows.next().transpose().map_err(AppError::from)
 }
 
+pub fn editar_almacen(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarAlmacen,
+    actor: &str,
+) -> AppResult<Almacen> {
+    puede(conn, Some(actor), "almacen", "editar")?;
+    let actual = obtener_almacen(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("almacén", id.to_string()))?;
+    let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
+    let descripcion = cambios.descripcion.clone().or(actual.descripcion);
+    let direccion = cambios.direccion.clone().or(actual.direccion);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE almacenes SET nombre = ?2, descripcion = ?3, direccion = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
+        rusqlite::params![id, nombre, descripcion, direccion, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "almacen",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_almacen(conn, id)?.expect("existe"))
+}
+
 /// Borrado lógico (SPEC §14.5). Un almacén inactivo no admite movimientos.
-#[allow(dead_code)]
 pub fn desactivar_almacen(conn: &Connection, id: &str, by: Option<&str>) -> AppResult<()> {
     puede(conn, by, "almacen", "desactivar")?;
     let ts = ahora();
@@ -178,6 +207,70 @@ pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
     rows.next().transpose().map_err(AppError::from)
 }
 
+pub fn editar_zona(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarZona,
+    actor: &str,
+) -> AppResult<Zona> {
+    puede(conn, Some(actor), "zona", "editar")?;
+    let actual =
+        obtener_zona(conn, id)?.ok_or_else(|| AppError::NoEncontrado("zona", id.to_string()))?;
+    let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
+    let descripcion = cambios.descripcion.clone().or(actual.descripcion);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE zonas SET nombre = ?2, descripcion = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?1",
+        rusqlite::params![id, nombre, descripcion, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "zona",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_zona(conn, id)?.expect("existe"))
+}
+
+/// No se desactiva una zona con stock vigente en cualquiera de sus
+/// ubicaciones descendientes (directas o vía rack/sección), en la misma
+/// línea que la regla de ubicación (SPEC §3.5, §14.1).
+pub fn desactivar_zona(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "zona", "desactivar")?;
+    let saldo: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(s.cantidad), 0) FROM saldos s
+         JOIN ubicaciones u ON u.id = s.ubicacion_id
+         WHERE u.zona_id = ?1
+            OR u.rack_id IN (SELECT id FROM racks WHERE zona_id = ?1)
+            OR u.seccion_id IN (SELECT id FROM secciones WHERE rack_id IN (SELECT id FROM racks WHERE zona_id = ?1))",
+        [id],
+        |r| r.get(0),
+    )?;
+    if saldo > 0 {
+        return Err(AppError::DesactivarConSaldo("zona"));
+    }
+    let ts = ahora();
+    conn.execute(
+        "UPDATE zonas SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "zona",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
+}
+
 // ============ Rack (SPEC §3.3) ============
 
 pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
@@ -235,6 +328,68 @@ pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+pub fn editar_rack(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarRack,
+    actor: &str,
+) -> AppResult<Rack> {
+    puede(conn, Some(actor), "rack", "editar")?;
+    let actual =
+        obtener_rack(conn, id)?.ok_or_else(|| AppError::NoEncontrado("rack", id.to_string()))?;
+    let nombre = cambios.nombre.clone().or(actual.nombre);
+    let tipo = cambios.tipo.clone().or(actual.tipo);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE racks SET nombre = ?2, tipo = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?1",
+        rusqlite::params![id, nombre, tipo, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "rack",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_rack(conn, id)?.expect("existe"))
+}
+
+/// No se desactiva un rack con stock vigente en sus ubicaciones descendientes
+/// (directas o vía sección).
+pub fn desactivar_rack(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "rack", "desactivar")?;
+    let saldo: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(s.cantidad), 0) FROM saldos s
+         JOIN ubicaciones u ON u.id = s.ubicacion_id
+         WHERE u.rack_id = ?1
+            OR u.seccion_id IN (SELECT id FROM secciones WHERE rack_id = ?1)",
+        [id],
+        |r| r.get(0),
+    )?;
+    if saldo > 0 {
+        return Err(AppError::DesactivarConSaldo("rack"));
+    }
+    let ts = ahora();
+    conn.execute(
+        "UPDATE racks SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "rack",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
 }
 
 // ============ Sección (SPEC §3.4) ============
@@ -299,57 +454,205 @@ pub fn obtener_seccion(conn: &Connection, id: &str) -> AppResult<Option<Seccion>
     rows.next().transpose().map_err(AppError::from)
 }
 
+pub fn editar_seccion(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarSeccion,
+    actor: &str,
+) -> AppResult<Seccion> {
+    puede(conn, Some(actor), "seccion", "editar")?;
+    let actual = obtener_seccion(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("sección", id.to_string()))?;
+    let nombre = cambios.nombre.clone().or(actual.nombre);
+    let nivel = cambios.nivel.clone().or(actual.nivel);
+    let descripcion = cambios.descripcion.clone().or(actual.descripcion);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE secciones SET nombre = ?2, nivel = ?3, descripcion = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
+        rusqlite::params![id, nombre, nivel, descripcion, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "seccion",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_seccion(conn, id)?.expect("existe"))
+}
+
+/// No se desactiva una sección con stock vigente en sus ubicaciones.
+pub fn desactivar_seccion(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "seccion", "desactivar")?;
+    let saldo: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(s.cantidad), 0) FROM saldos s
+         JOIN ubicaciones u ON u.id = s.ubicacion_id
+         WHERE u.seccion_id = ?1",
+        [id],
+        |r| r.get(0),
+    )?;
+    if saldo > 0 {
+        return Err(AppError::DesactivarConSaldo("sección"));
+    }
+    let ts = ahora();
+    conn.execute(
+        "UPDATE secciones SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "seccion",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
+}
+
 // ============ Ubicación (SPEC §3.5) ============
 
 pub fn crear_ubicacion(conn: &Connection, nuevo: &NuevaUbicacion) -> AppResult<Ubicacion> {
     puede(conn, nuevo.created_by.as_deref(), "ubicacion", "crear")?;
-    verificar_activo(conn, "secciones", &nuevo.seccion_id, "sección")?;
+    nuevo.validar_padre()?;
+    let (columna_padre, id_padre, tabla_padre, etiqueta_padre) =
+        match (&nuevo.seccion_id, &nuevo.rack_id, &nuevo.zona_id) {
+            (Some(s), _, _) => ("seccion_id", s, "secciones", "sección"),
+            (_, Some(r), _) => ("rack_id", r, "racks", "rack"),
+            (_, _, Some(z)) => ("zona_id", z, "zonas", "zona"),
+            _ => unreachable!("validar_padre ya garantizó exactamente un padre"),
+        };
+    verificar_activo(conn, tabla_padre, id_padre, etiqueta_padre)?;
     let id = Uuid::new_v4().to_string();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let tipo = nuevo.tipo()?.as_str().to_string();
     let ts = ahora();
     let existe: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM ubicaciones WHERE seccion_id = ?1 AND codigo = ?2",
-        rusqlite::params![nuevo.seccion_id, codigo],
+        &format!("SELECT COUNT(*) FROM ubicaciones WHERE {columna_padre} = ?1 AND codigo = ?2"),
+        rusqlite::params![id_padre, codigo],
         |r| r.get(0),
     )?;
     if existe > 0 {
         return Err(AppError::CodigoDuplicado(codigo));
     }
     conn.execute(
-        "INSERT INTO ubicaciones (id, codigo, nombre, seccion_id, tipo, capacidad_maxima, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8, ?9, ?9)",
+        "INSERT INTO ubicaciones (id, codigo, nombre, seccion_id, rack_id, zona_id, tipo, capacidad_maxima, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, ?10, ?11, ?11)",
         rusqlite::params![
-            id, codigo, nuevo.nombre, nuevo.seccion_id, tipo, nuevo.capacidad_maxima, ts, ts, nuevo.created_by
+            id, codigo, nuevo.nombre, nuevo.seccion_id, nuevo.rack_id, nuevo.zona_id, tipo,
+            nuevo.capacidad_maxima, ts, ts, nuevo.created_by
         ],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "ubicacion",
+        Some(&id),
+        None,
+        None,
+        None,
     )?;
     Ok(obtener_ubicacion(conn, &id)?.expect("recién insertada"))
 }
 
 pub fn obtener_ubicacion(conn: &Connection, id: &str) -> AppResult<Option<Ubicacion>> {
     let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, seccion_id, tipo, capacidad_maxima, activo,
+        "SELECT id, codigo, nombre, seccion_id, rack_id, zona_id, tipo, capacidad_maxima, activo,
                 created_by, created_at, updated_by, updated_at
          FROM ubicaciones WHERE id = ?1",
     )?;
-    let mut rows = stmt.query_map([id], |r| {
-        Ok(Ubicacion {
-            id: r.get(0)?,
-            codigo: r.get(1)?,
-            nombre: r.get(2)?,
-            seccion_id: r.get(3)?,
-            tipo: r.get(4)?,
-            capacidad_maxima: r.get(5)?,
-            activo: r.get::<_, i64>(6)? != 0,
-            auditoria: crate::domain::Auditoria {
-                created_by: r.get(7)?,
-                created_at: r.get(8)?,
-                updated_by: r.get(9)?,
-                updated_at: r.get(10)?,
-            },
-        })
-    })?;
+    let mut rows = stmt.query_map([id], map_ubicacion)?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+fn map_ubicacion(r: &rusqlite::Row<'_>) -> rusqlite::Result<Ubicacion> {
+    Ok(Ubicacion {
+        id: r.get(0)?,
+        codigo: r.get(1)?,
+        nombre: r.get(2)?,
+        seccion_id: r.get(3)?,
+        rack_id: r.get(4)?,
+        zona_id: r.get(5)?,
+        tipo: r.get(6)?,
+        capacidad_maxima: r.get(7)?,
+        activo: r.get::<_, i64>(8)? != 0,
+        auditoria: crate::domain::Auditoria {
+            created_by: r.get(9)?,
+            created_at: r.get(10)?,
+            updated_by: r.get(11)?,
+            updated_at: r.get(12)?,
+        },
+    })
+}
+
+/// Resuelve el `almacen_id` de una ubicación por transitividad (SPEC §3.13),
+/// caminando por el ancestro que corresponda según su árbol simplificado.
+#[allow(dead_code)] // usado por el traslado inter-almacén (Fase D)
+pub fn resolver_almacen_id_de_ubicacion(
+    conn: &Connection,
+    ubicacion_id: &str,
+) -> AppResult<String> {
+    conn.query_row(
+        "SELECT COALESCE(
+            (SELECT za.almacen_id FROM ubicaciones u
+                JOIN secciones se ON se.id = u.seccion_id
+                JOIN racks ra ON ra.id = se.rack_id
+                JOIN zonas za ON za.id = ra.zona_id
+             WHERE u.id = ?1),
+            (SELECT za.almacen_id FROM ubicaciones u
+                JOIN racks ra ON ra.id = u.rack_id
+                JOIN zonas za ON za.id = ra.zona_id
+             WHERE u.id = ?1),
+            (SELECT za.almacen_id FROM ubicaciones u
+                JOIN zonas za ON za.id = u.zona_id
+             WHERE u.id = ?1)
+        )",
+        [ubicacion_id],
+        |r| r.get(0),
+    )
+    .map_err(|_| AppError::NoEncontrado("ubicación", ubicacion_id.to_string()))
+}
+
+pub fn editar_ubicacion(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarUbicacion,
+    actor: &str,
+) -> AppResult<Ubicacion> {
+    puede(conn, Some(actor), "ubicacion", "editar")?;
+    let actual = obtener_ubicacion(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("ubicación", id.to_string()))?;
+    let tipo = match &cambios.tipo {
+        Some(t) => TipoUbicacion::parse(t)
+            .ok_or_else(|| AppError::CampoRequerido("tipo".into()))?
+            .as_str()
+            .to_string(),
+        None => actual.tipo,
+    };
+    let nombre = cambios.nombre.clone().or(actual.nombre);
+    let capacidad_maxima = cambios.capacidad_maxima.or(actual.capacidad_maxima);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE ubicaciones SET nombre = ?2, tipo = ?3, capacidad_maxima = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
+        rusqlite::params![id, nombre, tipo, capacidad_maxima, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "ubicacion",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_ubicacion(conn, id)?.expect("existe"))
 }
 
 /// Regla SPEC §3.5: no desactivar ubicación con saldo > 0.
@@ -367,6 +670,16 @@ pub fn desactivar_ubicacion(conn: &Connection, id: &str, by: Option<&str>) -> Ap
     conn.execute(
         "UPDATE ubicaciones SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
         rusqlite::params![id, ts, by],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        by,
+        "desactivar",
+        "ubicacion",
+        Some(id),
+        None,
+        None,
+        None,
     )?;
     Ok(())
 }
@@ -434,6 +747,55 @@ pub fn obtener_caja(conn: &Connection, id: &str) -> AppResult<Option<Caja>> {
     rows.next().transpose().map_err(AppError::from)
 }
 
+pub fn editar_caja(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarCaja,
+    actor: &str,
+) -> AppResult<Caja> {
+    puede(conn, Some(actor), "caja", "editar")?;
+    let actual =
+        obtener_caja(conn, id)?.ok_or_else(|| AppError::NoEncontrado("caja", id.to_string()))?;
+    let nombre = cambios.nombre.clone().or(actual.nombre);
+    let etiqueta = cambios.etiqueta.clone().or(actual.etiqueta);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE cajas SET nombre = ?2, etiqueta = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?1",
+        rusqlite::params![id, nombre, etiqueta, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "caja",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_caja(conn, id)?.expect("existe"))
+}
+
+pub fn desactivar_caja(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "caja", "desactivar")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE cajas SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "caja",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
+}
+
 // ============ Categoría (SPEC §3.8) ============
 
 pub fn crear_categoria(conn: &Connection, nuevo: &NuevaCategoria) -> AppResult<Categoria> {
@@ -486,6 +848,90 @@ pub fn obtener_categoria(conn: &Connection, id: &str) -> AppResult<Option<Catego
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// Recorre la cadena de ancestros desde `nuevo_parent_id` hacia la raíz: si
+/// llega a `id`, asignarlo como padre cerraría un ciclo (SPEC §3.8).
+fn crearia_ciclo_categoria(conn: &Connection, id: &str, nuevo_parent_id: &str) -> AppResult<bool> {
+    let mut actual = nuevo_parent_id.to_string();
+    for _ in 0..10_000 {
+        if actual == id {
+            return Ok(true);
+        }
+        let padre: Option<String> = conn
+            .query_row(
+                "SELECT parent_id FROM categorias WHERE id = ?1",
+                [&actual],
+                |r| r.get(0),
+            )
+            .map_err(|_| AppError::NoEncontrado("categoría", actual.clone()))?;
+        match padre {
+            Some(p) => actual = p,
+            None => return Ok(false),
+        }
+    }
+    // Cadena anormalmente larga: se trata como ciclo por seguridad.
+    Ok(true)
+}
+
+pub fn editar_categoria(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarCategoria,
+    actor: &str,
+) -> AppResult<Categoria> {
+    puede(conn, Some(actor), "categoria", "editar")?;
+    let actual = obtener_categoria(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("categoría", id.to_string()))?;
+    let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
+    let descripcion = cambios.descripcion.clone().or(actual.descripcion);
+    let parent_id = match &cambios.parent_id {
+        Some(Some(nuevo_padre)) => {
+            if nuevo_padre == id || crearia_ciclo_categoria(conn, id, nuevo_padre)? {
+                return Err(AppError::CicloCategoria);
+            }
+            verificar_activo(conn, "categorias", nuevo_padre, "categoría")?;
+            Some(nuevo_padre.clone())
+        }
+        Some(None) => None,
+        None => actual.parent_id,
+    };
+    let ts = ahora();
+    conn.execute(
+        "UPDATE categorias SET nombre = ?2, parent_id = ?3, descripcion = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
+        rusqlite::params![id, nombre, parent_id, descripcion, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "categoria",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_categoria(conn, id)?.expect("existe"))
+}
+
+pub fn desactivar_categoria(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "categoria", "desactivar")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE categorias SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "categoria",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
 }
 
 // ============ UOM (SPEC §3.9) ============
@@ -599,6 +1045,61 @@ pub fn obtener_proveedor(conn: &Connection, id: &str) -> AppResult<Option<Provee
     rows.next().transpose().map_err(AppError::from)
 }
 
+pub fn editar_proveedor(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarProveedor,
+    actor: &str,
+) -> AppResult<Proveedor> {
+    puede(conn, Some(actor), "proveedor", "editar")?;
+    let actual = obtener_proveedor(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("proveedor", id.to_string()))?;
+    let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
+    let contacto_nombre = cambios.contacto_nombre.clone().or(actual.contacto_nombre);
+    let contacto_telefono = cambios
+        .contacto_telefono
+        .clone()
+        .or(actual.contacto_telefono);
+    let contacto_email = cambios.contacto_email.clone().or(actual.contacto_email);
+    let direccion = cambios.direccion.clone().or(actual.direccion);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE proveedores SET nombre = ?2, contacto_nombre = ?3, contacto_telefono = ?4, contacto_email = ?5, direccion = ?6, updated_at = ?7, updated_by = ?8 WHERE id = ?1",
+        rusqlite::params![id, nombre, contacto_nombre, contacto_telefono, contacto_email, direccion, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "proveedor",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_proveedor(conn, id)?.expect("existe"))
+}
+
+pub fn desactivar_proveedor(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "proveedor", "desactivar")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE proveedores SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "proveedor",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
+}
+
 // ============ Cliente (SPEC §3.11) ============
 
 pub fn crear_cliente(conn: &Connection, nuevo: &NuevoCliente) -> AppResult<Cliente> {
@@ -653,6 +1154,61 @@ pub fn obtener_cliente(conn: &Connection, id: &str) -> AppResult<Option<Cliente>
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+pub fn editar_cliente(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarCliente,
+    actor: &str,
+) -> AppResult<Cliente> {
+    puede(conn, Some(actor), "cliente", "editar")?;
+    let actual = obtener_cliente(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("cliente", id.to_string()))?;
+    let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
+    let contacto_nombre = cambios.contacto_nombre.clone().or(actual.contacto_nombre);
+    let contacto_telefono = cambios
+        .contacto_telefono
+        .clone()
+        .or(actual.contacto_telefono);
+    let contacto_email = cambios.contacto_email.clone().or(actual.contacto_email);
+    let direccion = cambios.direccion.clone().or(actual.direccion);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE clientes SET nombre = ?2, contacto_nombre = ?3, contacto_telefono = ?4, contacto_email = ?5, direccion = ?6, updated_at = ?7, updated_by = ?8 WHERE id = ?1",
+        rusqlite::params![id, nombre, contacto_nombre, contacto_telefono, contacto_email, direccion, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "cliente",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_cliente(conn, id)?.expect("existe"))
+}
+
+pub fn desactivar_cliente(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "cliente", "desactivar")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE clientes SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "cliente",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
 }
 
 // ============ Producto (SPEC §3.7) ============
@@ -729,6 +1285,101 @@ fn map_producto(r: &rusqlite::Row<'_>) -> rusqlite::Result<Producto> {
     })
 }
 
+/// El `sku` no se toca aquí (SPEC §3.7: inmutable una vez creado).
+pub fn editar_producto(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarProducto,
+    actor: &str,
+) -> AppResult<Producto> {
+    puede(conn, Some(actor), "producto", "editar")?;
+    let actual = obtener_producto(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("producto", id.to_string()))?;
+    let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
+    let descripcion = cambios.descripcion.clone().or(actual.descripcion);
+    let categoria_id = cambios.categoria_id.clone().or(actual.categoria_id);
+    let uom_venta_id = cambios.uom_venta_id.clone().or(actual.uom_venta_id);
+    let uom_compra_id = cambios.uom_compra_id.clone().or(actual.uom_compra_id);
+    let codigo_barras = cambios.codigo_barras.clone().or(actual.codigo_barras);
+    let peso_unitario = cambios.peso_unitario.or(actual.peso_unitario);
+    let volumen_unitario = cambios.volumen_unitario.or(actual.volumen_unitario);
+    let stock_minimo = cambios.stock_minimo.or(actual.stock_minimo);
+    let stock_maximo = cambios.stock_maximo.or(actual.stock_maximo);
+    let controla_lote = cambios.controla_lote.unwrap_or(actual.controla_lote);
+    let controla_vencimiento = cambios
+        .controla_vencimiento
+        .unwrap_or(actual.controla_vencimiento);
+    let perecedero = cambios.perecedero.unwrap_or(actual.perecedero);
+    if controla_vencimiento && !controla_lote {
+        return Err(AppError::CampoRequerido(
+            "controla_lote (controla_vencimiento lo implica)".into(),
+        ));
+    }
+    let ts = ahora();
+    conn.execute(
+        "UPDATE productos SET nombre = ?2, descripcion = ?3, categoria_id = ?4, uom_venta_id = ?5,
+                uom_compra_id = ?6, codigo_barras = ?7, peso_unitario = ?8, volumen_unitario = ?9,
+                stock_minimo = ?10, stock_maximo = ?11, controla_lote = ?12, controla_vencimiento = ?13,
+                perecedero = ?14, updated_at = ?15, updated_by = ?16
+         WHERE id = ?1",
+        rusqlite::params![
+            id, nombre, descripcion, categoria_id, uom_venta_id, uom_compra_id, codigo_barras,
+            peso_unitario, volumen_unitario, stock_minimo, stock_maximo, controla_lote as i64,
+            controla_vencimiento as i64, perecedero as i64, ts, actor
+        ],
+    )
+    .map_err(|_| AppError::CodigoDuplicado("codigo_barras".into()))?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "producto",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_producto(conn, id)?.expect("existe"))
+}
+
+pub fn desactivar_producto(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "producto", "desactivar")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE productos SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "producto",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
+}
+
+/// Resuelve un producto por su código de barras exacto (SPEC §14.3). El
+/// escaneo nunca crea datos: si no hay coincidencia, devuelve `None` para que
+/// el llamador sugiera búsqueda manual.
+pub fn buscar_producto_por_codigo_barras(
+    conn: &Connection,
+    codigo_barras: &str,
+) -> AppResult<Option<Producto>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
+                codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
+                controla_lote, controla_vencimiento, perecedero, activo,
+                created_by, created_at, updated_by, updated_at
+         FROM productos WHERE codigo_barras = ?1",
+    )?;
+    let mut rows = stmt.query_map([codigo_barras], map_producto)?;
+    rows.next().transpose().map_err(AppError::from)
+}
+
 // ============ Lote (SPEC §3.12) ============
 
 pub fn crear_lote(conn: &Connection, nuevo: &NuevoLote) -> AppResult<Lote> {
@@ -793,6 +1444,49 @@ pub fn obtener_lote(conn: &Connection, id: &str) -> AppResult<Option<Lote>> {
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// `numero`/`producto_id` no se editan (definen la identidad del lote).
+pub fn editar_lote(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarLote,
+    actor: &str,
+) -> AppResult<Lote> {
+    puede(conn, Some(actor), "lote", "editar")?;
+    let actual =
+        obtener_lote(conn, id)?.ok_or_else(|| AppError::NoEncontrado("lote", id.to_string()))?;
+    let producto = obtener_producto(conn, &actual.producto_id)?
+        .ok_or_else(|| AppError::NoEncontrado("producto", actual.producto_id.clone()))?;
+    let fecha_fabricacion = cambios
+        .fecha_fabricacion
+        .clone()
+        .or(actual.fecha_fabricacion);
+    let fecha_vencimiento = cambios
+        .fecha_vencimiento
+        .clone()
+        .or(actual.fecha_vencimiento);
+    if producto.controla_vencimiento && fecha_vencimiento.is_none() {
+        return Err(AppError::CampoRequerido("fecha_vencimiento".into()));
+    }
+    let origen = cambios.origen.clone().or(actual.origen);
+    let notas = cambios.notas.clone().or(actual.notas);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE lotes SET fecha_fabricacion = ?2, fecha_vencimiento = ?3, origen = ?4, notas = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
+        rusqlite::params![id, fecha_fabricacion, fecha_vencimiento, origen, notas, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "lote",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_lote(conn, id)?.expect("existe"))
 }
 
 #[allow(unused)]

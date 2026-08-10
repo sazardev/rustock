@@ -107,6 +107,12 @@ pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult
 
     let tipo = nuevo.tipo()?.as_str();
     let sub_tipo = nuevo.sub_tipo()?.as_str();
+
+    // Entrada inicial (SPEC §7.5): reservada a quien puede administrar la
+    // configuración del sistema (ADMIN/GERENTE), además del permiso general.
+    if sub_tipo == "INICIAL" {
+        puede(conn, Some(&nuevo.created_by), "configuracion", "ejecutar")?;
+    }
     let id = Uuid::new_v4().to_string();
     let ts = ahora();
     let anio = &ts[..4];
@@ -307,6 +313,15 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
         // Entradas y traslados: validar capacidad de destino (SPEC §5.4, §3.5).
         if let Some(dest) = &destino {
             validar_capacidad(&tx, dest, &linea.producto_id, linea.cantidad)?;
+        }
+
+        // Restricción de caja (SPEC §3.6): si la caja declara producto/lote,
+        // solo admite ese producto/lote.
+        if let Some(caja_id) = &linea.caja_origen_id {
+            validar_restriccion_caja(&tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
+        }
+        if let Some(caja_id) = &linea.caja_destino_id {
+            validar_restriccion_caja(&tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
         }
 
         aplicar_linea(&tx, linea, origen.as_deref(), destino.as_deref())?;
@@ -526,11 +541,13 @@ fn aplicar_linea_inversa(
     Ok(())
 }
 
-/// Valida la capacidad máxima de una ubicación antes de ingresar (SPEC §5.4).
+/// Valida la capacidad máxima de una ubicación antes de ingresar (SPEC §5.4):
+/// la capacidad es un tope agregado de **toda** la mercancía de la ubicación
+/// (todos los productos y lotes), no solo del producto que entra.
 fn validar_capacidad(
     tx: &Connection,
     ubicacion: &str,
-    producto: &str,
+    _producto: &str,
     cantidad: i64,
 ) -> AppResult<()> {
     let capacidad: Option<i64> = tx.query_row(
@@ -539,11 +556,43 @@ fn validar_capacidad(
         |r| r.get(0),
     )?;
     if let Some(cap) = capacidad {
-        let actual: i64 = saldo_actual(tx, ubicacion, producto, None)?;
+        let actual: i64 = tx.query_row(
+            "SELECT COALESCE(SUM(cantidad), 0) FROM saldos WHERE ubicacion_id = ?1",
+            [ubicacion],
+            |r| r.get(0),
+        )?;
         if actual + cantidad > cap {
             let codigo = codigo_ubicacion(tx, ubicacion)?;
             return Err(AppError::CapacidadExcedida(codigo));
         }
+    }
+    Ok(())
+}
+
+/// Restricción de caja (SPEC §3.6): si la caja declara `producto_id`/`lote_id`,
+/// solo admite ese producto/lote — nunca stock mezclado.
+fn validar_restriccion_caja(
+    tx: &Connection,
+    caja_id: &str,
+    producto_id: &str,
+    lote_id: Option<&str>,
+) -> AppResult<()> {
+    let (codigo, producto_restringido, lote_restringido): (String, Option<String>, Option<String>) =
+        tx.query_row(
+            "SELECT codigo, producto_id, lote_id FROM cajas WHERE id = ?1",
+            [caja_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .map_err(|_| AppError::NoEncontrado("caja", caja_id.to_string()))?;
+    if let Some(p) = &producto_restringido
+        && p != producto_id
+    {
+        return Err(AppError::CajaRestringida(codigo));
+    }
+    if let Some(l) = &lote_restringido
+        && Some(l.as_str()) != lote_id
+    {
+        return Err(AppError::CajaRestringida(codigo));
     }
     Ok(())
 }
@@ -642,6 +691,108 @@ fn map_movimiento(r: &rusqlite::Row<'_>) -> rusqlite::Result<Movimiento> {
         anulado_by: r.get(19)?,
         anulado_at: r.get(20)?,
     })
+}
+
+/// Sugerencia de una línea de salida: cuánto tomar de qué lote/ubicación.
+#[allow(dead_code)] // se conecta a un comando Tauri más adelante en esta misma fase
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SugerenciaLinea {
+    pub ubicacion_id: String,
+    pub lote_id: Option<String>,
+    pub cantidad: i64,
+}
+
+/// Sugiere el desglose de ubicación/lote para despachar `cantidad` unidades
+/// de `producto_id` (SPEC §8.6): FEFO (`fecha_vencimiento` más próxima
+/// primero) si el producto es perecedero o controla vencimiento, FIFO
+/// (`fecha_fabricacion` más antigua primero) si solo controla lote, o el
+/// stock más antiguo por ubicación si no controla lote. El usuario siempre
+/// puede sobreescribir con un `lote_id` explícito al crear el movimiento;
+/// esta función solo propone. Si `excluir_vencidos` es `true` (destino
+/// CLIENTE o DEVOLUCION_PROVEEDOR, SPEC §8.6 regla dura), los lotes vencidos
+/// no se proponen.
+#[allow(dead_code)] // se conecta a un comando Tauri más adelante en esta misma fase
+pub fn sugerir_lineas_salida(
+    conn: &Connection,
+    producto_id: &str,
+    cantidad: i64,
+    ubicaciones: Option<&[String]>,
+    excluir_vencidos: bool,
+) -> AppResult<Vec<SugerenciaLinea>> {
+    if cantidad <= 0 {
+        return Err(AppError::CampoRequerido("cantidad (> 0)".into()));
+    }
+    let reglas = reglas_producto(conn, producto_id)?;
+    let hoy = ahora()[..10].to_string();
+
+    let mut sql = String::from(
+        "SELECT s.ubicacion_id, s.lote_id, s.cantidad
+         FROM saldos s
+         LEFT JOIN lotes l ON l.id = s.lote_id
+         WHERE s.producto_id = ?1 AND s.cantidad > 0",
+    );
+    let mut binds: Vec<rusqlite::types::Value> = vec![producto_id.to_string().into()];
+    if excluir_vencidos {
+        sql.push_str(&format!(
+            " AND (l.fecha_vencimiento IS NULL OR l.fecha_vencimiento >= ?{})",
+            binds.len() + 1
+        ));
+        binds.push(hoy.into());
+    }
+    if let Some(ubis) = ubicaciones {
+        if ubis.is_empty() {
+            return Ok(Vec::new());
+        }
+        let placeholders = ubis
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("?{}", binds.len() + 1 + i))
+            .collect::<Vec<_>>()
+            .join(",");
+        sql.push_str(&format!(" AND s.ubicacion_id IN ({placeholders})"));
+        for u in ubis {
+            binds.push(u.clone().into());
+        }
+    }
+    if reglas.perecedero || reglas.controla_vencimiento {
+        sql.push_str(" ORDER BY (l.fecha_vencimiento IS NULL), l.fecha_vencimiento ASC");
+    } else if reglas.controla_lote {
+        sql.push_str(" ORDER BY (l.fecha_fabricacion IS NULL), l.fecha_fabricacion ASC");
+    } else {
+        sql.push_str(" ORDER BY s.updated_at ASC");
+    }
+
+    let mut stmt = conn.prepare(&sql)?;
+    let filas: Vec<(String, Option<String>, i64)> = stmt
+        .query_map(rusqlite::params_from_iter(binds.iter()), |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })?
+        .collect::<Result<_, _>>()?;
+
+    let mut restante = cantidad;
+    let mut sugerencias = Vec::new();
+    for (ubicacion_id, lote_id, disponible) in filas {
+        if restante <= 0 {
+            break;
+        }
+        let tomar = restante.min(disponible);
+        if tomar > 0 {
+            sugerencias.push(SugerenciaLinea {
+                ubicacion_id,
+                lote_id,
+                cantidad: tomar,
+            });
+            restante -= tomar;
+        }
+    }
+    if restante > 0 {
+        return Err(AppError::SaldoInsuficiente {
+            ubicacion: "(todas las ubicaciones candidatas)".into(),
+            disponible: cantidad - restante,
+            intentado: cantidad,
+        });
+    }
+    Ok(sugerencias)
 }
 
 /// Saldos por (ubicación, producto, lote) — consulta canónica SPEC §5.2.

@@ -745,6 +745,8 @@ pub static UBICACION_SCHEMA: ResourceSchema = ResourceSchema {
             true,
             false,
         ),
+        col("rack_id", "u.rack_id", ColTipo::Texto, true, true, false),
+        col("zona_id", "u.zona_id", ColTipo::Texto, true, true, false),
         col("tipo", "u.tipo", ColTipo::Texto, true, true, true),
         col(
             "capacidad_maxima",

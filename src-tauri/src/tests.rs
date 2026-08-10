@@ -71,7 +71,9 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
         &NuevaUbicacion {
             codigo: "P1".into(),
             nombre: None,
-            seccion_id: seccion.id.clone(),
+            seccion_id: Some(seccion.id.clone()),
+            rack_id: None,
+            zona_id: None,
             tipo: Some("STANDARD".into()),
             capacidad_maxima: Some(1000),
             created_by: Some("admin".into()),
@@ -83,7 +85,9 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
         &NuevaUbicacion {
             codigo: "P2".into(),
             nombre: None,
-            seccion_id: seccion.id.clone(),
+            seccion_id: Some(seccion.id.clone()),
+            rack_id: None,
+            zona_id: None,
             tipo: Some("STANDARD".into()),
             capacidad_maxima: Some(1000),
             created_by: Some("admin".into()),
@@ -740,4 +744,696 @@ fn password_debil_rechazada() {
     )
     .expect_err("debe fallar");
     assert!(err.to_string().contains("contraseña"));
+}
+
+// ============ Motor de consulta universal (SPEC §15) ============
+
+fn sembrar_almacenes(conn: &rusqlite::Connection) {
+    for (codigo, nombre) in [
+        ("ALM-A", "Almacén Norte"),
+        ("ALM-B", "Almacén Sur"),
+        ("ALM-C", "Depósito Central"),
+    ] {
+        repo::catalogo::crear_almacen(
+            conn,
+            &NuevoAlmacen {
+                codigo: codigo.into(),
+                nombre: nombre.into(),
+                descripcion: None,
+                direccion: None,
+                created_by: Some("admin".into()),
+            },
+        )
+        .expect("almacen");
+    }
+}
+
+fn filas_de(
+    listado: crate::domain::Listado,
+) -> (Vec<serde_json::Value>, crate::domain::PaginadoMeta) {
+    match listado {
+        crate::domain::Listado::Filas(p) => (p.data, p.meta),
+        crate::domain::Listado::Grupos(_) => panic!("se esperaban filas, no grupos"),
+    }
+}
+
+#[test]
+fn query_listado_por_defecto_pagina_y_ordena() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let listado = crate::query::listar(
+        &conn,
+        &crate::query::ALMACEN_SCHEMA,
+        &crate::query::ListParams::default(),
+    )
+    .expect("listar");
+    let (data, meta) = filas_de(listado);
+    assert_eq!(meta.total, 3);
+    assert_eq!(meta.page, 1);
+    assert_eq!(meta.page_size, crate::query::PAGE_SIZE_DEFAULT);
+    assert_eq!(data.len(), 3);
+}
+
+#[test]
+fn query_filtro_eq_por_codigo() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        filters: Some(vec!["codigo:eq:ALM-B".into()]),
+        ..Default::default()
+    };
+    let (data, meta) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params).expect("listar"),
+    );
+    assert_eq!(meta.total, 1);
+    assert_eq!(data[0]["codigo"], "ALM-B");
+}
+
+#[test]
+fn query_busqueda_texto_libre_multi_termino() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        q: Some("almacén norte".into()),
+        ..Default::default()
+    };
+    let (data, meta) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params).expect("listar"),
+    );
+    assert_eq!(meta.total, 1);
+    assert_eq!(data[0]["codigo"], "ALM-A");
+}
+
+#[test]
+fn query_columna_desconocida_rechazada() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        filters: Some(vec!["campo_fantasma:eq:x".into()]),
+        ..Default::default()
+    };
+    let err = crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params)
+        .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::FiltroInvalido(_)));
+}
+
+#[test]
+fn query_operador_desconocido_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        filters: Some(vec!["codigo:regex:.*".into()]),
+        ..Default::default()
+    };
+    let err = crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params)
+        .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::FiltroInvalido(_)));
+}
+
+#[test]
+fn query_orden_explicito_ascendente_y_descendente() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let asc = crate::query::ListParams {
+        sort: Some("codigo".into()),
+        ..Default::default()
+    };
+    let (data_asc, _) =
+        filas_de(crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &asc).expect("listar"));
+    assert_eq!(data_asc[0]["codigo"], "ALM-A");
+
+    let desc = crate::query::ListParams {
+        sort: Some("-codigo".into()),
+        ..Default::default()
+    };
+    let (data_desc, _) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &desc).expect("listar"),
+    );
+    assert_eq!(data_desc[0]["codigo"], "ALM-C");
+}
+
+#[test]
+fn query_paginacion_respeta_topes() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        page: Some(0),
+        page_size: Some(10_000),
+        ..Default::default()
+    };
+    let (_, meta) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params).expect("listar"),
+    );
+    assert_eq!(meta.page, 1);
+    assert_eq!(meta.page_size, crate::query::PAGE_SIZE_MAX);
+}
+
+#[test]
+fn query_export_ignora_paginacion() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        page: Some(1),
+        page_size: Some(1),
+        export: true,
+        ..Default::default()
+    };
+    let (data, meta) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params).expect("listar"),
+    );
+    assert_eq!(data.len(), 3);
+    assert_eq!(meta.total, 3);
+}
+
+#[test]
+fn query_filtro_in_y_between() {
+    let db = setup();
+    let conn = db.conn();
+    sembrar_almacenes(&conn);
+    let in_params = crate::query::ListParams {
+        filters: Some(vec!["codigo:in:ALM-A,ALM-C".into()]),
+        ..Default::default()
+    };
+    let (_, meta_in) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &in_params).expect("listar"),
+    );
+    assert_eq!(meta_in.total, 2);
+}
+
+#[test]
+fn query_like_escapa_comodines_del_usuario() {
+    let db = setup();
+    let conn = db.conn();
+    // Un código que contenga un carácter comodín literal no debe hacer que
+    // `contains` se comporte como comodín abierto sobre datos no relacionados.
+    repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-100%".into(),
+            nombre: "Con porcentaje".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    sembrar_almacenes(&conn);
+    let params = crate::query::ListParams {
+        filters: Some(vec!["codigo:contains:100%".into()]),
+        ..Default::default()
+    };
+    let (data, meta) = filas_de(
+        crate::query::listar(&conn, &crate::query::ALMACEN_SCHEMA, &params).expect("listar"),
+    );
+    assert_eq!(meta.total, 1);
+    assert_eq!(data[0]["codigo"], "ALM-100%");
+}
+
+#[test]
+fn query_agregacion_group_by_con_metricas() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    let entrada = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![
+                NuevaLinea {
+                    producto_id: prod.clone(),
+                    lote_id: None,
+                    cantidad: 6,
+                    origen_ubicacion_id: None,
+                    destino_ubicacion_id: Some(ubi1.clone()),
+                    caja_origen_id: None,
+                    caja_destino_id: None,
+                },
+                NuevaLinea {
+                    producto_id: prod.clone(),
+                    lote_id: None,
+                    cantidad: 4,
+                    origen_ubicacion_id: None,
+                    destino_ubicacion_id: Some(ubi2.clone()),
+                    caja_origen_id: None,
+                    caja_destino_id: None,
+                },
+            ],
+        },
+    )
+    .expect("entrada");
+    repo::movimiento::aprobar_movimiento(&conn, &entrada.id, "admin").expect("aprobar");
+
+    let params = crate::query::ListParams {
+        group_by: Some("movimiento_id".into()),
+        metrics: Some(vec!["sum(cantidad)".into(), "count(*)".into()]),
+        ..Default::default()
+    };
+    let listado = crate::query::listar(&conn, &crate::query::MOVIMIENTO_LINEA_SCHEMA, &params)
+        .expect("agregar");
+    let grupos = match listado {
+        crate::domain::Listado::Grupos(g) => g,
+        crate::domain::Listado::Filas(_) => panic!("se esperaban grupos"),
+    };
+    assert_eq!(grupos.meta.total, 1);
+    assert_eq!(grupos.groups[0]["key"], entrada.id);
+    assert_eq!(grupos.groups[0]["count"], 2);
+    assert_eq!(grupos.groups[0]["m_sum_cantidad"], 10);
+}
+
+// ============ Catálogos: editar/desactivar, árbol simplificado, caja (SPEC §3) ============
+
+#[test]
+fn editar_almacen_actualiza_solo_lo_indicado() {
+    let db = setup();
+    let conn = db.conn();
+    let a = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-E".into(),
+            nombre: "Original".into(),
+            descripcion: Some("desc original".into()),
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear");
+    let editado = repo::catalogo::editar_almacen(
+        &conn,
+        &a.id,
+        &crate::domain::catalogo::EditarAlmacen {
+            nombre: Some("Editado".into()),
+            descripcion: None,
+            direccion: None,
+        },
+        "admin",
+    )
+    .expect("editar");
+    assert_eq!(editado.nombre, "Editado");
+    // descripcion no se tocó: sigue el valor original.
+    assert_eq!(editado.descripcion.as_deref(), Some("desc original"));
+    assert_eq!(editado.codigo, "ALM-E");
+}
+
+#[test]
+fn categoria_ciclo_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    let raiz = repo::catalogo::crear_categoria(
+        &conn,
+        &NuevaCategoria {
+            nombre: "Raíz".into(),
+            parent_id: None,
+            descripcion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("raiz");
+    let hija = repo::catalogo::crear_categoria(
+        &conn,
+        &NuevaCategoria {
+            nombre: "Hija".into(),
+            parent_id: Some(raiz.id.clone()),
+            descripcion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("hija");
+
+    // Intentar que la raíz cuelgue de su propia hija cierra un ciclo.
+    let err = repo::catalogo::editar_categoria(
+        &conn,
+        &raiz.id,
+        &crate::domain::catalogo::EditarCategoria {
+            nombre: None,
+            descripcion: None,
+            parent_id: Some(Some(hija.id.clone())),
+        },
+        "admin",
+    )
+    .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::CicloCategoria));
+}
+
+#[test]
+fn categoria_puede_moverse_a_raiz() {
+    let db = setup();
+    let conn = db.conn();
+    let raiz = repo::catalogo::crear_categoria(
+        &conn,
+        &NuevaCategoria {
+            nombre: "Raíz2".into(),
+            parent_id: None,
+            descripcion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("raiz");
+    let hija = repo::catalogo::crear_categoria(
+        &conn,
+        &NuevaCategoria {
+            nombre: "Hija2".into(),
+            parent_id: Some(raiz.id.clone()),
+            descripcion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("hija");
+    let editada = repo::catalogo::editar_categoria(
+        &conn,
+        &hija.id,
+        &crate::domain::catalogo::EditarCategoria {
+            nombre: None,
+            descripcion: None,
+            parent_id: Some(None),
+        },
+        "admin",
+    )
+    .expect("editar");
+    assert_eq!(editada.parent_id, None);
+}
+
+#[test]
+fn ubicacion_puede_colgar_directo_de_zona() {
+    let db = setup();
+    let conn = db.conn();
+    let almacen = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-Z".into(),
+            nombre: "Almacén Z".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "Z-DIRECTA".into(),
+            nombre: "Zona directa".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona");
+    let ubi = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: "UBI-DIRECTA".into(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: None,
+            zona_id: Some(zona.id.clone()),
+            tipo: Some("STANDARD".into()),
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion");
+    let resuelto =
+        repo::catalogo::resolver_almacen_id_de_ubicacion(&conn, &ubi.id).expect("resolver");
+    assert_eq!(resuelto, almacen.id);
+}
+
+#[test]
+fn ubicacion_exige_exactamente_un_padre() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+
+    // Ningún padre.
+    let err = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: "UBI-SIN-PADRE".into(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: None,
+            zona_id: None,
+            tipo: Some("STANDARD".into()),
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("debe fallar sin padre");
+    assert!(matches!(err, crate::error::AppError::CampoRequerido(_)));
+}
+
+#[test]
+fn caja_restringida_rechaza_producto_distinto() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (uom, prod1) = crear_uom_y_producto(&conn);
+    let prod2 = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            sku: "REF-200".into(),
+            nombre: "Producto B".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto2")
+    .id;
+
+    let caja = repo::catalogo::crear_caja(
+        &conn,
+        &NuevaCaja {
+            codigo: "CAJA-1".into(),
+            nombre: None,
+            ubicacion_id: ubi1.clone(),
+            producto_id: Some(prod1.clone()),
+            lote_id: None,
+            etiqueta: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("caja");
+
+    let mov = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod2,
+                lote_id: None,
+                cantidad: 1,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1.clone()),
+                caja_origen_id: None,
+                caja_destino_id: Some(caja.id.clone()),
+            }],
+        },
+    )
+    .expect("crear movimiento");
+    let err =
+        repo::movimiento::aprobar_movimiento(&conn, &mov.id, "admin").expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::CajaRestringida(_)));
+}
+
+#[test]
+fn capacidad_maxima_agrega_todos_los_productos() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi_grande, _ubi2) = crear_arbol(&conn);
+    // Ubicación con capacidad pequeña, en la misma sección.
+    let seccion_id = repo::catalogo::obtener_ubicacion(&conn, &ubi_grande)
+        .expect("ubi")
+        .expect("existe")
+        .seccion_id
+        .expect("seccion");
+    let ubi = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: "UBI-CAP".into(),
+            nombre: None,
+            seccion_id: Some(seccion_id),
+            rack_id: None,
+            zona_id: None,
+            tipo: Some("STANDARD".into()),
+            capacidad_maxima: Some(10),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion");
+    let (uom, prod1) = crear_uom_y_producto(&conn);
+    let prod2 = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            sku: "REF-300".into(),
+            nombre: "Producto C".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom,
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto2")
+    .id;
+
+    let entrada1 = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi.id.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod1,
+                lote_id: None,
+                cantidad: 6,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi.id.clone()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("entrada1");
+    repo::movimiento::aprobar_movimiento(&conn, &entrada1.id, "admin").expect("aprobar1");
+
+    // Un segundo producto distinto que sumado excede la capacidad total (6+6=12 > 10).
+    let entrada2 = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi.id.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod2,
+                lote_id: None,
+                cantidad: 6,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi.id.clone()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("entrada2");
+    let err = repo::movimiento::aprobar_movimiento(&conn, &entrada2.id, "admin")
+        .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::CapacidadExcedida(_)));
+}
+
+#[test]
+fn buscar_producto_por_codigo_barras() {
+    let db = setup();
+    let conn = db.conn();
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA2".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+    let producto = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            sku: "REF-BARRAS".into(),
+            nombre: "Con barras".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.id,
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: Some("7501234567890".into()),
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto");
+
+    let encontrado = repo::catalogo::buscar_producto_por_codigo_barras(&conn, "7501234567890")
+        .expect("buscar")
+        .expect("debe existir");
+    assert_eq!(encontrado.id, producto.id);
+
+    let no_encontrado =
+        repo::catalogo::buscar_producto_por_codigo_barras(&conn, "0000000000000").expect("buscar");
+    assert!(no_encontrado.is_none());
 }

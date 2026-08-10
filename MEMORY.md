@@ -11,13 +11,13 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión activa** | `0.1.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
-| **Último tag** | `v0.1.0` |
-| **Fase del roadmap** | Fase 0 — Fundación ✅ · Fase 1 (capa de datos SQLite) ✅ implementada · Fase 2 (catálogos CRUD completo) ⏳ siguiente |
-| **Backend Rust** | Capa de datos completa: esquema SQLite, repositorios, movimientos, inventario, permisos. 12 tests pasan, clippy y fmt limpios |
+| **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
+| **Último tag** | `v0.3.0` |
+| **Fase del roadmap** | Backend: en curso un plan propio de 7 sub-fases (A-G) para cerrar el SPEC completo en `src-tauri/` — ver plan guardado en `~/.claude/plans/vivid-scribbling-cook.md`. A, B, C completas y verificadas; D en curso (ver §6) |
+| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos (editar/desactivar en todas las entidades), árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO (sugerencia) en curso. 38 tests pasan, clippy y fmt limpios |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
-| **Repo** | Git en `main`, limpio salvo 2 archivos en progreso (ver §6) |
+| **Repo** | Git en `main` |
 
 **Árbol de documentación (fuentes de verdad):**
 `AGENTS.md` (reglas del repo) → `SPEC.md` (lógica de negocio) → `DESIGN.md`
@@ -118,6 +118,107 @@ Cada hito está anclado a un commit. El changelog completo vive en
   para lote NULL) para que UNIQUE/ON CONFLICT funcione en SQLite; inversión de
   sentido al anular; valor neto + ON CONFLICT suma en saldos.
 
+### Hito 7 — Backend completo conforme al SPEC (en curso, plan de 7 fases)
+
+Trabajo pedido por el usuario: "implementar todo el backend acorde el spec de
+manera segura y consistente". Un audit exhaustivo (agente Explore) encontró
+que, tras el Hito 6, el backend tenía dos huecos de seguridad reales y no
+implementaba el resto del SPEC (§12, §13, §15, §16, §17, partes de §3/§6-10).
+Se armó un plan de 7 sub-fases (guardado en
+`~/.claude/plans/vivid-scribbling-cook.md`), **solo backend** (`src-tauri/`,
+sin tocar `src/` porque el frontend aún no llama ningún comando de negocio
+real — confirmado por grep). Cada fase se cierra con `cargo fmt --all --check`
++ `cargo clippy --all-targets --all-features -- -D warnings` + `cargo test`
+en verde antes de seguir.
+
+**Fase A — Autenticación y sesión (completa)**
+- `argon2` para hashear contraseñas; `src-tauri/src/sesion.rs` nuevo con
+  `SesionState`/`SesionActiva` (sesión única en memoria del proceso, un solo
+  usuario a la vez — es una app de escritorio de un proceso).
+- Comandos `login`/`logout`/`quien_soy`. `crear_usuario`/`bootstrap_admin`
+  reciben `password` en texto plano (IPC local) y lo hashean en Rust;
+  `Usuario.password_hash` tiene `#[serde(skip_serializing)]` (nunca sale al
+  frontend).
+- `puede()` (`security.rs`) ya **no** tiene el bypass de "sin usuario =
+  permitido"; ahora `None` siempre es `AppError::NoAutenticado`. El único
+  camino sin sesión sigue siendo `bootstrap_admin` (no llama a `puede()`).
+- Todos los comandos de `commands.rs` dejaron de aceptar `created_by`/`by`/
+  `usuario_id` del invocador: lo resuelven de `SesionState`. Los campos
+  `created_by` en los structs `Nuevo*` tienen `#[serde(skip_deserializing)]`.
+- Todos los `listar_*`/`obtener_*` ahora exigen permiso `ver` (antes no
+  comprobaban nada). Macro `con_auditoria!` registra cada invocación
+  (éxito/fallo) con el actor real de la sesión.
+- Bug encontrado y corregido: `crear_uom` llamaba `puede(conn, None, ...)`
+  siempre — corría permanentemente en modo bootstrap sin verificar nada.
+
+**Fase B — Motor de consulta universal, SPEC §15 (completa)**
+- `src-tauri/src/query.rs` nuevo: `ListParams` (un solo struct recibido por
+  IPC), `ResourceSchema`/`ColumnDef` (allowlist explícita de columnas por
+  recurso — un nombre fuera de la lista es `AppError::FiltroInvalido`, nunca
+  se interpola a SQL), parser de filtros (`eq/neq/gt/gte/lt/lte/in/nin/
+  contains/starts/ends/between/is_null/not_null`) con valores siempre
+  parametrizados, búsqueda `q` multi-término, orden, paginación (con tope
+  `page_size` y `page_size:-1`/`export` para "todo con tope de seguridad"),
+  agregación (`group_by`+`metrics`) y proyección (`fields`).
+- Nuevo `domain::Listado` (enum `Filas(Paginado<Value>)`/`Grupos(Agregado<Value>)`)
+  — el `Paginado<T>`/`PaginadoMeta` que existía sin uso desde el Hito 6 por
+  fin se usa.
+- Los 15 `listar_*` principales (almacenes, zonas, racks, secciones,
+  ubicaciones, cajas, productos, lotes, proveedores, clientes, uoms,
+  categorías, usuarios, movimientos, sesiones de inventario) migrados al
+  motor genérico; se borraron las funciones `listar_*` ad-hoc redundantes en
+  `repo/`. `listar_saldos`/`listar_conteos`/`listar_roles` quedaron fuera a
+  propósito (reuso interno o naturaleza no-entidad — ver el plan).
+
+**Fase C — Catálogos completos, SPEC §3 (completa)**
+- `editar_*`/`desactivar_*` para las 10 entidades que no lo tenían (almacén,
+  zona, rack, sección, ubicación, caja, categoría, proveedor, cliente,
+  producto) + `editar_lote`. `sku`/`codigo` nunca son editables por este
+  camino (se tratan como estables una vez creados).
+- Detección real de ciclos en categorías (recorrido de ancestros, no solo
+  "el padre existe"); mover una categoría a raíz (`parent_id: Some(None)`).
+- Árbol de ubicación simplificado (SPEC §3.5/§3.13): `ubicaciones.seccion_id`
+  ahora nullable + columnas `rack_id`/`zona_id` nuevas, con `CHECK` en SQLite
+  que exige exactamente un padre. `resolver_almacen_id_de_ubicacion` camina
+  el ancestro que corresponda. **Requiere una base de datos nueva** (borrar
+  `rustock.db` de desarrollo): no hay migración de esquema, solo
+  `CREATE TABLE IF NOT EXISTS`, y el proyecto sigue pre-1.0 sin datos reales.
+- Restricción de caja (SPEC §3.6) validada al aprobar un movimiento:
+  `validar_restriccion_caja` en `repo/movimiento.rs`.
+- Bug corregido: `validar_capacidad` solo sumaba el stock del producto
+  entrante (y encima con `lote=None`, ignorando lotes) contra
+  `capacidad_maxima`; ahora suma **todo** el contenido de la ubicación.
+- `buscar_producto_por_codigo_barras` (SPEC §14.3).
+- **Gap conocido no resuelto** (preexistente, no introducido en esta sesión):
+  el `codigo` de zona/rack/sección/ubicación se valida único solo contra su
+  padre inmediato, no contra todo el almacén como pide el SPEC §3.2-§3.5
+  literalmente. Arreglarlo bien requiere denormalizar `almacen_id` en cada
+  nodo del árbol — no se hizo por alcance/tiempo.
+
+**Fase D — Movimientos, SPEC §6-10 (en curso)**
+- Hecho: permiso `configuracion:ejecutar` exigido además de `movimiento:crear`
+  para `sub_tipo = INICIAL` (SPEC §7.5).
+- Hecho: `repo::movimiento::sugerir_lineas_salida` (FEFO/FIFO/stock general
+  según SPEC §8.6), con `#[allow(dead_code)]` porque **todavía no está
+  conectada a un comando Tauri ni tiene tests** — eso es lo primero que falta
+  al retomar.
+- Pendiente: exponer `sugerir_lineas_salida` como comando (`sugerir_lineas_
+  salida`, gateado por `movimiento:ver`, `excluir_vencidos` decidido por el
+  `sub_tipo` que planea usar el caller — CLIENTE/DEVOLUCION_PROVEEDOR ⇒
+  `true`); tests de FEFO vs FIFO vs sin-lote y de "excluir vencidos".
+- Pendiente: traslado inter-almacén (SPEC §9.3) — diseño ya pensado pero sin
+  escribir: nuevo `NuevoTraslado`/`crear_traslado` en `repo/movimiento.rs`
+  que, si `resolver_almacen_id_de_ubicacion(origen) != resolver_almacen_id_de_
+  ubicacion(destino)`, crea **dos** `Movimiento` ligados (`SALIDA`/
+  `TRASLADO_SALIDA` en origen + `ENTRADA`/`TRASLADO_ENTRADA` en destino)
+  compartiendo `documento_referencia` (autogenerado si no se da); si es el
+  mismo almacén, se comporta como hoy (un solo `TRASLADO`). Sin tocar la
+  ruta actual de un solo movimiento (usada y testeada).
+- Pendiente tras eso: cerrar Fase D con el pipeline completo, luego Fases
+  E (comentarios, SPEC §12), F (trazabilidad §13.4 + alertas §17 + reportes/
+  KPIs §16) y G (bloqueo de ajustes durante sesión de inventario `EN_CURSO`,
+  pase final del pipeline, actualizar ROADMAP.md).
+
 ---
 
 ## 3. Decisiones de diseño del stack (recordatorio)
@@ -170,17 +271,33 @@ Cada hito está anclado a un commit. El changelog completo vive en
 
 ---
 
-## 6. Trabajo en progreso (pendiente de revisión/commit)
+## 6. Trabajo en progreso
 
-> Cambios del usuario fuera del flujo del agente; no commiteados aún.
+**Dónde retomar (Fase D del Hito 7, ver §2):**
 
-- `src/shared/ui/Chrome.tsx` — Sidebar: añade prop `onNavigate` (cierre de nav
-  móvil al hacer clic).
-- `src/shared/ui/Table.tsx` — modificado (no revisado aún).
-- `src/styles/*` — ajustes de tokens/layout del usuario.
+1. Conectar `repo::movimiento::sugerir_lineas_salida` (ya escrita, con
+   `#[allow(dead_code)]` en `repo/movimiento.rs`) a un comando Tauri nuevo +
+   registrarlo en `commands::handler()` + tests (FEFO, FIFO, sin lote,
+   `excluir_vencidos`). Quitar los `#[allow(dead_code)]` al conectarla.
+2. Implementar el traslado inter-almacén (SPEC §9.3) — diseño detallado en
+   §2/Hito 7/Fase D. No tocar el `TRASLADO` de un solo movimiento existente
+   (intra-almacén), que sigue siendo el camino por defecto y ya está
+   testeado.
+3. Cerrar Fase D: `cargo fmt --all --check && cargo clippy --all-targets
+   --all-features -- -D warnings && cargo test` en verde dentro de
+   `src-tauri/`.
+4. Seguir con Fases E (comentarios §12), F (trazabilidad §13.4 + alertas §17
+   + reportes/KPIs §16) y G (endurecimiento final) — todas detalladas en el
+   plan `~/.claude/plans/vivid-scribbling-cook.md`.
 
-**Siguiente hito recomendado:** Fase 2 del ROADMAP (CRUD completo de catálogos
-con la UI por página), que correspondería a la **v0.3.0**.
+**Importante para quien retome:** la base de datos de desarrollo
+(`rustock.db`) debe borrarse antes de correr la app — el esquema de
+`ubicaciones` cambió en la Fase C (columnas nuevas + `CHECK`) y no hay
+migración automática, solo `CREATE TABLE IF NOT EXISTS`.
+
+No hay cambios de frontend (`src/`) pendientes de este trabajo: el plan
+decidió explícitamente no tocar `src/` porque no depende de los comandos que
+cambiaron (verificado por grep antes de empezar).
 
 ---
 
