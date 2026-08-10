@@ -3,11 +3,11 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::db::DbState;
+use crate::domain::Listado;
 use crate::domain::catalogo::*;
 use crate::domain::inventario::*;
 use crate::domain::movimiento::*;
 use crate::domain::seguridad::*;
-use crate::domain::Listado;
 use crate::error::AppResult;
 use crate::query::{self, ListParams};
 use crate::repo;

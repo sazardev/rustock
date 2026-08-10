@@ -9,8 +9,8 @@
 //! una oportunidad de inyección. Los valores siempre viajan como parámetros
 //! ligados (`rusqlite::types::Value`), nunca como texto concatenado.
 
-use rusqlite::types::Value as SqlValue;
 use rusqlite::Connection;
+use rusqlite::types::Value as SqlValue;
 use serde::Deserialize;
 use serde_json::{Map, Value as JsonValue};
 
@@ -106,14 +106,22 @@ impl ResourceSchema {
 
 /// Punto de entrada único: ejecuta un listado universal contra `schema` según
 /// `params` y devuelve la respuesta ya lista para serializar al frontend.
-pub fn listar(conn: &Connection, schema: &ResourceSchema, params: &ListParams) -> AppResult<Listado> {
+pub fn listar(
+    conn: &Connection,
+    schema: &ResourceSchema,
+    params: &ListParams,
+) -> AppResult<Listado> {
     if let Some(group_by) = params.group_by.as_deref() {
         return agregar(conn, schema, params, group_by).map(Listado::Grupos);
     }
     filas(conn, schema, params).map(Listado::Filas)
 }
 
-fn filas(conn: &Connection, schema: &ResourceSchema, params: &ListParams) -> AppResult<Paginado<JsonValue>> {
+fn filas(
+    conn: &Connection,
+    schema: &ResourceSchema,
+    params: &ListParams,
+) -> AppResult<Paginado<JsonValue>> {
     let (where_sql, binds) = construir_where(schema, params)?;
     let order_sql = construir_order(schema, params.sort.as_deref())?;
 
@@ -162,7 +170,12 @@ fn filas(conn: &Connection, schema: &ResourceSchema, params: &ListParams) -> App
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(Paginado::new(filas, total, page_reportado, page_size_reportado))
+    Ok(Paginado::new(
+        filas,
+        total,
+        page_reportado,
+        page_size_reportado,
+    ))
 }
 
 fn agregar(
@@ -244,7 +257,10 @@ fn parsear_metrica(m: &str) -> AppResult<(String, String)> {
     Ok((funcion, campo))
 }
 
-fn construir_where(schema: &ResourceSchema, params: &ListParams) -> AppResult<(String, Vec<SqlValue>)> {
+fn construir_where(
+    schema: &ResourceSchema,
+    params: &ListParams,
+) -> AppResult<(String, Vec<SqlValue>)> {
     let mut clausulas = Vec::new();
     let mut binds = Vec::new();
 
@@ -316,7 +332,11 @@ fn construir_order(schema: &ResourceSchema, sort: Option<&str>) -> AppResult<Str
             None => (false, tok),
         };
         let col = schema.columna_ordenable(nombre)?;
-        partes.push(format!("{} {}", col.expr, if desc { "DESC" } else { "ASC" }));
+        partes.push(format!(
+            "{} {}",
+            col.expr,
+            if desc { "DESC" } else { "ASC" }
+        ));
     }
     if partes.is_empty() {
         Ok(schema.orden_defecto.to_string())
@@ -325,18 +345,46 @@ fn construir_order(schema: &ResourceSchema, sort: Option<&str>) -> AppResult<Str
     }
 }
 
-fn clausula_filtro(col: &ColumnDef, operador: &str, valor: &str) -> AppResult<(String, Vec<SqlValue>)> {
+fn clausula_filtro(
+    col: &ColumnDef,
+    operador: &str,
+    valor: &str,
+) -> AppResult<(String, Vec<SqlValue>)> {
     match operador {
-        "eq" => Ok((format!("{} = ?", col.expr), vec![parsear_valor(col.tipo, valor)?])),
-        "neq" => Ok((format!("{} <> ?", col.expr), vec![parsear_valor(col.tipo, valor)?])),
-        "gt" => Ok((format!("{} > ?", col.expr), vec![parsear_valor(col.tipo, valor)?])),
-        "gte" => Ok((format!("{} >= ?", col.expr), vec![parsear_valor(col.tipo, valor)?])),
-        "lt" => Ok((format!("{} < ?", col.expr), vec![parsear_valor(col.tipo, valor)?])),
-        "lte" => Ok((format!("{} <= ?", col.expr), vec![parsear_valor(col.tipo, valor)?])),
+        "eq" => Ok((
+            format!("{} = ?", col.expr),
+            vec![parsear_valor(col.tipo, valor)?],
+        )),
+        "neq" => Ok((
+            format!("{} <> ?", col.expr),
+            vec![parsear_valor(col.tipo, valor)?],
+        )),
+        "gt" => Ok((
+            format!("{} > ?", col.expr),
+            vec![parsear_valor(col.tipo, valor)?],
+        )),
+        "gte" => Ok((
+            format!("{} >= ?", col.expr),
+            vec![parsear_valor(col.tipo, valor)?],
+        )),
+        "lt" => Ok((
+            format!("{} < ?", col.expr),
+            vec![parsear_valor(col.tipo, valor)?],
+        )),
+        "lte" => Ok((
+            format!("{} <= ?", col.expr),
+            vec![parsear_valor(col.tipo, valor)?],
+        )),
         "in" | "nin" => {
-            let vals: Vec<&str> = valor.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
+            let vals: Vec<&str> = valor
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect();
             if vals.is_empty() {
-                return Err(AppError::FiltroInvalido(format!("{operador} requiere al menos un valor")));
+                return Err(AppError::FiltroInvalido(format!(
+                    "{operador} requiere al menos un valor"
+                )));
             }
             let placeholders = vals.iter().map(|_| "?").collect::<Vec<_>>().join(",");
             let binds = vals
@@ -367,18 +415,31 @@ fn clausula_filtro(col: &ColumnDef, operador: &str, valor: &str) -> AppResult<(S
             }
             Ok((
                 format!("{} BETWEEN ? AND ?", col.expr),
-                vec![parsear_valor(col.tipo, partes[0])?, parsear_valor(col.tipo, partes[1])?],
+                vec![
+                    parsear_valor(col.tipo, partes[0])?,
+                    parsear_valor(col.tipo, partes[1])?,
+                ],
             ))
         }
         "is_null" => Ok((
-            format!("{} IS {}NULL", col.expr, if es_verdadero(valor) { "" } else { "NOT " }),
+            format!(
+                "{} IS {}NULL",
+                col.expr,
+                if es_verdadero(valor) { "" } else { "NOT " }
+            ),
             vec![],
         )),
         "not_null" => Ok((
-            format!("{} IS {}NULL", col.expr, if es_verdadero(valor) { "NOT " } else { "" }),
+            format!(
+                "{} IS {}NULL",
+                col.expr,
+                if es_verdadero(valor) { "NOT " } else { "" }
+            ),
             vec![],
         )),
-        otro => Err(AppError::FiltroInvalido(format!("operador desconocido: {otro}"))),
+        otro => Err(AppError::FiltroInvalido(format!(
+            "operador desconocido: {otro}"
+        ))),
     }
 }
 
@@ -390,7 +451,10 @@ fn es_verdadero(valor: &str) -> bool {
 /// comodines LIKE, para que el operador de filtro nunca inyecte comodines
 /// implícitos desde datos arbitrarios.
 fn escapar_like(valor: &str, comodin_izq: bool, comodin_der: bool) -> String {
-    let escapado = valor.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+    let escapado = valor
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
     match (comodin_izq, comodin_der) {
         (true, true) => format!("%{escapado}%"),
         (false, true) => format!("{escapado}%"),
@@ -414,7 +478,11 @@ fn parsear_valor(tipo: ColTipo, raw: &str) -> AppResult<SqlValue> {
         ColTipo::Booleano => SqlValue::Integer(match raw.to_ascii_lowercase().as_str() {
             "true" | "1" => 1,
             "false" | "0" => 0,
-            _ => return Err(AppError::FiltroInvalido(format!("valor booleano inválido: {raw}"))),
+            _ => {
+                return Err(AppError::FiltroInvalido(format!(
+                    "valor booleano inválido: {raw}"
+                )));
+            }
         }),
     })
 }
@@ -423,7 +491,10 @@ fn fila_a_json(row: &rusqlite::Row<'_>, columnas: &[&ColumnDef]) -> rusqlite::Re
     let mut obj = Map::new();
     for (i, col) in columnas.iter().enumerate() {
         let val: SqlValue = row.get(i)?;
-        obj.insert(col.nombre.to_string(), valor_a_json(val, col.tipo == ColTipo::Booleano));
+        obj.insert(
+            col.nombre.to_string(),
+            valor_a_json(val, col.tipo == ColTipo::Booleano),
+        );
     }
     Ok(JsonValue::Object(obj))
 }
@@ -433,7 +504,9 @@ fn valor_a_json(val: SqlValue, es_booleano: bool) -> JsonValue {
         SqlValue::Null => JsonValue::Null,
         SqlValue::Integer(n) if es_booleano => JsonValue::Bool(n != 0),
         SqlValue::Integer(n) => JsonValue::from(n),
-        SqlValue::Real(f) => serde_json::Number::from_f64(f).map(JsonValue::Number).unwrap_or(JsonValue::Null),
+        SqlValue::Real(f) => serde_json::Number::from_f64(f)
+            .map(JsonValue::Number)
+            .unwrap_or(JsonValue::Null),
         SqlValue::Text(s) => JsonValue::String(s),
         SqlValue::Blob(_) => JsonValue::Null,
     }
@@ -448,13 +521,55 @@ pub static ALMACEN_SCHEMA: ResourceSchema = ResourceSchema {
         col("id", "a.id", ColTipo::Texto, true, true, false),
         col("codigo", "a.codigo", ColTipo::Texto, true, true, true),
         col("nombre", "a.nombre", ColTipo::Texto, true, true, true),
-        col("descripcion", "a.descripcion", ColTipo::Texto, false, false, true),
-        col("direccion", "a.direccion", ColTipo::Texto, false, false, true),
+        col(
+            "descripcion",
+            "a.descripcion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "direccion",
+            "a.direccion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
         col("activo", "a.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "a.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "a.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "a.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "a.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "a.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "a.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "a.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "a.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -465,13 +580,55 @@ pub static ZONA_SCHEMA: ResourceSchema = ResourceSchema {
         col("id", "z.id", ColTipo::Texto, true, true, false),
         col("codigo", "z.codigo", ColTipo::Texto, true, true, true),
         col("nombre", "z.nombre", ColTipo::Texto, true, true, true),
-        col("descripcion", "z.descripcion", ColTipo::Texto, false, false, true),
-        col("almacen_id", "z.almacen_id", ColTipo::Texto, true, true, false),
+        col(
+            "descripcion",
+            "z.descripcion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "almacen_id",
+            "z.almacen_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("activo", "z.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "z.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "z.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "z.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "z.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "z.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "z.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "z.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "z.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -485,10 +642,38 @@ pub static RACK_SCHEMA: ResourceSchema = ResourceSchema {
         col("tipo", "r.tipo", ColTipo::Texto, true, true, true),
         col("zona_id", "r.zona_id", ColTipo::Texto, true, true, false),
         col("activo", "r.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "r.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "r.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "r.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "r.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "r.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "r.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "r.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "r.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -501,12 +686,47 @@ pub static SECCION_SCHEMA: ResourceSchema = ResourceSchema {
         col("nombre", "s.nombre", ColTipo::Texto, false, false, true),
         col("nivel", "s.nivel", ColTipo::Texto, true, true, true),
         col("rack_id", "s.rack_id", ColTipo::Texto, true, true, false),
-        col("descripcion", "s.descripcion", ColTipo::Texto, false, false, true),
+        col(
+            "descripcion",
+            "s.descripcion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
         col("activo", "s.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "s.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "s.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "s.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "s.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "s.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "s.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "s.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "s.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -517,14 +737,56 @@ pub static UBICACION_SCHEMA: ResourceSchema = ResourceSchema {
         col("id", "u.id", ColTipo::Texto, true, true, false),
         col("codigo", "u.codigo", ColTipo::Texto, true, true, true),
         col("nombre", "u.nombre", ColTipo::Texto, false, false, true),
-        col("seccion_id", "u.seccion_id", ColTipo::Texto, true, true, false),
+        col(
+            "seccion_id",
+            "u.seccion_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("tipo", "u.tipo", ColTipo::Texto, true, true, true),
-        col("capacidad_maxima", "u.capacidad_maxima", ColTipo::Entero, true, true, false),
+        col(
+            "capacidad_maxima",
+            "u.capacidad_maxima",
+            ColTipo::Entero,
+            true,
+            true,
+            false,
+        ),
         col("activo", "u.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "u.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "u.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "u.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "u.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "u.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "u.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "u.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "u.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -535,15 +797,57 @@ pub static CAJA_SCHEMA: ResourceSchema = ResourceSchema {
         col("id", "c.id", ColTipo::Texto, true, true, false),
         col("codigo", "c.codigo", ColTipo::Texto, true, true, true),
         col("nombre", "c.nombre", ColTipo::Texto, false, false, true),
-        col("ubicacion_id", "c.ubicacion_id", ColTipo::Texto, true, true, false),
-        col("producto_id", "c.producto_id", ColTipo::Texto, true, false, false),
+        col(
+            "ubicacion_id",
+            "c.ubicacion_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "producto_id",
+            "c.producto_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
         col("lote_id", "c.lote_id", ColTipo::Texto, true, false, false),
         col("etiqueta", "c.etiqueta", ColTipo::Texto, true, false, true),
         col("activo", "c.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "c.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "c.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "c.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "c.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "c.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "c.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "c.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "c.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -556,24 +860,143 @@ pub static PRODUCTO_SCHEMA: ResourceSchema = ResourceSchema {
         // ambos son también buscables por texto libre.
         col("sku", "p.sku", ColTipo::Texto, true, true, true),
         col("nombre", "p.nombre", ColTipo::Texto, true, true, true),
-        col("descripcion", "p.descripcion", ColTipo::Texto, false, false, true),
-        col("categoria_id", "p.categoria_id", ColTipo::Texto, true, true, false),
-        col("uom_base_id", "p.uom_base_id", ColTipo::Texto, true, false, false),
-        col("uom_venta_id", "p.uom_venta_id", ColTipo::Texto, true, false, false),
-        col("uom_compra_id", "p.uom_compra_id", ColTipo::Texto, true, false, false),
-        col("codigo_barras", "p.codigo_barras", ColTipo::Texto, true, true, true),
-        col("peso_unitario", "p.peso_unitario", ColTipo::Real, true, true, false),
-        col("volumen_unitario", "p.volumen_unitario", ColTipo::Real, true, true, false),
-        col("stock_minimo", "p.stock_minimo", ColTipo::Entero, true, true, false),
-        col("stock_maximo", "p.stock_maximo", ColTipo::Entero, true, true, false),
-        col("controla_lote", "p.controla_lote", ColTipo::Booleano, true, true, false),
-        col("controla_vencimiento", "p.controla_vencimiento", ColTipo::Booleano, true, true, false),
-        col("perecedero", "p.perecedero", ColTipo::Booleano, true, true, false),
+        col(
+            "descripcion",
+            "p.descripcion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "categoria_id",
+            "p.categoria_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "uom_base_id",
+            "p.uom_base_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "uom_venta_id",
+            "p.uom_venta_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "uom_compra_id",
+            "p.uom_compra_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "codigo_barras",
+            "p.codigo_barras",
+            ColTipo::Texto,
+            true,
+            true,
+            true,
+        ),
+        col(
+            "peso_unitario",
+            "p.peso_unitario",
+            ColTipo::Real,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "volumen_unitario",
+            "p.volumen_unitario",
+            ColTipo::Real,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "stock_minimo",
+            "p.stock_minimo",
+            ColTipo::Entero,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "stock_maximo",
+            "p.stock_maximo",
+            ColTipo::Entero,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "controla_lote",
+            "p.controla_lote",
+            ColTipo::Booleano,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "controla_vencimiento",
+            "p.controla_vencimiento",
+            ColTipo::Booleano,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "perecedero",
+            "p.perecedero",
+            ColTipo::Booleano,
+            true,
+            true,
+            false,
+        ),
         col("activo", "p.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "p.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "p.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "p.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "p.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "p.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "p.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "p.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "p.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -583,15 +1006,64 @@ pub static LOTE_SCHEMA: ResourceSchema = ResourceSchema {
     columnas: &[
         col("id", "l.id", ColTipo::Texto, true, true, false),
         col("numero", "l.numero", ColTipo::Texto, true, true, true),
-        col("producto_id", "l.producto_id", ColTipo::Texto, true, true, false),
-        col("fecha_fabricacion", "l.fecha_fabricacion", ColTipo::Texto, true, true, false),
-        col("fecha_vencimiento", "l.fecha_vencimiento", ColTipo::Texto, true, true, false),
+        col(
+            "producto_id",
+            "l.producto_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "fecha_fabricacion",
+            "l.fecha_fabricacion",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "fecha_vencimiento",
+            "l.fecha_vencimiento",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("origen", "l.origen", ColTipo::Texto, true, false, true),
         col("notas", "l.notas", ColTipo::Texto, false, false, true),
-        col("created_by", "l.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "l.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "l.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "l.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "l.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "l.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "l.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "l.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -602,15 +1074,71 @@ pub static PROVEEDOR_SCHEMA: ResourceSchema = ResourceSchema {
         col("id", "pr.id", ColTipo::Texto, true, true, false),
         col("codigo", "pr.codigo", ColTipo::Texto, true, true, true),
         col("nombre", "pr.nombre", ColTipo::Texto, true, true, true),
-        col("contacto_nombre", "pr.contacto_nombre", ColTipo::Texto, false, false, true),
-        col("contacto_telefono", "pr.contacto_telefono", ColTipo::Texto, false, false, true),
-        col("contacto_email", "pr.contacto_email", ColTipo::Texto, false, false, true),
-        col("direccion", "pr.direccion", ColTipo::Texto, false, false, true),
+        col(
+            "contacto_nombre",
+            "pr.contacto_nombre",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "contacto_telefono",
+            "pr.contacto_telefono",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "contacto_email",
+            "pr.contacto_email",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "direccion",
+            "pr.direccion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
         col("activo", "pr.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "pr.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "pr.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "pr.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "pr.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "pr.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "pr.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "pr.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "pr.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -621,15 +1149,71 @@ pub static CLIENTE_SCHEMA: ResourceSchema = ResourceSchema {
         col("id", "cl.id", ColTipo::Texto, true, true, false),
         col("codigo", "cl.codigo", ColTipo::Texto, true, true, true),
         col("nombre", "cl.nombre", ColTipo::Texto, true, true, true),
-        col("contacto_nombre", "cl.contacto_nombre", ColTipo::Texto, false, false, true),
-        col("contacto_telefono", "cl.contacto_telefono", ColTipo::Texto, false, false, true),
-        col("contacto_email", "cl.contacto_email", ColTipo::Texto, false, false, true),
-        col("direccion", "cl.direccion", ColTipo::Texto, false, false, true),
+        col(
+            "contacto_nombre",
+            "cl.contacto_nombre",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "contacto_telefono",
+            "cl.contacto_telefono",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "contacto_email",
+            "cl.contacto_email",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
+        col(
+            "direccion",
+            "cl.direccion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
         col("activo", "cl.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "cl.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "cl.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "cl.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "cl.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "cl.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "cl.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "cl.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "cl.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -643,8 +1227,22 @@ pub static UOM_SCHEMA: ResourceSchema = ResourceSchema {
         col("tipo", "uo.tipo", ColTipo::Texto, true, true, true),
         col("factor", "uo.factor", ColTipo::Entero, true, true, false),
         col("base", "uo.base", ColTipo::Booleano, true, true, false),
-        col("created_at", "uo.created_at", ColTipo::Texto, true, true, false),
-        col("updated_at", "uo.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_at",
+            "uo.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_at",
+            "uo.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -654,13 +1252,55 @@ pub static CATEGORIA_SCHEMA: ResourceSchema = ResourceSchema {
     columnas: &[
         col("id", "ca.id", ColTipo::Texto, true, true, false),
         col("nombre", "ca.nombre", ColTipo::Texto, true, true, true),
-        col("parent_id", "ca.parent_id", ColTipo::Texto, true, true, false),
-        col("descripcion", "ca.descripcion", ColTipo::Texto, false, false, true),
+        col(
+            "parent_id",
+            "ca.parent_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "descripcion",
+            "ca.descripcion",
+            ColTipo::Texto,
+            false,
+            false,
+            true,
+        ),
         col("activo", "ca.activo", ColTipo::Booleano, true, true, false),
-        col("created_by", "ca.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "ca.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "ca.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "ca.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "created_by",
+            "ca.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "ca.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "ca.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "ca.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -670,16 +1310,65 @@ pub static USUARIO_SCHEMA: ResourceSchema = ResourceSchema {
     orden_defecto: "us.nombre_usuario ASC, us.id DESC",
     columnas: &[
         col("id", "us.id", ColTipo::Texto, true, true, false),
-        col("nombre_usuario", "us.nombre_usuario", ColTipo::Texto, true, true, true),
-        col("nombre_completo", "us.nombre_completo", ColTipo::Texto, true, true, true),
+        col(
+            "nombre_usuario",
+            "us.nombre_usuario",
+            ColTipo::Texto,
+            true,
+            true,
+            true,
+        ),
+        col(
+            "nombre_completo",
+            "us.nombre_completo",
+            ColTipo::Texto,
+            true,
+            true,
+            true,
+        ),
         col("email", "us.email", ColTipo::Texto, true, false, true),
         col("rol_id", "us.rol_id", ColTipo::Texto, true, true, false),
         col("activo", "us.activo", ColTipo::Booleano, true, true, false),
-        col("ultimo_acceso_at", "us.ultimo_acceso_at", ColTipo::Texto, true, true, false),
-        col("created_by", "us.created_by", ColTipo::Texto, true, false, false),
-        col("created_at", "us.created_at", ColTipo::Texto, true, true, false),
-        col("updated_by", "us.updated_by", ColTipo::Texto, true, false, false),
-        col("updated_at", "us.updated_at", ColTipo::Texto, true, true, false),
+        col(
+            "ultimo_acceso_at",
+            "us.ultimo_acceso_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "created_by",
+            "us.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "us.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "us.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "us.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
     ],
 };
 
@@ -692,22 +1381,120 @@ pub static MOVIMIENTO_SCHEMA: ResourceSchema = ResourceSchema {
         col("sub_tipo", "m.sub_tipo", ColTipo::Texto, true, true, true),
         col("numero", "m.numero", ColTipo::Texto, true, true, true),
         col("estado", "m.estado", ColTipo::Texto, true, true, true),
-        col("fecha_movimiento", "m.fecha_movimiento", ColTipo::Texto, true, true, false),
+        col(
+            "fecha_movimiento",
+            "m.fecha_movimiento",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("motivo", "m.motivo", ColTipo::Texto, false, false, true),
-        col("origen_ubicacion_id", "m.origen_ubicacion_id", ColTipo::Texto, true, true, false),
-        col("destino_ubicacion_id", "m.destino_ubicacion_id", ColTipo::Texto, true, true, false),
-        col("proveedor_id", "m.proveedor_id", ColTipo::Texto, true, false, false),
-        col("cliente_id", "m.cliente_id", ColTipo::Texto, true, false, false),
-        col("sesion_inventario_id", "m.sesion_inventario_id", ColTipo::Texto, true, false, false),
-        col("documento_referencia", "m.documento_referencia", ColTipo::Texto, true, false, true),
+        col(
+            "origen_ubicacion_id",
+            "m.origen_ubicacion_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "destino_ubicacion_id",
+            "m.destino_ubicacion_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "proveedor_id",
+            "m.proveedor_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "cliente_id",
+            "m.cliente_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "sesion_inventario_id",
+            "m.sesion_inventario_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "documento_referencia",
+            "m.documento_referencia",
+            ColTipo::Texto,
+            true,
+            false,
+            true,
+        ),
         col("notas", "m.notas", ColTipo::Texto, false, false, true),
-        col("movimiento_inverso_id", "m.movimiento_inverso_id", ColTipo::Texto, true, false, false),
-        col("created_by", "m.created_by", ColTipo::Texto, true, true, false),
-        col("created_at", "m.created_at", ColTipo::Texto, true, true, false),
-        col("approved_by", "m.approved_by", ColTipo::Texto, true, false, false),
-        col("approved_at", "m.approved_at", ColTipo::Texto, true, true, false),
-        col("anulado_by", "m.anulado_by", ColTipo::Texto, true, false, false),
-        col("anulado_at", "m.anulado_at", ColTipo::Texto, true, false, false),
+        col(
+            "movimiento_inverso_id",
+            "m.movimiento_inverso_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_by",
+            "m.created_by",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "created_at",
+            "m.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "approved_by",
+            "m.approved_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "approved_at",
+            "m.approved_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "anulado_by",
+            "m.anulado_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "anulado_at",
+            "m.anulado_at",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
     ],
 };
 
@@ -716,14 +1503,63 @@ pub static MOVIMIENTO_LINEA_SCHEMA: ResourceSchema = ResourceSchema {
     orden_defecto: "ml.id ASC",
     columnas: &[
         col("id", "ml.id", ColTipo::Texto, true, true, false),
-        col("movimiento_id", "ml.movimiento_id", ColTipo::Texto, true, true, false),
-        col("producto_id", "ml.producto_id", ColTipo::Texto, true, true, false),
+        col(
+            "movimiento_id",
+            "ml.movimiento_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "producto_id",
+            "ml.producto_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("lote_id", "ml.lote_id", ColTipo::Texto, true, true, false),
-        col("cantidad", "ml.cantidad", ColTipo::Entero, true, true, false),
-        col("origen_ubicacion_id", "ml.origen_ubicacion_id", ColTipo::Texto, true, false, false),
-        col("destino_ubicacion_id", "ml.destino_ubicacion_id", ColTipo::Texto, true, false, false),
-        col("caja_origen_id", "ml.caja_origen_id", ColTipo::Texto, true, false, false),
-        col("caja_destino_id", "ml.caja_destino_id", ColTipo::Texto, true, false, false),
+        col(
+            "cantidad",
+            "ml.cantidad",
+            ColTipo::Entero,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "origen_ubicacion_id",
+            "ml.origen_ubicacion_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "destino_ubicacion_id",
+            "ml.destino_ubicacion_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "caja_origen_id",
+            "ml.caja_origen_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "caja_destino_id",
+            "ml.caja_destino_id",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
     ],
 };
 
@@ -735,17 +1571,87 @@ pub static SESION_INVENTARIO_SCHEMA: ResourceSchema = ResourceSchema {
         col("numero", "si.numero", ColTipo::Texto, true, true, true),
         col("tipo", "si.tipo", ColTipo::Texto, true, true, true),
         col("estado", "si.estado", ColTipo::Texto, true, true, true),
-        col("almacen_id", "si.almacen_id", ColTipo::Texto, true, true, false),
+        col(
+            "almacen_id",
+            "si.almacen_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("alcance", "si.alcance", ColTipo::Texto, false, false, true),
-        col("fecha_inicio", "si.fecha_inicio", ColTipo::Texto, true, true, false),
-        col("fecha_fin", "si.fecha_fin", ColTipo::Texto, true, true, false),
-        col("responsable_id", "si.responsable_id", ColTipo::Texto, true, true, false),
-        col("conteo_ciego", "si.conteo_ciego", ColTipo::Booleano, true, true, false),
-        col("exige_doble_conteo", "si.exige_doble_conteo", ColTipo::Booleano, true, true, false),
-        col("created_by", "si.created_by", ColTipo::Texto, true, true, false),
-        col("created_at", "si.created_at", ColTipo::Texto, true, true, false),
-        col("closed_by", "si.closed_by", ColTipo::Texto, true, false, false),
-        col("closed_at", "si.closed_at", ColTipo::Texto, true, false, false),
+        col(
+            "fecha_inicio",
+            "si.fecha_inicio",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "fecha_fin",
+            "si.fecha_fin",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "responsable_id",
+            "si.responsable_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "conteo_ciego",
+            "si.conteo_ciego",
+            ColTipo::Booleano,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "exige_doble_conteo",
+            "si.exige_doble_conteo",
+            ColTipo::Booleano,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "created_by",
+            "si.created_by",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "created_at",
+            "si.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "closed_by",
+            "si.closed_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "closed_at",
+            "si.closed_at",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
     ],
 };
 
