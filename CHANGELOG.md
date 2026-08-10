@@ -4,6 +4,26 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [Unreleased]
+
+### Bug Fixes
+
+- **release:** Sincroniza version en Cargo.lock al hacer bump
+
+
+### Documentación
+
+- Regenera CHANGELOG.md anclado al tag v0.2.0
+
+
+### Features
+
+- **auditoria:** Historial completo de actividad con hora, fecha y metricas del backend
+
+- **web:** Gateway de API con historial funcional en modo navegador
+
+- **ui:** Sidebar colapsable con persistencia y ajustes de layout
+
 ## [0.2.0] - 2026-08-09
 
 ### Documentación
