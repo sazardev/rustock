@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../shared/api";
 import {
   Badge,
   Card,
@@ -28,7 +28,7 @@ function useHistorial() {
         setMetricas(m);
         setError(null);
       })
-      .catch((e) => setError(String(e)))
+      .catch((error) => setError(String(error)))
       .finally(() => setLoading(false));
   };
 
