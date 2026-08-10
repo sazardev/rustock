@@ -38,7 +38,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Análisis",
-    items: [{ label: "Reportes", href: PATH.reportes, icon: "reportes" }],
+    items: [
+      { label: "Reportes", href: PATH.reportes, icon: "reportes" },
+      { label: "Historial", href: PATH.historial, icon: "historial" },
+    ],
   },
   {
     title: "Administración",

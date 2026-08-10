@@ -6,6 +6,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { ErrorPage } from "../pages/ErrorPage";
 import { ForbiddenPage } from "../pages/ForbiddenPage";
 import { GaleriaPage } from "../pages/GaleriaPage";
+import { HistorialPage } from "../pages/HistorialPage";
 import { InventarioPage } from "../pages/InventarioPage";
 import { MovimientosPage } from "../pages/MovimientosPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: "inventario/nuevo", element: <InventarioPage /> },
       { path: "alertas", element: <AlertasPage /> },
       { path: "reportes", element: <ReportesPage /> },
+      { path: "historial", element: <HistorialPage /> },
       { path: "usuarios", element: <AlertasPage /> },
       { path: "configuracion", element: <ConfiguracionPage /> },
       { path: PATH.galeria.replace("/", ""), element: <GaleriaPage /> },

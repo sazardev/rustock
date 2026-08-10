@@ -204,6 +204,8 @@ impl NuevoUsuario {
 }
 
 /// Evento de auditoría (SPEC §4.5). Inmutable.
+/// Registra el historial completo de actividad del usuario con hora, fecha
+/// y métricas del backend (comando, duración, éxito, nivel).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventoAuditoria {
     pub id: i64,
@@ -215,6 +217,10 @@ pub struct EventoAuditoria {
     pub despues: Option<String>,
     pub timestamp: String,
     pub origen: Option<String>,
+    pub comando: Option<String>,
+    pub duracion_ms: Option<i64>,
+    pub exito: bool,
+    pub nivel: String,
 }
 
 impl EventoAuditoria {
@@ -229,11 +235,46 @@ impl EventoAuditoria {
         despues: Option<&str>,
         origen: Option<&str>,
     ) -> crate::error::AppResult<()> {
+        Self::registrar_con_metricas(
+            conn,
+            usuario_id,
+            accion,
+            entidad,
+            entidad_id,
+            antes,
+            despues,
+            origen,
+            None,
+            None,
+            true,
+            "ESCRITURA",
+        )
+    }
+
+    /// Registra un evento con métricas completas (hora, fecha, duración, éxito, nivel).
+    #[allow(clippy::too_many_arguments)]
+    pub fn registrar_con_metricas(
+        conn: &rusqlite::Connection,
+        usuario_id: Option<&str>,
+        accion: &str,
+        entidad: &str,
+        entidad_id: Option<&str>,
+        antes: Option<&str>,
+        despues: Option<&str>,
+        origen: Option<&str>,
+        comando: Option<&str>,
+        duracion_ms: Option<i64>,
+        exito: bool,
+        nivel: &str,
+    ) -> crate::error::AppResult<()> {
         let ts = ahora();
         conn.execute(
-            "INSERT INTO auditoria (usuario_id, accion, entidad, entidad_id, antes, despues, timestamp, origen)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            rusqlite::params![usuario_id, accion, entidad, entidad_id, antes, despues, ts, origen],
+            "INSERT INTO auditoria (usuario_id, accion, entidad, entidad_id, antes, despues, timestamp, origen, comando, duracion_ms, exito, nivel)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            rusqlite::params![
+                usuario_id, accion, entidad, entidad_id, antes, despues, ts, origen,
+                comando, duracion_ms, exito as i64, nivel
+            ],
         )?;
         Ok(())
     }

@@ -96,11 +96,17 @@ impl DbState {
                 antes TEXT,
                 despues TEXT,
                 timestamp TEXT NOT NULL,
-                origen TEXT
+                origen TEXT,
+                comando TEXT,
+                duracion_ms INTEGER,
+                exito INTEGER NOT NULL DEFAULT 1,
+                nivel TEXT NOT NULL DEFAULT 'LECTURA'
             );
             CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_id);
             CREATE INDEX IF NOT EXISTS idx_auditoria_timestamp ON auditoria(timestamp);
             CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_comando ON auditoria(comando);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_nivel ON auditoria(nivel);
 
             -- ============ CATALOGOS: ARBOL FISICO (SPEC §3.1-3.6) ============
             CREATE TABLE IF NOT EXISTS almacenes (

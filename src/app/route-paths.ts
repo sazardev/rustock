@@ -11,6 +11,7 @@ export const PATH = {
   reporteVencimientos: "/reportes/vencimientos",
   reportePrecision: "/reportes/precision",
   reporteAuditoria: "/reportes/auditoria",
+  historial: "/historial",
   usuarios: "/usuarios",
   configuracion: "/configuracion",
   galeria: "/galeria",

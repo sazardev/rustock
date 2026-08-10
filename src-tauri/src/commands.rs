@@ -10,6 +10,29 @@ use crate::domain::seguridad::*;
 use crate::error::AppResult;
 use crate::repo;
 
+/// Ejecuta un comando de mutación, mide su duración y registra la invocación
+/// en el historial de auditoría (SPEC §4.5, §13). `$usuario` es el id del actor.
+macro_rules! audit_mutacion {
+    ($db:expr, $usuario:expr, $comando:expr, $origen:expr, $cuerpo:expr) => {{
+        let inicio = std::time::Instant::now();
+        let resultado = $cuerpo;
+        let duracion_ms = inicio.elapsed().as_millis() as i64;
+        let exito = resultado.is_ok();
+        {
+            let conn = $db.conn();
+            let _ = repo::auditoria::registrar_invocacion(
+                &conn,
+                $usuario,
+                $comando,
+                duracion_ms,
+                exito,
+                $origen,
+            );
+        }
+        resultado
+    }};
+}
+
 // ============ Almacén ============
 
 #[tauri::command]
@@ -20,8 +43,10 @@ pub fn listar_almacenes(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Almacen>> 
 
 #[tauri::command]
 pub fn crear_almacen(db: State<'_, Arc<DbState>>, nuevo: NuevoAlmacen) -> AppResult<Almacen> {
-    let conn = db.conn();
-    repo::catalogo::crear_almacen(&conn, &nuevo)
+    audit_mutacion!(db, nuevo.created_by.as_deref(), "crear_almacen", None, {
+        let conn = db.conn();
+        repo::catalogo::crear_almacen(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
@@ -225,8 +250,10 @@ pub fn listar_usuarios(db: State<'_, Arc<DbState>>) -> AppResult<Vec<Usuario>> {
 
 #[tauri::command]
 pub fn crear_usuario(db: State<'_, Arc<DbState>>, nuevo: NuevoUsuario) -> AppResult<Usuario> {
-    let conn = db.conn();
-    repo::seguridad::crear_usuario(&conn, &nuevo)
+    audit_mutacion!(db, nuevo.created_by.as_deref(), "crear_usuario", None, {
+        let conn = db.conn();
+        repo::seguridad::crear_usuario(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
@@ -253,8 +280,10 @@ pub fn crear_movimiento(
     db: State<'_, Arc<DbState>>,
     nuevo: NuevoMovimiento,
 ) -> AppResult<Movimiento> {
-    let conn = db.conn();
-    repo::movimiento::crear_movimiento(&conn, &nuevo)
+    audit_mutacion!(db, Some(&nuevo.created_by), "crear_movimiento", None, {
+        let conn = db.conn();
+        repo::movimiento::crear_movimiento(&conn, &nuevo)
+    })
 }
 
 #[tauri::command]
@@ -263,8 +292,10 @@ pub fn enviar_a_aprobacion(
     id: String,
     by: String,
 ) -> AppResult<Movimiento> {
-    let conn = db.conn();
-    repo::movimiento::enviar_a_aprobacion(&conn, &id, &by)
+    audit_mutacion!(db, Some(&by), "enviar_a_aprobacion", None, {
+        let conn = db.conn();
+        repo::movimiento::enviar_a_aprobacion(&conn, &id, &by)
+    })
 }
 
 #[tauri::command]
@@ -273,8 +304,10 @@ pub fn aprobar_movimiento(
     id: String,
     by: String,
 ) -> AppResult<Movimiento> {
-    let conn = db.conn();
-    repo::movimiento::aprobar_movimiento(&conn, &id, &by)
+    audit_mutacion!(db, Some(&by), "aprobar_movimiento", None, {
+        let conn = db.conn();
+        repo::movimiento::aprobar_movimiento(&conn, &id, &by)
+    })
 }
 
 #[tauri::command]
@@ -283,8 +316,10 @@ pub fn anular_movimiento(
     id: String,
     by: String,
 ) -> AppResult<Movimiento> {
-    let conn = db.conn();
-    repo::movimiento::anular_movimiento(&conn, &id, &by)
+    audit_mutacion!(db, Some(&by), "anular_movimiento", None, {
+        let conn = db.conn();
+        repo::movimiento::anular_movimiento(&conn, &id, &by)
+    })
 }
 
 #[tauri::command]
@@ -338,8 +373,16 @@ pub fn crear_sesion_inventario(
     db: State<'_, Arc<DbState>>,
     nuevo: NuevaSesionInventario,
 ) -> AppResult<SesionInventario> {
-    let conn = db.conn();
-    repo::inventario::crear_sesion(&conn, &nuevo)
+    audit_mutacion!(
+        db,
+        Some(&nuevo.created_by),
+        "crear_sesion_inventario",
+        None,
+        {
+            let conn = db.conn();
+            repo::inventario::crear_sesion(&conn, &nuevo)
+        }
+    )
 }
 
 #[tauri::command]
@@ -353,8 +396,16 @@ pub fn listar_sesiones_inventario(
 
 #[tauri::command]
 pub fn registrar_conteo(db: State<'_, Arc<DbState>>, nuevo: NuevoConteo) -> AppResult<Conteo> {
-    let conn = db.conn();
-    repo::inventario::registrar_conteo(&conn, &nuevo)
+    audit_mutacion!(
+        db,
+        Some(&nuevo.usuario_contador_id),
+        "registrar_conteo",
+        None,
+        {
+            let conn = db.conn();
+            repo::inventario::registrar_conteo(&conn, &nuevo)
+        }
+    )
 }
 
 #[tauri::command]
@@ -378,8 +429,10 @@ pub fn cerrar_sesion_inventario(
     sesion_id: String,
     by: String,
 ) -> AppResult<Vec<String>> {
-    let conn = db.conn();
-    repo::inventario::cerrar_sesion(&conn, &sesion_id, &by)
+    audit_mutacion!(db, Some(&by), "cerrar_sesion_inventario", None, {
+        let conn = db.conn();
+        repo::inventario::cerrar_sesion(&conn, &sesion_id, &by)
+    })
 }
 
 /// Expone los comandos al invoke_handler de Tauri.
@@ -432,5 +485,41 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         listar_conteos,
         diferencias_sesion,
         cerrar_sesion_inventario,
+        listar_historial,
+        metricas_historial,
     ]
+}
+
+// ============ Historial y métricas (SPEC §4.5, §13, §16) ============
+
+/// Lista el historial de actividad del usuario (filtrable).
+#[tauri::command]
+pub fn listar_historial(
+    db: State<'_, Arc<DbState>>,
+    usuario_id: Option<String>,
+    comando: Option<String>,
+    nivel: Option<String>,
+    desde: Option<String>,
+    hasta: Option<String>,
+    limit: Option<i64>,
+) -> AppResult<Vec<crate::domain::seguridad::EventoAuditoria>> {
+    let conn = db.conn();
+    repo::auditoria::listar_historial(
+        &conn,
+        usuario_id.as_deref(),
+        comando.as_deref(),
+        nivel.as_deref(),
+        desde.as_deref(),
+        hasta.as_deref(),
+        limit.unwrap_or(100),
+    )
+}
+
+/// Métricas agregadas del historial (conteos, tasas, por comando/día).
+#[tauri::command]
+pub fn metricas_historial(
+    db: State<'_, Arc<DbState>>,
+) -> AppResult<repo::auditoria::MetricasHistorial> {
+    let conn = db.conn();
+    repo::auditoria::metricas_historial(&conn)
 }

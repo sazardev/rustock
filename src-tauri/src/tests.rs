@@ -553,3 +553,53 @@ fn producto_que_controla_lote_exige_lote() {
     let err = repo::movimiento::crear_movimiento(&conn, &mov).expect_err("lote requerido");
     assert!(err.to_string().contains("lote"));
 }
+
+#[test]
+fn historial_registra_invocaciones_con_metricas() {
+    let db = setup();
+    let conn = db.conn();
+    let (_, ubi1, _) = crear_arbol(&conn);
+    let (_, prod) = crear_uom_y_producto(&conn);
+
+    // Simular una invocación de escritura registrada con métricas.
+    repo::auditoria::registrar_invocacion(&conn, Some("admin"), "crear_movimiento", 12, true, None)
+        .expect("registrar");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some("admin"),
+        "aprobar_movimiento",
+        3,
+        true,
+        None,
+    )
+    .expect("registrar");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some("admin"),
+        "anular_movimiento",
+        1,
+        false,
+        None,
+    )
+    .expect("registrar");
+
+    // Consultar el historial filtrado por comando.
+    let hist = repo::auditoria::listar_historial(&conn, Some("admin"), None, None, None, None, 100)
+        .expect("historial");
+    assert!(hist.len() >= 3);
+    assert_eq!(hist[0].nivel, "ESCRITURA");
+
+    // Métricas agregadas: total = 3 invocaciones + eventos de setup (>= 3).
+    let m = repo::auditoria::metricas_historial(&conn).expect("metricas");
+    assert!(m.total >= 3);
+    assert_eq!(m.exitos, m.total - 1);
+    assert_eq!(m.errores, 1);
+    assert!(m.tasa_exito > 60.0);
+    assert!(m.duracion_promedio_ms.is_some());
+    assert!(!m.por_comando.is_empty());
+
+    // Verificar que no queda saldo (el historial no toca stock).
+    let saldos = repo::movimiento::listar_saldos(&conn, Some(&ubi1), None).expect("saldos");
+    let _ = prod;
+    assert!(saldos.is_empty());
+}
