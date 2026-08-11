@@ -1,19 +1,110 @@
-import { ButtonLink, Card, DetailList, PageHeader } from "../shared/ui";
+import { useQuery } from "@tanstack/react-query";
+import { obtenerDashboard, obtenerKpisGenerales, listarMovimientos } from "../shared/backend";
+import { esPaginado, type Movimiento } from "../shared/types";
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  DetailList,
+  ErrorPanel,
+  PageHeader,
+  Table,
+  type TableColumn,
+} from "../shared/ui";
+import {
+  ESTADO_MOVIMIENTO_LABEL,
+  ESTADO_MOVIMIENTO_TONE,
+  TIPO_MOVIMIENTO_ICON,
+  TIPO_MOVIMIENTO_LABEL,
+  TIPO_MOVIMIENTO_TONE,
+  formatearFecha,
+  mensajeError,
+} from "../shared/format";
 
-interface Kpi {
-  label: string;
-  value: string;
-  code?: boolean;
-}
-
-const KPIS: Kpi[] = [
-  { label: "Productos activos", value: "1,248", code: true },
-  { label: "Ubicaciones", value: "364", code: true },
-  { label: "Movimientos del mes", value: "2,103", code: true },
-  { label: "Alertas activas", value: "3", code: true },
+const columns: Array<TableColumn<Movimiento>> = [
+  { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+  {
+    key: "tipo",
+    header: "Tipo",
+    render: (m) => (
+      <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
+        {TIPO_MOVIMIENTO_LABEL[m.tipo]}
+      </Badge>
+    ),
+  },
+  {
+    key: "fecha_movimiento",
+    header: "Fecha",
+    render: (m) => formatearFecha(m.fecha_movimiento),
+  },
+  {
+    key: "estado",
+    header: "Estado",
+    render: (m) => (
+      <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>{ESTADO_MOVIMIENTO_LABEL[m.estado]}</Badge>
+    ),
+  },
 ];
 
 export function DashboardPage() {
+  const dashboardQuery = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: obtenerDashboard,
+  });
+  const kpisQuery = useQuery({
+    queryKey: ["kpis-generales"],
+    queryFn: obtenerKpisGenerales,
+  });
+  const movimientosQuery = useQuery({
+    queryKey: ["movimientos", "recientes"],
+    queryFn: () => listarMovimientos({ page_size: 5, sort: "-fecha_movimiento" }),
+  });
+
+  const resumen = dashboardQuery.data;
+  const kpis = kpisQuery.data;
+  const movimientosListado = movimientosQuery.data;
+  const movimientos =
+    movimientosListado && esPaginado(movimientosListado) ? movimientosListado.data : [];
+
+  const kpiItems = resumen
+    ? [
+        { label: "SKUs activos", value: resumen.total_skus_activos.toLocaleString(), code: true },
+        { label: "Unidades totales", value: resumen.total_unidades.toLocaleString(), code: true },
+        { label: "Alertas activas", value: resumen.alertas_activas.toLocaleString(), code: true },
+        {
+          label: "Movimientos de hoy",
+          value: resumen.movimientos_hoy.toLocaleString(),
+          code: true,
+        },
+        {
+          label: "Precisión (última sesión)",
+          value:
+            resumen.precision_sku_ultima_sesion !== null
+              ? `${resumen.precision_sku_ultima_sesion.toFixed(1)}%`
+              : "Sin sesiones cerradas",
+          code: resumen.precision_sku_ultima_sesion !== null,
+        },
+        {
+          label: "Ocupación de ubicaciones",
+          value: `${resumen.ocupacion_pct.toFixed(1)}% (${resumen.ubicaciones_con_stock}/${resumen.ubicaciones_totales})`,
+          code: true,
+        },
+      ]
+    : [];
+
+  const kpiGeneralItems = kpis
+    ? [
+        { label: "Tasa de merma", value: `${kpis.tasa_merma_pct.toFixed(2)}%`, code: true },
+        {
+          label: "Lotes vencidos sin dar de baja",
+          value: kpis.lotes_vencidos_sin_dar_de_baja.toLocaleString(),
+          code: true,
+        },
+      ]
+    : [];
+
+  const error = dashboardQuery.error ?? kpisQuery.error ?? movimientosQuery.error;
+
   return (
     <>
       <PageHeader
@@ -26,25 +117,38 @@ export function DashboardPage() {
         }
       />
 
+      {error ? (
+        <ErrorPanel title="No se pudieron cargar los indicadores">{mensajeError(error)}</ErrorPanel>
+      ) : null}
+
       <Card title="Indicadores clave">
         <Card.Body>
-          <DetailList items={KPIS} />
+          {dashboardQuery.isLoading ? (
+            <p className="text-base text-gray-500">Cargando…</p>
+          ) : (
+            <DetailList items={kpiItems} />
+          )}
         </Card.Body>
       </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card title="Movimientos recientes">
-          <Card.Body>
-            <p className="text-base text-gray-500">
-              Los últimos movimientos se muestran aquí una vez que exista historial.
-            </p>
-          </Card.Body>
+          <Table
+            columns={columns}
+            rows={movimientos}
+            rowKey={(m) => m.id}
+            loading={movimientosQuery.isLoading}
+            emptyTitle="Sin movimientos todavía"
+            emptyDescription="Los últimos movimientos se muestran aquí una vez que exista historial."
+          />
         </Card>
-        <Card title="Stock por ubicación">
+        <Card title="Indicadores adicionales">
           <Card.Body>
-            <p className="text-base text-gray-500">
-              El detalle de saldos por ubicación y lote aparece en esta sección.
-            </p>
+            {kpisQuery.isLoading ? (
+              <p className="text-base text-gray-500">Cargando…</p>
+            ) : (
+              <DetailList items={kpiGeneralItems} />
+            )}
           </Card.Body>
         </Card>
       </div>

@@ -2519,3 +2519,23 @@ fn ajuste_manual_bloqueado_durante_inventario_en_curso() {
         crate::error::AppError::AjusteBloqueadoPorInventario(_)
     ));
 }
+
+/// Ejercita la deserialización JSON real (no la construcción directa del
+/// struct en Rust): `parent_id` ausente debe distinguirse de `parent_id:
+/// null` — es exactamente el límite que cruza el IPC de Tauri con el
+/// frontend. Ver `domain::catalogo::deserialize_some`.
+#[test]
+fn editar_categoria_distingue_ausente_de_null_en_json() {
+    use crate::domain::catalogo::EditarCategoria;
+
+    let ausente: EditarCategoria = serde_json::from_str(r#"{"nombre":"X"}"#).expect("deserializar");
+    assert_eq!(ausente.parent_id, None, "ausente debe ser 'no tocar'");
+
+    let nulo: EditarCategoria =
+        serde_json::from_str(r#"{"nombre":"X","parent_id":null}"#).expect("deserializar");
+    assert_eq!(nulo.parent_id, Some(None), "null debe ser 'mover a raíz'");
+
+    let con_valor: EditarCategoria =
+        serde_json::from_str(r#"{"nombre":"X","parent_id":"abc"}"#).expect("deserializar");
+    assert_eq!(con_valor.parent_id, Some(Some("abc".to_string())));
+}

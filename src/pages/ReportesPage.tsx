@@ -1,4 +1,5 @@
 import { ButtonLink, Card, PageHeader } from "../shared/ui";
+import { PATH, catalogoLista } from "../app/route-paths";
 
 interface Reporte {
   id: string;
@@ -11,32 +12,38 @@ const REPORTES: Reporte[] = [
   {
     id: "stock",
     nombre: "Stock actual",
-    descripcion: "Existencias por producto, ubicación y lote.",
-    href: "/reportes/stock",
+    descripcion: "Existencias por producto; use filtros y agregaciones en el catálogo.",
+    href: catalogoLista("productos"),
   },
   {
     id: "movimientos",
     nombre: "Movimientos",
     descripcion: "Historial de entradas, salidas, traslados y ajustes.",
-    href: "/reportes/movimientos",
+    href: PATH.movimientos,
   },
   {
     id: "vencimientos",
     nombre: "Vencimientos",
-    descripcion: "Lotes próximos a vencer por ubicación.",
-    href: "/reportes/vencimientos",
+    descripcion: "Lotes próximos a vencer o vencidos, por producto.",
+    href: PATH.reporteVencimientos,
+  },
+  {
+    id: "kardex",
+    nombre: "Kardex de producto",
+    descripcion: "Tarjeta de stock: movimientos y saldo acumulado de un producto.",
+    href: PATH.reporteKardex,
   },
   {
     id: "precision",
     nombre: "Precisión de inventario",
     descripcion: "Precisión por sesión de conteo cerrada.",
-    href: "/reportes/precision",
+    href: PATH.inventario,
   },
   {
     id: "auditoria",
     nombre: "Auditoría",
     descripcion: "Trazabilidad de cambios sobre los registros.",
-    href: "/reportes/auditoria",
+    href: PATH.historial,
   },
 ];
 

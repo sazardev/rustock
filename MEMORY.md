@@ -13,8 +13,8 @@
 |---|---|
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
-| **Fase del roadmap** | Backend: las 7 sub-fases (A-G) del plan de cierre del SPEC completadas y verificadas — ver plan en `~/.claude/plans/vivid-scribbling-cook.md`. Backend Rust conforme al SPEC completo (§3-§17). Pendiente: Fase 2+ del ROADMAP original (UI de catálogos/movimientos en `src/`, sin empezar) |
-| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 64 tests pasan, clippy y fmt limpios |
+| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **FE-1, FE-2 y FE-3 completas**; **FE-4 en curso**; FE-5/FE-6 pendientes. Ver §6 |
+| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 65 tests pasan, clippy y fmt limpios |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
 | **Repo** | Git en `main` |
@@ -275,6 +275,110 @@ en verde antes de seguir.
   atómica entre sí (cada `crear_movimiento` es su propia transacción); ambos
   nacen en `BORRADOR` sin efecto sobre stock, así que no compromete saldos.
 
+### Hito 8 — Frontend conectado al backend real (FE-1 a FE-3 completas, FE-4 en curso)
+
+Plan completo en `~/.claude/plans/vivid-scribbling-cook.md`. Auditoría previa
+confirmó que **todo** el frontend (`src/pages/*`) era maqueta con arrays
+hardcodeados, sin login, con `Topbar` mostrando un usuario fijo. Este hito lo
+conecta al backend real fase por fase.
+
+**FE-1 — Cimientos (completa):**
+- Instaladas las dependencias ya ancladas en `STACK.md`:
+  `@tanstack/react-query`, `zustand`, `react-hook-form`, `zod`,
+  `@hookform/resolvers`, `date-fns`.
+- `src/shared/types.ts` (~470 líneas): tipos TS espejo de cada struct Rust
+  serializable (`domain/*.rs`, `query::Listado`), en `snake_case` tal cual
+  los serializa `serde` — nunca traducidos a camelCase.
+- `src/shared/backend.ts`: una función por comando Tauri, nombres de función
+  camelCase invocando comandos snake_case.
+- `src/shared/session.ts`: store zustand (`usuario`, `cargando`,
+  `iniciarSesion`, `cerrarSesion`, `refrescar`).
+- `LoginPage` / `BootstrapAdminPage` nuevas, `AppLayout` ahora redirige a
+  `/login` sin sesión y muestra usuario/rol reales con botón de cerrar
+  sesión.
+- **Bug real descubierto por esta integración** (no por tests Rust): el tipo
+  `Option<Option<String>>` de `EditarCategoria.parent_id` colapsaba `null`
+  JSON y ausencia de clave al mismo valor con `#[serde(default)]` plano —
+  invisible a los tests Rust porque construían el struct directamente sin
+  pasar por deserialización JSON. Arreglado con un helper
+  `deserialize_some` + test `editar_categoria_distingue_ausente_de_null_en_json`
+  que sí pasa por `serde_json::from_str`.
+
+**FE-2 — Dashboard, Alertas, Reportes (completa):**
+- `DashboardPage`: KPIs y movimientos recientes reales
+  (`obtener_dashboard`, `obtener_kpis_generales`, `listar_movimientos`).
+- `AlertasPage`: filtro por estado real, acciones `Resolver`/`Ignorar` que
+  invalidan la query.
+- `ReportesPage`: tarjetas de stock/movimientos/auditoría enlazadas a los
+  listados reales ya existentes (catálogo de productos, movimientos,
+  historial) en vez de duplicar vistas; **nuevas** `ReporteVencimientosPage`
+  (`lotes_por_vencer` con selector de días) y `ReporteKardexPage` (selector
+  de producto + `kardex_producto`). La tarjeta de precisión de inventario
+  queda enlazada a `/inventario` (pendiente de un selector de sesión cerrada
+  cuando exista FE-5) — decisión de alcance, no un olvido.
+- Nuevo `src/shared/format.ts`: fechas y mapas de tono/etiqueta de Badge
+  (tipo/estado de movimiento, severidad/estado de alerta) compartidos entre
+  páginas para que no diverjan.
+
+**FE-3 — Movimientos (completa, es el núcleo del sistema):**
+- `MovimientosPage`: listado real vía el motor de consulta universal, con
+  filtros de tipo/estado y paginación (`listar_movimientos`).
+- `MovimientoDetallePage` (ruta nueva `/movimientos/:id`): datos generales,
+  tabla de líneas (con enlaces a producto/lote/ubicación resueltos vía
+  `src/shared/refs.tsx`), panel de comentarios (listar + crear, SPEC §12) y
+  acciones según el estado (`Enviar a aprobación` inline porque no altera
+  stock; `Aprobar`/`Anular` como páginas de confirmación propias por
+  DESIGN §7.6, nunca inline).
+- `MovimientoAprobarPage` / `MovimientoAnularPage`: páginas de confirmación
+  dedicadas, cero modales.
+- `MovimientoNuevoPage` + `src/pages/movimiento-form.tsx` (el archivo
+  principal se dividió en dos porque pasaba las 300 líneas del lint):
+  selector de tipo (ENTRADA/SALIDA/TRASLADO/AJUSTE), formulario genérico con
+  líneas dinámicas (`useFieldArray`) que muestra/oculta lote según
+  `producto.controla_lote` y origen/destino según tipo+sub_tipo, botón
+  "Sugerir FIFO/FEFO" para SALIDA (`sugerir_lineas_salida`), y un formulario
+  de traslado separado (`crear_traslado`, una sola línea). Validación
+  cliente mínima (motivo obligatorio para ajustes/merma, lote obligatorio si
+  `controla_lote`, origen/destino según tipo) + errores de servidor
+  mostrados tal cual en `ErrorPanel`.
+- **Regla de negocio aclarada leyendo `repo/movimiento.rs`** (no está escrita
+  así de explícita en el SPEC): `tipo=AJUSTE` es su propio tipo con
+  sub_tipos `AJUSTE_POSITIVO`/`AJUSTE_NEGATIVO` — no son sub-tipos de
+  `ENTRADA`/`SALIDA` pese a como está redactado el SPEC §7.1/§8.1. El código
+  Rust (`aprobar_movimiento`, match de `tipo_mov`) es la fuente de verdad
+  usada para construir el formulario.
+
+**FE-4 — Catálogos (en curso):** se creó `src/shared/refs.tsx` con
+componentes `<XRef id/>` reutilizables (producto, ubicación, lote,
+categoría, uom, proveedor, cliente, almacén) que resuelven la etiqueta
+legible vía react-query y enlazan al detalle. Al construirlo se detectó que
+**faltaba el comando Tauri `obtener_uom`** (la función de repo existía,
+`crear_uom`/`listar_uoms` sí estaban expuestas, pero no `obtener_uom`) — se
+agregó siguiendo el mismo patrón que el resto de `obtener_*` (permiso
+`uom:ver` + `con_auditoria!`) y se registró en `handler()`. Falta: sustituir
+`src/pages/catalogs.tsx`/`CatalogPages.tsx` (mock) por un registro real por
+entidad, y CRUD completo (nuevo/editar/eliminar → en realidad
+"desactivar", el SPEC no permite borrado físico con historial) para
+**Almacén** y **Producto**. El nav (`src/app/nav.ts`) y el registro de
+catálogos ya excluían Zona/Rack/Sección/Caja del top-level desde antes de
+este hito (se navegan anidados, no como catálogo propio) — se respeta esa
+decisión preexistente, no se agregan rutas nuevas para ellas.
+
+**Verificación de este hito:** `cargo fmt --check`, `cargo clippy --all-targets
+-- -D warnings` y `cargo test` (65 tests) en verde; `npm run typecheck`,
+`npm run build`, `npm run design` (DesignGuard) y `npm run routes`
+(RouteGuard) en verde en cada fase.
+
+**Limitación de entorno encontrada (no es un bug de la app):** el navegador
+que controla la herramienta `claude-in-chrome` en este entorno **no alcanza
+`localhost` del sandbox** donde corre `npm run dev` — se confirmó
+navegando primero a la app (falla, "Frame ... showing error page") y luego
+a `https://example.com` (carga con normalidad), aislando que el problema es
+de red del entorno, no de la app. Por eso esta ronda se verificó con el
+pipeline estático (typecheck/build/design/routes) en vez de una prueba
+visual en vivo; falta la prueba manual con `npm run tauri dev` cuando el
+usuario la corra en su máquina.
+
 ---
 
 ## 3. Decisiones de diseño del stack (recordatorio)
@@ -329,28 +433,55 @@ en verde antes de seguir.
 
 ## 6. Trabajo en progreso
 
-**El plan de 7 fases del Hito 7 (§2) está completo.** El backend Rust
-(`src-tauri/`) implementa el SPEC completo (§3-§17) de forma segura y
-consistente: autenticación real, motor de consulta universal, catálogos con
-CRUD completo, movimientos con FIFO/FEFO y traslado inter-almacén,
-comentarios, trazabilidad, alertas y reportes/KPIs. 64 tests, clippy y fmt en
-verde; `npm run typecheck` confirma que el frontend no tiene regresiones (no
-se tocó `src/`).
+**Backend: completo (Hito 7, §2).** **Frontend: Hito 8 (§2) en curso**,
+FE-1/FE-2/FE-3 terminadas y verificadas; FE-4 arrancada pero no terminada.
 
-**Siguiente hito recomendado:** Fase 2 del ROADMAP original — la UI de
-catálogos y movimientos en `src/` (listado/detalle/nuevo/editar/eliminar por
-página, DESIGN.md, cero modales). El backend ya expone todos los comandos
-que esa UI necesita, incluido el estándar de consulta universal (§15) para
-cada listado. Antes de arrancarla:
+**Retomar exactamente aquí (FE-4 — Catálogos):**
+1. Reemplazar `src/pages/catalogs.tsx` + `src/pages/CatalogPages.tsx` (hoy
+   son 100% mock: filas hardcodeadas) por un registro real por entidad que
+   use `src/shared/backend.ts` (`listar_*`/`obtener_*`) + el motor de
+   consulta universal para paginación/orden/búsqueda. Ya existe
+   `src/shared/refs.tsx` con los componentes `<XRef id/>` para enlazar
+   entidades entre sí en las columnas/paneles de detalle.
+2. El registro de catálogos cubre las **8 entidades que ya están en el nav**
+   (`src/app/nav.ts`): almacenes, ubicaciones, productos, lotes, categorías,
+   uoms, proveedores, clientes. Zona/Rack/Sección/Caja **no están en el nav**
+   desde antes de este hito — no agregar rutas nuevas para ellas, es una
+   decisión de arquitectura preexistente (se navegan anidadas, no como
+   catálogo top-level).
+3. **Profundidad completa** (nuevo/editar/eliminar — en la práctica
+   "desactivar", el SPEC prohíbe borrado físico con historial) solo para
+   **Almacén** (simple) y **Producto** (complejo: UOM/categoría/lote). Las
+   otras 6 entidades quedan con listado + detalle reales pero sin formulario
+   propio — alcance documentado en el plan, no un olvido.
+4. Backend ya tiene todo lo necesario: `crear_almacen`/`editar_almacen`/
+   `desactivar_almacen` y `crear_producto`/`editar_producto`/
+   `desactivar_producto` están expuestos y probados. `desactivar_*` en
+   ambos casos no tiene precondición de negocio más allá del permiso (a
+   diferencia de zona/rack/sección/ubicación, que sí validan stock/hijos) —
+   revisar `repo/catalogo.rs::desactivar_almacen`/`desactivar_producto` si
+   hace falta confirmar antes de escribir la página de confirmación.
 
-- **Borrar la base de datos de desarrollo** (`rustock.db`, en el directorio
-  de datos de la app): el esquema de `ubicaciones` cambió en la Fase C
-  (columnas nuevas + `CHECK`) y no hay migración automática, solo
-  `CREATE TABLE IF NOT EXISTS`.
-- Revisar los "gaps conocidos" documentados al final de la Fase G (§2) antes
-  de darlos por sorpresa en la UI: unicidad de código por padre inmediato
-  (no por almacén completo), `comentario:eliminar` solo para ADMIN, y la
-  creación no-atómica de las dos piernas de un traslado inter-almacén.
+**Después de FE-4, quedan:**
+- **FE-5 — Inventario físico**: `InventarioPage` real
+  (`listar_sesiones_inventario`), `/inventario/:id` (sesión + conteos +
+  diferencias), `/inventario/nuevo` (formulario real).
+- **FE-6 — Cierre**: pipeline completo en verde (`typecheck`, `build`,
+  `lint`, `design`, `routes`), prueba manual con `npm run tauri dev`
+  (login → dashboard → crear entrada → verla listada → aprobarla → ver el
+  saldo reflejado — la automatización de navegador no pudo hacer esta
+  prueba en este entorno, ver Hito 8 en §2), y actualizar este documento con
+  el hito de frontend cerrado + la misma lista de gaps de
+  amplitud-sin-profundidad de arriba.
+
+**Antes de correr la app real** (`npm run tauri dev`), recordar: si viene de
+antes de la Fase C del Hito 7, **borrar `rustock.db`** — el esquema de
+`ubicaciones` cambió (columnas nuevas + `CHECK`) sin migración automática.
+
+Gaps conocidos del backend (Hito 7, sin cambios): unicidad de código por
+padre inmediato en zona/rack/sección/ubicación (no por almacén completo),
+`comentario:eliminar` solo para ADMIN, creación no-atómica de las dos
+piernas de un traslado inter-almacén.
 
 ---
 

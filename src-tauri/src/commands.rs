@@ -810,6 +810,19 @@ pub fn crear_uom(
 }
 
 #[tauri::command]
+pub fn obtener_uom(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Uom>> {
+    con_auditoria!(db, sesion, "obtener_uom", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "uom", "ver")?;
+        repo::catalogo::obtener_uom(&conn, &id)
+    })
+}
+
+#[tauri::command]
 pub fn listar_categorias(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -1488,6 +1501,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         desactivar_cliente,
         listar_uoms,
         crear_uom,
+        obtener_uom,
         listar_categorias,
         crear_categoria,
         obtener_categoria,

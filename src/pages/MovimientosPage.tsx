@@ -1,135 +1,178 @@
-import { Badge, ButtonLink, Card, PageHeader, Table, Text } from "../shared/ui";
-import type { TableColumn } from "../shared/ui";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { listarMovimientos } from "../shared/backend";
+import {
+  esPaginado,
+  type EstadoMovimiento,
+  type Movimiento,
+  type TipoMovimiento,
+} from "../shared/types";
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  ErrorPanel,
+  FilterBar,
+  FilterField,
+  PageHeader,
+  Pagination,
+  Select,
+  Table,
+  Text,
+  type TableColumn,
+} from "../shared/ui";
+import { movimientoDetalle, PATH } from "../app/route-paths";
+import {
+  ESTADO_MOVIMIENTO_LABEL,
+  ESTADO_MOVIMIENTO_TONE,
+  TIPO_MOVIMIENTO_ICON,
+  TIPO_MOVIMIENTO_LABEL,
+  TIPO_MOVIMIENTO_TONE,
+  formatearFecha,
+  mensajeError,
+} from "../shared/format";
 
-interface Movimiento {
-  id: string;
-  numero: string;
-  tipo: "Entrada" | "Salida" | "Traslado" | "Ajuste";
-  producto: string;
-  cantidad: number;
-  uom: string;
-  estado: "Aprobado" | "Pendiente" | "Borrador";
-}
-
-const MOVIMIENTOS: Movimiento[] = [
-  {
-    id: "1",
-    numero: "MOV-0001",
-    tipo: "Entrada",
-    producto: "Tornillo M6",
-    cantidad: 120,
-    uom: "pza",
-    estado: "Aprobado",
-  },
-  {
-    id: "2",
-    numero: "MOV-0002",
-    tipo: "Salida",
-    producto: "Arandela 5/16",
-    cantidad: 40,
-    uom: "pza",
-    estado: "Pendiente",
-  },
-  {
-    id: "3",
-    numero: "MOV-0003",
-    tipo: "Traslado",
-    producto: "Cinta embalaje",
-    cantidad: 8,
-    uom: "caja",
-    estado: "Aprobado",
-  },
-  {
-    id: "4",
-    numero: "MOV-0004",
-    tipo: "Ajuste",
-    producto: "Tornillo M6",
-    cantidad: -5,
-    uom: "pza",
-    estado: "Borrador",
-  },
-];
-
-const TIPO_TONE: Record<Movimiento["tipo"], "success" | "danger" | "info" | "warning"> = {
-  Entrada: "success",
-  Salida: "danger",
-  Traslado: "info",
-  Ajuste: "warning",
-};
-
-const ESTADO_TONE: Record<Movimiento["estado"], "success" | "warning" | "neutral"> = {
-  Aprobado: "success",
-  Pendiente: "warning",
-  Borrador: "neutral",
-};
-
-const columns: Array<TableColumn<Movimiento>> = [
-  { key: "numero", header: "Número", code: true, sortable: true, render: (m) => m.numero },
-  {
-    key: "tipo",
-    header: "Tipo",
-    sortable: true,
-    render: (m) => (
-      <Badge
-        tone={TIPO_TONE[m.tipo]}
-        icon={
-          m.tipo === "Entrada"
-            ? "entrada"
-            : m.tipo === "Salida"
-              ? "salida"
-              : m.tipo === "Traslado"
-                ? "traslado"
-                : "ajuste"
-        }
-      >
-        {m.tipo}
-      </Badge>
-    ),
-  },
-  { key: "producto", header: "Producto", sortable: true, render: (m) => m.producto },
-  {
-    key: "cantidad",
-    header: "Cantidad",
-    num: true,
-    sortable: true,
-    render: (m) => `${m.cantidad} ${m.uom}`,
-  },
-  {
-    key: "estado",
-    header: "Estado",
-    sortable: true,
-    render: (m) => <Badge tone={ESTADO_TONE[m.estado]}>{m.estado}</Badge>,
-  },
-];
+const TIPOS: TipoMovimiento[] = ["ENTRADA", "SALIDA", "TRASLADO", "AJUSTE", "CONSUMO"];
+const ESTADOS: EstadoMovimiento[] = ["BORRADOR", "PENDIENTE_APROBACION", "APROBADO", "ANULADO"];
+const PAGE_SIZE = 20;
 
 export function MovimientosPage() {
+  const navigate = useNavigate();
+  const [page, setPage] = useState(1);
+  const [tipo, setTipo] = useState<TipoMovimiento | "">("");
+  const [estado, setEstado] = useState<EstadoMovimiento | "">("");
+
+  const filters: string[] = [];
+  if (tipo) filters.push(`tipo:eq:${tipo}`);
+  if (estado) filters.push(`estado:eq:${estado}`);
+
+  const query = useQuery({
+    queryKey: ["movimientos", { page, tipo, estado }],
+    queryFn: () =>
+      listarMovimientos({
+        page,
+        page_size: PAGE_SIZE,
+        sort: "-fecha_movimiento",
+        filters: filters.length ? filters : undefined,
+      }),
+  });
+
+  const listado = query.data && esPaginado(query.data) ? query.data : null;
+  const filas = listado?.data ?? [];
+
+  const columns: Array<TableColumn<Movimiento>> = [
+    { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+    {
+      key: "tipo",
+      header: "Tipo",
+      render: (m) => (
+        <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
+          {TIPO_MOVIMIENTO_LABEL[m.tipo]}
+        </Badge>
+      ),
+    },
+    { key: "sub_tipo", header: "Sub-tipo", code: true, render: (m) => m.sub_tipo },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (m) => (
+        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>{ESTADO_MOVIMIENTO_LABEL[m.estado]}</Badge>
+      ),
+    },
+    {
+      key: "fecha_movimiento",
+      header: "Fecha",
+      render: (m) => formatearFecha(m.fecha_movimiento),
+    },
+    {
+      key: "documento_referencia",
+      header: "Documento",
+      code: true,
+      render: (m) => m.documento_referencia ?? "—",
+    },
+  ];
+
   return (
     <>
       <PageHeader
         title="Movimientos"
         description="Entradas, salidas, traslados y ajustes de inventario."
         actions={
-          <ButtonLink variant="primary" icon="agregar" href="/movimientos/nuevo">
+          <ButtonLink variant="primary" icon="agregar" href={PATH.movimientosNuevo}>
             Nuevo movimiento
           </ButtonLink>
         }
       />
 
+      {query.error ? (
+        <ErrorPanel title="No se pudieron cargar los movimientos">
+          {mensajeError(query.error)}
+        </ErrorPanel>
+      ) : null}
+
+      <FilterBar>
+        <FilterField>
+          <Select
+            aria-label="Filtrar por tipo"
+            value={tipo}
+            onChange={(e) => {
+              setTipo(e.target.value as TipoMovimiento | "");
+              setPage(1);
+            }}
+          >
+            <option value="">Todos los tipos</option>
+            {TIPOS.map((t) => (
+              <option key={t} value={t}>
+                {TIPO_MOVIMIENTO_LABEL[t]}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField>
+          <Select
+            aria-label="Filtrar por estado"
+            value={estado}
+            onChange={(e) => {
+              setEstado(e.target.value as EstadoMovimiento | "");
+              setPage(1);
+            }}
+          >
+            <option value="">Todos los estados</option>
+            {ESTADOS.map((e) => (
+              <option key={e} value={e}>
+                {ESTADO_MOVIMIENTO_LABEL[e]}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+      </FilterBar>
+
       <Card>
-        <Card.Body>
-          <Table
-            columns={columns}
-            rows={MOVIMIENTOS}
-            rowKey={(m) => m.id}
-            emptyTitle="No hay movimientos todavía"
-            emptyDescription="Registre el primer movimiento para comenzar a operar."
-            emptyAction={
-              <ButtonLink variant="primary" size="sm" icon="agregar" href="/movimientos/nuevo">
-                Crear movimiento
-              </ButtonLink>
-            }
+        <Table
+          columns={columns}
+          rows={filas}
+          rowKey={(m) => m.id}
+          loading={query.isLoading}
+          onRowClick={(m) => navigate(movimientoDetalle(m.id))}
+          emptyTitle="No hay movimientos todavía"
+          emptyDescription="Registre el primer movimiento para comenzar a operar."
+          emptyAction={
+            <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.movimientosNuevo}>
+              Crear movimiento
+            </ButtonLink>
+          }
+        />
+        {listado && listado.meta.total > 0 ? (
+          <Pagination
+            page={listado.meta.page}
+            pageCount={listado.meta.total_pages}
+            total={listado.meta.total}
+            from={(listado.meta.page - 1) * listado.meta.page_size + 1}
+            to={Math.min(listado.meta.page * listado.meta.page_size, listado.meta.total)}
+            onPageChange={setPage}
           />
-        </Card.Body>
+        ) : null}
       </Card>
 
       <Card muted>

@@ -1,4 +1,6 @@
 export const PATH = {
+  login: "/login",
+  configurarAdministrador: "/configurar-administrador",
   dashboard: "/",
   movimientos: "/movimientos",
   movimientosNuevo: "/movimientos/nuevo",
@@ -9,6 +11,7 @@ export const PATH = {
   reporteStock: "/reportes/stock",
   reporteMovimientos: "/reportes/movimientos",
   reporteVencimientos: "/reportes/vencimientos",
+  reporteKardex: "/reportes/kardex",
   reportePrecision: "/reportes/precision",
   reporteAuditoria: "/reportes/auditoria",
   historial: "/historial",
@@ -18,6 +21,22 @@ export const PATH = {
   accesoNoPermitido: "/acceso-no-permitido",
   noEncontrado: "/no-encontrado",
 } as const;
+
+export function reporteKardexProducto(productoId: string): string {
+  return `/reportes/kardex/${productoId}`;
+}
+
+export function movimientoDetalle(id: string): string {
+  return `/movimientos/${id}`;
+}
+
+export function movimientoAprobar(id: string): string {
+  return `/movimientos/${id}/aprobar`;
+}
+
+export function movimientoAnular(id: string): string {
+  return `/movimientos/${id}/anular`;
+}
 
 export function catalogoLista(slug: string): string {
   return `/${slug}`;

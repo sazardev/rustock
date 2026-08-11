@@ -1,4 +1,20 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Distingue "campo ausente" (no tocar) de "campo presente con `null`"
+/// (limpiar) para un `Option<Option<T>>` — el `derive(Deserialize)` normal de
+/// serde colapsa ambos casos a `None` porque `null` ya satisface la propia
+/// capa `Option` externa antes de llegar a la interna. Con
+/// `#[serde(default, deserialize_with = "deserialize_some")]`: clave ausente
+/// -> `None` (por `default`); clave presente (con `null` o un valor) ->
+/// siempre `Some(..)`, dejando que la deserialización interna de `Option<T>`
+/// decida entre `Some(None)` (limpiar) y `Some(Some(x))` (asignar).
+fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Deserialize::deserialize(deserializer).map(Some)
+}
 
 use super::{Auditoria, TipoUbicacion, normalizar_codigo};
 
@@ -301,11 +317,11 @@ pub struct NuevaCategoria {
 
 /// `None` en un campo significa "no tocar". Cambiar `parent_id` re-valida
 /// que no se forme un ciclo (SPEC §3.8).
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Default)]
 pub struct EditarCategoria {
     pub nombre: Option<String>,
     pub descripcion: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_some")]
     pub parent_id: Option<Option<String>>,
 }
 
