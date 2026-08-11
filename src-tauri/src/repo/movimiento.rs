@@ -100,6 +100,122 @@ pub fn stock_total_producto(conn: &Connection, producto: &str) -> AppResult<i64>
         .ok_or(AppError::CampoRequerido("saldo".into()))
 }
 
+/// Crea un traslado (SPEC §9), resolviendo el almacén de origen y destino
+/// por transitividad (§3.13). Si coinciden, crea un único movimiento
+/// `TRASLADO` (comportamiento intra-almacén sin cambios). Si difieren, crea
+/// **dos** movimientos ligados por el mismo `documento_referencia` (§9.3):
+/// `SALIDA`/`TRASLADO_SALIDA` en el almacén de origen y
+/// `ENTRADA`/`TRASLADO_ENTRADA` en el de destino. Cada movimiento nace en
+/// `BORRADOR` y se aprueba por separado (§6.2); como ninguno de los dos
+/// afecta stock hasta su propia aprobación, la falta de una transacción
+/// conjunta entre ambas creaciones no compromete la consistencia del saldo.
+pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<TrasladoCreado> {
+    if nuevo.cantidad <= 0 {
+        return Err(AppError::CampoRequerido("cantidad (> 0)".into()));
+    }
+    let almacen_origen =
+        crate::repo::catalogo::resolver_almacen_id_de_ubicacion(conn, &nuevo.origen_ubicacion_id)?;
+    let almacen_destino =
+        crate::repo::catalogo::resolver_almacen_id_de_ubicacion(conn, &nuevo.destino_ubicacion_id)?;
+
+    if almacen_origen == almacen_destino {
+        let mov = crear_movimiento(
+            conn,
+            &NuevoMovimiento {
+                tipo: "TRASLADO".into(),
+                sub_tipo: "TRASLADO_SALIDA".into(),
+                fecha_movimiento: None,
+                motivo: None,
+                origen_ubicacion_id: Some(nuevo.origen_ubicacion_id.clone()),
+                destino_ubicacion_id: Some(nuevo.destino_ubicacion_id.clone()),
+                proveedor_id: None,
+                cliente_id: None,
+                sesion_inventario_id: None,
+                documento_referencia: nuevo.documento_referencia.clone(),
+                notas: nuevo.notas.clone(),
+                lineas: vec![NuevaLinea {
+                    producto_id: nuevo.producto_id.clone(),
+                    lote_id: nuevo.lote_id.clone(),
+                    cantidad: nuevo.cantidad,
+                    origen_ubicacion_id: Some(nuevo.origen_ubicacion_id.clone()),
+                    destino_ubicacion_id: Some(nuevo.destino_ubicacion_id.clone()),
+                    caja_origen_id: nuevo.caja_origen_id.clone(),
+                    caja_destino_id: nuevo.caja_destino_id.clone(),
+                }],
+                created_by: nuevo.created_by.clone(),
+            },
+        )?;
+        return Ok(TrasladoCreado {
+            salida: mov,
+            entrada: None,
+        });
+    }
+
+    let referencia = nuevo
+        .documento_referencia
+        .clone()
+        .unwrap_or_else(|| format!("TRASLADO-{}", Uuid::new_v4()));
+
+    let salida = crear_movimiento(
+        conn,
+        &NuevoMovimiento {
+            tipo: "SALIDA".into(),
+            sub_tipo: "TRASLADO_SALIDA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: Some(nuevo.origen_ubicacion_id.clone()),
+            destino_ubicacion_id: None,
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: Some(referencia.clone()),
+            notas: nuevo.notas.clone(),
+            lineas: vec![NuevaLinea {
+                producto_id: nuevo.producto_id.clone(),
+                lote_id: nuevo.lote_id.clone(),
+                cantidad: nuevo.cantidad,
+                origen_ubicacion_id: Some(nuevo.origen_ubicacion_id.clone()),
+                destino_ubicacion_id: None,
+                caja_origen_id: nuevo.caja_origen_id.clone(),
+                caja_destino_id: None,
+            }],
+            created_by: nuevo.created_by.clone(),
+        },
+    )?;
+
+    let entrada = crear_movimiento(
+        conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "TRASLADO_ENTRADA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(nuevo.destino_ubicacion_id.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: Some(referencia),
+            notas: nuevo.notas.clone(),
+            lineas: vec![NuevaLinea {
+                producto_id: nuevo.producto_id.clone(),
+                lote_id: nuevo.lote_id.clone(),
+                cantidad: nuevo.cantidad,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(nuevo.destino_ubicacion_id.clone()),
+                caja_origen_id: None,
+                caja_destino_id: nuevo.caja_destino_id.clone(),
+            }],
+            created_by: nuevo.created_by.clone(),
+        },
+    )?;
+
+    Ok(TrasladoCreado {
+        salida,
+        entrada: Some(entrada),
+    })
+}
+
 /// Crea un movimiento en estado BORRADOR (SPEC §6.2). No afecta stock.
 pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Movimiento> {
     nuevo.validar()?;
@@ -196,8 +312,8 @@ pub fn enviar_a_aprobacion(conn: &Connection, id: &str, by: &str) -> AppResult<M
     match estado {
         EstadoMovimiento::Borrador => {
             tx.execute(
-                "UPDATE movimientos SET estado = 'PENDIENTE_APROBACION', updated_at = ?2 WHERE id = ?1",
-                rusqlite::params![id, ahora()],
+                "UPDATE movimientos SET estado = 'PENDIENTE_APROBACION' WHERE id = ?1",
+                [id],
             )?;
         }
         _ => {
@@ -279,6 +395,17 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
             "CONSUMO" => (Some(origen_obligatorio(&tx, sub, linea)?), None),
             _ => return Err(AppError::CampoRequerido("tipo".into())),
         };
+
+        // SPEC §14.6: una sesión de inventario en curso bloquea ajustes
+        // manuales sobre las ubicaciones de su almacén (deben aplicarse como
+        // diferencias de la sesión, no a mano por fuera de ella).
+        if tipo_mov == "AJUSTE" {
+            let ubicacion_ajustada = origen
+                .as_deref()
+                .or(destino.as_deref())
+                .expect("ajuste siempre tiene un lado");
+            verificar_sin_inventario_en_curso(&tx, ubicacion_ajustada)?;
+        }
 
         // Salidas y traslados: saldo suficiente (SPEC §14.2), nunca negativo.
         if let Some(ori) = &origen {
@@ -541,6 +668,23 @@ fn aplicar_linea_inversa(
     Ok(())
 }
 
+/// SPEC §14.6: mientras una sesión de inventario está `EN_CURSO` en el
+/// almacén de `ubicacion`, los ajustes manuales quedan bloqueados — las
+/// diferencias deben resolverse a través de la sesión (§11.5), no por fuera.
+fn verificar_sin_inventario_en_curso(tx: &Connection, ubicacion: &str) -> AppResult<()> {
+    let almacen_id = crate::repo::catalogo::resolver_almacen_id_de_ubicacion(tx, ubicacion)?;
+    let en_curso: i64 = tx.query_row(
+        "SELECT COUNT(*) FROM sesiones_inventario WHERE almacen_id = ?1 AND estado = 'EN_CURSO'",
+        [&almacen_id],
+        |r| r.get(0),
+    )?;
+    if en_curso > 0 {
+        let codigo = codigo_ubicacion(tx, ubicacion)?;
+        return Err(AppError::AjusteBloqueadoPorInventario(codigo));
+    }
+    Ok(())
+}
+
 /// Valida la capacidad máxima de una ubicación antes de ingresar (SPEC §5.4):
 /// la capacidad es un tope agregado de **toda** la mercancía de la ubicación
 /// (todos los productos y lotes), no solo del producto que entra.
@@ -694,7 +838,6 @@ fn map_movimiento(r: &rusqlite::Row<'_>) -> rusqlite::Result<Movimiento> {
 }
 
 /// Sugerencia de una línea de salida: cuánto tomar de qué lote/ubicación.
-#[allow(dead_code)] // se conecta a un comando Tauri más adelante en esta misma fase
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SugerenciaLinea {
     pub ubicacion_id: String,
@@ -711,7 +854,6 @@ pub struct SugerenciaLinea {
 /// esta función solo propone. Si `excluir_vencidos` es `true` (destino
 /// CLIENTE o DEVOLUCION_PROVEEDOR, SPEC §8.6 regla dura), los lotes vencidos
 /// no se proponen.
-#[allow(dead_code)] // se conecta a un comando Tauri más adelante en esta misma fase
 pub fn sugerir_lineas_salida(
     conn: &Connection,
     producto_id: &str,

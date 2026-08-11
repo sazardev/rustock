@@ -13,8 +13,8 @@
 |---|---|
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
-| **Fase del roadmap** | Backend: en curso un plan propio de 7 sub-fases (A-G) para cerrar el SPEC completo en `src-tauri/` — ver plan guardado en `~/.claude/plans/vivid-scribbling-cook.md`. A, B, C completas y verificadas; D en curso (ver §6) |
-| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos (editar/desactivar en todas las entidades), árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO (sugerencia) en curso. 38 tests pasan, clippy y fmt limpios |
+| **Fase del roadmap** | Backend: las 7 sub-fases (A-G) del plan de cierre del SPEC completadas y verificadas — ver plan en `~/.claude/plans/vivid-scribbling-cook.md`. Backend Rust conforme al SPEC completo (§3-§17). Pendiente: Fase 2+ del ROADMAP original (UI de catálogos/movimientos en `src/`, sin empezar) |
+| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 64 tests pasan, clippy y fmt limpios |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
 | **Repo** | Git en `main` |
@@ -195,29 +195,85 @@ en verde antes de seguir.
   literalmente. Arreglarlo bien requiere denormalizar `almacen_id` en cada
   nodo del árbol — no se hizo por alcance/tiempo.
 
-**Fase D — Movimientos, SPEC §6-10 (en curso)**
-- Hecho: permiso `configuracion:ejecutar` exigido además de `movimiento:crear`
-  para `sub_tipo = INICIAL` (SPEC §7.5).
-- Hecho: `repo::movimiento::sugerir_lineas_salida` (FEFO/FIFO/stock general
-  según SPEC §8.6), con `#[allow(dead_code)]` porque **todavía no está
-  conectada a un comando Tauri ni tiene tests** — eso es lo primero que falta
-  al retomar.
-- Pendiente: exponer `sugerir_lineas_salida` como comando (`sugerir_lineas_
-  salida`, gateado por `movimiento:ver`, `excluir_vencidos` decidido por el
-  `sub_tipo` que planea usar el caller — CLIENTE/DEVOLUCION_PROVEEDOR ⇒
-  `true`); tests de FEFO vs FIFO vs sin-lote y de "excluir vencidos".
-- Pendiente: traslado inter-almacén (SPEC §9.3) — diseño ya pensado pero sin
-  escribir: nuevo `NuevoTraslado`/`crear_traslado` en `repo/movimiento.rs`
-  que, si `resolver_almacen_id_de_ubicacion(origen) != resolver_almacen_id_de_
-  ubicacion(destino)`, crea **dos** `Movimiento` ligados (`SALIDA`/
-  `TRASLADO_SALIDA` en origen + `ENTRADA`/`TRASLADO_ENTRADA` en destino)
-  compartiendo `documento_referencia` (autogenerado si no se da); si es el
-  mismo almacén, se comporta como hoy (un solo `TRASLADO`). Sin tocar la
-  ruta actual de un solo movimiento (usada y testeada).
-- Pendiente tras eso: cerrar Fase D con el pipeline completo, luego Fases
-  E (comentarios, SPEC §12), F (trazabilidad §13.4 + alertas §17 + reportes/
-  KPIs §16) y G (bloqueo de ajustes durante sesión de inventario `EN_CURSO`,
-  pase final del pipeline, actualizar ROADMAP.md).
+**Fase D — Movimientos, SPEC §6-10 (completa)**
+- Permiso `configuracion:ejecutar` exigido además de `movimiento:crear` para
+  `sub_tipo = INICIAL` (SPEC §7.5).
+- `repo::movimiento::sugerir_lineas_salida` (FEFO/FIFO/stock general según
+  SPEC §8.6) conectada al comando `sugerir_lineas_salida` (gateado por
+  `movimiento:ver`; `excluir_vencidos` se decide del `sub_tipo` que el
+  frontend planea usar — `CLIENTE`/`DEVOLUCION_PROVEEDOR` ⇒ `true`).
+- Traslado inter-almacén (SPEC §9.3): `NuevoTraslado`/`TrasladoCreado` +
+  `repo::movimiento::crear_traslado` — si origen y destino resuelven al mismo
+  almacén, un solo `TRASLADO` (sin cambios respecto al comportamiento
+  existente); si no, dos `Movimiento` ligados por `documento_referencia`
+  (`SALIDA`/`TRASLADO_SALIDA` en origen + `ENTRADA`/`TRASLADO_ENTRADA` en
+  destino), cada uno en `BORRADOR` y aprobado por separado. Comando
+  `crear_traslado`.
+- **Bug preexistente encontrado y corregido**: `enviar_a_aprobacion` hacía
+  `UPDATE movimientos SET ... updated_at = ?2` pero la tabla `movimientos`
+  nunca tuvo columna `updated_at` (solo `created_at`/`approved_at`/
+  `anulado_at`) — el comando fallaba en tiempo de ejecución desde el Hito 6;
+  nadie lo había probado hasta el test `alertas_movimiento_pendiente_se_detecta`.
+
+**Fase E — Comentarios, SPEC §12 (completa)**
+- `db.rs`: `comentarios` gana `oculto_by`/`oculto_at`; nueva tabla
+  `comentario_historial` (el texto antes de cada edición nunca se pierde,
+  SPEC §12.1).
+- `repo/comentario.rs`: crear (exige `ver` sobre la entidad ancla +
+  `comentario:crear`; `entidad` validada contra un allowlist fijo de
+  recursos), listar por entidad, editar (solo el autor; guarda la versión
+  anterior), ocultar (autor o `comentario:eliminar` — hoy solo ADMIN tiene
+  ese permiso en la matriz, ver §19 checklist más abajo).
+- Comandos: `crear_comentario`, `listar_comentarios`, `editar_comentario`,
+  `listar_historial_comentario`, `ocultar_comentario`.
+
+**Fase F — Trazabilidad, alertas, reportes/KPIs, SPEC §13/§16/§17 (completa)**
+- `repo/trazabilidad.rs`: las 5 consultas de §13.4 (`donde_esta_lote`,
+  `origen_de_salida`, `movimientos_de_producto_en_rango`, `lotes_por_vencer`,
+  `historial_caja`).
+- `repo/alerta.rs`: `regenerar_alertas` recalcula las 7 condiciones de §17.1
+  contra `saldos`/`lotes`/`sesiones_inventario`/`movimientos` y sincroniza la
+  tabla `alertas` (upsert si sigue activa, auto-resuelve si la condición
+  desapareció, nunca reabre una que el usuario marcó `IGNORADA`). Se
+  recalcula de forma perezosa al listar (`listar_alertas` la invoca antes de
+  consultar) — no hay scheduler en segundo plano en esta app de escritorio.
+  Cada alerta solo es visible para quien tenga `ver` sobre el recurso de su
+  `entidad` (§17.2). Comandos: `listar_alertas`, `resolver_alerta`,
+  `ignorar_alerta`.
+- `repo/reporte.rs`: `dashboard` (los 6 indicadores de §16.1),
+  `kpis_generales` (tasa de merma, lotes vencidos sin dar de baja),
+  `kardex_producto` (saldo acumulado cronológico, SPEC §16.2).
+  `repo::inventario::precision_sesion` (SPEC §11.6/§16.3: precisión por SKU,
+  por cantidad y exactitud por ubicación, usando el último conteo por grupo).
+  **Decisión de alcance**: el resto de reportes tabulares de §16.2 (stock
+  actual, movimientos/entradas/salidas por periodo) no se reimplementan como
+  comandos bespoke — ya son alcanzables por el frontend contra
+  `PRODUCTO_SCHEMA`/`MOVIMIENTO_SCHEMA`/`MOVIMIENTO_LINEA_SCHEMA` del motor
+  de consulta universal (Fase B) con `filters`+`group_by`+`metrics`, que es
+  exactamente para lo que se construyó.
+
+**Fase G — Endurecimiento final (completa)**
+- SPEC §14.6 (segunda regla): una sesión de inventario `EN_CURSO` bloquea
+  ajustes manuales (`AJUSTE_POSITIVO`/`AJUSTE_NEGATIVO`) sobre cualquier
+  ubicación del almacén de esa sesión —
+  `repo::movimiento::verificar_sin_inventario_en_curso`, aplicado en
+  `aprobar_movimiento`. Los ajustes automáticos que genera el cierre de
+  sesión (`generar_ajuste_diferencia`) no pasan por esta ruta, así que no hay
+  conflicto consigo mismos.
+- Pipeline completo verde: `cargo fmt --all --check`, `cargo clippy
+  --all-targets --all-features -- -D warnings`, `cargo test` (64 tests) y
+  `npm run typecheck` (sin cambios en `src/`, confirmado sin regresiones).
+
+**Gaps conocidos, documentados y deliberadamente fuera de esta ronda:**
+- Unicidad de `codigo` en zona/rack/sección/ubicación validada solo contra el
+  padre inmediato, no contra todo el almacén como dice el SPEC literalmente
+  (Fase C, preexistente).
+- `comentario:eliminar` (moderar/ocultar el comentario de otra persona) no
+  está en la matriz de ningún rol salvo ADMIN — el SPEC no especifica qué
+  permiso debería ser; se dejó así en vez de inventar una regla no escrita.
+- La creación de los dos movimientos de un traslado inter-almacén no es
+  atómica entre sí (cada `crear_movimiento` es su propia transacción); ambos
+  nacen en `BORRADOR` sin efecto sobre stock, así que no compromete saldos.
 
 ---
 
@@ -273,31 +329,28 @@ en verde antes de seguir.
 
 ## 6. Trabajo en progreso
 
-**Dónde retomar (Fase D del Hito 7, ver §2):**
+**El plan de 7 fases del Hito 7 (§2) está completo.** El backend Rust
+(`src-tauri/`) implementa el SPEC completo (§3-§17) de forma segura y
+consistente: autenticación real, motor de consulta universal, catálogos con
+CRUD completo, movimientos con FIFO/FEFO y traslado inter-almacén,
+comentarios, trazabilidad, alertas y reportes/KPIs. 64 tests, clippy y fmt en
+verde; `npm run typecheck` confirma que el frontend no tiene regresiones (no
+se tocó `src/`).
 
-1. Conectar `repo::movimiento::sugerir_lineas_salida` (ya escrita, con
-   `#[allow(dead_code)]` en `repo/movimiento.rs`) a un comando Tauri nuevo +
-   registrarlo en `commands::handler()` + tests (FEFO, FIFO, sin lote,
-   `excluir_vencidos`). Quitar los `#[allow(dead_code)]` al conectarla.
-2. Implementar el traslado inter-almacén (SPEC §9.3) — diseño detallado en
-   §2/Hito 7/Fase D. No tocar el `TRASLADO` de un solo movimiento existente
-   (intra-almacén), que sigue siendo el camino por defecto y ya está
-   testeado.
-3. Cerrar Fase D: `cargo fmt --all --check && cargo clippy --all-targets
-   --all-features -- -D warnings && cargo test` en verde dentro de
-   `src-tauri/`.
-4. Seguir con Fases E (comentarios §12), F (trazabilidad §13.4 + alertas §17
-   + reportes/KPIs §16) y G (endurecimiento final) — todas detalladas en el
-   plan `~/.claude/plans/vivid-scribbling-cook.md`.
+**Siguiente hito recomendado:** Fase 2 del ROADMAP original — la UI de
+catálogos y movimientos en `src/` (listado/detalle/nuevo/editar/eliminar por
+página, DESIGN.md, cero modales). El backend ya expone todos los comandos
+que esa UI necesita, incluido el estándar de consulta universal (§15) para
+cada listado. Antes de arrancarla:
 
-**Importante para quien retome:** la base de datos de desarrollo
-(`rustock.db`) debe borrarse antes de correr la app — el esquema de
-`ubicaciones` cambió en la Fase C (columnas nuevas + `CHECK`) y no hay
-migración automática, solo `CREATE TABLE IF NOT EXISTS`.
-
-No hay cambios de frontend (`src/`) pendientes de este trabajo: el plan
-decidió explícitamente no tocar `src/` porque no depende de los comandos que
-cambiaron (verificado por grep antes de empezar).
+- **Borrar la base de datos de desarrollo** (`rustock.db`, en el directorio
+  de datos de la app): el esquema de `ubicaciones` cambió en la Fase C
+  (columnas nuevas + `CHECK`) y no hay migración automática, solo
+  `CREATE TABLE IF NOT EXISTS`.
+- Revisar los "gaps conocidos" documentados al final de la Fase G (§2) antes
+  de darlos por sorpresa en la UI: unicidad de código por padre inmediato
+  (no por almacén completo), `comentario:eliminar` solo para ADMIN, y la
+  creación no-atómica de las dos piernas de un traslado inter-almacén.
 
 ---
 

@@ -59,6 +59,11 @@ pub enum AppError {
     #[error("La caja '{0}' está restringida a otro producto/lote")]
     CajaRestringida(String),
 
+    #[error(
+        "No se puede aplicar un ajuste manual en {0}: hay una sesión de inventario en curso en este almacén. Regístralo como diferencia de la sesión"
+    )]
+    AjusteBloqueadoPorInventario(String),
+
     #[error("La entidad {0} está inactiva y no admite esta operación")]
     EntidadInactiva(&'static str),
 

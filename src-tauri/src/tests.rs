@@ -1437,3 +1437,1085 @@ fn buscar_producto_por_codigo_barras() {
         repo::catalogo::buscar_producto_por_codigo_barras(&conn, "0000000000000").expect("buscar");
     assert!(no_encontrado.is_none());
 }
+
+// ============ Movimientos: FIFO/FEFO, INICIAL, traslado inter-almacén (SPEC §6-9) ============
+
+fn entrar_stock(
+    conn: &rusqlite::Connection,
+    ubicacion_id: &str,
+    producto_id: &str,
+    lote_id: Option<&str>,
+    cantidad: i64,
+) {
+    let mov = repo::movimiento::crear_movimiento(
+        conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubicacion_id.into()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: producto_id.into(),
+                lote_id: lote_id.map(String::from),
+                cantidad,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubicacion_id.into()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("crear entrada stock");
+    repo::movimiento::aprobar_movimiento(conn, &mov.id, "admin").expect("aprobar entrada stock");
+}
+
+#[test]
+fn entrada_inicial_exige_permiso_configuracion() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    let rol_operador: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'OPERADOR'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol");
+    repo::seguridad::crear_usuario(
+        &conn,
+        &crate::domain::seguridad::NuevoUsuario {
+            nombre_usuario: "operador2".into(),
+            nombre_completo: "Operador Dos".into(),
+            email: None,
+            password: "clave1234".into(),
+            rol_id: rol_operador,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear operador");
+
+    let mov = NuevoMovimiento {
+        tipo: "ENTRADA".into(),
+        sub_tipo: "INICIAL".into(),
+        fecha_movimiento: None,
+        motivo: None,
+        origen_ubicacion_id: None,
+        destino_ubicacion_id: Some(ubi1.clone()),
+        proveedor_id: None,
+        cliente_id: None,
+        sesion_inventario_id: None,
+        documento_referencia: None,
+        notas: None,
+        created_by: "operador2".into(),
+        lineas: vec![NuevaLinea {
+            producto_id: prod,
+            lote_id: None,
+            cantidad: 5,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1),
+            caja_origen_id: None,
+            caja_destino_id: None,
+        }],
+    };
+    let err = repo::movimiento::crear_movimiento(&conn, &mov).expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::SinPermiso(_)));
+}
+
+/// Crea un producto que controla lote (y opcionalmente vencimiento/perecedero).
+fn crear_producto_con_lote(
+    conn: &rusqlite::Connection,
+    sku: &str,
+    uom_id: &str,
+    perecedero: bool,
+) -> String {
+    repo::catalogo::crear_producto(
+        conn,
+        &NuevoProducto {
+            sku: sku.into(),
+            nombre: "Producto con lote".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom_id.into(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: true,
+            controla_vencimiento: perecedero,
+            perecedero,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto")
+    .id
+}
+
+fn crear_lote_con_fechas(
+    conn: &rusqlite::Connection,
+    producto_id: &str,
+    numero: &str,
+    fecha_fabricacion: Option<&str>,
+    fecha_vencimiento: Option<&str>,
+) -> String {
+    repo::catalogo::crear_lote(
+        conn,
+        &NuevoLote {
+            numero: numero.into(),
+            producto_id: producto_id.into(),
+            fecha_fabricacion: fecha_fabricacion.map(String::from),
+            fecha_vencimiento: fecha_vencimiento.map(String::from),
+            origen: None,
+            notas: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("lote")
+    .id
+}
+
+#[test]
+fn sugerir_fifo_toma_lote_mas_antiguo_primero() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-FIFO".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    let prod = crear_producto_con_lote(&conn, "REF-FIFO", &uom, false);
+    let viejo = crear_lote_con_fechas(&conn, &prod, "L-VIEJO", Some("2025-01-01"), None);
+    let nuevo = crear_lote_con_fechas(&conn, &prod, "L-NUEVO", Some("2025-06-01"), None);
+    entrar_stock(&conn, &ubi1, &prod, Some(&nuevo), 10);
+    entrar_stock(&conn, &ubi1, &prod, Some(&viejo), 10);
+
+    let sugerencias =
+        repo::movimiento::sugerir_lineas_salida(&conn, &prod, 5, None, false).expect("sugerir");
+    assert_eq!(sugerencias.len(), 1);
+    assert_eq!(sugerencias[0].lote_id.as_deref(), Some(viejo.as_str()));
+    assert_eq!(sugerencias[0].cantidad, 5);
+}
+
+#[test]
+fn sugerir_fefo_toma_vencimiento_mas_proximo_primero() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-FEFO".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    let prod = crear_producto_con_lote(&conn, "REF-FEFO", &uom, true);
+    let vence_pronto = crear_lote_con_fechas(&conn, &prod, "L-PRONTO", None, Some("2027-01-01"));
+    let vence_tarde = crear_lote_con_fechas(&conn, &prod, "L-TARDE", None, Some("2028-01-01"));
+    entrar_stock(&conn, &ubi1, &prod, Some(&vence_tarde), 10);
+    entrar_stock(&conn, &ubi1, &prod, Some(&vence_pronto), 10);
+
+    let sugerencias =
+        repo::movimiento::sugerir_lineas_salida(&conn, &prod, 15, None, false).expect("sugerir");
+    assert_eq!(
+        sugerencias[0].lote_id.as_deref(),
+        Some(vence_pronto.as_str())
+    );
+    assert_eq!(sugerencias[0].cantidad, 10);
+    assert_eq!(
+        sugerencias[1].lote_id.as_deref(),
+        Some(vence_tarde.as_str())
+    );
+    assert_eq!(sugerencias[1].cantidad, 5);
+}
+
+#[test]
+fn sugerir_excluye_vencidos_para_cliente() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-VENC".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    let prod = crear_producto_con_lote(&conn, "REF-VENC", &uom, true);
+    let vencido = crear_lote_con_fechas(&conn, &prod, "L-VENCIDO", None, Some("2020-01-01"));
+    let vigente = crear_lote_con_fechas(&conn, &prod, "L-VIGENTE", None, Some("2030-01-01"));
+    entrar_stock(&conn, &ubi1, &prod, Some(&vencido), 10);
+    entrar_stock(&conn, &ubi1, &prod, Some(&vigente), 10);
+
+    // Con exclusión (CLIENTE/DEVOLUCION_PROVEEDOR): solo debe proponer el vigente.
+    let sugerencias =
+        repo::movimiento::sugerir_lineas_salida(&conn, &prod, 10, None, true).expect("sugerir");
+    assert_eq!(sugerencias.len(), 1);
+    assert_eq!(sugerencias[0].lote_id.as_deref(), Some(vigente.as_str()));
+
+    // Pedir más de lo vigente disponible falla aunque el vencido tenga saldo.
+    let err = repo::movimiento::sugerir_lineas_salida(&conn, &prod, 15, None, true)
+        .expect_err("debe fallar");
+    assert!(matches!(
+        err,
+        crate::error::AppError::SaldoInsuficiente { .. }
+    ));
+
+    // Sin exclusión (p. ej. MERMA) sí puede usar el vencido.
+    let sugerencias_merma =
+        repo::movimiento::sugerir_lineas_salida(&conn, &prod, 15, None, false).expect("sugerir");
+    let total: i64 = sugerencias_merma.iter().map(|s| s.cantidad).sum();
+    assert_eq!(total, 15);
+}
+
+#[test]
+fn sugerir_lineas_insuficiente_devuelve_error() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 5);
+
+    let err = repo::movimiento::sugerir_lineas_salida(&conn, &prod, 100, None, false)
+        .expect_err("debe fallar");
+    assert!(matches!(
+        err,
+        crate::error::AppError::SaldoInsuficiente { .. }
+    ));
+}
+
+fn crear_arbol_en_almacen(conn: &rusqlite::Connection, codigo_almacen: &str) -> (String, String) {
+    let almacen = repo::catalogo::crear_almacen(
+        conn,
+        &NuevoAlmacen {
+            codigo: codigo_almacen.into(),
+            nombre: format!("Almacén {codigo_almacen}"),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona = repo::catalogo::crear_zona(
+        conn,
+        &NuevaZona {
+            codigo: format!("{codigo_almacen}-Z1"),
+            nombre: "Zona".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona");
+    let ubi = repo::catalogo::crear_ubicacion(
+        conn,
+        &NuevaUbicacion {
+            codigo: format!("{codigo_almacen}-UBI1"),
+            nombre: None,
+            seccion_id: None,
+            rack_id: None,
+            zona_id: Some(zona.id.clone()),
+            tipo: Some("STANDARD".into()),
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion");
+    (almacen.id, ubi.id)
+}
+
+#[test]
+fn traslado_intra_almacen_genera_un_solo_movimiento() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    let creado = repo::movimiento::crear_traslado(
+        &conn,
+        &NuevoTraslado {
+            producto_id: prod,
+            lote_id: None,
+            cantidad: 4,
+            origen_ubicacion_id: ubi1,
+            destino_ubicacion_id: ubi2,
+            caja_origen_id: None,
+            caja_destino_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+        },
+    )
+    .expect("crear traslado");
+    assert_eq!(creado.salida.tipo, "TRASLADO");
+    assert!(creado.entrada.is_none());
+}
+
+#[test]
+fn traslado_inter_almacen_genera_dos_movimientos_ligados() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen1, ubi_origen) = crear_arbol_en_almacen(&conn, "ALM-ORIGEN");
+    let (_almacen2, ubi_destino) = crear_arbol_en_almacen(&conn, "ALM-DESTINO");
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi_origen, &prod, None, 10);
+
+    let creado = repo::movimiento::crear_traslado(
+        &conn,
+        &NuevoTraslado {
+            producto_id: prod.clone(),
+            lote_id: None,
+            cantidad: 6,
+            origen_ubicacion_id: ubi_origen.clone(),
+            destino_ubicacion_id: ubi_destino.clone(),
+            caja_origen_id: None,
+            caja_destino_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+        },
+    )
+    .expect("crear traslado");
+
+    assert_eq!(creado.salida.tipo, "SALIDA");
+    assert_eq!(creado.salida.sub_tipo, "TRASLADO_SALIDA");
+    let entrada = creado.entrada.expect("debe tener entrada ligada");
+    assert_eq!(entrada.tipo, "ENTRADA");
+    assert_eq!(entrada.sub_tipo, "TRASLADO_ENTRADA");
+    assert_eq!(
+        creado.salida.documento_referencia,
+        entrada.documento_referencia
+    );
+    assert!(creado.salida.documento_referencia.is_some());
+
+    repo::movimiento::aprobar_movimiento(&conn, &creado.salida.id, "admin")
+        .expect("aprobar salida");
+    repo::movimiento::aprobar_movimiento(&conn, &entrada.id, "admin").expect("aprobar entrada");
+
+    let saldo_origen =
+        repo::movimiento::listar_saldos(&conn, Some(&ubi_origen), None).expect("saldos");
+    let saldo_destino =
+        repo::movimiento::listar_saldos(&conn, Some(&ubi_destino), None).expect("saldos");
+    assert_eq!(saldo_origen[0].cantidad, 4);
+    assert_eq!(saldo_destino[0].cantidad, 6);
+}
+
+// ============ Comentarios (SPEC §12) ============
+
+fn crear_operador(conn: &rusqlite::Connection, nombre_usuario: &str) -> String {
+    let rol_operador: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'OPERADOR'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol");
+    repo::seguridad::crear_usuario(
+        conn,
+        &crate::domain::seguridad::NuevoUsuario {
+            nombre_usuario: nombre_usuario.into(),
+            nombre_completo: "Operador de prueba".into(),
+            email: None,
+            password: "clave1234".into(),
+            rol_id: rol_operador,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear operador")
+    .id
+}
+
+#[test]
+fn comentario_crear_y_listar() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+
+    let comentario = repo::comentario::crear_comentario(
+        &conn,
+        &crate::domain::alerta::NuevoComentario {
+            entidad: "almacen".into(),
+            entidad_id: almacen_id.clone(),
+            texto: "Revisar estantería dañada".into(),
+            usuario_id: "admin".into(),
+        },
+    )
+    .expect("crear comentario");
+    assert_eq!(comentario.entidad_id, almacen_id);
+    assert!(!comentario.editado);
+    assert!(!comentario.oculto);
+
+    let lista = repo::comentario::listar_comentarios(&conn, "almacen", &almacen_id, "admin")
+        .expect("listar");
+    assert_eq!(lista.len(), 1);
+    assert_eq!(lista[0].id, comentario.id);
+}
+
+#[test]
+fn comentario_entidad_invalida_rechazada() {
+    let db = setup();
+    let conn = db.conn();
+    let err = repo::comentario::crear_comentario(
+        &conn,
+        &crate::domain::alerta::NuevoComentario {
+            entidad: "cosa_inventada".into(),
+            entidad_id: "x".into(),
+            texto: "texto".into(),
+            usuario_id: "admin".into(),
+        },
+    )
+    .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::CampoRequerido(_)));
+}
+
+#[test]
+fn comentario_editar_conserva_historial() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+    let comentario = repo::comentario::crear_comentario(
+        &conn,
+        &crate::domain::alerta::NuevoComentario {
+            entidad: "almacen".into(),
+            entidad_id: almacen_id,
+            texto: "Texto original".into(),
+            usuario_id: "admin".into(),
+        },
+    )
+    .expect("crear");
+
+    let editado =
+        repo::comentario::editar_comentario(&conn, &comentario.id, "Texto corregido", "admin")
+            .expect("editar");
+    assert!(editado.editado);
+    assert_eq!(editado.texto, "Texto corregido");
+
+    let historial =
+        repo::comentario::listar_historial_comentario(&conn, &comentario.id).expect("historial");
+    assert_eq!(historial.len(), 1);
+    assert_eq!(historial[0].texto_anterior, "Texto original");
+}
+
+#[test]
+fn comentario_editar_solo_autor() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+    let comentario = repo::comentario::crear_comentario(
+        &conn,
+        &crate::domain::alerta::NuevoComentario {
+            entidad: "almacen".into(),
+            entidad_id: almacen_id,
+            texto: "Texto de admin".into(),
+            usuario_id: "admin".into(),
+        },
+    )
+    .expect("crear");
+    let operador = crear_operador(&conn, "operador_com1");
+
+    let err =
+        repo::comentario::editar_comentario(&conn, &comentario.id, "intento ajeno", &operador)
+            .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::SinPermiso(_)));
+}
+
+#[test]
+fn comentario_autor_puede_ocultar_el_propio() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+    let operador = crear_operador(&conn, "operador_com2");
+    let comentario = repo::comentario::crear_comentario(
+        &conn,
+        &crate::domain::alerta::NuevoComentario {
+            entidad: "almacen".into(),
+            entidad_id: almacen_id,
+            texto: "Comentario del operador".into(),
+            usuario_id: operador.clone(),
+        },
+    )
+    .expect("crear");
+
+    repo::comentario::ocultar_comentario(&conn, &comentario.id, &operador).expect("ocultar");
+    let actualizado = repo::comentario::obtener_comentario(&conn, &comentario.id)
+        .expect("obtener")
+        .expect("existe");
+    assert!(actualizado.oculto);
+    assert_eq!(actualizado.oculto_by.as_deref(), Some(operador.as_str()));
+}
+
+#[test]
+fn comentario_ocultar_por_otro_sin_permiso_falla() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+    let comentario = repo::comentario::crear_comentario(
+        &conn,
+        &crate::domain::alerta::NuevoComentario {
+            entidad: "almacen".into(),
+            entidad_id: almacen_id,
+            texto: "Comentario de admin".into(),
+            usuario_id: "admin".into(),
+        },
+    )
+    .expect("crear");
+    let operador = crear_operador(&conn, "operador_com3");
+
+    let err = repo::comentario::ocultar_comentario(&conn, &comentario.id, &operador)
+        .expect_err("debe fallar");
+    assert!(matches!(err, crate::error::AppError::SinPermiso(_)));
+}
+
+// ============ Trazabilidad (SPEC §13.4) ============
+
+#[test]
+fn trazabilidad_donde_esta_lote() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-TRZ1".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    let prod = crear_producto_con_lote(&conn, "REF-TRZ1", &uom, false);
+    let lote = crear_lote_con_fechas(&conn, &prod, "L-TRZ1", None, None);
+    entrar_stock(&conn, &ubi1, &prod, Some(&lote), 6);
+    entrar_stock(&conn, &ubi2, &prod, Some(&lote), 4);
+
+    let ubicaciones =
+        repo::trazabilidad::donde_esta_lote(&conn, &lote, "admin").expect("consultar");
+    assert_eq!(ubicaciones.len(), 2);
+    let total: i64 = ubicaciones.iter().map(|u| u.cantidad).sum();
+    assert_eq!(total, 10);
+}
+
+#[test]
+fn trazabilidad_origen_de_salida() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    let salida = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "SALIDA".into(),
+            sub_tipo: "CLIENTE".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: Some(ubi1.clone()),
+            destino_ubicacion_id: None,
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod,
+                lote_id: None,
+                cantidad: 3,
+                origen_ubicacion_id: Some(ubi1),
+                destino_ubicacion_id: None,
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("crear salida");
+    repo::movimiento::aprobar_movimiento(&conn, &salida.id, "admin").expect("aprobar salida");
+
+    let origenes =
+        repo::trazabilidad::origen_de_salida(&conn, &salida.id, "admin").expect("consultar");
+    assert_eq!(origenes.len(), 1);
+    assert_eq!(origenes[0].sub_tipo, "COMPRA");
+}
+
+#[test]
+fn trazabilidad_movimientos_de_producto_en_rango() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 5);
+
+    let hoy = crate::domain::ahora()[..10].to_string();
+    let en_rango = repo::trazabilidad::movimientos_de_producto_en_rango(
+        &conn,
+        &prod,
+        &format!("{hoy}T00:00:00"),
+        &format!("{hoy}T23:59:59"),
+        "admin",
+    )
+    .expect("consultar");
+    assert_eq!(en_rango.len(), 1);
+
+    let fuera_de_rango = repo::trazabilidad::movimientos_de_producto_en_rango(
+        &conn,
+        &prod,
+        "2000-01-01T00:00:00",
+        "2000-01-02T00:00:00",
+        "admin",
+    )
+    .expect("consultar");
+    assert!(fuera_de_rango.is_empty());
+}
+
+#[test]
+fn trazabilidad_lotes_por_vencer() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-TRZ2".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    let prod = crear_producto_con_lote(&conn, "REF-TRZ2", &uom, true);
+    let vencido = crear_lote_con_fechas(&conn, &prod, "L-TRZ2-VENC", None, Some("2020-01-01"));
+    let proximo = crear_lote_con_fechas(&conn, &prod, "L-TRZ2-PROX", None, Some("2026-08-20"));
+    let lejano = crear_lote_con_fechas(&conn, &prod, "L-TRZ2-LEJOS", None, Some("2035-01-01"));
+    entrar_stock(&conn, &ubi1, &prod, Some(&vencido), 5);
+    entrar_stock(&conn, &ubi1, &prod, Some(&proximo), 5);
+    entrar_stock(&conn, &ubi1, &prod, Some(&lejano), 5);
+
+    let resultado = repo::trazabilidad::lotes_por_vencer(&conn, 60, "admin").expect("consultar");
+    let ids: Vec<&str> = resultado.iter().map(|l| l.lote_id.as_str()).collect();
+    assert!(ids.contains(&vencido.as_str()));
+    assert!(ids.contains(&proximo.as_str()));
+    assert!(!ids.contains(&lejano.as_str()));
+    let venc = resultado.iter().find(|l| l.lote_id == vencido).unwrap();
+    assert!(venc.vencido);
+}
+
+#[test]
+fn trazabilidad_historial_caja() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    let caja = repo::catalogo::crear_caja(
+        &conn,
+        &NuevaCaja {
+            codigo: "CAJA-TRZ".into(),
+            nombre: None,
+            ubicacion_id: ubi1.clone(),
+            producto_id: None,
+            lote_id: None,
+            etiqueta: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("caja");
+
+    let entrada = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod.clone(),
+                lote_id: None,
+                cantidad: 5,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1.clone()),
+                caja_origen_id: None,
+                caja_destino_id: Some(caja.id.clone()),
+            }],
+        },
+    )
+    .expect("entrada");
+    repo::movimiento::aprobar_movimiento(&conn, &entrada.id, "admin").expect("aprobar entrada");
+
+    let traslado = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "TRASLADO".into(),
+            sub_tipo: "TRASLADO_SALIDA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: Some(ubi1.clone()),
+            destino_ubicacion_id: Some(ubi2.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod,
+                lote_id: None,
+                cantidad: 5,
+                origen_ubicacion_id: Some(ubi1),
+                destino_ubicacion_id: Some(ubi2),
+                caja_origen_id: Some(caja.id.clone()),
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("traslado");
+    repo::movimiento::aprobar_movimiento(&conn, &traslado.id, "admin").expect("aprobar traslado");
+
+    let historial =
+        repo::trazabilidad::historial_caja(&conn, &caja.id, "admin").expect("consultar");
+    assert_eq!(historial.len(), 2);
+    assert_eq!(historial[0].rol, "destino");
+    assert_eq!(historial[1].rol, "origen");
+}
+
+// ============ Alertas (SPEC §17) ============
+
+#[test]
+fn alertas_stock_bajo_se_genera_y_resuelve() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn); // stock_minimo = 2
+    entrar_stock(&conn, &ubi1, &prod, None, 1);
+
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar");
+    let abiertas = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(
+        abiertas
+            .iter()
+            .any(|a| a.tipo == "STOCK_BAJO" && a.entidad_id.as_deref() == Some(prod.as_str()))
+    );
+
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar de nuevo");
+    let abiertas2 = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(
+        !abiertas2
+            .iter()
+            .any(|a| a.tipo == "STOCK_BAJO" && a.entidad_id.as_deref() == Some(prod.as_str()))
+    );
+    let resueltas = repo::alerta::listar_alertas(&conn, Some("RESUELTA"), "admin").expect("listar");
+    assert!(
+        resueltas
+            .iter()
+            .any(|a| a.tipo == "STOCK_BAJO" && a.entidad_id.as_deref() == Some(prod.as_str()))
+    );
+}
+
+#[test]
+fn alertas_lote_vencido_se_detecta() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-AL1".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    let prod = crear_producto_con_lote(&conn, "REF-AL1", &uom, true);
+    let lote = crear_lote_con_fechas(&conn, &prod, "L-AL1", None, Some("2020-01-01"));
+    entrar_stock(&conn, &ubi1, &prod, Some(&lote), 5);
+
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar");
+    let abiertas = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(
+        abiertas
+            .iter()
+            .any(|a| a.tipo == "LOTE_VENCIDO" && a.entidad_id.as_deref() == Some(lote.as_str()))
+    );
+}
+
+#[test]
+fn alertas_movimiento_pendiente_se_detecta() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    let mov = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod,
+                lote_id: None,
+                cantidad: 5,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("crear");
+    repo::movimiento::enviar_a_aprobacion(&conn, &mov.id, "admin").expect("enviar");
+
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar");
+    let abiertas = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(
+        abiertas.iter().any(|a| a.tipo == "MOVIMIENTO_PENDIENTE"
+            && a.entidad_id.as_deref() == Some(mov.id.as_str()))
+    );
+}
+
+#[test]
+fn alertas_ignorar_no_se_muestra_como_abierta() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 1);
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar");
+    let abierta = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin")
+        .expect("listar")
+        .into_iter()
+        .find(|a| a.tipo == "STOCK_BAJO" && a.entidad_id.as_deref() == Some(prod.as_str()))
+        .expect("debe existir");
+
+    repo::alerta::ignorar_alerta(&conn, &abierta.id, "admin").expect("ignorar");
+    let abiertas = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(!abiertas.iter().any(|a| a.id == abierta.id));
+    let ignoradas = repo::alerta::listar_alertas(&conn, Some("IGNORADA"), "admin").expect("listar");
+    assert!(ignoradas.iter().any(|a| a.id == abierta.id));
+}
+
+// ============ Reportes y KPIs (SPEC §16) ============
+
+#[test]
+fn reporte_dashboard_totales() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 8);
+
+    let resumen = repo::reporte::dashboard(&conn).expect("dashboard");
+    assert_eq!(resumen.total_skus_activos, 1);
+    assert_eq!(resumen.total_unidades, 8);
+    assert_eq!(resumen.movimientos_hoy, 1);
+    assert_eq!(resumen.ubicaciones_con_stock, 1);
+    assert!(resumen.ubicaciones_totales >= 2);
+}
+
+#[test]
+fn reporte_kardex_producto_acumula_saldo() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    let salida = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "SALIDA".into(),
+            sub_tipo: "CLIENTE".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: Some(ubi1.clone()),
+            destino_ubicacion_id: None,
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod.clone(),
+                lote_id: None,
+                cantidad: 4,
+                origen_ubicacion_id: Some(ubi1),
+                destino_ubicacion_id: None,
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("crear salida");
+    repo::movimiento::aprobar_movimiento(&conn, &salida.id, "admin").expect("aprobar salida");
+
+    let kardex = repo::reporte::kardex_producto(&conn, &prod, None).expect("kardex");
+    assert_eq!(kardex.len(), 2);
+    assert_eq!(kardex[0].saldo_acumulado, 10);
+    assert_eq!(kardex[1].saldo_acumulado, 6);
+}
+
+#[test]
+fn reporte_precision_sesion_calcula_metricas() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    let sesion = repo::inventario::crear_sesion(
+        &conn,
+        &NuevaSesionInventario {
+            tipo: "CICLICO".into(),
+            almacen_id,
+            alcance: None,
+            fecha_inicio: Some(crate::domain::ahora()),
+            fecha_fin: None,
+            responsable_id: Some("admin".into()),
+            conteo_ciego: false,
+            exige_doble_conteo: false,
+            created_by: "admin".into(),
+        },
+    )
+    .expect("sesion");
+    repo::inventario::registrar_conteo(
+        &conn,
+        &NuevoConteo {
+            sesion_id: sesion.id.clone(),
+            ubicacion_id: ubi1,
+            producto_id: prod,
+            lote_id: None,
+            cantidad_contada: 7,
+            conteo_numero: 1,
+            usuario_contador_id: "admin".into(),
+            nota: None,
+        },
+    )
+    .expect("conteo");
+
+    let precision = repo::inventario::precision_sesion(&conn, &sesion.id).expect("precision");
+    assert_eq!(precision.skus_contados, 1);
+    assert_eq!(precision.skus_exactos, 0);
+    assert_eq!(precision.unidades_contadas, 7);
+    assert_eq!(precision.unidades_correctas, 4);
+    assert!((precision.precision_cantidad - (4.0 / 7.0 * 100.0)).abs() < 0.001);
+    assert_eq!(precision.ubicaciones_contadas, 1);
+    assert_eq!(precision.ubicaciones_exactas, 0);
+}
+
+// ============ Endurecimiento final (SPEC §14.6) ============
+
+#[test]
+fn ajuste_manual_bloqueado_durante_inventario_en_curso() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    repo::inventario::crear_sesion(
+        &conn,
+        &NuevaSesionInventario {
+            tipo: "CICLICO".into(),
+            almacen_id,
+            alcance: None,
+            fecha_inicio: Some(crate::domain::ahora()),
+            fecha_fin: None,
+            responsable_id: Some("admin".into()),
+            conteo_ciego: false,
+            exige_doble_conteo: false,
+            created_by: "admin".into(),
+        },
+    )
+    .expect("sesion");
+
+    let ajuste = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "AJUSTE".into(),
+            sub_tipo: "AJUSTE_NEGATIVO".into(),
+            fecha_movimiento: None,
+            motivo: Some("corrección manual".into()),
+            origen_ubicacion_id: Some(ubi1.clone()),
+            destino_ubicacion_id: None,
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                producto_id: prod,
+                lote_id: None,
+                cantidad: 2,
+                origen_ubicacion_id: Some(ubi1),
+                destino_ubicacion_id: None,
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("crear ajuste (BORRADOR no afecta stock)");
+
+    let err =
+        repo::movimiento::aprobar_movimiento(&conn, &ajuste.id, "admin").expect_err("debe fallar");
+    assert!(matches!(
+        err,
+        crate::error::AppError::AjusteBloqueadoPorInventario(_)
+    ));
+}

@@ -240,6 +240,41 @@ impl NuevoMovimiento {
     }
 }
 
+/// Solicitud de traslado (SPEC §9). Es una línea única: producto, lote,
+/// cantidad y su par origen/destino. Si origen y destino resuelven al mismo
+/// almacén se crea un solo movimiento `TRASLADO`; si no, dos movimientos
+/// ligados (SPEC §9.3) — ver `TrasladoCreado`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NuevoTraslado {
+    pub producto_id: String,
+    #[serde(default)]
+    pub lote_id: Option<String>,
+    pub cantidad: i64,
+    pub origen_ubicacion_id: String,
+    pub destino_ubicacion_id: String,
+    #[serde(default)]
+    pub caja_origen_id: Option<String>,
+    #[serde(default)]
+    pub caja_destino_id: Option<String>,
+    #[serde(default)]
+    pub documento_referencia: Option<String>,
+    #[serde(default)]
+    pub notas: Option<String>,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
+    pub created_by: String,
+}
+
+/// Resultado de crear un traslado: un único movimiento si es intra-almacén,
+/// o dos movimientos ligados por el mismo `documento_referencia` si es
+/// inter-almacén (SPEC §9.3): `salida` es el `TRASLADO`/`SALIDA` según el
+/// caso, `entrada` solo existe cuando hubo que cruzar de almacén.
+#[derive(Debug, Clone, Serialize)]
+pub struct TrasladoCreado {
+    pub salida: Movimiento,
+    pub entrada: Option<Movimiento>,
+}
+
 /// Saldo materializado (SPEC §5, §15.11).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Saldo {

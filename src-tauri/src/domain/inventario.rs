@@ -99,3 +99,21 @@ pub struct DiferenciaInventario {
     pub diferencia: i64,
     pub tipo: String, // "conciliado" | "sobrante" | "faltante"
 }
+
+/// Métricas de precisión de una sesión cerrada (SPEC §11.6). Toma el último
+/// conteo (`conteo_numero` más alto) por (ubicación, producto, lote). Una
+/// unidad "correcta" es la unidad contada menos la diferencia absoluta de su
+/// línea (SPEC §16.3: precisión por cantidad).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrecisionSesion {
+    pub sesion_id: String,
+    pub skus_contados: i64,
+    pub skus_exactos: i64,
+    pub precision_sku: f64,
+    pub unidades_contadas: i64,
+    pub unidades_correctas: i64,
+    pub precision_cantidad: f64,
+    pub ubicaciones_contadas: i64,
+    pub ubicaciones_exactas: i64,
+    pub exactitud_ubicacion: f64,
+}

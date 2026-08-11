@@ -943,6 +943,21 @@ pub fn crear_movimiento(
     })
 }
 
+/// Crea un traslado (SPEC §9): un movimiento si es intra-almacén, dos
+/// ligados si cruza de almacén (§9.3) — ver `repo::movimiento::crear_traslado`.
+#[tauri::command]
+pub fn crear_traslado(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoTraslado,
+) -> AppResult<TrasladoCreado> {
+    con_auditoria!(db, sesion, "crear_traslado", {
+        nuevo.created_by = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::movimiento::crear_traslado(&conn, &nuevo)
+    })
+}
+
 #[tauri::command]
 pub fn enviar_a_aprobacion(
     db: State<'_, Arc<DbState>>,
@@ -1054,6 +1069,34 @@ pub fn stock_total_producto(
     })
 }
 
+/// Sugiere el desglose de ubicación/lote para despachar `cantidad` unidades
+/// de un producto (SPEC §8.6: FEFO/FIFO/stock general según el producto). El
+/// `sub_tipo` de la salida planeada decide si se excluyen lotes vencidos
+/// (`CLIENTE`/`DEVOLUCION_PROVEEDOR`, regla dura del SPEC). Es solo una
+/// propuesta: el usuario puede ajustar manualmente al crear el movimiento.
+#[tauri::command]
+pub fn sugerir_lineas_salida(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    producto_id: String,
+    cantidad: i64,
+    ubicaciones: Option<Vec<String>>,
+    sub_tipo: String,
+) -> AppResult<Vec<repo::movimiento::SugerenciaLinea>> {
+    con_auditoria!(db, sesion, "sugerir_lineas_salida", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "movimiento", "ver")?;
+        let excluir_vencidos = matches!(sub_tipo.as_str(), "CLIENTE" | "DEVOLUCION_PROVEEDOR");
+        repo::movimiento::sugerir_lineas_salida(
+            &conn,
+            &producto_id,
+            cantidad,
+            ubicaciones.as_deref(),
+            excluir_vencidos,
+        )
+    })
+}
+
 // ============ Inventario físico ============
 
 #[tauri::command]
@@ -1134,6 +1177,258 @@ pub fn cerrar_sesion_inventario(
     })
 }
 
+// ============ Comentarios (SPEC §12) ============
+
+#[tauri::command]
+pub fn crear_comentario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: crate::domain::alerta::NuevoComentario,
+) -> AppResult<crate::domain::alerta::Comentario> {
+    con_auditoria!(db, sesion, "crear_comentario", {
+        nuevo.usuario_id = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::comentario::crear_comentario(&conn, &nuevo)
+    })
+}
+
+/// Lista los comentarios anclados a una entidad concreta (SPEC §12.2).
+#[tauri::command]
+pub fn listar_comentarios(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    entidad: String,
+    entidad_id: String,
+) -> AppResult<Vec<crate::domain::alerta::Comentario>> {
+    con_auditoria!(db, sesion, "listar_comentarios", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::comentario::listar_comentarios(&conn, &entidad, &entidad_id, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn editar_comentario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    texto: String,
+) -> AppResult<crate::domain::alerta::Comentario> {
+    con_auditoria!(db, sesion, "editar_comentario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::comentario::editar_comentario(&conn, &id, &texto, &actor)
+    })
+}
+
+/// Historial de versiones anteriores del texto de un comentario (SPEC §12.1).
+#[tauri::command]
+pub fn listar_historial_comentario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    comentario_id: String,
+) -> AppResult<Vec<crate::domain::alerta::HistorialComentario>> {
+    con_auditoria!(db, sesion, "listar_historial_comentario", {
+        sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::comentario::listar_historial_comentario(&conn, &comentario_id)
+    })
+}
+
+#[tauri::command]
+pub fn ocultar_comentario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "ocultar_comentario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::comentario::ocultar_comentario(&conn, &id, &actor)
+    })
+}
+
+// ============ Trazabilidad (SPEC §13.4) ============
+
+/// "¿Dónde está ahora el lote X?"
+#[tauri::command]
+pub fn donde_esta_lote(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    lote_id: String,
+) -> AppResult<Vec<repo::trazabilidad::UbicacionDeLote>> {
+    con_auditoria!(db, sesion, "donde_esta_lote", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::trazabilidad::donde_esta_lote(&conn, &lote_id, &actor)
+    })
+}
+
+/// "¿De dónde vino la unidad que despaché hoy?"
+#[tauri::command]
+pub fn origen_de_salida(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    movimiento_id: String,
+) -> AppResult<Vec<repo::trazabilidad::OrigenLinea>> {
+    con_auditoria!(db, sesion, "origen_de_salida", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::trazabilidad::origen_de_salida(&conn, &movimiento_id, &actor)
+    })
+}
+
+/// "¿Quién tocó el stock del producto Y en un rango de fechas?"
+#[tauri::command]
+pub fn movimientos_de_producto_en_rango(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    producto_id: String,
+    desde: String,
+    hasta: String,
+) -> AppResult<Vec<Movimiento>> {
+    con_auditoria!(db, sesion, "movimientos_de_producto_en_rango", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::trazabilidad::movimientos_de_producto_en_rango(
+            &conn,
+            &producto_id,
+            &desde,
+            &hasta,
+            &actor,
+        )
+    })
+}
+
+/// "¿Cuánto vence en N días?" (por defecto 30).
+#[tauri::command]
+pub fn lotes_por_vencer(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    dias: Option<i64>,
+) -> AppResult<Vec<repo::trazabilidad::LotePorVencer>> {
+    con_auditoria!(db, sesion, "lotes_por_vencer", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::trazabilidad::lotes_por_vencer(&conn, dias.unwrap_or(30), &actor)
+    })
+}
+
+/// "¿Dónde estuvo la caja Z?"
+#[tauri::command]
+pub fn historial_caja(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    caja_id: String,
+) -> AppResult<Vec<repo::trazabilidad::HistorialCaja>> {
+    con_auditoria!(db, sesion, "historial_caja", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::trazabilidad::historial_caja(&conn, &caja_id, &actor)
+    })
+}
+
+// ============ Alertas (SPEC §17) ============
+
+/// Recalcula y lista las alertas (SPEC §17.1). Cada alerta solo es visible
+/// para quien tenga `ver` sobre el recurso de su entidad (SPEC §17.2).
+#[tauri::command]
+pub fn listar_alertas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    estado: Option<String>,
+    dias_por_vencer: Option<i64>,
+) -> AppResult<Vec<crate::domain::alerta::Alerta>> {
+    con_auditoria!(db, sesion, "listar_alertas", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::alerta::regenerar_alertas(&conn, dias_por_vencer.unwrap_or(30))?;
+        repo::alerta::listar_alertas(&conn, estado.as_deref(), &actor)
+    })
+}
+
+#[tauri::command]
+pub fn resolver_alerta(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "resolver_alerta", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::alerta::resolver_alerta(&conn, &id, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn ignorar_alerta(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "ignorar_alerta", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::alerta::ignorar_alerta(&conn, &id, &actor)
+    })
+}
+
+// ============ Reportes y KPIs (SPEC §16) ============
+
+#[tauri::command]
+pub fn obtener_dashboard(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<repo::reporte::DashboardResumen> {
+    con_auditoria!(db, sesion, "obtener_dashboard", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::reporte::dashboard(&conn)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_kpis_generales(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<repo::reporte::KpisGenerales> {
+    con_auditoria!(db, sesion, "obtener_kpis_generales", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::reporte::kpis_generales(&conn)
+    })
+}
+
+/// Kardex / tarjeta de stock de un producto (SPEC §16.2), opcionalmente
+/// acotado a un lote.
+#[tauri::command]
+pub fn kardex_producto(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    producto_id: String,
+    lote_id: Option<String>,
+) -> AppResult<Vec<repo::reporte::KardexLinea>> {
+    con_auditoria!(db, sesion, "kardex_producto", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        repo::reporte::kardex_producto(&conn, &producto_id, lote_id.as_deref())
+    })
+}
+
+/// Precisión de una sesión de inventario (SPEC §11.6, §16.2/§16.3).
+#[tauri::command]
+pub fn precision_sesion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    sesion_id: String,
+) -> AppResult<PrecisionSesion> {
+    con_auditoria!(db, sesion, "precision_sesion", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
+        repo::inventario::precision_sesion(&conn, &sesion_id)
+    })
+}
+
 /// Expone los comandos al invoke_handler de Tauri.
 /// Uso: `.invoke_handler(commands::handler())`
 pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
@@ -1203,6 +1498,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         listar_roles,
         bootstrap_admin,
         crear_movimiento,
+        crear_traslado,
         enviar_a_aprobacion,
         aprobar_movimiento,
         anular_movimiento,
@@ -1211,12 +1507,30 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         listar_lineas_movimiento,
         listar_saldos,
         stock_total_producto,
+        sugerir_lineas_salida,
         crear_sesion_inventario,
         listar_sesiones_inventario,
         registrar_conteo,
         listar_conteos,
         diferencias_sesion,
         cerrar_sesion_inventario,
+        crear_comentario,
+        listar_comentarios,
+        editar_comentario,
+        listar_historial_comentario,
+        ocultar_comentario,
+        donde_esta_lote,
+        origen_de_salida,
+        movimientos_de_producto_en_rango,
+        lotes_por_vencer,
+        historial_caja,
+        listar_alertas,
+        resolver_alerta,
+        ignorar_alerta,
+        obtener_dashboard,
+        obtener_kpis_generales,
+        kardex_producto,
+        precision_sesion,
         listar_historial,
         metricas_historial,
     ]

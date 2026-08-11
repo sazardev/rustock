@@ -1,5 +1,9 @@
+pub mod alerta;
 pub mod auditoria;
 pub mod catalogo;
+pub mod comentario;
 pub mod inventario;
 pub mod movimiento;
+pub mod reporte;
 pub mod seguridad;
+pub mod trazabilidad;

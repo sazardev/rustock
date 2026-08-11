@@ -193,6 +193,76 @@ pub fn diferencias_sesion(
     Ok(result)
 }
 
+/// Precisión de una sesión (SPEC §11.6, §16.3): usa el último conteo
+/// (`conteo_numero` más alto) por (ubicación, producto, lote) — SQLite
+/// garantiza que las columnas planas acompañando a un único `MAX()` agrupado
+/// vienen de la misma fila que el máximo.
+pub fn precision_sesion(conn: &Connection, sesion_id: &str) -> AppResult<PrecisionSesion> {
+    let mut stmt = conn.prepare(
+        "SELECT ubicacion_id, producto_id, lote_id, cantidad_contada, MAX(conteo_numero)
+         FROM conteos WHERE sesion_id = ?1
+         GROUP BY ubicacion_id, producto_id, lote_id",
+    )?;
+    let filas: Vec<(String, String, Option<String>, i64)> = stmt
+        .query_map([sesion_id], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?
+        .collect::<Result<_, _>>()?;
+
+    let mut unidades_contadas = 0i64;
+    let mut suma_abs_diferencia = 0i64;
+    let mut por_sku: std::collections::HashMap<String, bool> = std::collections::HashMap::new();
+    let mut por_ubicacion: std::collections::HashMap<String, bool> =
+        std::collections::HashMap::new();
+
+    for (ubicacion_id, producto_id, lote_id, cantidad_contada) in &filas {
+        let lote_key = lote_id.clone().unwrap_or_default();
+        let saldo: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(cantidad), 0) FROM saldos WHERE ubicacion_id = ?1 AND producto_id = ?2 AND lote_key = ?3",
+            rusqlite::params![ubicacion_id, producto_id, lote_key],
+            |r| r.get(0),
+        )?;
+        let diferencia = cantidad_contada - saldo;
+        let exacto = diferencia == 0;
+        unidades_contadas += cantidad_contada;
+        suma_abs_diferencia += diferencia.abs();
+        por_sku
+            .entry(producto_id.clone())
+            .and_modify(|v| *v = *v && exacto)
+            .or_insert(exacto);
+        por_ubicacion
+            .entry(ubicacion_id.clone())
+            .and_modify(|v| *v = *v && exacto)
+            .or_insert(exacto);
+    }
+
+    let skus_contados = por_sku.len() as i64;
+    let skus_exactos = por_sku.values().filter(|v| **v).count() as i64;
+    let ubicaciones_contadas = por_ubicacion.len() as i64;
+    let ubicaciones_exactas = por_ubicacion.values().filter(|v| **v).count() as i64;
+    let unidades_correctas = (unidades_contadas - suma_abs_diferencia).max(0);
+    let pct = |num: i64, den: i64| {
+        if den > 0 {
+            (num as f64 / den as f64) * 100.0
+        } else {
+            0.0
+        }
+    };
+
+    Ok(PrecisionSesion {
+        sesion_id: sesion_id.to_string(),
+        skus_contados,
+        skus_exactos,
+        precision_sku: pct(skus_exactos, skus_contados),
+        unidades_contadas,
+        unidades_correctas,
+        precision_cantidad: pct(unidades_correctas, unidades_contadas),
+        ubicaciones_contadas,
+        ubicaciones_exactas,
+        exactitud_ubicacion: pct(ubicaciones_exactas, ubicaciones_contadas),
+    })
+}
+
 /// Cierra la sesión (SPEC §11.5): solo con permiso; genera ajustes de diferencias.
 pub fn cerrar_sesion(conn: &Connection, sesion_id: &str, by: &str) -> AppResult<Vec<String>> {
     puede(conn, Some(by), "inventario", "cerrar")?;

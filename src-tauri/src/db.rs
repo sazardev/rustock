@@ -409,10 +409,23 @@ impl DbState {
                 texto TEXT NOT NULL,
                 editado INTEGER NOT NULL DEFAULT 0,
                 oculto INTEGER NOT NULL DEFAULT 0,
+                oculto_by TEXT,
+                oculto_at TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_comentarios_entidad ON comentarios(entidad, entidad_id);
+
+            -- El texto original nunca se pierde al editar (SPEC §12.1): cada
+            -- edición guarda aquí el texto que tenía el comentario antes.
+            CREATE TABLE IF NOT EXISTS comentario_historial (
+                id TEXT PRIMARY KEY,
+                comentario_id TEXT NOT NULL REFERENCES comentarios(id),
+                texto_anterior TEXT NOT NULL,
+                editado_by TEXT,
+                editado_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_comentario_historial_comentario ON comentario_historial(comentario_id);
 
             -- ============ ALERTAS (SPEC §17) ============
             CREATE TABLE IF NOT EXISTS alertas (
