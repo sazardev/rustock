@@ -13,7 +13,7 @@
 |---|---|
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
-| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **FE-1, FE-2 y FE-3 completas**; **FE-4 en curso**; FE-5/FE-6 pendientes. Ver §6 |
+| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **FE-1, FE-2, FE-3 y FE-4 completas**; FE-5/FE-6 pendientes. Ver §6 |
 | **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 65 tests pasan, clippy y fmt limpios |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
@@ -348,21 +348,51 @@ conecta al backend real fase por fase.
   Rust (`aprobar_movimiento`, match de `tipo_mov`) es la fuente de verdad
   usada para construir el formulario.
 
-**FE-4 — Catálogos (en curso):** se creó `src/shared/refs.tsx` con
-componentes `<XRef id/>` reutilizables (producto, ubicación, lote,
-categoría, uom, proveedor, cliente, almacén) que resuelven la etiqueta
-legible vía react-query y enlazan al detalle. Al construirlo se detectó que
-**faltaba el comando Tauri `obtener_uom`** (la función de repo existía,
+**FE-4 — Catálogos (completa):** `src/shared/refs.tsx` con componentes
+`<XRef id/>` reutilizables (producto, ubicación, lote, categoría, uom,
+proveedor, cliente, almacén) que resuelven la etiqueta legible vía
+react-query y enlazan al detalle. Al construirlo se detectó que **faltaba
+el comando Tauri `obtener_uom`** (la función de repo existía,
 `crear_uom`/`listar_uoms` sí estaban expuestas, pero no `obtener_uom`) — se
 agregó siguiendo el mismo patrón que el resto de `obtener_*` (permiso
-`uom:ver` + `con_auditoria!`) y se registró en `handler()`. Falta: sustituir
-`src/pages/catalogs.tsx`/`CatalogPages.tsx` (mock) por un registro real por
-entidad, y CRUD completo (nuevo/editar/eliminar → en realidad
-"desactivar", el SPEC no permite borrado físico con historial) para
-**Almacén** y **Producto**. El nav (`src/app/nav.ts`) y el registro de
-catálogos ya excluían Zona/Rack/Sección/Caja del top-level desde antes de
-este hito (se navegan anidados, no como catálogo propio) — se respeta esa
-decisión preexistente, no se agregan rutas nuevas para ellas.
+`uom:ver` + `con_auditoria!`) y se registró en `handler()`.
+`src/pages/catalogs.tsx`/`CatalogPages.tsx` (antes 100% mock) se
+reemplazaron por: `src/pages/catalog-adapters.tsx` (un `CatalogAdapter<T
+extends { id: string }>` por entidad — título, listar/obtener reales,
+columnas de tabla, panel de datos generales, y opcionalmente
+`crearHref`/`editarHref`/`eliminarHref`/`desactivar` cuando la entidad
+tiene profundidad completa) + `CatalogPages.tsx` genérico
+(`CatalogListPage`/`CatalogDetailPage`/`CatalogEliminarPage`) que consume
+cualquier adaptador vía react-query + el motor de consulta universal
+(búsqueda, paginación). Las 8 entidades del nav (almacenes, ubicaciones,
+productos, lotes, categorías, uoms, proveedores, clientes) tienen listado +
+detalle reales; **Almacén** y **Producto** además tienen
+`AlmacenFormPage.tsx`/`ProductoFormPage.tsx` (nuevo + editar, mismo
+componente) y la página de eliminación genérica (`CatalogEliminarPage`,
+reutilizada para ambas) — en la práctica desactiva vía
+`desactivar_almacen`/`desactivar_producto` (SPEC no permite borrado físico
+con historial), con el botón rotulado "Eliminar definitivamente" y el texto
+explicando que se trata de una desactivación (mismo patrón de DESIGN §7.5).
+El nav (`src/app/nav.ts`) y el registro de catálogos ya excluían
+Zona/Rack/Sección/Caja del top-level desde antes de este hito (se navegan
+anidados, no como catálogo propio) — se respetó esa decisión preexistente,
+no se agregaron rutas nuevas para ellas.
+
+**Ajuste de tooling descubierto al mover el registro de catálogos:**
+`scripts/route-guard.mjs` extraía los slugs de catálogo con una regex que
+esperaba objetos literales inline (`almacenes: { ... }`, la forma del mock
+viejo). Al pasar a `CATALOGOS: Record<string, CatalogAdapter<any>> = {
+almacenes: almacenAdapter, ... }` (valores por referencia, no literales) la
+regex dejó de matchear y RouteGuard reportaba falsos negativos en los 8
+enlaces de nav de catálogos. Se corrigió apuntando la lectura a
+`catalog-adapters.tsx` y acotando la regex al bloque del objeto `CATALOGOS`
+(no a todo el archivo, para no capturar los nombres de campo de la interfaz
+`CatalogAdapter` como si fueran slugs). También se actualizó
+`src/app/breadcrumbs.ts`, que resolvía el nombre legible de un detalle de
+catálogo buscando en `cfg.rows` (array estático del mock) — ya no existe,
+así que el breadcrumb de detalle ahora muestra `{Singular} {id.slice(0,8)}`
+en vez del código real (el título real ya se ve en el `PageHeader` de la
+página de detalle; es una degradación cosmética aceptada, no un bug).
 
 **Verificación de este hito:** `cargo fmt --check`, `cargo clippy --all-targets
 -- -D warnings` y `cargo test` (65 tests) en verde; `npm run typecheck`,
@@ -434,45 +464,46 @@ usuario la corra en su máquina.
 ## 6. Trabajo en progreso
 
 **Backend: completo (Hito 7, §2).** **Frontend: Hito 8 (§2) en curso**,
-FE-1/FE-2/FE-3 terminadas y verificadas; FE-4 arrancada pero no terminada.
+FE-1/FE-2/FE-3/FE-4 terminadas y verificadas; FE-5/FE-6 pendientes.
 
-**Retomar exactamente aquí (FE-4 — Catálogos):**
-1. Reemplazar `src/pages/catalogs.tsx` + `src/pages/CatalogPages.tsx` (hoy
-   son 100% mock: filas hardcodeadas) por un registro real por entidad que
-   use `src/shared/backend.ts` (`listar_*`/`obtener_*`) + el motor de
-   consulta universal para paginación/orden/búsqueda. Ya existe
-   `src/shared/refs.tsx` con los componentes `<XRef id/>` para enlazar
-   entidades entre sí en las columnas/paneles de detalle.
-2. El registro de catálogos cubre las **8 entidades que ya están en el nav**
-   (`src/app/nav.ts`): almacenes, ubicaciones, productos, lotes, categorías,
-   uoms, proveedores, clientes. Zona/Rack/Sección/Caja **no están en el nav**
-   desde antes de este hito — no agregar rutas nuevas para ellas, es una
-   decisión de arquitectura preexistente (se navegan anidadas, no como
-   catálogo top-level).
-3. **Profundidad completa** (nuevo/editar/eliminar — en la práctica
-   "desactivar", el SPEC prohíbe borrado físico con historial) solo para
-   **Almacén** (simple) y **Producto** (complejo: UOM/categoría/lote). Las
-   otras 6 entidades quedan con listado + detalle reales pero sin formulario
-   propio — alcance documentado en el plan, no un olvido.
-4. Backend ya tiene todo lo necesario: `crear_almacen`/`editar_almacen`/
-   `desactivar_almacen` y `crear_producto`/`editar_producto`/
-   `desactivar_producto` están expuestos y probados. `desactivar_*` en
-   ambos casos no tiene precondición de negocio más allá del permiso (a
-   diferencia de zona/rack/sección/ubicación, que sí validan stock/hijos) —
-   revisar `repo/catalogo.rs::desactivar_almacen`/`desactivar_producto` si
-   hace falta confirmar antes de escribir la página de confirmación.
+**Retomar exactamente aquí (FE-5 — Inventario físico, SPEC §11):**
+1. `InventarioPage` (hoy es un `EmptyState` fijo, sin datos): reemplazar por
+   `listar_sesiones_inventario(estado?)` real (ya existe en `backend.ts` —
+   nota: este comando devuelve `SesionInventario[]` directo, no pasa por el
+   motor de consulta universal como los catálogos, así que no lleva
+   paginación/`ListParams`).
+2. `/inventario/:id` (ruta nueva): detalle de sesión — resumen (tipo,
+   alcance, estado, responsable, fechas), tabla de conteos
+   (`listar_conteos(sesionId)`) y diferencias (`diferencias_sesion(sesionId)`);
+   si la sesión está `CERRADA`, mostrar precisión (`precision_sesion(sesionId)`).
+3. `/inventario/nuevo` (ruta ya existe en el router pero apunta al mock):
+   formulario real con `crear_sesion_inventario` — tipo (`COMPLETO`/`CICLICO`),
+   almacén (selector), alcance (texto libre), `conteo_ciego`,
+   `exige_doble_conteo`.
+4. Registrar conteos: DESIGN §7.8 pide una página dedicada
+   `/inventario/:id/conteos` (captura campo a campo, sin mostrar saldo del
+   sistema si `conteo_ciego`). `registrar_conteo` ya existe en `backend.ts`.
+5. Cerrar sesión: `/inventario/:id/cerrar` como página de confirmación
+   (mismo patrón que `MovimientoAprobarPage`/`MovimientoAnularPage`) que
+   llama `cerrar_sesion_inventario(sesionId)`.
+6. Reutilizar donde tenga sentido: `src/shared/refs.tsx` para enlazar
+   producto/ubicación desde las líneas de conteo; `src/shared/format.ts`
+   para fechas.
 
-**Después de FE-4, quedan:**
-- **FE-5 — Inventario físico**: `InventarioPage` real
-  (`listar_sesiones_inventario`), `/inventario/:id` (sesión + conteos +
-  diferencias), `/inventario/nuevo` (formulario real).
-- **FE-6 — Cierre**: pipeline completo en verde (`typecheck`, `build`,
-  `lint`, `design`, `routes`), prueba manual con `npm run tauri dev`
-  (login → dashboard → crear entrada → verla listada → aprobarla → ver el
-  saldo reflejado — la automatización de navegador no pudo hacer esta
-  prueba en este entorno, ver Hito 8 en §2), y actualizar este documento con
-  el hito de frontend cerrado + la misma lista de gaps de
-  amplitud-sin-profundidad de arriba.
+**Después de FE-5, queda FE-6 — Cierre:**
+- Pipeline completo en verde (`typecheck`, `build`, `lint`, `design`,
+  `routes`) — ya viene siendo la verificación de cada fase, así que en FE-6
+  es solo confirmarlo una vez más con todo junto.
+- Prueba manual con `npm run tauri dev` (login → dashboard → crear entrada →
+  verla listada → aprobarla → ver el saldo reflejado). **La automatización de
+  navegador de este entorno no pudo hacer esta prueba** (ver limitación de
+  red más abajo) — queda pendiente que el usuario la corra en su máquina, o
+  reintentarla si el entorno cambia.
+- Actualizar este documento cerrando el Hito 8 (mover de "en curso" a
+  "completo" en §1 y aquí) y consolidar la lista de gaps de
+  amplitud-sin-profundidad (las 6 entidades de catálogo sin formulario
+  propio, precisión de inventario sin selector de sesión en Reportes) como
+  el "gaps conocidos" de este hito, mismo estilo que el Hito 7.
 
 **Antes de correr la app real** (`npm run tauri dev`), recordar: si viene de
 antes de la Fase C del Hito 7, **borrar `rustock.db`** — el esquema de

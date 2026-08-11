@@ -21,7 +21,7 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
 const navSource = read("src/app/nav.ts");
 const routerSource = read("src/app/router.tsx");
 const pathsSource = read("src/app/route-paths.ts");
-const catalogsSource = read("src/pages/catalogs.tsx");
+const catalogsSource = read("src/pages/catalog-adapters.tsx");
 
 const failures = [];
 const warn = (msg) => failures.push(msg);
@@ -52,7 +52,10 @@ for (const key of ["galeria", "noEncontrado", "accesoNoPermitido"]) {
 //    Rutas literales del nav: los catálogos (/almacenes, ...) y las de PATH resueltas
 //    (dashboard="/", movimientos, etc.). Los paths del router son hijos sin "/" inicial,
 //    así que normalizamos.
-const catalogSlugs = [...catalogsSource.matchAll(/^  (\w+): \{/gm)].map((m) => m[1]);
+const catalogosBlock = catalogsSource.match(/CATALOGOS[^=]*=\s*\{([\s\S]*?)\n\};/);
+const catalogSlugs = catalogosBlock
+  ? [...catalogosBlock[1].matchAll(/^\s*(\w+):/gm)].map((m) => m[1])
+  : [];
 
 for (const href of navHrefs) {
   const normalized = href.replace(/^\//, "");

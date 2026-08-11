@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { AppLayout } from "./AppLayout";
 import { AlertasPage } from "../pages/AlertasPage";
+import { AlmacenFormPage } from "../pages/AlmacenFormPage";
 import { BootstrapAdminPage } from "../pages/BootstrapAdminPage";
 import { ConfiguracionPage } from "../pages/ConfiguracionPage";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -16,10 +17,16 @@ import { MovimientoDetallePage } from "../pages/MovimientoDetallePage";
 import { MovimientoNuevoPage } from "../pages/MovimientoNuevoPage";
 import { MovimientosPage } from "../pages/MovimientosPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { ProductoFormPage } from "../pages/ProductoFormPage";
 import { ReporteKardexPage } from "../pages/ReporteKardexPage";
 import { ReporteVencimientosPage } from "../pages/ReporteVencimientosPage";
 import { ReportesPage } from "../pages/ReportesPage";
-import { CATALOGOS, CatalogDetailRoute, CatalogListRoute } from "../pages/catalogs";
+import {
+  CATALOGOS,
+  CatalogDetailRoute,
+  CatalogEliminarRoute,
+  CatalogListRoute,
+} from "../pages/catalogs";
 import { PATH } from "./route-paths";
 
 const CATALOG_KEYS = Object.keys(CATALOGOS);
@@ -53,6 +60,12 @@ export const router = createBrowserRouter([
       { path: "usuarios", element: <AlertasPage /> },
       { path: "configuracion", element: <ConfiguracionPage /> },
       { path: PATH.galeria.replace("/", ""), element: <GaleriaPage /> },
+      { path: "almacenes/nuevo", element: <AlmacenFormPage /> },
+      { path: "almacenes/:id/editar", element: <AlmacenFormPage /> },
+      { path: "almacenes/:id/eliminar", element: <CatalogEliminarRoute catalog="almacenes" /> },
+      { path: "productos/nuevo", element: <ProductoFormPage /> },
+      { path: "productos/:id/editar", element: <ProductoFormPage /> },
+      { path: "productos/:id/eliminar", element: <CatalogEliminarRoute catalog="productos" /> },
       ...CATALOG_KEYS.map((key) => ({
         path: key,
         element: <CatalogListRoute catalog={key} />,

@@ -71,7 +71,7 @@ export function crumbsFromPath(pathname: string): Crumb[] {
     matched = true;
   } else if (isCatalog) {
     const cfg = CATALOGOS[first as keyof typeof CATALOGOS];
-    crumbs.push({ label: cfg.title, href: `/${first}` });
+    crumbs.push({ label: cfg.titulo, href: `/${first}` });
     matched = true;
   }
 
@@ -111,13 +111,16 @@ export function crumbsFromPath(pathname: string): Crumb[] {
   return crumbs;
 }
 
-/** Resuelve el crumb de un detalle de catálogo usando los datos conocidos. */
+/**
+ * Resuelve el crumb de un detalle de catálogo. Los datos reales son
+ * asíncronos (react-query) y `crumbsFromPath` es una función pura y
+ * síncrona, así que aquí solo se arma un label genérico con el id — el
+ * título real ya se muestra en el `PageHeader` de la página de detalle.
+ */
 function crumbDetalleCatalogo(slug: string, id: string): Crumb | null {
   const cfg = CATALOGOS[slug as keyof typeof CATALOGOS];
   if (!cfg) return null;
-  const row = cfg.rows.find((r) => r.id === id);
-  const label = row ? `${cfg.singular}: ${row.codigo}` : `${cfg.singular} ${id}`;
-  return { label, href: `/${slug}/${id}` };
+  return { label: `${cfg.singular} ${id.slice(0, 8)}`, href: `/${slug}/${id}` };
 }
 
 /** Convierte un slug de ruta en texto legible (kebab-case -> Capitalizado). */
