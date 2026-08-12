@@ -2539,3 +2539,59 @@ fn editar_categoria_distingue_ausente_de_null_en_json() {
         serde_json::from_str(r#"{"nombre":"X","parent_id":"abc"}"#).expect("deserializar");
     assert_eq!(con_valor.parent_id, Some(Some("abc".to_string())));
 }
+
+/// El script de datos de ejemplo (`RUSTOCK_SEED=1`, ver `src/seed.rs`) debe
+/// producir un estado consistente usando únicamente las funciones de negocio
+/// reales, y no debe duplicar datos si se ejecuta más de una vez.
+#[test]
+fn seed_de_ejemplo_puebla_datos_consistentes_y_es_idempotente() {
+    let db = DbState::init_in_memory().expect("db");
+    let conn = db.conn();
+    crate::security::seed_roles(&conn).expect("roles");
+
+    crate::seed::sembrar_si_vacio(&conn).expect("seed");
+
+    let almacenes: i64 = conn
+        .query_row("SELECT COUNT(*) FROM almacenes", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(almacenes, 1);
+
+    let productos: i64 = conn
+        .query_row("SELECT COUNT(*) FROM productos", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(productos, 4);
+
+    let movimientos_aprobados: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM movimientos WHERE estado = 'APROBADO'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(movimientos_aprobados >= 5);
+
+    let alertas_abiertas: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM alertas WHERE estado = 'ABIERTA'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        alertas_abiertas > 0,
+        "el seed debe disparar al menos una alerta (stock bajo, vencimiento o pendiente)"
+    );
+
+    let sesiones: i64 = conn
+        .query_row("SELECT COUNT(*) FROM sesiones_inventario", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(sesiones, 2, "una sesión cerrada y una en curso");
+
+    // Idempotente: correrlo de nuevo (como hace cada arranque con la app ya
+    // sembrada) no debe duplicar nada.
+    crate::seed::sembrar_si_vacio(&conn).expect("seed segunda vez");
+    let almacenes_2: i64 = conn
+        .query_row("SELECT COUNT(*) FROM almacenes", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(almacenes_2, 1);
+}

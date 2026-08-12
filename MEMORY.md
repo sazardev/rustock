@@ -14,7 +14,7 @@
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
 | **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **completo (FE-1 a FE-6)**. Ver Hito 8 en §2 |
-| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 65 tests pasan, clippy y fmt limpios |
+| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 66 tests pasan, clippy y fmt limpios. Incluye `seed.rs` para datos de ejemplo (`RUSTOCK_SEED=1`, solo debug) |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
 | **Repo** | Git en `main` |
@@ -484,6 +484,74 @@ manual con `npm run tauri dev` en una máquina con acceso real a la app.
 
 ---
 
+### Hito 9 — Verificación visual en Chrome + script de datos de ejemplo
+
+Pedido del usuario: levantar front+back en modo web, abrir Chrome y probar
+toda la funcionalidad con datos semilla. Dos hallazgos importantes y una
+herramienta nueva:
+
+**Esta vez el navegador sí alcanzó `localhost`** (a diferencia del intento
+del Hito 8): había dos navegadores Chrome conectados a la cuenta
+(`claude-in-chrome` obliga a elegir con `select_browser` cuando hay más de
+uno); el navegador Linux sí comparte red con el sandbox. **Conclusión:** la
+limitación de red del Hito 8 no era del entorno en general, sino de *cuál*
+navegador estaba seleccionado — si vuelve a fallar, comprobar primero
+`list_connected_browsers`/`tabs_context_mcp` antes de asumir que no hay
+acceso.
+
+**Confirmado en vivo (no por lectura de código) que el modo web puro
+(`npm run dev`, sin Tauri) no puede ejecutar NINGÚN comando de negocio**:
+`/login` y `/configurar-administrador` renderizan perfecto (capturas
+tomadas), pero al enviar el formulario de bootstrap la app devuelve el error
+real `"El comando bootstrap_admin requiere la app de escritorio (Tauri)."`
+— exactamente el mensaje de `webInvoke` en `src/shared/api.ts`. Esto hace
+imposible, por diseño (STACK.md: lógica de negocio solo en Rust), probar
+"toda la funcionalidad" sirviendo solo el frontend sin Tauri: ni con datos
+semilla, porque ni el primer usuario admin se puede crear. El guardia de
+autenticación de `AppLayout` sí se verificó funcionando (navegar a
+`/almacenes` sin sesión redirige a `/login` incluso sin backend real).
+
+**Solución construida: `src-tauri/src/seed.rs`** — un módulo
+`#[cfg(debug_assertions)]` (nunca se compila en release) que puebla
+`rustock.db` con datos realistas usando **exclusivamente las mismas
+funciones `repo::*` que usan los comandos Tauri** (nunca `INSERT` directo),
+así que los datos sembrados respetan las mismas reglas de negocio que
+cualquier dato creado desde la UI real:
+- Usuario admin (`admin` / `Admin1234!`), 3 UOMs, 2 categorías, 1 proveedor,
+  1 cliente.
+- Árbol físico completo: 1 almacén → 3 zonas → 1 rack → 2 secciones → 4
+  ubicaciones (picking ×2, recepción, devolución) — ejemplo de árbol
+  simplificado (ubicaciones colgando de zona directamente) y estricto
+  (colgando de sección) a la vez.
+- 4 productos: uno simple, uno que termina con **stock bajo su mínimo**
+  (dispara alerta), uno con lote, uno con lote **+ vencimiento** (con un
+  lote por vencer en 15 días y otro ya vencido, para disparar ambas alertas
+  de vencimiento).
+- Movimientos aprobados: entrada de compra (múltiples líneas y lotes),
+  2 salidas a cliente, 1 traslado intra-almacén, 1 ajuste positivo — más un
+  comentario en la entrada y **un movimiento dejado en
+  `PENDIENTE_APROBACION`** a propósito (dispara la alerta correspondiente).
+- 2 sesiones de inventario: una **CERRADA** (con un conteo exacto y uno con
+  diferencia, para ver precisión y el ajuste generado al cerrar) y una
+  **EN_CURSO con conteo ciego** (para que el usuario practique registrar
+  conteos y cerrarla él mismo).
+- Termina llamando `regenerar_alertas` para que las alertas aparezcan de
+  inmediato en el dashboard sin esperar a la primera consulta.
+
+Se activa con `RUSTOCK_SEED=1 npm run tauri dev` (revisa `lib.rs::setup()`,
+justo después de `seed_roles`) y es **idempotente**: si ya existe algún
+almacén, no hace nada — seguro de dejar la variable puesta entre reinicios.
+Cubierto por el test `seed_de_ejemplo_puebla_datos_consistentes_y_es_idempotente`
+en `tests.rs` (corre el seed dos veces y verifica que no duplica). 66 tests
+en total ahora, clippy y fmt limpios.
+
+**Sigue sin poder verificarse visualmente `npm run tauri dev` en sí** (la
+ventana nativa WebKitGTK no es una pestaña de Chrome; `claude-in-chrome` no
+puede adjuntarse a ella). El usuario debe correrlo él mismo con
+`RUSTOCK_SEED=1 npm run tauri dev` para explorar los datos de ejemplo.
+
+---
+
 ## 3. Decisiones de diseño del stack (recordatorio)
 
 | Decisión | Por qué (referencia) |
@@ -537,18 +605,22 @@ manual con `npm run tauri dev` en una máquina con acceso real a la app.
 ## 6. Trabajo en progreso
 
 **Backend: completo (Hito 7, §2). Frontend: completo (Hito 8, §2, FE-1 a
-FE-6).** No hay ningún FE en curso ni tareas a medias en este momento.
+FE-6). Datos de ejemplo listos (Hito 9, §2).** No hay ningún FE en curso ni
+tareas a medias en este momento.
 
 **Antes de correr la app real** (`npm run tauri dev`), recordar: si la base
 de datos viene de antes de la Fase C del Hito 7, **borrar `rustock.db`** —
 el esquema de `ubicaciones` cambió (columnas nuevas + `CHECK`) sin migración
-automática.
+automática. Para explorar la app con datos de ejemplo (almacén, productos,
+movimientos, alertas, sesiones de inventario ya poblados), correr
+`RUSTOCK_SEED=1 npm run tauri dev` — usuario `admin` / contraseña
+`Admin1234!` (ver Hito 9, §2, para el detalle completo de qué se siembra).
 
 **Siguiente trabajo sugerido, en orden de valor** (ninguno es urgente; el
 sistema es funcional y conforme al SPEC tal como está):
-1. **Prueba manual end-to-end con `npm run tauri dev`** en una máquina con
-   acceso real a la app — es lo único que ningún test automatizado de esta
-   sesión pudo cubrir (ver limitación de entorno en el Hito 8, §2).
+1. **Prueba manual end-to-end con `RUSTOCK_SEED=1 npm run tauri dev`** en una
+   máquina con acceso real a la app — sigue siendo lo único que ningún test
+   automatizado pudo cubrir (la ventana nativa no es una pestaña de Chrome).
 2. Página de edición de movimientos (`/movimientos/:id/editar`, solo para
    `BORRADOR`/`PENDIENTE_APROBACION`) — está en el mapa de rutas de DESIGN
    §5.4 pero no se construyó en el Hito 8.

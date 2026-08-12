@@ -7,6 +7,9 @@ mod repo;
 mod security;
 mod sesion;
 
+#[cfg(debug_assertions)]
+mod seed;
+
 #[cfg(test)]
 mod tests;
 
@@ -36,6 +39,10 @@ pub fn run() {
             {
                 let conn = db.conn();
                 seed_roles(&conn)?;
+                #[cfg(debug_assertions)]
+                if std::env::var("RUSTOCK_SEED").is_ok_and(|v| v == "1") {
+                    seed::sembrar_si_vacio(&conn)?;
+                }
             }
             app.manage(db);
             app.manage(Arc::new(SesionState::default()));
