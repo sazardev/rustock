@@ -1,12 +1,14 @@
-import type { EventoAuditoria, MetricasHistorial } from "./audit";
+import type { EventoAuditoria } from "./audit";
 
 /**
  * Gateway de API de Rustock.
  *
- * Abstrae el backend: cuando la app corre dentro de Tauri usa `invoke` (comandos
- * Rust reales con SQLite); cuando corre en modo web (Vite puro / navegador) usa
- * un store local en `localStorage` con la misma forma de datos. Así la UI
- * funciona idéntica en ambos modos (DESIGN §5: deep-linking también en web).
+ * Abstrae el backend: cuando la app corre dentro de Tauri usa `invoke` (IPC
+ * nativo); cuando corre en un navegador normal (sin puente Tauri) usa el
+ * servidor HTTP local que el mismo binario Rust expone en
+ * `http://127.0.0.1:1421` (ver `src-tauri/src/server.rs`). En ambos casos es
+ * la misma lógica de negocio real — nunca un mock en el frontend (STACK.md:
+ * "lógica de negocio en Rust, frontend solo muestra").
  */
 
 /** ¿Corremos dentro de Tauri? */
@@ -14,9 +16,12 @@ export function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+const API_BASE = "http://127.0.0.1:1421/api";
+
 /**
- * Invoca un comando del backend. En Tauri usa el IPC real; en web despacha a
- * los handlers locales. Firma compatible con `@tauri-apps/api/core` invoke.
+ * Invoca un comando del backend. En Tauri usa el IPC real; en un navegador
+ * normal llama al servidor HTTP local del mismo backend. Firma compatible
+ * con `@tauri-apps/api/core` invoke.
  */
 export async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauri()) {
@@ -26,9 +31,33 @@ export async function invoke<T>(command: string, args?: Record<string, unknown>)
   return webInvoke<T>(command, args ?? {});
 }
 
+/** Despacho de comandos vía el servidor HTTP local (modo navegador). */
+async function webInvoke<T>(command: string, args: Record<string, unknown>): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/${command}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+  } catch {
+    throw new Error(
+      `No se pudo conectar con el backend local en ${API_BASE}. ¿Está corriendo la app (npm run tauri dev)?`,
+    );
+  }
+  const payload = (await response.json()) as { ok: boolean; data?: unknown; error?: string };
+  if (!payload.ok) {
+    throw new Error(payload.error ?? "Error desconocido del backend.");
+  }
+  return payload.data as T;
+}
+
 /**
- * Registra un evento en el historial local (modo web). Misma estructura que la
- * tabla `auditoria` del backend (SPEC §4.5).
+ * Registra un evento en el historial local de navegación del SPA (no es el
+ * historial de auditoría del backend, SPEC §4.5 — ese vive en `auditoria` y
+ * se consulta vía `listar_historial`/`metricas_historial`). Este historial
+ * local solo anota qué páginas visitó el usuario dentro de la app, algo que
+ * el backend no modela porque navegar no es una acción de negocio.
  */
 export function historialRegistrar(
   entrada: Omit<EventoAuditoria, "id" | "timestamp"> & { timestamp?: string },
@@ -57,127 +86,6 @@ export function historialLeer(): EventoAuditoria[] {
   }
 }
 
-/** Clasifica un comando por nivel (espejo del backend). */
-function nivelDeComando(comando: string): string {
-  const prefijos = [
-    "crear_",
-    "editar_",
-    "eliminar_",
-    "aprobar_",
-    "anular_",
-    "desactivar_",
-    "enviar_",
-    "registrar_",
-    "cerrar_",
-    "bootstrap_",
-  ];
-  return prefijos.some((p) => comando.startsWith(p)) ? "ESCRITURA" : "LECTURA";
-}
-
-function metricasDe(eventos: EventoAuditoria[]): MetricasHistorial {
-  const total = eventos.length;
-  const exitos = eventos.filter((e) => e.exito).length;
-  const errores = total - exitos;
-  const duraciones = eventos
-    .filter((e) => e.duracion_ms !== null)
-    .map((e) => e.duracion_ms as number);
-  const prom = duraciones.length ? duraciones.reduce((a, b) => a + b, 0) / duraciones.length : null;
-
-  const porComando = new Map<
-    string,
-    { total: number; exitos: number; errores: number; duracion: number[] }
-  >();
-  for (const e of eventos) {
-    const nombre = e.comando ?? e.accion;
-    const cur = porComando.get(nombre) ?? { total: 0, exitos: 0, errores: 0, duracion: [] };
-    cur.total += 1;
-    if (e.exito) cur.exitos += 1;
-    else cur.errores += 1;
-    if (e.duracion_ms !== null) cur.duracion.push(e.duracion_ms as number);
-    porComando.set(nombre, cur);
-  }
-  const porDia = new Map<string, number>();
-  for (const e of eventos) {
-    const dia = e.timestamp.slice(0, 10);
-    porDia.set(dia, (porDia.get(dia) ?? 0) + 1);
-  }
-
-  return {
-    total,
-    exitos,
-    errores,
-    tasa_exito: total ? (exitos / total) * 100 : 0,
-    duracion_promedio_ms: prom,
-    por_comando: [...porComando.entries()]
-      .map(([nombre, v]) => ({
-        nombre,
-        total: v.total,
-        exitos: v.exitos,
-        errores: v.errores,
-        duracion_promedio_ms: v.duracion.length
-          ? v.duracion.reduce((a, b) => a + b, 0) / v.duracion.length
-          : null,
-      }))
-      .toSorted((a, b) => b.total - a.total)
-      .slice(0, 20),
-    por_dia: [...porDia.entries()]
-      .map(([dia, total]) => ({ dia, total }))
-      .toSorted((a, b) => b.dia.localeCompare(a.dia))
-      .slice(0, 30),
-  };
-}
-
 const STORAGE_KEY = "rustock.historial";
 const MAX_EVENTOS = 500;
 let memoria: EventoAuditoria[] = [];
-
-/** Despacho de comandos en modo web (sin backend Rust). */
-async function webInvoke<T>(command: string, args: Record<string, unknown>): Promise<T> {
-  const inicio = performance.now();
-  let exito = true;
-  let resultado: unknown;
-
-  try {
-    switch (command) {
-      case "listar_historial": {
-        const eventos = historialLeer();
-        const limit = (args.limit as number | undefined) ?? 100;
-        resultado = eventos.slice(0, limit);
-        break;
-      }
-      case "metricas_historial": {
-        resultado = metricasDe(historialLeer());
-        break;
-      }
-      default:
-        // Comando de negocio sin handler web: se registra y responde vacío.
-        exito = false;
-        resultado = `El comando ${command} requiere la app de escritorio (Tauri).`;
-        break;
-    }
-  } catch (err) {
-    exito = false;
-    resultado = String(err);
-  }
-
-  const duracion = Math.round(performance.now() - inicio);
-  if (command !== "metricas_historial") {
-    historialRegistrar({
-      usuario_id:
-        (args.usuario_id as string | undefined) ?? (args.by as string | undefined) ?? "web",
-      accion: "invoke",
-      entidad: "comando",
-      entidad_id: null,
-      antes: null,
-      despues: null,
-      origen: "web",
-      comando: command,
-      duracion_ms: duracion,
-      exito,
-      nivel: nivelDeComando(command),
-    });
-  }
-
-  if (!exito) throw new Error(String(resultado));
-  return resultado as T;
-}

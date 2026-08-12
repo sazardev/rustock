@@ -13,8 +13,8 @@
 |---|---|
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
-| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **completo (FE-1 a FE-6)**. Ver Hito 8 en §2 |
-| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 66 tests pasan, clippy y fmt limpios. Incluye `seed.rs` para datos de ejemplo (`RUSTOCK_SEED=1`, solo debug) |
+| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 — **completo**. Modo navegador real (servidor HTTP local) — **completo**. Ver Hitos 8-10 en §2 |
+| **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17), dashboard/KPIs/kardex (§16) **y servidor HTTP local en `:1421`** (`server.rs`) que expone la misma lógica para navegadores normales. 66 tests pasan, clippy y fmt limpios. Incluye `seed.rs` para datos de ejemplo (`RUSTOCK_SEED=1`, solo debug) |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
 | **Repo** | Git en `main` |
@@ -552,6 +552,119 @@ puede adjuntarse a ella). El usuario debe correrlo él mismo con
 
 ---
 
+### Hito 10 — Modo navegador real: servidor HTTP local + modo headless
+
+El usuario pidió explícitamente que el login (y todo lo demás) **funcionara
+de verdad en un navegador normal**, no solo que se explicara por qué no
+podía. Se le presentaron las opciones (servidor HTTP local reutilizando
+Rust vs. duplicar la lógica en TypeScript) y eligió la primera — la única
+que no viola la decisión de STACK.md de mantener la lógica de negocio solo
+en Rust.
+
+**`src-tauri/src/server.rs` (nuevo, ~800 líneas):** servidor HTTP con
+`tiny_http` (bloqueante, sin runtime async — coherente con el resto del
+código, todo síncrono) que escucha en `127.0.0.1:1421` y expone un
+dispatcher genérico (`POST /api/<comando>` con el cuerpo JSON que ya arma
+`backend.ts`) que espeja **uno a uno** cada comando Tauri de `commands.rs`:
+mismo permiso (`puede`), misma función `repo::*`, misma auditoría
+(`con_auditoria!`, reexportado como `pub(crate) use con_auditoria;` porque
+`macro_rules!` no acepta `pub(crate)` como modificador directo — hay que
+declararlo simple y re-exportarlo). **Nunca reimplementa una regla de
+negocio**: es una segunda fachada de transporte, no una segunda
+implementación. Arranca siempre (no solo en debug) como hilo de fondo desde
+`lib.rs::setup()`, reutilizando el mismo `Arc<DbState>`/`Arc<SesionState>`
+que ya gestiona Tauri — como el resto de la app asume un único operador por
+instalación (SPEC §4.1), no hay cookies ni tokens: iniciar sesión desde el
+navegador o desde la ventana nativa es la misma sesión activa del proceso.
+CORS abierto (`Access-Control-Allow-Origin: *`) porque solo escucha en
+loopback.
+
+**Modo headless (`RUSTOCK_HEADLESS=1`):** para poder probar solo por HTTP
+sin que aparezca la ventana nativa de Linux, `lib.rs::setup()` oculta la
+ventana (`window.hide()`) tras crearla si la variable está presente — **no**
+se tocó `tauri.conf.json` ni se intentó evitar que Tauri cree la ventana
+(la API para "cero ventanas" tenía más riesgo de romper algo a ciegas);
+ocultarla después es la vía de menor riesgo y ya cumple el objetivo (no se
+ve nada en pantalla). GTK/webkit se siguen inicializando igual, así que
+sigue haciendo falta un `DISPLAY` — no es un modo headless "de verdad" sin
+entorno gráfico, es "headless visualmente".
+
+**`src/shared/api.ts` reescrito:** `webInvoke` ahora hace `fetch` real a
+`http://127.0.0.1:1421/api/<comando>` en vez de devolver el stub "requiere
+Tauri". Si el `fetch` falla (backend no corriendo), el error es explícito:
+*"No se pudo conectar con el backend local en ...¿Está corriendo la app
+(npm run tauri dev)?"*. Se **eliminaron** `nivelDeComando`/`metricasDe` (ya
+no hacen falta: `listar_historial`/`metricas_historial` ahora van por el
+backend real en los dos modos) pero se **conservaron**
+`historialRegistrar`/`historialLeer` — no son un mock del backend, los usa
+`use-historial-navegacion.ts` para trackear navegación del SPA, un concepto
+que no existe como comando de negocio y seguirá siendo local-only siempre.
+
+**Bug real encontrado y corregido durante la verificación en vivo (no antes
+de probarlo):** el arranque en modo Tauri normal (sin headless) falló la
+primera vez con `no such column: comando in CREATE INDEX ... ON
+auditoria(comando)` — un `rustock.db` viejo (de antes de que `auditoria`
+tuviera esa columna) seguía en
+`~/.local/share/com.rustock.app/rustock.db`, vacío (0 almacenes), se borró.
+Justo el escenario que el Hito 7 ya había documentado como gap conocido
+("si la base de datos viene de antes de la Fase C, borrar `rustock.db`").
+
+**Verificado en vivo, en Chrome real, contra el backend real (no solo
+`curl`)**, con `RUSTOCK_HEADLESS=1 RUSTOCK_SEED=1 npm run tauri dev` +
+`npm run dev`:
+- Login real con `admin`/`Admin1234!` → sesión real → redirección a
+  Dashboard con los KPIs sembrados exactos (4 SKUs, 13,465 unidades, 4
+  alertas, 7 movimientos, ocupación 75% 3/4).
+- Alertas: las 4 alertas sembradas se ven con fechas correctas — confirma
+  que el bug de fechas del Hito 9 (`fecha_mas_dias` con timestamp completo)
+  quedó bien corregido: "vence el 2026-08-27" vs. "venció el 2026-08-02",
+  ya no la misma fecha repetida.
+- Mutación real por HTTP: clic en "Resolver" sobre la alerta de movimiento
+  pendiente → toast de éxito → al recalcularse las alertas, **se vuelve a
+  abrir** porque el movimiento sigue `PENDIENTE_APROBACION` — comportamiento
+  correcto según SPEC §17.2 (resolver la alerta no arregla la causa raíz),
+  no un bug.
+- Movimientos: listado completo, detalle de `MOV-2026-000001` con líneas,
+  referencias a producto/lote resueltas vía `<XRef>` (confirma que llamadas
+  HTTP anidadas — el detalle dispara `obtener_producto`/`obtener_lote` por
+  cada línea — funcionan igual que en Tauri), y el comentario sembrado.
+- Inventario físico: las 2 sesiones sembradas (una `EN_CURSO`, una
+  `CERRADA`) se listan correctamente.
+
+**Pendiente de probar, explícitamente fuera de lo que se pudo verificar
+en este entorno:**
+- **La ventana nativa de escritorio en sí** (`npm run tauri dev` sin
+  `RUSTOCK_HEADLESS`): se sabe que compila y arranca (se vio en el log,
+  Hito 9), pero nadie ha *interactuado* con la ventana WebKitGTK real
+  todavía — `claude-in-chrome` no puede adjuntarse a ella. El usuario debe
+  abrirla él mismo al menos una vez para confirmar que el WebView nativo
+  (distinto del motor de Chrome) renderiza igual de bien.
+- **Formularios de escritura más allá de "Resolver alerta"**: crear un
+  movimiento nuevo, aprobar/anular, registrar un conteo, crear/editar un
+  almacén o producto — todo el CAMINO DE LECTURA (listados, detalles,
+  navegación, alertas) quedó probado en vivo por HTTP; el camino de
+  *creación/edición* con formularios reales (`react-hook-form` + `zod`)
+  todavía no se ejercitó en este navegador, solo en las páginas
+  automatizadas anteriores en modo Tauri simulado por lectura de código.
+- **Multi-cliente simultáneo**: como la sesión es un único
+  `Mutex<Option<SesionActiva>>` compartido (sin tokens), nunca se probó qué
+  pasa si el navegador Y la ventana nativa están abiertos al mismo tiempo y
+  alguien cierra sesión en uno — el otro se queda con una sesión "fantasma"
+  hasta el siguiente refresh. Es la consecuencia esperada del diseño
+  "un solo operador", pero no se verificó explícitamente el comportamiento
+  visual de ese caso límite.
+- **El puerto 1421 fijo**: si algo más en la máquina del usuario ya lo usa,
+  el servidor HTTP falla en silencio (`eprintln!`, la app de escritorio
+  sigue funcionando igual) — no hay todavía forma de configurarlo por env
+  var; sería la primera mejora si esto da problemas en la práctica.
+- **Exposición de red**: el servidor solo escucha en `127.0.0.1` a
+  propósito (no en `0.0.0.0`) — acceder desde otro dispositivo de la LAN
+  (otra visión del "self-hosted" de la SPEC) **no** está soportado todavía
+  y requeriría una decisión explícita sobre HTTPS/autenticación reforzada
+  antes de exponerlo, no se hizo sin que nadie lo pidiera.
+
+---
+
 ## 3. Decisiones de diseño del stack (recordatorio)
 
 | Decisión | Por qué (referencia) |
@@ -605,22 +718,29 @@ puede adjuntarse a ella). El usuario debe correrlo él mismo con
 ## 6. Trabajo en progreso
 
 **Backend: completo (Hito 7, §2). Frontend: completo (Hito 8, §2, FE-1 a
-FE-6). Datos de ejemplo listos (Hito 9, §2).** No hay ningún FE en curso ni
+FE-6). Datos de ejemplo listos (Hito 9, §2). Modo navegador real con
+servidor HTTP local, completo (Hito 10, §2).** No hay ningún FE en curso ni
 tareas a medias en este momento.
 
 **Antes de correr la app real** (`npm run tauri dev`), recordar: si la base
-de datos viene de antes de la Fase C del Hito 7, **borrar `rustock.db`** —
-el esquema de `ubicaciones` cambió (columnas nuevas + `CHECK`) sin migración
-automática. Para explorar la app con datos de ejemplo (almacén, productos,
-movimientos, alertas, sesiones de inventario ya poblados), correr
-`RUSTOCK_SEED=1 npm run tauri dev` — usuario `admin` / contraseña
-`Admin1234!` (ver Hito 9, §2, para el detalle completo de qué se siembra).
+de datos viene de antes de la Fase C del Hito 7 (o del Hito 10 si nunca
+había arrancado bien), **borrar `rustock.db`** en
+`~/.local/share/com.rustock.app/rustock.db` — no hay migraciones
+automáticas, solo `CREATE TABLE IF NOT EXISTS`. Para explorar la app con
+datos de ejemplo ya poblados: `RUSTOCK_SEED=1 npm run tauri dev` — usuario
+`admin` / contraseña `Admin1234!`. Para probar solo por HTTP sin que se vea
+la ventana nativa: agregar `RUSTOCK_HEADLESS=1` a esa misma línea, y abrir
+`http://localhost:1420` en cualquier navegador (el backend HTTP escucha en
+`:1421`, ver Hito 10).
 
 **Siguiente trabajo sugerido, en orden de valor** (ninguno es urgente; el
 sistema es funcional y conforme al SPEC tal como está):
-1. **Prueba manual end-to-end con `RUSTOCK_SEED=1 npm run tauri dev`** en una
-   máquina con acceso real a la app — sigue siendo lo único que ningún test
-   automatizado pudo cubrir (la ventana nativa no es una pestaña de Chrome).
+1. **Probar la ventana nativa de escritorio en sí** (`npm run tauri dev` sin
+   `RUSTOCK_HEADLESS`) y **los formularios de escritura** (crear movimiento,
+   aprobar/anular, registrar conteo, crear/editar almacén o producto) — ver
+   la lista completa de "pendiente de probar" al final del Hito 10, §2. Todo
+   lo demás (lectura, navegación, una mutación simple) ya se verificó en
+   vivo por HTTP.
 2. Página de edición de movimientos (`/movimientos/:id/editar`, solo para
    `BORRADOR`/`PENDIENTE_APROBACION`) — está en el mapa de rutas de DESIGN
    §5.4 pero no se construyó en el Hito 8.
@@ -630,6 +750,9 @@ sistema es funcional y conforme al SPEC tal como está):
 4. Reemplazar el placeholder de `/usuarios` (hoy apunta a `AlertasPage`) por
    una página real de gestión de usuarios y roles — es preexistente, de
    antes del Hito 8, y nunca estuvo en el alcance de FE-1..FE-6.
+5. Puerto HTTP configurable (hoy fijo en `:1421`) y, si algún día se pide
+   explícitamente, exponer el servidor a la LAN (hoy solo `127.0.0.1` a
+   propósito) — requeriría decidir HTTPS/autenticación reforzada primero.
 
 Gaps conocidos del backend (Hito 7, sin cambios): unicidad de código por
 padre inmediato en zona/rack/sección/ubicación (no por almacén completo),
@@ -642,6 +765,11 @@ anidadas); 6 entidades de catálogo con amplitud pero sin profundidad
 (punto 3 arriba); sin edición de movimientos (punto 2 arriba); sin comando
 para pasar una sesión de inventario de `PLANEADA` a `EN_CURSO` después de
 creada (limitación del backend, no del frontend — documentada en FE-5).
+
+Gaps conocidos del modo navegador (Hito 10, ver detalle completo en §2):
+sesión única compartida entre navegador y ventana nativa (sin tokens, por
+diseño de "un solo operador"); puerto `:1421` fijo, sin configuración; sin
+soporte para acceso desde otros dispositivos de la LAN.
 
 ---
 

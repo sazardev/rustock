@@ -387,7 +387,11 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
     )?;
 
     // 7. Lotes: uno normal, uno por vencer pronto, uno ya vencido.
-    let hoy = ahora();
+    // `fecha_mas_dias` espera fecha pura "YYYY-MM-DD" (así la llaman todos
+    // los usos reales en repo::alerta/repo::trazabilidad) — pasarle la
+    // marca de tiempo completa de `ahora()` hace que el parseo falle en
+    // silencio y devuelva la fecha de entrada sin modificar.
+    let hoy = ahora()[..10].to_string();
     let lote_cinta = repo::catalogo::crear_lote(
         conn,
         &NuevoLote {

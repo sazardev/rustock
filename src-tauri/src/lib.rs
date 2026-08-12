@@ -5,6 +5,7 @@ mod error;
 mod query;
 mod repo;
 mod security;
+mod server;
 mod sesion;
 
 #[cfg(debug_assertions)]
@@ -44,8 +45,26 @@ pub fn run() {
                     seed::sembrar_si_vacio(&conn)?;
                 }
             }
+            let sesion = Arc::new(SesionState::default());
+
+            // Servidor HTTP local (127.0.0.1:1421): expone la misma lógica de
+            // negocio para poder usar Rustock desde un navegador normal, sin
+            // el puente IPC de la ventana de escritorio (ver src/server.rs).
+            server::iniciar(db.clone(), sesion.clone());
+
             app.manage(db);
-            app.manage(Arc::new(SesionState::default()));
+            app.manage(sesion);
+
+            // RUSTOCK_HEADLESS=1: oculta la ventana nativa (sigue existiendo
+            // e inicializando GTK/webkit, solo no se muestra en pantalla) —
+            // pensado para probar/depurar exclusivamente vía el servidor
+            // HTTP + un navegador, sin la ventana de escritorio de por medio.
+            if std::env::var("RUSTOCK_HEADLESS").is_ok_and(|v| v == "1")
+                && let Some(window) = app.get_webview_window("main")
+            {
+                let _ = window.hide();
+            }
+
             Ok(())
         })
         .invoke_handler(commands::handler())

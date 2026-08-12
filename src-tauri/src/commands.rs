@@ -27,7 +27,7 @@ macro_rules! con_auditoria {
         let exito = resultado.is_ok();
         {
             let conn = $db.conn();
-            let _ = repo::auditoria::registrar_invocacion(
+            let _ = $crate::repo::auditoria::registrar_invocacion(
                 &conn,
                 actor.as_deref(),
                 $comando,
@@ -39,6 +39,7 @@ macro_rules! con_auditoria {
         resultado
     }};
 }
+pub(crate) use con_auditoria;
 
 // ============ Autenticación y sesión (SPEC §4.1) ============
 
