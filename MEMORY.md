@@ -13,7 +13,7 @@
 |---|---|
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
-| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **FE-1, FE-2, FE-3 y FE-4 completas**; FE-5/FE-6 pendientes. Ver §6 |
+| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 en `~/.claude/plans/vivid-scribbling-cook.md` — **completo (FE-1 a FE-6)**. Ver Hito 8 en §2 |
 | **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén, comentarios con historial, trazabilidad (§13.4), alertas (§17) y dashboard/KPIs/kardex (§16). 65 tests pasan, clippy y fmt limpios |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
@@ -275,7 +275,7 @@ en verde antes de seguir.
   atómica entre sí (cada `crear_movimiento` es su propia transacción); ambos
   nacen en `BORRADOR` sin efecto sobre stock, así que no compromete saldos.
 
-### Hito 8 — Frontend conectado al backend real (FE-1 a FE-3 completas, FE-4 en curso)
+### Hito 8 — Frontend conectado al backend real (completo, FE-1 a FE-6)
 
 Plan completo en `~/.claude/plans/vivid-scribbling-cook.md`. Auditoría previa
 confirmó que **todo** el frontend (`src/pages/*`) era maqueta con arrays
@@ -394,20 +394,93 @@ así que el breadcrumb de detalle ahora muestra `{Singular} {id.slice(0,8)}`
 en vez del código real (el título real ya se ve en el `PageHeader` de la
 página de detalle; es una degradación cosmética aceptada, no un bug).
 
+**FE-5 — Inventario físico (completa, SPEC §11):**
+- `InventarioPage`: listado real de sesiones (`listar_sesiones_inventario`)
+  con filtro por estado y paginación.
+- **Bug real encontrado al construir esta página, no relacionado con FE-5 en
+  sí**: `backend.ts` declaraba `listarSesionesInventario(estado?: string):
+  Promise<SesionInventario[]>` invocando `{ estado }` — pero el comando Rust
+  `listar_sesiones_inventario` en realidad recibe `params: ListParams` y
+  devuelve `Listado` (pasa por el motor de consulta universal §15, igual que
+  los catálogos). Esa función llevaba así desde FE-1 sin que nada la hubiera
+  ejercitado todavía; habría fallado en tiempo real al primer uso (Tauri no
+  habría podido deserializar el argumento). Se corrigió la firma para que
+  coincida con el comando real y se agregó `obtenerSesionInventario`.
+- **Segundo comando Tauri faltante, mismo patrón que `obtener_uom` del
+  Hito 8/FE-4**: no existía `obtener_sesion_inventario` (la función de repo
+  `obtener_sesion` sí existía, usada internamente por `crear_sesion_inventario`,
+  pero nunca se expuso como comando propio). Se agregó siguiendo el mismo
+  patrón (`inventario:ver` + `con_auditoria!`) y se registró en `handler()`.
+- `InventarioNuevoPage`: formulario real (`crear_sesion_inventario`) — tipo,
+  almacén, alcance, fecha de inicio (con valor por defecto = ahora, para que
+  la sesión nazca `EN_CURSO` y admita conteos de inmediato; el backend no
+  tiene un comando separado para pasar de `PLANEADA` a `EN_CURSO`, así que
+  dejar la fecha vacía dejaría la sesión sin forma de activarse después —
+  documentado como límite conocido, no se inventó un comando nuevo para
+  esto), `conteo_ciego`, `exige_doble_conteo`.
+- `SesionInventarioDetallePage` (ruta nueva `/inventario/:id`): resumen,
+  tabla de conteos y de diferencias (`listar_conteos`/`diferencias_sesion`,
+  con enlaces a producto/ubicación/lote vía `src/shared/refs.tsx`), y panel
+  de precisión (`precision_sesion`) cuando la sesión está `CERRADA`. Acciones
+  "Registrar conteos" y "Cerrar sesión" solo visibles si está `EN_CURSO`.
+- `SesionInventarioConteosPage` (`/inventario/:id/conteos`, DESIGN §7.8):
+  página dedicada de captura campo a campo (ubicación, producto, lote si
+  `controla_lote`, cantidad, n.º de conteo, nota) con lista de conteos ya
+  registrados debajo. **Decisión de alcance**: no se muestra el saldo del
+  sistema en esta página en ningún caso (ciego o no) — cumple la regla dura
+  del conteo ciego sin necesidad de branch adicional; mostrarlo cuando no es
+  ciego queda como mejora futura, no es una regla del SPEC que se esté
+  incumpliendo.
+- `SesionInventarioCerrarPage` (`/inventario/:id/cerrar`): página de
+  confirmación (mismo patrón que aprobar/anular movimiento) que lista las
+  diferencias no conciliadas y qué tipo de ajuste generará cada una antes de
+  llamar `cerrar_sesion_inventario`.
+- Nuevos mapas en `src/shared/format.ts`: `ESTADO_SESION_LABEL/TONE`,
+  `TIPO_DIFERENCIA_LABEL/TONE`.
+
+**FE-6 — Cierre (completa):**
+- Pipeline completo verde de punta a punta: backend (`cargo fmt --check`,
+  `cargo clippy --all-targets -- -D warnings`, `cargo test` — 65 tests) y
+  frontend (`npm run typecheck`, `npm run build`, `npm run lint`, `npm run
+  design`, `npm run routes`).
+- **No se pudo hacer la prueba manual real con `npm run tauri dev`** (login
+  → dashboard → crear entrada → verla listada → aprobarla → ver el saldo
+  reflejado) — ver limitación de entorno abajo. Queda pendiente que el
+  usuario la corra en su máquina; todo el trabajo de esta sesión se apoyó en
+  verificación estática (tipos, build, linters, guards) más los 65 tests de
+  Rust, que sí cubren la lógica de negocio de extremo a extremo.
+- Gaps de amplitud-sin-profundidad que quedan documentados como alcance
+  deliberado de esta ronda de frontend (no como pendientes urgentes):
+  - Zona, Rack, Sección, Caja: sin página propia en absoluto (ni siquiera
+    listado) — decisión preexistente al Hito 8, se navegan anidadas.
+  - Ubicación, Lote, Categoría, UOM, Proveedor, Cliente: listado + detalle
+    reales, sin formulario de creación/edición propio.
+  - Movimientos: sin página de edición (`/movimientos/:id/editar`) pese a
+    estar en el mapa de rutas de DESIGN §5.4 — se puede crear, aprobar,
+    anular y enviar a aprobación, pero no editar un `BORRADOR` ya creado.
+  - Reportes "Precisión de inventario": no tiene un selector de sesión
+    dedicado en `/reportes`; la precisión real se ve entrando a una sesión
+    `CERRADA` desde `/inventario` (ahora que FE-5 existe, esto ya funciona,
+    solo que no hay un atajo directo desde Reportes).
+  - Usuarios y roles: la ruta `/usuarios` sigue apuntando a `AlertasPage`
+    como placeholder (esto es preexistente, de antes del Hito 8; no se tocó
+    en esta ronda porque no estaba en el alcance de ningún FE-1..FE-6).
+
 **Verificación de este hito:** `cargo fmt --check`, `cargo clippy --all-targets
 -- -D warnings` y `cargo test` (65 tests) en verde; `npm run typecheck`,
-`npm run build`, `npm run design` (DesignGuard) y `npm run routes`
-(RouteGuard) en verde en cada fase.
+`npm run build`, `npm run lint`, `npm run design` (DesignGuard) y `npm run
+routes` (RouteGuard) en verde en cada fase, incluida la fase de cierre.
 
-**Limitación de entorno encontrada (no es un bug de la app):** el navegador
-que controla la herramienta `claude-in-chrome` en este entorno **no alcanza
-`localhost` del sandbox** donde corre `npm run dev` — se confirmó
-navegando primero a la app (falla, "Frame ... showing error page") y luego
-a `https://example.com` (carga con normalidad), aislando que el problema es
-de red del entorno, no de la app. Por eso esta ronda se verificó con el
-pipeline estático (typecheck/build/design/routes) en vez de una prueba
-visual en vivo; falta la prueba manual con `npm run tauri dev` cuando el
-usuario la corra en su máquina.
+**Limitación de entorno encontrada (no es un bug de la app, se repite en
+todo el Hito 8):** el navegador que controla la herramienta
+`claude-in-chrome` en este entorno **no alcanza `localhost` del sandbox**
+donde corre `npm run dev` — se confirmó navegando primero a la app (falla,
+"Frame ... showing error page") y luego a `https://example.com` (carga con
+normalidad), aislando que el problema es de red del entorno, no de la app.
+Por eso todo este hito se verificó con el pipeline estático
+(typecheck/build/lint/design/routes) más los tests de Rust, en vez de una
+prueba visual en vivo dentro de este entorno; sigue pendiente la prueba
+manual con `npm run tauri dev` en una máquina con acceso real a la app.
 
 ---
 
@@ -463,56 +536,40 @@ usuario la corra en su máquina.
 
 ## 6. Trabajo en progreso
 
-**Backend: completo (Hito 7, §2).** **Frontend: Hito 8 (§2) en curso**,
-FE-1/FE-2/FE-3/FE-4 terminadas y verificadas; FE-5/FE-6 pendientes.
+**Backend: completo (Hito 7, §2). Frontend: completo (Hito 8, §2, FE-1 a
+FE-6).** No hay ningún FE en curso ni tareas a medias en este momento.
 
-**Retomar exactamente aquí (FE-5 — Inventario físico, SPEC §11):**
-1. `InventarioPage` (hoy es un `EmptyState` fijo, sin datos): reemplazar por
-   `listar_sesiones_inventario(estado?)` real (ya existe en `backend.ts` —
-   nota: este comando devuelve `SesionInventario[]` directo, no pasa por el
-   motor de consulta universal como los catálogos, así que no lleva
-   paginación/`ListParams`).
-2. `/inventario/:id` (ruta nueva): detalle de sesión — resumen (tipo,
-   alcance, estado, responsable, fechas), tabla de conteos
-   (`listar_conteos(sesionId)`) y diferencias (`diferencias_sesion(sesionId)`);
-   si la sesión está `CERRADA`, mostrar precisión (`precision_sesion(sesionId)`).
-3. `/inventario/nuevo` (ruta ya existe en el router pero apunta al mock):
-   formulario real con `crear_sesion_inventario` — tipo (`COMPLETO`/`CICLICO`),
-   almacén (selector), alcance (texto libre), `conteo_ciego`,
-   `exige_doble_conteo`.
-4. Registrar conteos: DESIGN §7.8 pide una página dedicada
-   `/inventario/:id/conteos` (captura campo a campo, sin mostrar saldo del
-   sistema si `conteo_ciego`). `registrar_conteo` ya existe en `backend.ts`.
-5. Cerrar sesión: `/inventario/:id/cerrar` como página de confirmación
-   (mismo patrón que `MovimientoAprobarPage`/`MovimientoAnularPage`) que
-   llama `cerrar_sesion_inventario(sesionId)`.
-6. Reutilizar donde tenga sentido: `src/shared/refs.tsx` para enlazar
-   producto/ubicación desde las líneas de conteo; `src/shared/format.ts`
-   para fechas.
+**Antes de correr la app real** (`npm run tauri dev`), recordar: si la base
+de datos viene de antes de la Fase C del Hito 7, **borrar `rustock.db`** —
+el esquema de `ubicaciones` cambió (columnas nuevas + `CHECK`) sin migración
+automática.
 
-**Después de FE-5, queda FE-6 — Cierre:**
-- Pipeline completo en verde (`typecheck`, `build`, `lint`, `design`,
-  `routes`) — ya viene siendo la verificación de cada fase, así que en FE-6
-  es solo confirmarlo una vez más con todo junto.
-- Prueba manual con `npm run tauri dev` (login → dashboard → crear entrada →
-  verla listada → aprobarla → ver el saldo reflejado). **La automatización de
-  navegador de este entorno no pudo hacer esta prueba** (ver limitación de
-  red más abajo) — queda pendiente que el usuario la corra en su máquina, o
-  reintentarla si el entorno cambia.
-- Actualizar este documento cerrando el Hito 8 (mover de "en curso" a
-  "completo" en §1 y aquí) y consolidar la lista de gaps de
-  amplitud-sin-profundidad (las 6 entidades de catálogo sin formulario
-  propio, precisión de inventario sin selector de sesión en Reportes) como
-  el "gaps conocidos" de este hito, mismo estilo que el Hito 7.
-
-**Antes de correr la app real** (`npm run tauri dev`), recordar: si viene de
-antes de la Fase C del Hito 7, **borrar `rustock.db`** — el esquema de
-`ubicaciones` cambió (columnas nuevas + `CHECK`) sin migración automática.
+**Siguiente trabajo sugerido, en orden de valor** (ninguno es urgente; el
+sistema es funcional y conforme al SPEC tal como está):
+1. **Prueba manual end-to-end con `npm run tauri dev`** en una máquina con
+   acceso real a la app — es lo único que ningún test automatizado de esta
+   sesión pudo cubrir (ver limitación de entorno en el Hito 8, §2).
+2. Página de edición de movimientos (`/movimientos/:id/editar`, solo para
+   `BORRADOR`/`PENDIENTE_APROBACION`) — está en el mapa de rutas de DESIGN
+   §5.4 pero no se construyó en el Hito 8.
+3. Formularios de creación/edición para las 6 entidades de catálogo que hoy
+   solo tienen listado + detalle (Ubicación, Lote, Categoría, UOM,
+   Proveedor, Cliente) — mismo patrón que `AlmacenFormPage`/`ProductoFormPage`.
+4. Reemplazar el placeholder de `/usuarios` (hoy apunta a `AlertasPage`) por
+   una página real de gestión de usuarios y roles — es preexistente, de
+   antes del Hito 8, y nunca estuvo en el alcance de FE-1..FE-6.
 
 Gaps conocidos del backend (Hito 7, sin cambios): unicidad de código por
 padre inmediato en zona/rack/sección/ubicación (no por almacén completo),
 `comentario:eliminar` solo para ADMIN, creación no-atómica de las dos
 piernas de un traslado inter-almacén.
+
+Gaps conocidos del frontend (Hito 8, ver detalle completo en §2): Zona,
+Rack, Sección y Caja sin página propia (decisión preexistente, se navegan
+anidadas); 6 entidades de catálogo con amplitud pero sin profundidad
+(punto 3 arriba); sin edición de movimientos (punto 2 arriba); sin comando
+para pasar una sesión de inventario de `PLANEADA` a `EN_CURSO` después de
+creada (limitación del backend, no del frontend — documentada en FE-5).
 
 ---
 

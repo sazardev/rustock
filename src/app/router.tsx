@@ -9,6 +9,7 @@ import { ErrorPage } from "../pages/ErrorPage";
 import { ForbiddenPage } from "../pages/ForbiddenPage";
 import { GaleriaPage } from "../pages/GaleriaPage";
 import { HistorialPage } from "../pages/HistorialPage";
+import { InventarioNuevoPage } from "../pages/InventarioNuevoPage";
 import { InventarioPage } from "../pages/InventarioPage";
 import { LoginPage } from "../pages/LoginPage";
 import { MovimientoAnularPage } from "../pages/MovimientoAnularPage";
@@ -21,6 +22,9 @@ import { ProductoFormPage } from "../pages/ProductoFormPage";
 import { ReporteKardexPage } from "../pages/ReporteKardexPage";
 import { ReporteVencimientosPage } from "../pages/ReporteVencimientosPage";
 import { ReportesPage } from "../pages/ReportesPage";
+import { SesionInventarioCerrarPage } from "../pages/SesionInventarioCerrarPage";
+import { SesionInventarioConteosPage } from "../pages/SesionInventarioConteosPage";
+import { SesionInventarioDetallePage } from "../pages/SesionInventarioDetallePage";
 import {
   CATALOGOS,
   CatalogDetailRoute,
@@ -50,7 +54,10 @@ export const router = createBrowserRouter([
       { path: "movimientos/:id/aprobar", element: <MovimientoAprobarPage /> },
       { path: "movimientos/:id/anular", element: <MovimientoAnularPage /> },
       { path: "inventario", element: <InventarioPage /> },
-      { path: "inventario/nuevo", element: <InventarioPage /> },
+      { path: "inventario/nuevo", element: <InventarioNuevoPage /> },
+      { path: "inventario/:id", element: <SesionInventarioDetallePage /> },
+      { path: "inventario/:id/conteos", element: <SesionInventarioConteosPage /> },
+      { path: "inventario/:id/cerrar", element: <SesionInventarioCerrarPage /> },
       { path: "alertas", element: <AlertasPage /> },
       { path: "reportes", element: <ReportesPage /> },
       { path: "reportes/vencimientos", element: <ReporteVencimientosPage /> },

@@ -283,8 +283,10 @@ export const sugerirLineasSalida = (args: SugerirLineasSalidaArgs): Promise<Suge
 
 export const crearSesionInventario = (nuevo: NuevaSesionInventario): Promise<SesionInventario> =>
   invoke("crear_sesion_inventario", { nuevo });
-export const listarSesionesInventario = (estado?: string): Promise<SesionInventario[]> =>
-  invoke("listar_sesiones_inventario", { estado });
+export const listarSesionesInventario = (p?: ListParams): Promise<Listado<SesionInventario>> =>
+  invoke("listar_sesiones_inventario", params(p));
+export const obtenerSesionInventario = (id: string): Promise<SesionInventario | null> =>
+  invoke("obtener_sesion_inventario", { id });
 export const registrarConteo = (nuevo: NuevoConteo): Promise<Conteo> =>
   invoke("registrar_conteo", { nuevo });
 export const listarConteos = (sesionId: string): Promise<Conteo[]> =>

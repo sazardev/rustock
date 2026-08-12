@@ -4,7 +4,13 @@
  * Alertas se vean consistentes (DESIGN.md).
  */
 import type { BadgeTone, IconName } from "./ui";
-import type { EstadoAlerta, EstadoMovimiento, SeveridadAlerta, TipoMovimiento } from "./types";
+import type {
+  EstadoAlerta,
+  EstadoMovimiento,
+  EstadoSesionInventario,
+  SeveridadAlerta,
+  TipoMovimiento,
+} from "./types";
 
 export function formatearFecha(iso: string | null): string {
   if (!iso) return "—";
@@ -90,6 +96,32 @@ export const TIPO_ALERTA_LABEL: Record<string, string> = {
   LOTE_VENCIDO: "Lote vencido",
   DIFERENCIA_INVENTARIO: "Diferencia de inventario",
   MOVIMIENTO_PENDIENTE: "Movimiento pendiente",
+};
+
+export const ESTADO_SESION_LABEL: Record<EstadoSesionInventario, string> = {
+  PLANEADA: "Planeada",
+  EN_CURSO: "En curso",
+  CERRADA: "Cerrada",
+  ANULADA: "Anulada",
+};
+
+export const ESTADO_SESION_TONE: Record<EstadoSesionInventario, BadgeTone> = {
+  PLANEADA: "neutral",
+  EN_CURSO: "info",
+  CERRADA: "success",
+  ANULADA: "danger",
+};
+
+export const TIPO_DIFERENCIA_LABEL: Record<string, string> = {
+  conciliado: "Conciliado",
+  sobrante: "Sobrante",
+  faltante: "Faltante",
+};
+
+export const TIPO_DIFERENCIA_TONE: Record<string, BadgeTone> = {
+  conciliado: "success",
+  sobrante: "info",
+  faltante: "danger",
 };
 
 export function mensajeError(err: unknown): string {

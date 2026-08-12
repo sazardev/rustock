@@ -1139,6 +1139,19 @@ pub fn listar_sesiones_inventario(
 }
 
 #[tauri::command]
+pub fn obtener_sesion_inventario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<SesionInventario>> {
+    con_auditoria!(db, sesion, "obtener_sesion_inventario", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
+        repo::inventario::obtener_sesion(&conn, &id)
+    })
+}
+
+#[tauri::command]
 pub fn registrar_conteo(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -1524,6 +1537,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         sugerir_lineas_salida,
         crear_sesion_inventario,
         listar_sesiones_inventario,
+        obtener_sesion_inventario,
         registrar_conteo,
         listar_conteos,
         diferencias_sesion,

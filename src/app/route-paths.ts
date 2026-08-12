@@ -38,6 +38,18 @@ export function movimientoAnular(id: string): string {
   return `/movimientos/${id}/anular`;
 }
 
+export function sesionInventarioDetalle(id: string): string {
+  return `/inventario/${id}`;
+}
+
+export function sesionInventarioConteos(id: string): string {
+  return `/inventario/${id}/conteos`;
+}
+
+export function sesionInventarioCerrar(id: string): string {
+  return `/inventario/${id}/cerrar`;
+}
+
 export function catalogoLista(slug: string): string {
   return `/${slug}`;
 }
