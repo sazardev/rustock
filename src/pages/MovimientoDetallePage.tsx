@@ -12,6 +12,7 @@ import {
   obtenerUbicacion,
 } from "../shared/backend";
 import { esPaginado, type LineaMovimiento } from "../shared/types";
+import { MovimientoRef } from "../shared/refs";
 import {
   Badge,
   Button,
@@ -31,7 +32,6 @@ import {
   catalogoDetalle,
   movimientoAnular,
   movimientoAprobar,
-  movimientoDetalle,
   movimientoEditar,
   PATH,
 } from "../app/route-paths";
@@ -207,10 +207,7 @@ export function MovimientoDetallePage() {
       {movimiento.movimiento_inverso_id ? (
         <ErrorPanel title="Movimiento anulado">
           Este movimiento fue anulado. Se generó el movimiento inverso{" "}
-          <Link href={movimientoDetalle(movimiento.movimiento_inverso_id)}>
-            {movimiento.movimiento_inverso_id}
-          </Link>
-          .
+          <MovimientoRef id={movimiento.movimiento_inverso_id} />.
         </ErrorPanel>
       ) : null}
 

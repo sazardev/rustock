@@ -118,12 +118,6 @@ impl DbState {
             CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
             CREATE INDEX IF NOT EXISTS idx_auditoria_comando ON auditoria(comando);
             CREATE INDEX IF NOT EXISTS idx_auditoria_nivel ON auditoria(nivel);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_tipo_evento ON auditoria(tipo_evento);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_modulo ON auditoria(modulo);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_ruta ON auditoria(ruta);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_proceso ON auditoria(proceso);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_tenant ON auditoria(tenant);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_tiempo_local ON auditoria(hora_local, dia_semana);
 
             -- ============ CATALOGOS: ARBOL FISICO (SPEC §3.1-3.6) ============
             CREATE TABLE IF NOT EXISTS almacenes (
@@ -607,6 +601,20 @@ impl DbState {
         asegurar_columna(&tx, "auditoria", "duracion_vista_ms", "INTEGER")?;
         asegurar_columna(&tx, "auditoria", "hora_local", "INTEGER")?;
         asegurar_columna(&tx, "auditoria", "dia_semana", "INTEGER")?;
+        // Los índices sobre estas columnas se crean aquí (no en el batch
+        // inicial): en una db existente, `CREATE TABLE IF NOT EXISTS` no
+        // agrega las columnas nuevas, así que crear el índice antes de los
+        // `asegurar_columna` de arriba fallaba con "no such column".
+        tx.execute_batch(
+            "
+            CREATE INDEX IF NOT EXISTS idx_auditoria_tipo_evento ON auditoria(tipo_evento);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_modulo ON auditoria(modulo);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_ruta ON auditoria(ruta);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_proceso ON auditoria(proceso);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_tenant ON auditoria(tenant);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_tiempo_local ON auditoria(hora_local, dia_semana);
+            ",
+        )?;
 
         // Valorización de inventario (Fase D): costo del producto, costo por
         // línea de entrada y método configurado en la empresa.

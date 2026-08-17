@@ -74,6 +74,29 @@ impl SubTipoMovimiento {
             _ => None,
         }
     }
+
+    /// ¿Es `tipo` coherente con este sub-tipo? Refleja exactamente los casos
+    /// que `aprobar_movimiento` sabe ejecutar (match por `tipo` y, dentro de
+    /// AJUSTE, por `sub_tipo`). Sin este chequeo, un cliente HTTP/IPC puede
+    /// crear combinaciones sin sentido (ej. `ENTRADA` + `MERMA`) que
+    /// `aprobar_movimiento` aplica igual: como el efecto de saldo lo decide
+    /// `tipo` (no `sub_tipo`), una "merma" así **incrementa** el saldo en vez
+    /// de reducirlo, corrompiendo saldos, reportes de mermas/ajustes (SPEC
+    /// §16.2) y la trazabilidad (§14.1).
+    pub fn tipo_valido(&self, tipo: TipoMovimiento) -> bool {
+        use TipoMovimiento as T;
+        match self {
+            Self::Compra | Self::DevolucionCliente | Self::Inicial | Self::TrasladoEntrada => {
+                tipo == T::Entrada
+            }
+            Self::Cliente | Self::DevolucionProveedor | Self::Merma => tipo == T::Salida,
+            // TRASLADO_SALIDA se usa tanto en el traslado intra-almacén
+            // (tipo TRASLADO) como en la pierna de salida del traslado
+            // inter-almacén (tipo SALIDA, SPEC §9.3).
+            Self::TrasladoSalida => matches!(tipo, T::Salida | T::Traslado),
+            Self::AjustePositivo | Self::AjusteNegativo => tipo == T::Ajuste,
+        }
+    }
 }
 
 /// Estado del movimiento (SPEC §6.2).
@@ -228,8 +251,20 @@ impl NuevoMovimiento {
             }
         }
 
-        // Ajustes y mermas: motivo obligatorio (SPEC §7.4, §8.4, §8.5, §10.3).
+        // Coherencia tipo/sub_tipo (SPEC §6.1, §7.1, §8.1, §9): un sub_tipo
+        // fuera de su familia (ej. ENTRADA + MERMA) produciría un efecto de
+        // saldo indefinido al aprobar.
+        let tipo = self.tipo()?;
         let subtipo = self.sub_tipo()?;
+        if !subtipo.tipo_valido(tipo) {
+            return Err(AppError::CampoInvalido(format!(
+                "sub_tipo '{}' no es válido para tipo '{}'",
+                subtipo.as_str(),
+                tipo.as_str()
+            )));
+        }
+
+        // Ajustes y mermas: motivo obligatorio (SPEC §7.4, §8.4, §8.5, §10.3).
         let requiere_motivo = matches!(
             subtipo,
             SubTipoMovimiento::AjustePositivo

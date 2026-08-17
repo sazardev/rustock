@@ -76,6 +76,9 @@ export interface CatalogAdapter<T extends { id: string }> {
   titulo: string;
   descripcion: string;
   singular: string;
+  /** Género gramatical de `singular`, para concordancia en la UI (Nuevo/Nueva,
+   * el primer/la primera, desactivado/desactivada). Por defecto masculino. */
+  genero?: "F";
   icon: IconName;
   listar: (p?: ListParams) => Promise<Listado<T>>;
   obtener: (id: string) => Promise<T | null>;
@@ -133,6 +136,7 @@ const ubicacionAdapter: CatalogAdapter<Ubicacion> = {
   titulo: "Ubicaciones",
   descripcion: "Ubicaciones de almacenamiento (bins).",
   singular: "Ubicación",
+  genero: "F",
   icon: "ubicacion",
   listar: listarUbicaciones,
   obtener: obtenerUbicacion,
@@ -259,6 +263,7 @@ const categoriaAdapter: CatalogAdapter<Categoria> = {
   titulo: "Categorías",
   descripcion: "Clasificación de productos.",
   singular: "Categoría",
+  genero: "F",
   icon: "categoria",
   listar: listarCategorias,
   obtener: obtenerCategoria,
@@ -289,6 +294,7 @@ const uomAdapter: CatalogAdapter<Uom> = {
   titulo: "Unidades de medida",
   descripcion: "Unidades de medida de los productos.",
   singular: "Unidad",
+  genero: "F",
   icon: "uom",
   listar: listarUoms,
   obtener: obtenerUom,
@@ -392,6 +398,7 @@ const zonaAdapter: CatalogAdapter<Zona> = {
   titulo: "Zonas",
   descripcion: "Divisiones lógicas o físicas dentro de un almacén.",
   singular: "Zona",
+  genero: "F",
   icon: "zona",
   listar: listarZonas,
   obtener: obtenerZona,
@@ -449,6 +456,7 @@ const seccionAdapter: CatalogAdapter<Seccion> = {
   titulo: "Secciones",
   descripcion: "Subdivisiones de un rack (niveles, pasillos, bahías).",
   singular: "Sección",
+  genero: "F",
   icon: "zona",
   listar: listarSecciones,
   obtener: obtenerSeccion,
@@ -479,6 +487,7 @@ const cajaAdapter: CatalogAdapter<Caja> = {
   titulo: "Cajas",
   descripcion: "Contenedores dentro de una ubicación que agrupan stock.",
   singular: "Caja",
+  genero: "F",
   icon: "caja",
   listar: listarCajas,
   obtener: obtenerCaja,

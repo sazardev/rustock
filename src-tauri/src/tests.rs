@@ -233,6 +233,48 @@ fn entrada_aprobada_incrementa_saldo() {
 }
 
 #[test]
+fn tipo_sub_tipo_incoherente_es_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    // ENTRADA + MERMA es incoherente (MERMA es un sub-tipo de SALIDA, SPEC
+    // §8.4): sin este chequeo, `aprobar_movimiento` decide el efecto de
+    // saldo por `tipo`, así que esto incrementaría el saldo bajo una
+    // etiqueta de pérdida.
+    let err = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "MERMA".into(),
+            fecha_movimiento: None,
+            motivo: Some("prueba".into()),
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                costo_unitario: None,
+                producto_id: prod.clone(),
+                lote_id: None,
+                cantidad: 10,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1.clone()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect_err("tipo/sub_tipo incoherente debe rechazarse");
+    assert!(err.to_string().contains("no es válido para tipo"));
+}
+
+#[test]
 fn salida_sin_saldo_suficiente_rechazada() {
     let db = setup();
     let conn = db.conn();

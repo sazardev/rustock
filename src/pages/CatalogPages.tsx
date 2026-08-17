@@ -25,6 +25,30 @@ import {
 
 const PAGE_SIZE = 20;
 
+/** Concordancia de género para la copia genérica de catálogos (AGENTS.md:
+ * "UI copy es profesional en español"). `adapter.genero` marca los pocos
+ * sustantivos femeninos (Ubicación, Categoría, Unidad, Zona, Sección, Caja);
+ * el resto usa las formas masculinas por defecto. */
+function esFemenino<T extends { id: string }>(adapter: CatalogAdapter<T>) {
+  return adapter.genero === "F";
+}
+
+function articuloNuevo<T extends { id: string }>(adapter: CatalogAdapter<T>) {
+  return esFemenino(adapter) ? "Nueva" : "Nuevo";
+}
+
+function articuloPrimero<T extends { id: string }>(adapter: CatalogAdapter<T>) {
+  return esFemenino(adapter) ? "la primera" : "el primer";
+}
+
+function participioEncontrado<T extends { id: string }>(adapter: CatalogAdapter<T>) {
+  return esFemenino(adapter) ? "encontrada" : "encontrado";
+}
+
+function participioDesactivado<T extends { id: string }>(adapter: CatalogAdapter<T>) {
+  return esFemenino(adapter) ? "desactivada" : "desactivado";
+}
+
 export function CatalogListPage<T extends { id: string }>({
   adapter,
   slug,
@@ -71,7 +95,7 @@ export function CatalogListPage<T extends { id: string }>({
         actions={
           adapter.crearHref ? (
             <ButtonLink variant="primary" icon="agregar" href={adapter.crearHref}>
-              Nuevo {adapter.singular.toLowerCase()}
+              {articuloNuevo(adapter)} {adapter.singular.toLowerCase()}
             </ButtonLink>
           ) : undefined
         }
@@ -115,7 +139,7 @@ export function CatalogListPage<T extends { id: string }>({
           emptyTitle={`No hay ${adapter.singular.toLowerCase()} todavía`}
           emptyDescription={
             adapter.crearHref
-              ? `Cree el primer ${adapter.singular.toLowerCase()} para comenzar a operar.`
+              ? `Cree ${articuloPrimero(adapter)} ${adapter.singular.toLowerCase()} para comenzar a operar.`
               : undefined
           }
           emptyAction={
@@ -164,7 +188,7 @@ export function CatalogDetailPage<T extends { id: string }>({
 
   if (!row) {
     return (
-      <ErrorPanel title={`${adapter.singular} no encontrado`}>
+      <ErrorPanel title={`${adapter.singular} no ${participioEncontrado(adapter)}`}>
         No se encontró el registro solicitado.{" "}
         <Link href={catalogoLista(slug)}>Volver al listado</Link>.
       </ErrorPanel>
@@ -233,7 +257,7 @@ export function CatalogEliminarPage<T extends { id: string }>({
       // Listado universal + selectores/reportes que consumen el mismo recurso.
       queryClient.invalidateQueries({ queryKey: ["catalogo", slug] });
       queryClient.invalidateQueries({ queryKey: [slug] });
-      toast(`${adapter.singular} desactivado.`, "success");
+      toast(`${adapter.singular} ${participioDesactivado(adapter)}.`, "success");
       navigate(catalogoLista(slug));
     },
     onError: (err) => setError(mensajeError(err)),
@@ -249,7 +273,7 @@ export function CatalogEliminarPage<T extends { id: string }>({
 
   if (!row) {
     return (
-      <ErrorPanel title={`${adapter.singular} no encontrado`}>
+      <ErrorPanel title={`${adapter.singular} no ${participioEncontrado(adapter)}`}>
         <Link href={catalogoLista(slug)}>Volver al listado</Link>
       </ErrorPanel>
     );
