@@ -1016,7 +1016,6 @@ fn query_agregacion_group_by_con_metricas() {
             lineas: vec![
                 NuevaLinea {
                     costo_unitario: None,
-                    costo_unitario: None,
                     producto_id: prod.clone(),
                     lote_id: None,
                     cantidad: 6,
@@ -1026,7 +1025,6 @@ fn query_agregacion_group_by_con_metricas() {
                     caja_destino_id: None,
                 },
                 NuevaLinea {
-                    costo_unitario: None,
                     costo_unitario: None,
                     producto_id: prod.clone(),
                     lote_id: None,
