@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { listarMovimientos } from "../shared/backend";
+import { listarMovimientos, obtenerMovimiento } from "../shared/backend";
 import {
   esPaginado,
   type EstadoMovimiento,
@@ -23,6 +23,7 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import { movimientoDetalle, PATH } from "../app/route-paths";
+import { FavoritosFiltros } from "../shared/favoritos";
 import {
   ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
@@ -39,6 +40,7 @@ const PAGE_SIZE = 20;
 
 export function MovimientosPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [tipo, setTipo] = useState<TipoMovimiento | "">("");
   const [estado, setEstado] = useState<EstadoMovimiento | "">("");
@@ -60,6 +62,15 @@ export function MovimientosPage() {
 
   const listado = query.data && esPaginado(query.data) ? query.data : null;
   const filas = listado?.data ?? [];
+
+  // Prefetch bajo demanda (STACK §8.4): precargar el detalle del movimiento
+  // al pasar el ratón sobre la fila.
+  function prefetchDetalle(m: Movimiento) {
+    void queryClient.prefetchQuery({
+      queryKey: ["movimiento", m.id],
+      queryFn: () => obtenerMovimiento(m.id),
+    });
+  }
 
   const columns: Array<TableColumn<Movimiento>> = [
     { key: "numero", header: "Número", code: true, render: (m) => m.numero },
@@ -148,6 +159,16 @@ export function MovimientosPage() {
         </FilterField>
       </FilterBar>
 
+      <FavoritosFiltros
+        clave="movimientos"
+        estadoActual={() => ({ tipo, estado })}
+        onAplicar={(estadoGuardado) => {
+          setTipo((estadoGuardado.tipo as TipoMovimiento) || "");
+          setEstado((estadoGuardado.estado as EstadoMovimiento) || "");
+          setPage(1);
+        }}
+      />
+
       <Card>
         <Table
           columns={columns}
@@ -155,6 +176,7 @@ export function MovimientosPage() {
           rowKey={(m) => m.id}
           loading={query.isLoading}
           onRowClick={(m) => navigate(movimientoDetalle(m.id))}
+          prefetch={prefetchDetalle}
           emptyTitle="No hay movimientos todavía"
           emptyDescription="Registre el primer movimiento para comenzar a operar."
           emptyAction={

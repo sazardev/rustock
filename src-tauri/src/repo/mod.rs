@@ -1,9 +1,12 @@
 pub mod alerta;
+pub mod archivo;
 pub mod auditoria;
 pub mod catalogo;
 pub mod comentario;
+pub mod configuracion;
 pub mod inventario;
 pub mod movimiento;
 pub mod reporte;
 pub mod seguridad;
+pub mod sucursal;
 pub mod trazabilidad;

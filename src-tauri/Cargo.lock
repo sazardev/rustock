@@ -2872,6 +2872,7 @@ name = "rustock"
 version = "0.3.0"
 dependencies = [
  "argon2",
+ "base64 0.22.1",
  "chrono",
  "parking_lot",
  "rand_core",

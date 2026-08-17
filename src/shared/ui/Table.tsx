@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "../lib/cn";
 import { Icon } from "./Icon";
 import { EmptyState } from "./EmptyState";
@@ -30,6 +31,9 @@ export interface TableProps<T> {
   sort?: TableSort | null;
   onSortChange?: (sort: TableSort) => void;
   onRowClick?: (row: T) => void;
+  /** Prefetch bajo demanda (STACK §8.4): se llama al pasar el ratón sobre una
+   *  fila para precargar su detalle antes de navegar. */
+  prefetch?: (row: T) => void;
   selectable?: boolean;
   selectedKeys?: string[];
   onToggleRow?: (key: string) => void;
@@ -42,6 +46,13 @@ export interface TableProps<T> {
   className?: string;
 }
 
+/** Umbral a partir del cual la tabla virtualiza sus filas (STACK §4.6): con
+ *  pocas filas el DOM plano es más simple; con miles solo se renderizan las
+ *  visibles + el overscan, manteniendo scroll y navegación instantáneos. */
+const VIRTUALIZE_UMBRAL = 80;
+/** Altura estimada por fila (densidad media, DESIGN §3.6/§3.7). */
+const ALTURA_FILA = 44;
+
 export function Table<T>({
   columns,
   rows,
@@ -49,6 +60,7 @@ export function Table<T>({
   sort,
   onSortChange,
   onRowClick,
+  prefetch,
   selectable,
   selectedKeys = [],
   onToggleRow,
@@ -61,6 +73,18 @@ export function Table<T>({
   className,
 }: TableProps<T>) {
   const allSelected = rows.length > 0 && rows.every((row) => selectedKeys.includes(rowKey(row)));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualize = rows.length > VIRTUALIZE_UMBRAL && !loading;
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ALTURA_FILA,
+    overscan: 8,
+    enabled: virtualize,
+  });
+  const itemsVirtuales = virtualize ? virtualizer.getVirtualItems() : null;
+  const altoTotal = virtualize ? virtualizer.getTotalSize() : 0;
 
   function handleSort(column: TableColumn<T>) {
     if (!column.sortable || !onSortChange) {
@@ -78,7 +102,7 @@ export function Table<T>({
     const active = sort?.key === column.key;
     return (
       <Icon
-        name={active ? "ordenar" : "ordenar"}
+        name="ordenar"
         className={cn(
           "table__sort-icon",
           active && sort?.direction === "asc" && "table__sort-icon--asc",
@@ -89,8 +113,52 @@ export function Table<T>({
     );
   }
 
+  function renderFila(row: T) {
+    const key = rowKey(row);
+    const selected = selectedKeys.includes(key);
+    return (
+      <tr
+        key={key}
+        className={cn(selected && "tr--selected")}
+        onClick={onRowClick ? () => onRowClick(row) : undefined}
+        onMouseEnter={prefetch ? () => prefetch(row) : undefined}
+      >
+        {selectable ? (
+          <td className="table__select">
+            <input
+              type="checkbox"
+              className="checkbox__input"
+              checked={selected}
+              onChange={() => onToggleRow?.(key)}
+              aria-label="Seleccionar fila"
+            />
+          </td>
+        ) : null}
+        {columns.map((column) => (
+          <td
+            key={column.key}
+            className={cn(
+              column.align === "right" && "text-right",
+              column.align === "center" && "text-center",
+              column.code && "cell--code",
+              column.num && "cell--num",
+            )}
+          >
+            {column.render(row)}
+          </td>
+        ))}
+        {actions ? <td className="cell--actions">{actions(row)}</td> : null}
+      </tr>
+    );
+  }
+
+  const colSpan = columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0);
+
   return (
-    <div className={cn("table-wrap", className)}>
+    <div
+      ref={scrollRef}
+      className={cn("table-wrap", virtualize && "table-wrap--virtual", className)}
+    >
       <table className={cn("table", onRowClick && "table--clickable")}>
         <thead>
           <tr>
@@ -137,7 +205,7 @@ export function Table<T>({
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)}>
+              <td colSpan={colSpan}>
                 <div className="p-4">
                   <Skeleton variant="text" className="mb-2" />
                   <Skeleton variant="text" className="mb-2" />
@@ -147,7 +215,7 @@ export function Table<T>({
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)}>
+              <td colSpan={colSpan}>
                 <EmptyState
                   title={emptyTitle}
                   description={emptyDescription}
@@ -155,44 +223,31 @@ export function Table<T>({
                 />
               </td>
             </tr>
-          ) : (
-            rows.map((row) => {
-              const key = rowKey(row);
-              const selected = selectedKeys.includes(key);
-              return (
+          ) : itemsVirtuales ? (
+            <>
+              {itemsVirtuales.length > 0 && itemsVirtuales[0].start > 0 ? (
                 <tr
-                  key={key}
-                  className={cn(selected && "tr--selected")}
-                  onClick={onRowClick ? () => onRowClick(row) : undefined}
-                >
-                  {selectable ? (
-                    <td className="table__select">
-                      <input
-                        type="checkbox"
-                        className="checkbox__input"
-                        checked={selected}
-                        onChange={() => onToggleRow?.(key)}
-                        aria-label="Seleccionar fila"
-                      />
-                    </td>
-                  ) : null}
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={cn(
-                        column.align === "right" && "text-right",
-                        column.align === "center" && "text-center",
-                        column.code && "cell--code",
-                        column.num && "cell--num",
-                      )}
-                    >
-                      {column.render(row)}
-                    </td>
-                  ))}
-                  {actions ? <td className="cell--actions">{actions(row)}</td> : null}
-                </tr>
-              );
-            })
+                  className="table__spacer"
+                  style={{ height: itemsVirtuales[0].start }}
+                  aria-hidden="true"
+                />
+              ) : null}
+              {itemsVirtuales.map((item) => renderFila(rows[item.index]))}
+              {itemsVirtuales.length > 0 ? (
+                <tr
+                  className="table__spacer"
+                  style={{
+                    height:
+                      altoTotal -
+                      (itemsVirtuales[itemsVirtuales.length - 1].start +
+                        itemsVirtuales[itemsVirtuales.length - 1].size),
+                  }}
+                  aria-hidden="true"
+                />
+              ) : null}
+            </>
+          ) : (
+            rows.map((row) => renderFila(row))
           )}
         </tbody>
       </table>

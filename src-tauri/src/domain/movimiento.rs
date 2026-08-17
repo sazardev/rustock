@@ -119,6 +119,9 @@ pub struct LineaMovimiento {
     pub destino_ubicacion_id: Option<String>,
     pub caja_origen_id: Option<String>,
     pub caja_destino_id: Option<String>,
+    /// Costo unitario de la entrada (valorización, Fase D). Solo lo portan las
+    /// líneas de entrada; alimenta el costo del producto según el método.
+    pub costo_unitario: Option<f64>,
 }
 
 /// Línea de entrada (creación desde el frontend).
@@ -136,6 +139,9 @@ pub struct NuevaLinea {
     pub caja_origen_id: Option<String>,
     #[serde(default)]
     pub caja_destino_id: Option<String>,
+    /// Costo unitario opcional de la línea (entradas; valorización Fase D).
+    #[serde(default)]
+    pub costo_unitario: Option<f64>,
 }
 
 /// Movimiento completo (SPEC §6.1).
@@ -238,6 +244,29 @@ impl NuevoMovimiento {
         }
         Ok(())
     }
+}
+
+/// Cambios aceptados sobre un movimiento en `BORRADOR`/`PENDIENTE_APROBACION`
+/// (SPEC §6.2: un aprobado no se edita). Solo el creador puede editarlo.
+/// `tipo`/`sub_tipo`/`numero` son estables (definen la semántica); se
+/// actualizan los campos operativos y se reemplazan las líneas. Los campos
+/// opcionales son `Option<Option<T>>`: `None` = no tocar, `Some(None)` =
+/// dejar nulo, `Some(Some(v))` = fijar valor.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EditarMovimiento {
+    #[serde(default)]
+    pub fecha_movimiento: Option<String>,
+    #[serde(default)]
+    pub motivo: Option<Option<String>>,
+    #[serde(default)]
+    pub proveedor_id: Option<Option<String>>,
+    #[serde(default)]
+    pub cliente_id: Option<Option<String>>,
+    #[serde(default)]
+    pub documento_referencia: Option<Option<String>>,
+    #[serde(default)]
+    pub notas: Option<Option<String>>,
+    pub lineas: Vec<NuevaLinea>,
 }
 
 /// Solicitud de traslado (SPEC §9). Es una línea única: producto, lote,

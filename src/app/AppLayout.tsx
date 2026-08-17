@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { listarAlertas, listarRoles } from "../shared/backend";
+import { usePreferencias } from "../shared/preferencias";
 import { useSession } from "../shared/session";
 import {
   AlertsIndicator,
@@ -9,19 +10,25 @@ import {
   Brand,
   Button,
   Icon,
-  Search,
+  Kbd,
   Sidebar,
+  Skeleton,
+  SkipLink,
   Topbar,
   TopbarNavToggle,
-  TopbarSidebarToggle,
   TopbarUser,
 } from "../shared/ui";
-import { DESIGN_HREF, NAV_GROUPS } from "./nav";
+import { usePalette } from "../shared/palette/palette-store";
+import { CommandPalette } from "../shared/palette/CommandPalette";
+import { construirNav, DESIGN_HREF } from "./nav";
 import { PATH } from "./route-paths";
 import { SmartBreadcrumbs } from "./SmartBreadcrumbs";
-import { useHistorialNavegacion } from "./use-historial-navegacion";
+import { useTrackVista } from "../shared/actividad";
+import { useAtajosGlobales } from "../shared/atajos";
 
 const SIDEBAR_STORAGE_KEY = "rustock.sidebar.collapsed";
+const MOBILE_QUERY = "(max-width: 47.99rem)";
+const TABLET_QUERY = "(max-width: 63.99rem)";
 
 function loadSidebarCollapsed(): boolean {
   try {
@@ -29,6 +36,17 @@ function loadSidebarCollapsed(): boolean {
   } catch {
     return false;
   }
+}
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handleChange = (event: MediaQueryListEvent) => setMatches(event.matches);
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, [query]);
+  return matches;
 }
 
 const ROL_LABEL: Record<string, string> = {
@@ -39,20 +57,63 @@ const ROL_LABEL: Record<string, string> = {
   LECTOR: "Lector",
 };
 
+/** Píldora de la topbar que abre el command palette (DESIGN §4.2, §6.10). */
+function PaletteTrigger() {
+  const abrir = usePalette((s) => s.abrir);
+  return (
+    <button
+      type="button"
+      className="palette-trigger"
+      onClick={abrir}
+      aria-label="Buscar en todo Rustock (Ctrl+K)"
+    >
+      <Icon name="buscar" size={16} className="palette-trigger__icono" aria-hidden="true" />
+      <span className="palette-trigger__texto">Buscar en todo Rustock</span>
+      <Kbd className="palette-trigger__kbd">Ctrl K</Kbd>
+    </button>
+  );
+}
+
 export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(loadSidebarCollapsed);
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  const isTablet = useMediaQuery(TABLET_QUERY);
   const navigate = useNavigate();
   const usuario = useSession((s) => s.usuario);
   const cargandoSesion = useSession((s) => s.cargando);
   const refrescar = useSession((s) => s.refrescar);
   const cerrarSesion = useSession((s) => s.cerrarSesion);
-  useHistorialNavegacion();
+  useTrackVista();
+  useAtajosGlobales();
 
   useEffect(() => {
     refrescar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Preferencias personales: cargan el tamaño de fuente y el orden del
+  // sidebar apenas hay sesión (SPEC §14.4). El store aplica la fuente al root.
+  const preferenciasResueltas = usePreferencias((s) => s.resueltas);
+  useEffect(() => {
+    if (usuario) {
+      void usePreferencias.getState().refrescar();
+    }
+  }, [usuario]);
+
+  const ordenSidebar = useMemo(() => {
+    if (!preferenciasResueltas?.orden_sidebar) return null;
+    try {
+      const parsed: unknown = JSON.parse(preferenciasResueltas.orden_sidebar);
+      return Array.isArray(parsed) ? (parsed as string[]) : null;
+    } catch {
+      return null;
+    }
+  }, [preferenciasResueltas?.orden_sidebar]);
+  const gruposNav = useMemo(() => construirNav(ordenSidebar), [ordenSidebar]);
+  // El modo compacto aplica en escritorio colapsado o en tablet (nunca en el
+  // drawer móvil, que siempre se muestra expandido).
+  const sidebarCompact = !isMobile && (sidebarCollapsed || isTablet);
 
   const { data: alertasAbiertas } = useQuery({
     queryKey: ["alertas", "ABIERTA"],
@@ -93,64 +154,104 @@ export function AppLayout() {
     });
   }
 
+  function handleNavToggle() {
+    if (isMobile) {
+      setNavOpen(true);
+    } else {
+      toggleSidebar();
+    }
+  }
+
   return (
-    <AppShell
-      navOpen={navOpen}
-      onCloseNav={() => setNavOpen(false)}
-      sidebarCollapsed={sidebarCollapsed}
-      topbar={
-        <Topbar
-          navToggle={<TopbarNavToggle onClick={() => setNavOpen(true)} />}
-          sidebarToggle={
-            <TopbarSidebarToggle collapsed={sidebarCollapsed} onClick={toggleSidebar} />
-          }
-          brand={<Brand name="Rustock" />}
-          breadcrumbs={<SmartBreadcrumbs />}
-          search={<Search placeholder="Buscar en todo Rustock" aria-label="Búsqueda global" />}
-          alerts={<AlertsIndicator count={alertasAbiertas?.length ?? 0} href={PATH.alertas} />}
-          user={
-            <div className="flex items-center gap-2">
-              <TopbarUser
-                name={usuario.nombre_completo}
-                role={rolCodigo ? (ROL_LABEL[rolCodigo] ?? rolCodigo) : undefined}
-                href={PATH.configuracion}
+    <>
+      <SkipLink />
+      <AppShell
+        navOpen={navOpen}
+        onCloseNav={() => setNavOpen(false)}
+        sidebarCollapsed={sidebarCollapsed}
+        topbar={
+          <Topbar
+            navToggle={
+              <TopbarNavToggle
+                expanded={isMobile ? navOpen : !sidebarCollapsed}
+                onClick={handleNavToggle}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Cerrar sesión"
-                onClick={handleLogout}
-              >
-                <Icon name="cerrarSesion" size={16} aria-hidden="true" />
-              </Button>
+            }
+            breadcrumbs={<SmartBreadcrumbs />}
+            search={<PaletteTrigger />}
+            alerts={<AlertsIndicator count={alertasAbiertas?.length ?? 0} href={PATH.alertas} />}
+            user={
+              <div className="flex items-center gap-2">
+                <TopbarUser
+                  name={usuario.nombre_completo}
+                  role={rolCodigo ? (ROL_LABEL[rolCodigo] ?? rolCodigo) : undefined}
+                  href={PATH.perfil}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Cerrar sesión"
+                  onClick={handleLogout}
+                >
+                  <Icon name="cerrarSesion" size={16} aria-hidden="true" />
+                </Button>
+              </div>
+            }
+          />
+        }
+        sidebar={
+          <>
+            <div className="sidebar__header">
+              <Brand name="Rustock" />
+            </div>
+            <Sidebar
+              groups={gruposNav}
+              collapsed={sidebarCompact}
+              onNavigate={() => setNavOpen(false)}
+            />
+            <div className="sidebar__spacer" aria-hidden="true" />
+            <Sidebar
+              collapsed={sidebarCompact}
+              groups={[
+                {
+                  title: "Sistema",
+                  items: [
+                    {
+                      label: "Galería de diseño",
+                      href: DESIGN_HREF,
+                      icon: "dashboard",
+                      end: true,
+                      descripcion: "Componentes y tokens del sistema de diseño",
+                    },
+                    {
+                      label: "No encontrado",
+                      href: "/no-encontrado",
+                      icon: "alerta",
+                      end: true,
+                      descripcion: "Página de error de ejemplo",
+                    },
+                  ],
+                },
+              ]}
+              onNavigate={() => setNavOpen(false)}
+            />
+          </>
+        }
+      >
+        <Suspense
+          fallback={
+            <div className="p-6">
+              <Skeleton variant="text" className="mb-2" />
+              <Skeleton variant="text" className="mb-2" />
+              <Skeleton variant="block" className="h-48" />
             </div>
           }
-        />
-      }
-      sidebar={
-        <>
-          <div className="sidebar__header">
-            <Brand name="Rustock" />
-          </div>
-          <Sidebar groups={NAV_GROUPS} onNavigate={() => setNavOpen(false)} />
-          <div className="sidebar__spacer" aria-hidden="true" />
-          <Sidebar
-            groups={[
-              {
-                title: "Sistema",
-                items: [
-                  { label: "Galería de diseño", href: DESIGN_HREF, icon: "dashboard", end: true },
-                  { label: "No encontrado", href: "/no-encontrado", icon: "alerta", end: true },
-                ],
-              },
-            ]}
-            onNavigate={() => setNavOpen(false)}
-          />
-        </>
-      }
-    >
-      <Outlet />
-    </AppShell>
+        >
+          <Outlet />
+        </Suspense>
+      </AppShell>
+      <CommandPalette />
+    </>
   );
 }

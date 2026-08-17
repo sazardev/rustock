@@ -1,8 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { useNavigate, useParams } from "react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   crearProducto,
@@ -12,8 +12,17 @@ import {
   obtenerProducto,
 } from "../shared/backend";
 import { esPaginado } from "../shared/types";
-import { catalogoDetalle, catalogoLista } from "../app/route-paths";
+import { invalidarRecurso } from "../shared/invalidar";
+import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import {
+  CrearRapido,
+  usePeticionCreacion,
+  usePreservarFormulario,
+  useSeleccionCreada,
+  urlConRegreso,
+  urlConSeleccion,
+} from "../shared/creacion-rapida";
 import {
   Button,
   ButtonLink,
@@ -48,6 +57,9 @@ const esquema = z.object({
 
 type FormValues = z.infer<typeof esquema>;
 
+const INVALIDAR_UOMS = ["uoms", "selector"] as const;
+const INVALIDAR_CATEGORIAS = ["categorias", "selector"] as const;
+
 const VALORES_INICIALES: FormValues = {
   sku: "",
   nombre: "",
@@ -75,13 +87,23 @@ function numeroONull(valor: string | undefined): number | null {
 export function ProductoFormPage() {
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
+  const [searchParams] = useSearchParams();
+  const duplicarDe = searchParams.get("duplicarDe");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const { volver, campo } = usePeticionCreacion();
+  const retornaAFormulario = !esEdicion && Boolean(volver && campo);
 
   const productoQuery = useQuery({
     queryKey: ["producto", id],
     queryFn: () => obtenerProducto(id as string),
     enabled: esEdicion,
+  });
+  const origenQuery = useQuery({
+    queryKey: ["producto", duplicarDe],
+    queryFn: () => obtenerProducto(duplicarDe as string),
+    enabled: Boolean(duplicarDe && !esEdicion),
   });
   const categoriasQuery = useQuery({
     queryKey: ["categorias", "selector"],
@@ -101,11 +123,49 @@ export function ProductoFormPage() {
     handleSubmit,
     reset,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(esquema),
     defaultValues: VALORES_INICIALES,
   });
+
+  // Conserva el borrador al salir a crear UOM/categoría (creación rápida) y
+  // lo restaura al volver (crear o cancelar). Los registros creados se
+  // aplican después, por si el borrador ya traía una selección.
+  const { descartar } = usePreservarFormulario(
+    "/productos/nuevo",
+    () => getValues(),
+    (valores) => reset(valores as FormValues),
+    !esEdicion,
+  );
+
+  // Creación rápida: aplica los registros creados en /uoms/nuevo y
+  // /categorias/nuevo cuando se vuelve con la selección en la URL.
+  useSeleccionCreada(
+    "categoria_id",
+    (nuevoId) => setValue("categoria_id", nuevoId),
+    INVALIDAR_CATEGORIAS,
+    !esEdicion,
+  );
+  useSeleccionCreada(
+    "uom_base_id",
+    (nuevoId) => setValue("uom_base_id", nuevoId),
+    INVALIDAR_UOMS,
+    !esEdicion,
+  );
+  useSeleccionCreada(
+    "uom_venta_id",
+    (nuevoId) => setValue("uom_venta_id", nuevoId),
+    INVALIDAR_UOMS,
+    !esEdicion,
+  );
+  useSeleccionCreada(
+    "uom_compra_id",
+    (nuevoId) => setValue("uom_compra_id", nuevoId),
+    INVALIDAR_UOMS,
+    !esEdicion,
+  );
 
   const controlaVencimiento = useWatch({ control, name: "controla_vencimiento" });
 
@@ -137,6 +197,31 @@ export function ProductoFormPage() {
       });
     }
   }, [productoQuery.data, reset]);
+
+  // Duplicar: precarga los datos del producto origen, pero deja el SKU vacío
+  // (debe ser único) para que se defina uno nuevo al guardar como creación.
+  useEffect(() => {
+    const p = origenQuery.data;
+    if (p) {
+      reset({
+        sku: "",
+        nombre: p.nombre,
+        descripcion: p.descripcion ?? "",
+        categoria_id: p.categoria_id ?? "",
+        uom_base_id: p.uom_base_id,
+        uom_venta_id: p.uom_venta_id ?? "",
+        uom_compra_id: p.uom_compra_id ?? "",
+        codigo_barras: p.codigo_barras ?? "",
+        peso_unitario: p.peso_unitario?.toString() ?? "",
+        volumen_unitario: p.volumen_unitario?.toString() ?? "",
+        stock_minimo: p.stock_minimo?.toString() ?? "",
+        stock_maximo: p.stock_maximo?.toString() ?? "",
+        controla_lote: p.controla_lote,
+        controla_vencimiento: p.controla_vencimiento,
+        perecedero: p.perecedero,
+      });
+    }
+  }, [origenQuery.data, reset]);
 
   const guardarMut = useMutation({
     mutationFn: (v: FormValues) =>
@@ -173,7 +258,15 @@ export function ProductoFormPage() {
             controla_vencimiento: v.controla_vencimiento,
             perecedero: v.perecedero,
           }),
-    onSuccess: (producto) => navigate(catalogoDetalle("productos", producto.id)),
+    onSuccess: (producto) => {
+      descartar();
+      invalidarRecurso(queryClient, "productos", "producto");
+      if (volver && campo && !esEdicion) {
+        navigate(urlConSeleccion(volver, campo, producto.id));
+      } else {
+        navigate(catalogoDetalle("productos", producto.id));
+      }
+    },
     onError: (err) => setError(mensajeError(err)),
   });
 
@@ -184,8 +277,20 @@ export function ProductoFormPage() {
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar producto — ${productoQuery.data?.sku ?? ""}` : "Nuevo producto"}
-        description="El SKU y la unidad de medida base son inmutables una vez creado el producto."
+        title={
+          esEdicion
+            ? `Editar producto — ${productoQuery.data?.sku ?? ""}`
+            : duplicarDe
+              ? `Duplicar producto — ${origenQuery.data?.sku ?? ""}`
+              : "Nuevo producto"
+        }
+        description={
+          retornaAFormulario
+            ? "Crea el producto y vuelve al formulario anterior con él seleccionado."
+            : duplicarDe
+              ? "Los datos del producto original están precargados. Define un SKU nuevo (debe ser único)."
+              : "El SKU y la unidad de medida base son inmutables una vez creado el producto."
+        }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
@@ -204,13 +309,26 @@ export function ProductoFormPage() {
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field label="Categoría" htmlFor="categoria_id">
-                <Select id="categoria_id" placeholder="Sin categoría" {...register("categoria_id")}>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      id="categoria_id"
+                      placeholder="Sin categoría"
+                      {...register("categoria_id")}
+                    >
+                      {categorias.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {!esEdicion ? (
+                    <CrearRapido campo="categoria_id" rutaNueva={catalogoNuevo("categorias")}>
+                      Nueva categoría
+                    </CrearRapido>
+                  ) : null}
+                </div>
               </Field>
               <Field
                 label="UOM base"
@@ -219,15 +337,41 @@ export function ProductoFormPage() {
                 error={errors.uom_base_id?.message}
                 help={esEdicion ? "La unidad de medida base no se puede modificar." : undefined}
               >
-                <Controller
-                  control={control}
-                  name="uom_base_id"
-                  render={({ field }) => (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Controller
+                      control={control}
+                      name="uom_base_id"
+                      render={({ field }) => (
+                        <Select
+                          id="uom_base_id"
+                          placeholder="Selecciona"
+                          disabled={esEdicion}
+                          {...field}
+                        >
+                          {uoms.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.codigo} — {u.nombre}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  {!esEdicion ? (
+                    <CrearRapido campo="uom_base_id" rutaNueva={catalogoNuevo("uoms")}>
+                      Nueva UOM
+                    </CrearRapido>
+                  ) : null}
+                </div>
+              </Field>
+              <Field label="UOM de venta" htmlFor="uom_venta_id">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
                     <Select
-                      id="uom_base_id"
-                      placeholder="Selecciona"
-                      disabled={esEdicion}
-                      {...field}
+                      id="uom_venta_id"
+                      placeholder="Igual que la base"
+                      {...register("uom_venta_id")}
                     >
                       {uoms.map((u) => (
                         <option key={u.id} value={u.id}>
@@ -235,34 +379,35 @@ export function ProductoFormPage() {
                         </option>
                       ))}
                     </Select>
-                  )}
-                />
-              </Field>
-              <Field label="UOM de venta" htmlFor="uom_venta_id">
-                <Select
-                  id="uom_venta_id"
-                  placeholder="Igual que la base"
-                  {...register("uom_venta_id")}
-                >
-                  {uoms.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.codigo} — {u.nombre}
-                    </option>
-                  ))}
-                </Select>
+                  </div>
+                  {!esEdicion ? (
+                    <CrearRapido campo="uom_venta_id" rutaNueva={catalogoNuevo("uoms")}>
+                      Nueva UOM
+                    </CrearRapido>
+                  ) : null}
+                </div>
               </Field>
               <Field label="UOM de compra" htmlFor="uom_compra_id">
-                <Select
-                  id="uom_compra_id"
-                  placeholder="Igual que la base"
-                  {...register("uom_compra_id")}
-                >
-                  {uoms.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.codigo} — {u.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      id="uom_compra_id"
+                      placeholder="Igual que la base"
+                      {...register("uom_compra_id")}
+                    >
+                      {uoms.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.codigo} — {u.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {!esEdicion ? (
+                    <CrearRapido campo="uom_compra_id" rutaNueva={catalogoNuevo("uoms")}>
+                      Nueva UOM
+                    </CrearRapido>
+                  ) : null}
+                </div>
               </Field>
               <Field label="Código de barras" htmlFor="codigo_barras">
                 <Input id="codigo_barras" code {...register("codigo_barras")} />
@@ -337,7 +482,11 @@ export function ProductoFormPage() {
           <ButtonLink
             variant="secondary"
             href={
-              esEdicion ? catalogoDetalle("productos", id as string) : catalogoLista("productos")
+              retornaAFormulario
+                ? urlConRegreso(volver as string)
+                : esEdicion
+                  ? catalogoDetalle("productos", id as string)
+                  : catalogoLista("productos")
             }
           >
             Cancelar

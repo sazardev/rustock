@@ -6,15 +6,21 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   obtenerAlmacen,
+  obtenerCaja,
   obtenerCategoria,
   obtenerCliente,
   obtenerLote,
+  obtenerMovimiento,
   obtenerProducto,
   obtenerProveedor,
+  obtenerRack,
+  obtenerSeccion,
+  obtenerSesionInventario,
   obtenerUbicacion,
   obtenerUom,
+  obtenerZona,
 } from "./backend";
-import { catalogoDetalle } from "../app/route-paths";
+import { catalogoDetalle, movimientoDetalle, sesionInventarioDetalle } from "../app/route-paths";
 import { Link } from "./ui";
 
 function Ref({ id }: { id: string }) {
@@ -67,4 +73,46 @@ export function AlmacenRef({ id }: { id: string }) {
   const query = useQuery({ queryKey: ["almacen", id], queryFn: () => obtenerAlmacen(id) });
   if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
   return <Link href={catalogoDetalle("almacenes", id)}>{query.data.codigo}</Link>;
+}
+
+export function ZonaRef({ id }: { id: string }) {
+  const query = useQuery({ queryKey: ["zona", id], queryFn: () => obtenerZona(id) });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={catalogoDetalle("zonas", id)}>{query.data.codigo}</Link>;
+}
+
+export function RackRef({ id }: { id: string }) {
+  const query = useQuery({ queryKey: ["rack", id], queryFn: () => obtenerRack(id) });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={catalogoDetalle("racks", id)}>{query.data.codigo}</Link>;
+}
+
+export function SeccionRef({ id }: { id: string }) {
+  const query = useQuery({ queryKey: ["seccion", id], queryFn: () => obtenerSeccion(id) });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={catalogoDetalle("secciones", id)}>{query.data.codigo}</Link>;
+}
+
+export function CajaRef({ id }: { id: string }) {
+  const query = useQuery({ queryKey: ["caja", id], queryFn: () => obtenerCaja(id) });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={catalogoDetalle("cajas", id)}>{query.data.codigo}</Link>;
+}
+
+export function MovimientoRef({ id }: { id: string }) {
+  const query = useQuery({
+    queryKey: ["movimiento", id],
+    queryFn: () => obtenerMovimiento(id),
+  });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={movimientoDetalle(id)}>{query.data.numero}</Link>;
+}
+
+export function SesionInventarioRef({ id }: { id: string }) {
+  const query = useQuery({
+    queryKey: ["sesion-inventario", id],
+    queryFn: () => obtenerSesionInventario(id),
+  });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={sesionInventarioDetalle(id)}>{query.data.numero}</Link>;
 }

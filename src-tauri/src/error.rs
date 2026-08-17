@@ -23,6 +23,15 @@ pub enum AppError {
     #[error("El campo '{0}' es obligatorio")]
     CampoRequerido(String),
 
+    #[error("El valor '{0}' no es válido")]
+    CampoInvalido(String),
+
+    #[error("La contraseña actual no coincide")]
+    PasswordActualIncorrecta,
+
+    #[error("No se puede desactivar al último administrador activo")]
+    UltimoAdmin,
+
     #[error("El motivo es obligatorio (mínimo 3 caracteres)")]
     MotivoRequerido,
 

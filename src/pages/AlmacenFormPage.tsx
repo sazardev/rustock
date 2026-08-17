@@ -2,11 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { crearAlmacen, editarAlmacen, obtenerAlmacen } from "../shared/backend";
+import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { usePeticionCreacion, urlConRegreso, urlConSeleccion } from "../shared/creacion-rapida";
 import {
   Button,
   ButtonLink,
@@ -33,7 +35,10 @@ export function AlmacenFormPage() {
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const { volver, campo } = usePeticionCreacion();
+  const retornaAFormulario = !esEdicion && Boolean(volver && campo);
 
   const almacenQuery = useQuery({
     queryKey: ["almacen", id],
@@ -76,7 +81,14 @@ export function AlmacenFormPage() {
             descripcion: valores.descripcion || null,
             direccion: valores.direccion || null,
           }),
-    onSuccess: (almacen) => navigate(catalogoDetalle("almacenes", almacen.id)),
+    onSuccess: (almacen) => {
+      invalidarRecurso(queryClient, "almacenes", "almacen");
+      if (volver && campo && !esEdicion) {
+        navigate(urlConSeleccion(volver, campo, almacen.id));
+      } else {
+        navigate(catalogoDetalle("almacenes", almacen.id));
+      }
+    },
     onError: (err) => setError(mensajeError(err)),
   });
 
@@ -88,7 +100,11 @@ export function AlmacenFormPage() {
     <>
       <PageHeader
         title={esEdicion ? `Editar almacén — ${almacenQuery.data?.codigo ?? ""}` : "Nuevo almacén"}
-        description="Un almacén es la raíz del árbol físico: toda la operación pertenece a exactamente un almacén."
+        description={
+          retornaAFormulario
+            ? "Crea el almacén y vuelve al formulario anterior con él seleccionado."
+            : "Un almacén es la raíz del árbol físico: toda la operación pertenece a exactamente un almacén."
+        }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
@@ -129,7 +145,11 @@ export function AlmacenFormPage() {
           <ButtonLink
             variant="secondary"
             href={
-              esEdicion ? catalogoDetalle("almacenes", id as string) : catalogoLista("almacenes")
+              retornaAFormulario
+                ? urlConRegreso(volver as string)
+                : esEdicion
+                  ? catalogoDetalle("almacenes", id as string)
+                  : catalogoLista("almacenes")
             }
           >
             Cancelar

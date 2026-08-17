@@ -100,13 +100,30 @@ impl DbState {
                 comando TEXT,
                 duracion_ms INTEGER,
                 exito INTEGER NOT NULL DEFAULT 1,
-                nivel TEXT NOT NULL DEFAULT 'LECTURA'
+                nivel TEXT NOT NULL DEFAULT 'LECTURA',
+                -- Tracking total (Hito 25): todo evento registra tipo, módulo,
+                -- ruta/proceso, metadatos, tenant y tiempo local para análisis.
+                tipo_evento TEXT NOT NULL DEFAULT 'COMANDO',
+                ruta TEXT,
+                modulo TEXT,
+                proceso TEXT,
+                metadatos TEXT,
+                tenant TEXT,
+                duracion_vista_ms INTEGER,
+                hora_local INTEGER,
+                dia_semana INTEGER
             );
             CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_id);
             CREATE INDEX IF NOT EXISTS idx_auditoria_timestamp ON auditoria(timestamp);
             CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
             CREATE INDEX IF NOT EXISTS idx_auditoria_comando ON auditoria(comando);
             CREATE INDEX IF NOT EXISTS idx_auditoria_nivel ON auditoria(nivel);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_tipo_evento ON auditoria(tipo_evento);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_modulo ON auditoria(modulo);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_ruta ON auditoria(ruta);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_proceso ON auditoria(proceso);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_tenant ON auditoria(tenant);
+            CREATE INDEX IF NOT EXISTS idx_auditoria_tiempo_local ON auditoria(hora_local, dia_semana);
 
             -- ============ CATALOGOS: ARBOL FISICO (SPEC §3.1-3.6) ============
             CREATE TABLE IF NOT EXISTS almacenes (
@@ -439,9 +456,198 @@ impl DbState {
                 detalle TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_alertas_estado ON alertas(estado, tipo);
+
+            -- ============ CONFIGURACIÓN DE EMPRESA (admin, SPEC §4.3) ============
+            -- Fila única: los parámetros globales que elige el ADMIN. Los
+            -- usuarios heredan de aquí sus valores por defecto (zona horaria,
+            -- formato de fecha, umbral de vencimiento) salvo que tengan
+            -- preferencia propia (SPEC §14.4, §17.1). Las columnas de datos de
+            -- la empresa (país, fiscales, contacto, coordenadas) se agregan
+            -- con `asegurar_columna` al final de la migración para no romper
+            -- bases de datos ya existentes.
+            CREATE TABLE IF NOT EXISTS configuracion_empresa (
+                id TEXT PRIMARY KEY,
+                nombre TEXT,
+                codigo TEXT,
+                descripcion TEXT,
+                zona_horaria TEXT NOT NULL DEFAULT 'America/Lima',
+                formato_fecha TEXT NOT NULL DEFAULT 'DD_MMM_YYYY',
+                dias_aviso_vencimiento INTEGER NOT NULL DEFAULT 30,
+                requiere_aprobacion INTEGER NOT NULL DEFAULT 1,
+                stock_minimo_default INTEGER,
+                pais TEXT,
+                ciudad TEXT,
+                direccion TEXT,
+                codigo_postal TEXT,
+                razon_social TEXT,
+                documento_fiscal TEXT,
+                direccion_fiscal TEXT,
+                telefono TEXT,
+                email_contacto TEXT,
+                sitio_web TEXT,
+                latitud REAL,
+                longitud REAL,
+                updated_by TEXT,
+                updated_at TEXT NOT NULL
+            );
+            INSERT OR IGNORE INTO configuracion_empresa
+                (id, updated_at) VALUES ('default', datetime('now'));
+
+            -- ============ SUCURSALES (config de empresa, admin) ============
+            -- Puntos de operación de la empresa con su ubicación geográfica
+            -- (país, dirección, coordenadas para el mapa). Las gestiona el
+            -- ADMIN; se rigen por el permiso `configuracion:ver/editar`.
+            CREATE TABLE IF NOT EXISTS sucursales (
+                id TEXT PRIMARY KEY,
+                codigo TEXT NOT NULL UNIQUE,
+                nombre TEXT NOT NULL,
+                pais TEXT,
+                ciudad TEXT,
+                direccion TEXT,
+                latitud REAL,
+                longitud REAL,
+                activo INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT,
+                updated_by TEXT
+            );
+
+            -- ============ ARCHIVOS DE EMPRESA (logo + documentos, admin) ============
+            -- El logo (una sola fila de tipo LOGO, se reemplaza) y documentos
+            -- adjuntos. Los bytes viajan en base64 por IPC/HTTP y se guardan
+            -- como BLOB en SQLite (self-hosted, sin servicios externos).
+            CREATE TABLE IF NOT EXISTS archivos_empresa (
+                id TEXT PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                tipo TEXT NOT NULL DEFAULT 'DOCUMENTO',
+                mime TEXT NOT NULL,
+                tamano INTEGER NOT NULL,
+                datos BLOB NOT NULL,
+                created_by TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_archivos_empresa_tipo ON archivos_empresa(tipo);
+
+            -- ============ PREFERENCIAS DE USUARIO (por usuario) ============
+            -- Preferencias personales de UI y de presentacion. Los campos con
+            -- valor NULL significan heredar de la configuracion de empresa.
+            CREATE TABLE IF NOT EXISTS preferencias_usuario (
+                usuario_id TEXT PRIMARY KEY REFERENCES usuarios(id),
+                tamano_fuente TEXT NOT NULL DEFAULT 'MEDIA',
+                orden_sidebar TEXT,
+                zona_horaria TEXT,
+                formato_fecha TEXT,
+                updated_at TEXT NOT NULL
+            );
             "
         )?;
+
+        // Migración por columna para bases de datos existentes: las columnas
+        // de datos de la empresa se agregan con ALTER TABLE si no existen. Así
+        // una db creada antes de este cambio se actualiza sin borrarla (la
+        // tabla ya existe y el CREATE TABLE IF NOT EXISTS no toca sus columnas).
+        // OJO: solo `configuracion_empresa` tiene columnas nuevas; las tablas
+        // nuevas (sucursales, archivos_empresa) ya las crea el batch anterior.
+        asegurar_columna(&tx, "configuracion_empresa", "pais", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "ciudad", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "direccion", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "codigo_postal", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "razon_social", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "documento_fiscal", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "direccion_fiscal", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "telefono", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "email_contacto", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "sitio_web", "TEXT")?;
+        asegurar_columna(&tx, "configuracion_empresa", "latitud", "REAL")?;
+        asegurar_columna(&tx, "configuracion_empresa", "longitud", "REAL")?;
+        // Tema de la UI (DESIGN §3.1): paleta global (ADMIN) y modo claro/oscuro.
+        // El ALTER TABLE con NOT NULL DEFAULT funciona en SQLite (sin rewrite).
+        asegurar_columna(
+            &tx,
+            "configuracion_empresa",
+            "tema_id",
+            "TEXT NOT NULL DEFAULT 'rust'",
+        )?;
+        asegurar_columna(
+            &tx,
+            "configuracion_empresa",
+            "modo_oscuro",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        // Preferencia personal de tema: NULL = heredar de la empresa.
+        asegurar_columna(&tx, "preferencias_usuario", "tema_id", "TEXT")?;
+        asegurar_columna(&tx, "preferencias_usuario", "modo_oscuro", "INTEGER")?;
+        // Preferencia de búsqueda: si la ayuda aparece en el command palette
+        // (Ctrl+K). Default 1 = activa (DESIGN §6.10, Hito 22).
+        asegurar_columna(
+            &tx,
+            "preferencias_usuario",
+            "ayuda_en_palette",
+            "INTEGER NOT NULL DEFAULT 1",
+        )?;
+        // UOM: la SPEC §3.9 no define `activo`, pero la matriz de permisos
+        // contempla `uom:desactivar` (GERENTE). Se agrega con default activo
+        // para dbs existentes (migración idempotente como las anteriores).
+        asegurar_columna(&tx, "uoms", "activo", "INTEGER NOT NULL DEFAULT 1")?;
+
+        // Tracking total (Hito 25): columnas nuevas de `auditoria` para bases
+        // ya creadas (el CREATE TABLE IF NOT EXISTS anterior no las agrega).
+        asegurar_columna(
+            &tx,
+            "auditoria",
+            "tipo_evento",
+            "TEXT NOT NULL DEFAULT 'COMANDO'",
+        )?;
+        asegurar_columna(&tx, "auditoria", "ruta", "TEXT")?;
+        asegurar_columna(&tx, "auditoria", "modulo", "TEXT")?;
+        asegurar_columna(&tx, "auditoria", "proceso", "TEXT")?;
+        asegurar_columna(&tx, "auditoria", "metadatos", "TEXT")?;
+        asegurar_columna(&tx, "auditoria", "tenant", "TEXT")?;
+        asegurar_columna(&tx, "auditoria", "duracion_vista_ms", "INTEGER")?;
+        asegurar_columna(&tx, "auditoria", "hora_local", "INTEGER")?;
+        asegurar_columna(&tx, "auditoria", "dia_semana", "INTEGER")?;
+
+        // Valorización de inventario (Fase D): costo del producto, costo por
+        // línea de entrada y método configurado en la empresa.
+        asegurar_columna(&tx, "productos", "costo_unitario", "REAL")?;
+        asegurar_columna(&tx, "movimiento_lineas", "costo_unitario", "REAL")?;
+        asegurar_columna(
+            &tx,
+            "configuracion_empresa",
+            "metodo_valorizacion",
+            "TEXT NOT NULL DEFAULT 'ULTIMO'",
+        )?;
+
         tx.commit()?;
         Ok(())
     }
+}
+
+/// ¿Existe la columna `columna` en la tabla `tabla`? (PRAGMA table_info)
+fn columna_existe(conn: &Connection, tabla: &str, columna: &str) -> AppResult<bool> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({tabla})"))?;
+    let filas = stmt.query_map([], |r| r.get::<_, String>(1))?;
+    for nombre in filas {
+        if nombre? == columna {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// Agrega la columna si no existe (migración idempotente para dbs existentes).
+fn asegurar_columna(
+    conn: &Connection,
+    tabla: &str,
+    columna: &str,
+    definicion: &str,
+) -> AppResult<()> {
+    if !columna_existe(conn, tabla, columna)? {
+        conn.execute(
+            &format!("ALTER TABLE {tabla} ADD COLUMN {columna} {definicion}"),
+            [],
+        )?;
+    }
+    Ok(())
 }

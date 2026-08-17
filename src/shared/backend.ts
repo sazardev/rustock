@@ -6,13 +6,18 @@
  * igual que en Rust.
  */
 import { invoke } from "./api";
+import type { EventoAuditoria, MetricasActividad, RegistrarVista } from "./audit";
 import type {
   Alerta,
   Almacen,
+  ArchivoEmpresa,
+  ArchivoEmpresaCompleto,
+  BuscarRespuesta,
   Caja,
   Categoria,
   Cliente,
   Comentario,
+  ConfiguracionEmpresa,
   Conteo,
   DashboardResumen,
   DiferenciaInventario,
@@ -20,13 +25,20 @@ import type {
   EditarCaja,
   EditarCategoria,
   EditarCliente,
+  EditarConfiguracionEmpresa,
   EditarLote,
+  EditarMovimiento,
+  EditarPreferenciasUsuario,
   EditarProducto,
   EditarProveedor,
   EditarRack,
   EditarSeccion,
+  EditarSucursal,
   EditarUbicacion,
+  EditarUom,
+  EditarUsuario,
   EditarZona,
+  EscaneoResuelto,
   EstadoAlerta,
   HistorialCaja,
   HistorialComentario,
@@ -40,10 +52,12 @@ import type {
   NuevaCategoria,
   NuevaSeccion,
   NuevaSesionInventario,
+  NuevaSucursal,
   NuevaUbicacion,
   NuevaUom,
   NuevaZona,
   NuevoAlmacen,
+  NuevoArchivoEmpresa,
   NuevoCliente,
   NuevoComentario,
   NuevoConteo,
@@ -57,15 +71,20 @@ import type {
   OrigenLinea,
   LineaMovimiento,
   LotePorVencer,
+  PreferenciasResueltas,
   PrecisionSesion,
   Producto,
   Proveedor,
   Rack,
+  ResumenTema,
+  ResultadoImportacion,
   Rol,
   Saldo,
   Seccion,
   SesionInventario,
+  Sucursal,
   SugerenciaLinea,
+  TemaActivo,
   TrasladoCreado,
   Uom,
   Ubicacion,
@@ -73,8 +92,15 @@ import type {
   Usuario,
   Zona,
 } from "./types";
+import type { MetricasHistorial } from "./audit";
 
 const params = (p?: ListParams): Record<string, unknown> => ({ params: p ?? {} });
+
+// ============ Búsqueda global del command palette (SPEC §15.4) ============
+
+/** Busca `q` en todos los recursos permitidos del usuario, agrupado por
+ * entidad y ordenado por relevancia (exacto > prefijo > contiene). */
+export const buscar = (q: string): Promise<BuscarRespuesta> => invoke("buscar", { q });
 
 // ============ Autenticación y sesión (SPEC §4.1) ============
 
@@ -88,6 +114,11 @@ export function logout(): Promise<void> {
 
 export function quienSoy(): Promise<Usuario | null> {
   return invoke("quien_soy");
+}
+
+/** ¿Tiene el usuario de la sesión el permiso `recurso:accion`? (SPEC §4.3). */
+export function puedo(recurso: string, accion: string): Promise<boolean> {
+  return invoke("puedo", { recurso, accion });
 }
 
 export function bootstrapAdmin(
@@ -185,6 +216,15 @@ export const desactivarProducto = (id: string): Promise<void> =>
   invoke("desactivar_producto", { id });
 export const buscarProductoPorCodigoBarras = (codigoBarras: string): Promise<Producto | null> =>
   invoke("buscar_producto_por_codigo_barras", { codigoBarras });
+export const resolverEscaneo = (codigo: string): Promise<EscaneoResuelto | null> =>
+  invoke("resolver_escaneo", { codigo });
+
+// ============ Importación masiva (Fase C) ============
+
+export const importarDatos = (
+  tipo: string,
+  filas: Record<string, unknown>[],
+): Promise<ResultadoImportacion[]> => invoke("importar_datos", { tipo, filas });
 
 // ============ Lote ============
 
@@ -225,6 +265,9 @@ export const listarUoms = (p?: ListParams): Promise<Listado<Uom>> =>
   invoke("listar_uoms", params(p));
 export const crearUom = (nuevo: NuevaUom): Promise<Uom> => invoke("crear_uom", { nuevo });
 export const obtenerUom = (id: string): Promise<Uom | null> => invoke("obtener_uom", { id });
+export const editarUom = (id: string, cambios: EditarUom): Promise<Uom> =>
+  invoke("editar_uom", { id, cambios });
+export const desactivarUom = (id: string): Promise<void> => invoke("desactivar_uom", { id });
 
 export const listarCategorias = (p?: ListParams): Promise<Listado<Categoria>> =>
   invoke("listar_categorias", params(p));
@@ -241,9 +284,67 @@ export const desactivarCategoria = (id: string): Promise<void> =>
 
 export const listarUsuarios = (p?: ListParams): Promise<Listado<Usuario>> =>
   invoke("listar_usuarios", params(p));
+export const obtenerUsuario = (id: string): Promise<Usuario | null> =>
+  invoke("obtener_usuario", { id });
 export const crearUsuario = (nuevo: NuevoUsuario): Promise<Usuario> =>
   invoke("crear_usuario", { nuevo });
 export const listarRoles = (): Promise<Rol[]> => invoke("listar_roles");
+export const editarUsuario = (id: string, cambios: EditarUsuario): Promise<Usuario> =>
+  invoke("editar_usuario", { id, cambios });
+export const desactivarUsuario = (id: string): Promise<void> =>
+  invoke("desactivar_usuario", { id });
+export const reactivarUsuario = (id: string): Promise<Usuario> =>
+  invoke("reactivar_usuario", { id });
+export const cambiarPassword = (passwordActual: string, passwordNueva: string): Promise<void> =>
+  invoke("cambiar_password", { passwordActual, passwordNueva });
+export const cambiarPasswordAdmin = (id: string, passwordNueva: string): Promise<void> =>
+  invoke("cambiar_password_admin", { id, passwordNueva });
+
+// ============ Configuración de empresa y preferencias ============
+
+export const obtenerConfiguracionEmpresa = (): Promise<ConfiguracionEmpresa> =>
+  invoke("obtener_configuracion_empresa");
+export const guardarConfiguracionEmpresa = (
+  cambios: EditarConfiguracionEmpresa,
+): Promise<ConfiguracionEmpresa> => invoke("guardar_configuracion_empresa", { cambios });
+export const obtenerPreferenciasUsuario = (): Promise<PreferenciasResueltas> =>
+  invoke("obtener_preferencias_usuario");
+export const guardarPreferenciasUsuario = (
+  cambios: EditarPreferenciasUsuario,
+): Promise<PreferenciasResueltas> => invoke("guardar_preferencias_usuario", { cambios });
+
+// ============ Temas de la UI (DESIGN §3.1) ============
+
+export const listarTemas = (): Promise<ResumenTema[]> => invoke("listar_temas");
+export const obtenerTema = (temaId: string, modoOscuro: boolean): Promise<TemaActivo> =>
+  invoke("obtener_tema", { temaId, modoOscuro });
+export const obtenerTemaActivo = (): Promise<TemaActivo> => invoke("obtener_tema_activo");
+export const obtenerTemaGlobal = (): Promise<TemaActivo> => invoke("obtener_tema_global");
+
+// ============ Sucursales (config de empresa, solo ADMIN) ============
+
+export const listarSucursales = (): Promise<Sucursal[]> => invoke("listar_sucursales");
+export const crearSucursal = (nuevo: NuevaSucursal): Promise<Sucursal> =>
+  invoke("crear_sucursal", { nuevo });
+export const obtenerSucursal = (id: string): Promise<Sucursal | null> =>
+  invoke("obtener_sucursal", { id });
+export const editarSucursal = (id: string, cambios: EditarSucursal): Promise<Sucursal> =>
+  invoke("editar_sucursal", { id, cambios });
+export const desactivarSucursal = (id: string): Promise<void> =>
+  invoke("desactivar_sucursal", { id });
+
+// ============ Archivos de empresa (logo + documentos, solo ADMIN) ============
+
+export const listarArchivosEmpresa = (): Promise<ArchivoEmpresa[]> =>
+  invoke("listar_archivos_empresa");
+export const subirArchivoEmpresa = (nuevo: NuevoArchivoEmpresa): Promise<ArchivoEmpresa> =>
+  invoke("subir_archivo_empresa", { nuevo });
+export const obtenerArchivoEmpresa = (id: string): Promise<ArchivoEmpresaCompleto | null> =>
+  invoke("obtener_archivo_empresa", { id });
+export const obtenerLogoEmpresa = (): Promise<ArchivoEmpresaCompleto | null> =>
+  invoke("obtener_logo_empresa");
+export const eliminarArchivoEmpresa = (id: string): Promise<void> =>
+  invoke("eliminar_archivo_empresa", { id });
 
 // ============ Movimientos ============
 
@@ -251,6 +352,8 @@ export const crearMovimiento = (nuevo: NuevoMovimiento): Promise<Movimiento> =>
   invoke("crear_movimiento", { nuevo });
 export const crearTraslado = (nuevo: NuevoTraslado): Promise<TrasladoCreado> =>
   invoke("crear_traslado", { nuevo });
+export const editarMovimiento = (id: string, cambios: EditarMovimiento): Promise<Movimiento> =>
+  invoke("editar_movimiento", { id, cambios });
 export const enviarAAprobacion = (id: string): Promise<Movimiento> =>
   invoke("enviar_a_aprobacion", { id });
 export const aprobarMovimiento = (id: string): Promise<Movimiento> =>
@@ -287,6 +390,8 @@ export const listarSesionesInventario = (p?: ListParams): Promise<Listado<Sesion
   invoke("listar_sesiones_inventario", params(p));
 export const obtenerSesionInventario = (id: string): Promise<SesionInventario | null> =>
   invoke("obtener_sesion_inventario", { id });
+export const iniciarSesionInventario = (id: string): Promise<SesionInventario> =>
+  invoke("iniciar_sesion_inventario", { id });
 export const registrarConteo = (nuevo: NuevoConteo): Promise<Conteo> =>
   invoke("registrar_conteo", { nuevo });
 export const listarConteos = (sesionId: string): Promise<Conteo[]> =>
@@ -311,6 +416,41 @@ export const listarHistorialComentario = (comentarioId: string): Promise<Histori
 export const ocultarComentario = (id: string): Promise<void> =>
   invoke("ocultar_comentario", { id });
 
+// ============ Historial y métricas de auditoría (SPEC §4.5, §13, §16) ============
+
+/** Registra la visita del frontend a una página (tracking total, Hito 25). */
+export function registrarVista(vista: RegistrarVista): Promise<void> {
+  return invoke("registrar_vista", { vista });
+}
+
+export interface ListarHistorialArgs {
+  usuario_id?: string;
+  comando?: string;
+  nivel?: string;
+  tipo_evento?: string;
+  modulo?: string;
+  ruta?: string;
+  proceso?: string;
+  exito?: boolean;
+  desde?: string;
+  hasta?: string;
+  page?: number;
+  page_size?: number;
+}
+export const listarHistorial = (
+  args: ListarHistorialArgs = {},
+): Promise<Listado<EventoAuditoria>> => invoke("listar_historial", { ...args });
+export const metricasHistorial = (): Promise<MetricasHistorial> => invoke("metricas_historial");
+
+/** Análisis profundo de actividad (Hito 25): resumen, desgloses e insights. */
+export interface MetricasActividadArgs {
+  desde?: string;
+  hasta?: string;
+  usuario_id?: string;
+}
+export const metricasActividad = (args: MetricasActividadArgs = {}): Promise<MetricasActividad> =>
+  invoke("metricas_actividad", { ...args });
+
 // ============ Trazabilidad (SPEC §13.4) ============
 
 export const dondeEstaLote = (loteId: string): Promise<UbicacionDeLote[]> =>
@@ -332,7 +472,6 @@ export const historialCaja = (cajaId: string): Promise<HistorialCaja[]> =>
 
 export const listarAlertas = (estado?: EstadoAlerta, diasPorVencer?: number): Promise<Alerta[]> =>
   invoke("listar_alertas", { estado, diasPorVencer });
-export const resolverAlerta = (id: string): Promise<void> => invoke("resolver_alerta", { id });
 export const ignorarAlerta = (id: string): Promise<void> => invoke("ignorar_alerta", { id });
 
 // ============ Reportes y KPIs (SPEC §16) ============

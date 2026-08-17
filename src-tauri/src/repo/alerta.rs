@@ -26,8 +26,11 @@ fn map_alerta(r: &rusqlite::Row<'_>) -> rusqlite::Result<Alerta> {
 
 const SELECT_ALERTA: &str = "SELECT id, tipo, severidad, entidad, entidad_id, fecha_deteccion, estado, detalle FROM alertas";
 
-/// Crea o refresca una alerta abierta para (tipo, entidad, entidad_id). No
-/// reabre alertas que el usuario marcó `IGNORADA` explícitamente.
+/// Crea o refresca una alerta abierta para (tipo, entidad, entidad_id). Si el
+/// usuario marcó `IGNORADA` una alerta de esa clave, se respeta: no se reabre
+/// ni se crea una fila nueva mientras la misma condición siga activa
+/// (SPEC §17.2). De paso limpia duplicados que versiones anteriores pudieran
+/// haber dejado (la clave no tiene UNIQUE en la tabla).
 fn upsert_alerta(
     tx: &Connection,
     tipo: &str,
@@ -36,29 +39,48 @@ fn upsert_alerta(
     entidad_id: &str,
     detalle: &str,
 ) -> AppResult<()> {
-    let existe: Option<String> = tx
-        .query_row(
-            "SELECT id FROM alertas WHERE tipo = ?1 AND entidad = ?2 AND entidad_id = ?3 AND estado != 'IGNORADA'",
-            rusqlite::params![tipo, entidad, entidad_id],
-            |r| r.get(0),
-        )
-        .optional()?;
+    let filas: Vec<(String, String)> = tx
+        .prepare(
+            "SELECT id, estado FROM alertas
+             WHERE tipo = ?1 AND entidad = ?2 AND entidad_id = ?3
+             ORDER BY fecha_deteccion",
+        )?
+        .query_map(rusqlite::params![tipo, entidad, entidad_id], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })?
+        .collect::<Result<_, _>>()?;
     let ts = ahora();
-    match existe {
-        Some(id) => {
-            tx.execute(
-                "UPDATE alertas SET detalle = ?2, estado = 'ABIERTA', fecha_deteccion = ?3 WHERE id = ?1",
-                rusqlite::params![id, detalle, ts],
-            )?;
+
+    let ignoradas: Vec<&str> = filas
+        .iter()
+        .filter(|(_, e)| e == "IGNORADA")
+        .map(|(id, _)| id.as_str())
+        .collect();
+
+    if !ignoradas.is_empty() {
+        // El usuario ignoró explícitamente esta alerta: no reabrir, no
+        // duplicar. Se eliminan filas no ignoradas sobrantes y se conserva
+        // una sola fila ignorada por clave.
+        for (id, estado) in &filas {
+            if *estado != "IGNORADA" {
+                tx.execute("DELETE FROM alertas WHERE id = ?1", [id])?;
+            }
         }
-        None => {
-            let id = Uuid::new_v4().to_string();
-            tx.execute(
-                "INSERT INTO alertas (id, tipo, severidad, entidad, entidad_id, fecha_deteccion, estado, detalle)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'ABIERTA', ?7)",
-                rusqlite::params![id, tipo, severidad, entidad, entidad_id, ts, detalle],
-            )?;
+        for id in ignoradas.iter().skip(1) {
+            tx.execute("DELETE FROM alertas WHERE id = ?1", [id])?;
         }
+    } else if let Some((id, _)) = filas.first() {
+        tx.execute(
+            "UPDATE alertas SET detalle = ?2, estado = 'ABIERTA', fecha_deteccion = ?3 WHERE id = ?1",
+            rusqlite::params![id, detalle, ts],
+        )?;
+    } else {
+        let id = Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO alertas (id, tipo, severidad, entidad, entidad_id, fecha_deteccion, estado, detalle)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'ABIERTA', ?7)",
+            rusqlite::params![id, tipo, severidad, entidad, entidad_id, ts, detalle],
+        )?;
     }
     Ok(())
 }
@@ -91,7 +113,10 @@ fn resolver_ausentes(tx: &Connection, tipo: &str, activos: &[String]) -> AppResu
 pub fn regenerar_alertas(conn: &Connection, dias_por_vencer: i64) -> AppResult<()> {
     let tx = conn.unchecked_transaction()?;
 
-    // Stock bajo / stock excedido (SPEC §5.4, §17.1).
+    // Stock bajo / stock excedido (SPEC §5.4, §17.1). El umbral de stock bajo
+    // usa el `stock_minimo` del producto; si no está definido, cae al
+    // `stock_minimo_default` de la configuración de empresa.
+    let default_minimo = crate::repo::configuracion::stock_minimo_default(&tx)?;
     let productos: Vec<(String, String, Option<i64>, Option<i64>)> = tx
         .prepare("SELECT id, sku, stock_minimo, stock_maximo FROM productos WHERE activo = 1")?
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
@@ -104,8 +129,8 @@ pub fn regenerar_alertas(conn: &Connection, dias_por_vencer: i64) -> AppResult<(
             [id],
             |r| r.get(0),
         )?;
-        if let Some(min) = minimo
-            && total <= *min
+        if let Some(min) = minimo.or(default_minimo)
+            && total <= min
         {
             upsert_alerta(
                 &tx,

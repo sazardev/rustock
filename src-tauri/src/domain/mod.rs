@@ -1,9 +1,11 @@
 pub mod alerta;
 pub mod catalogo;
+pub mod configuracion;
 pub mod inventario;
 pub mod movimiento;
 pub mod seguridad;
 pub mod sesion;
+pub mod tema;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

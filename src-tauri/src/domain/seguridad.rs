@@ -208,9 +208,39 @@ impl NuevoUsuario {
     }
 }
 
+/// Cambios aceptados sobre un usuario (SPEC §4.1). `nombre_usuario` no se
+/// puede cambiar por este camino: es el identificador estable de la sesión,
+/// igual que los códigos de los catálogos (SPEC §14.7).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct EditarUsuario {
+    pub nombre_completo: Option<String>,
+    pub email: Option<Option<String>>,
+    pub rol_id: Option<String>,
+}
+
+impl EditarUsuario {
+    pub fn validar(&self) -> Result<(), crate::error::AppError> {
+        if let Some(n) = &self.nombre_completo
+            && n.trim().is_empty()
+        {
+            return Err(crate::error::AppError::CampoRequerido(
+                "nombre_completo".into(),
+            ));
+        }
+        if let Some(rol) = &self.rol_id
+            && rol.trim().is_empty()
+        {
+            return Err(crate::error::AppError::CampoRequerido("rol_id".into()));
+        }
+        Ok(())
+    }
+}
+
 /// Evento de auditoría (SPEC §4.5). Inmutable.
 /// Registra el historial completo de actividad del usuario con hora, fecha
-/// y métricas del backend (comando, duración, éxito, nivel).
+/// y métricas del backend (comando, duración, éxito, nivel) más el tracking
+/// total (Hito 25): tipo de evento, ruta/módulo/proceso, metadatos, tenant y
+/// tiempo local — la materia prima del análisis de actividad.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventoAuditoria {
     pub id: i64,
@@ -226,6 +256,71 @@ pub struct EventoAuditoria {
     pub duracion_ms: Option<i64>,
     pub exito: bool,
     pub nivel: String,
+    /// `COMANDO` (backend) o `VISTA` (navegación del frontend).
+    pub tipo_evento: String,
+    /// Ruta del frontend (solo eventos de vista).
+    pub ruta: Option<String>,
+    /// Módulo de la aplicación (Dashboard, Movimientos, Productos...).
+    pub modulo: Option<String>,
+    /// Proceso de negocio asociado (recepción, despacho, inventario...).
+    pub proceso: Option<String>,
+    /// Metadatos JSON extra (parámetros de búsqueda, entidad visitada...).
+    pub metadatos: Option<String>,
+    /// Nombre de la empresa (tenant) al momento del evento.
+    pub tenant: Option<String>,
+    /// Tiempo que el usuario permaneció en la vista (ms).
+    pub duracion_vista_ms: Option<i64>,
+    /// Hora local del usuario (0-23) — denormalizada para análisis por hora.
+    pub hora_local: Option<i64>,
+    /// Día de la semana local (1=lunes ... 7=domingo).
+    pub dia_semana: Option<i64>,
+}
+
+/// Datos que el frontend envía al registrar la visita a una página
+/// (tracking de navegación, Hito 25). `ruta` y `modulo` son obligatorios;
+/// el resto enriquece el análisis (proceso de negocio, duración, tiempo local).
+#[derive(Debug, Clone, Deserialize)]
+pub struct RegistrarVista {
+    pub ruta: String,
+    pub modulo: String,
+    #[serde(default)]
+    pub proceso: Option<String>,
+    #[serde(default)]
+    pub metadatos: Option<serde_json::Value>,
+    #[serde(default)]
+    pub duracion_vista_ms: Option<i64>,
+    #[serde(default)]
+    pub hora_local: Option<i64>,
+    #[serde(default)]
+    pub dia_semana: Option<i64>,
+    #[serde(default)]
+    pub cliente_info: Option<serde_json::Value>,
+}
+
+impl RegistrarVista {
+    pub fn validar(&self) -> Result<(), crate::error::AppError> {
+        if self.ruta.trim().is_empty() {
+            return Err(crate::error::AppError::CampoRequerido("ruta".into()));
+        }
+        if self.modulo.trim().is_empty() {
+            return Err(crate::error::AppError::CampoRequerido("modulo".into()));
+        }
+        if let Some(h) = self.hora_local
+            && !(0..=23).contains(&h)
+        {
+            return Err(crate::error::AppError::CampoRequerido(
+                "hora_local fuera de rango (0-23)".into(),
+            ));
+        }
+        if let Some(d) = self.dia_semana
+            && !(1..=7).contains(&d)
+        {
+            return Err(crate::error::AppError::CampoRequerido(
+                "dia_semana fuera de rango (1-7)".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl EventoAuditoria {
@@ -272,13 +367,65 @@ impl EventoAuditoria {
         exito: bool,
         nivel: &str,
     ) -> crate::error::AppResult<()> {
+        Self::registrar_detallado(
+            conn,
+            usuario_id,
+            accion,
+            entidad,
+            entidad_id,
+            antes,
+            despues,
+            origen,
+            comando,
+            duracion_ms,
+            exito,
+            nivel,
+            "COMANDO",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    /// Registro completo con tracking total (tipo de evento, ruta, módulo,
+    /// proceso, metadatos, tenant y tiempo local).
+    #[allow(clippy::too_many_arguments)]
+    pub fn registrar_detallado(
+        conn: &rusqlite::Connection,
+        usuario_id: Option<&str>,
+        accion: &str,
+        entidad: &str,
+        entidad_id: Option<&str>,
+        antes: Option<&str>,
+        despues: Option<&str>,
+        origen: Option<&str>,
+        comando: Option<&str>,
+        duracion_ms: Option<i64>,
+        exito: bool,
+        nivel: &str,
+        tipo_evento: &str,
+        ruta: Option<&str>,
+        modulo: Option<&str>,
+        proceso: Option<&str>,
+        metadatos: Option<&str>,
+        tenant: Option<&str>,
+        duracion_vista_ms: Option<i64>,
+        hora_local: Option<i64>,
+        dia_semana: Option<i64>,
+    ) -> crate::error::AppResult<()> {
         let ts = ahora();
         conn.execute(
-            "INSERT INTO auditoria (usuario_id, accion, entidad, entidad_id, antes, despues, timestamp, origen, comando, duracion_ms, exito, nivel)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO auditoria (usuario_id, accion, entidad, entidad_id, antes, despues, timestamp, origen, comando, duracion_ms, exito, nivel, tipo_evento, ruta, modulo, proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
             rusqlite::params![
                 usuario_id, accion, entidad, entidad_id, antes, despues, ts, origen,
-                comando, duracion_ms, exito as i64, nivel
+                comando, duracion_ms, exito as i64, nivel, tipo_evento, ruta, modulo,
+                proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana
             ],
         )?;
         Ok(())

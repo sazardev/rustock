@@ -8,26 +8,53 @@
  */
 import {
   desactivarAlmacen,
+  desactivarCaja,
+  desactivarCategoria,
+  desactivarCliente,
   desactivarProducto,
+  desactivarProveedor,
+  desactivarRack,
+  desactivarSeccion,
+  desactivarUbicacion,
+  desactivarUom,
+  desactivarZona,
+  listarCajas,
   listarCategorias,
   listarClientes,
   listarLotes,
   listarProveedores,
+  listarRacks,
+  listarSecciones,
   listarUbicaciones,
   listarUoms,
+  listarZonas,
   obtenerAlmacen,
+  obtenerCaja,
   obtenerCategoria,
   obtenerCliente,
   obtenerLote,
   obtenerProducto,
   obtenerProveedor,
+  obtenerRack,
+  obtenerSeccion,
   obtenerUbicacion,
   obtenerUom,
+  obtenerZona,
 } from "../shared/backend";
 import * as backend from "../shared/backend";
-import { CategoriaRef, ProductoRef, UomRef } from "../shared/refs";
+import {
+  AlmacenRef,
+  CategoriaRef,
+  LoteRef,
+  ProductoRef,
+  RackRef,
+  UbicacionRef,
+  UomRef,
+  ZonaRef,
+} from "../shared/refs";
 import type {
   Almacen,
+  Caja,
   Categoria,
   Cliente,
   Listado,
@@ -35,8 +62,11 @@ import type {
   Lote,
   Producto,
   Proveedor,
+  Rack,
+  Seccion,
   Ubicacion,
   Uom,
+  Zona,
 } from "../shared/types";
 import { Badge, type DetailItem, type IconName, type TableColumn } from "../shared/ui";
 import { catalogoEditar, catalogoEliminar, catalogoLista } from "../app/route-paths";
@@ -57,6 +87,8 @@ export interface CatalogAdapter<T extends { id: string }> {
   crearHref?: string;
   editarHref?: (id: string) => string;
   eliminarHref?: (id: string) => string;
+  /** Ruta "nuevo" precargada con los datos de un registro existente (duplicar). */
+  duplicarHref?: (id: string) => string;
   desactivar?: (id: string) => Promise<void>;
 }
 
@@ -125,6 +157,11 @@ const ubicacionAdapter: CatalogAdapter<Ubicacion> = {
   ],
   tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
   activo: (r) => r.activo,
+  crearHref: catalogoLista("ubicaciones") + "/nuevo",
+  editarHref: (id) => catalogoEditar("ubicaciones", id),
+  eliminarHref: (id) => catalogoEliminar("ubicaciones", id),
+  duplicarHref: (id) => `${catalogoLista("ubicaciones")}/nuevo?duplicarDe=${id}`,
+  desactivar: desactivarUbicacion,
 };
 
 const productoAdapter: CatalogAdapter<Producto> = {
@@ -176,6 +213,7 @@ const productoAdapter: CatalogAdapter<Producto> = {
   crearHref: catalogoLista("productos") + "/nuevo",
   editarHref: (id) => catalogoEditar("productos", id),
   eliminarHref: (id) => catalogoEliminar("productos", id),
+  duplicarHref: (id) => `${catalogoLista("productos")}/nuevo?duplicarDe=${id}`,
   desactivar: desactivarProducto,
 };
 
@@ -212,6 +250,9 @@ const loteAdapter: CatalogAdapter<Lote> = {
     { label: "Creado", value: formatearFecha(r.created_at) },
   ],
   tituloDetalle: (r) => r.numero,
+  crearHref: catalogoLista("lotes") + "/nuevo",
+  editarHref: (id) => catalogoEditar("lotes", id),
+  duplicarHref: (id) => `${catalogoLista("lotes")}/nuevo?duplicarDe=${id}`,
 };
 
 const categoriaAdapter: CatalogAdapter<Categoria> = {
@@ -238,6 +279,10 @@ const categoriaAdapter: CatalogAdapter<Categoria> = {
   ],
   tituloDetalle: (r) => r.nombre,
   activo: (r) => r.activo,
+  crearHref: catalogoLista("categorias") + "/nuevo",
+  editarHref: (id) => catalogoEditar("categorias", id),
+  eliminarHref: (id) => catalogoEliminar("categorias", id),
+  desactivar: desactivarCategoria,
 };
 
 const uomAdapter: CatalogAdapter<Uom> = {
@@ -257,6 +302,7 @@ const uomAdapter: CatalogAdapter<Uom> = {
       header: "Base de familia",
       render: (r) => (r.base ? <Badge tone="info">Base</Badge> : "—"),
     },
+    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
   ],
   datosGenerales: (r) => [
     { label: "Código", value: r.codigo, code: true },
@@ -267,6 +313,11 @@ const uomAdapter: CatalogAdapter<Uom> = {
     { label: "Creado", value: formatearFecha(r.created_at) },
   ],
   tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+  activo: (r) => r.activo,
+  crearHref: catalogoLista("uoms") + "/nuevo",
+  editarHref: (id) => catalogoEditar("uoms", id),
+  eliminarHref: (id) => catalogoEliminar("uoms", id),
+  desactivar: desactivarUom,
 };
 
 function contactoColumnas<T extends { contacto_telefono: string | null; activo: boolean }>(): Array<
@@ -310,6 +361,10 @@ const proveedorAdapter: CatalogAdapter<Proveedor> = {
   datosGenerales: contactoDatos,
   tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
   activo: (r) => r.activo,
+  crearHref: catalogoLista("proveedores") + "/nuevo",
+  editarHref: (id) => catalogoEditar("proveedores", id),
+  eliminarHref: (id) => catalogoEliminar("proveedores", id),
+  desactivar: desactivarProveedor,
 };
 
 const clienteAdapter: CatalogAdapter<Cliente> = {
@@ -327,11 +382,148 @@ const clienteAdapter: CatalogAdapter<Cliente> = {
   datosGenerales: contactoDatos,
   tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
   activo: (r) => r.activo,
+  crearHref: catalogoLista("clientes") + "/nuevo",
+  editarHref: (id) => catalogoEditar("clientes", id),
+  eliminarHref: (id) => catalogoEliminar("clientes", id),
+  desactivar: desactivarCliente,
+};
+
+const zonaAdapter: CatalogAdapter<Zona> = {
+  titulo: "Zonas",
+  descripcion: "Divisiones lógicas o físicas dentro de un almacén.",
+  singular: "Zona",
+  icon: "zona",
+  listar: listarZonas,
+  obtener: obtenerZona,
+  columnas: [
+    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
+    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
+    { key: "almacen_id", header: "Almacén", render: (r) => <AlmacenRef id={r.almacen_id} /> },
+    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
+  ],
+  datosGenerales: (r) => [
+    { label: "Código", value: r.codigo, code: true },
+    { label: "Nombre", value: r.nombre },
+    { label: "Descripción", value: r.descripcion ?? "—" },
+    { label: "Almacén", value: <AlmacenRef id={r.almacen_id} /> },
+    { label: "Creado", value: formatearFecha(r.created_at) },
+  ],
+  tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+  activo: (r) => r.activo,
+  crearHref: catalogoLista("zonas") + "/nuevo",
+  editarHref: (id) => catalogoEditar("zonas", id),
+  eliminarHref: (id) => catalogoEliminar("zonas", id),
+  desactivar: desactivarZona,
+};
+
+const rackAdapter: CatalogAdapter<Rack> = {
+  titulo: "Racks",
+  descripcion: "Estructuras de almacenamiento dentro de una zona.",
+  singular: "Rack",
+  icon: "zona",
+  listar: listarRacks,
+  obtener: obtenerRack,
+  columnas: [
+    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
+    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
+    { key: "tipo", header: "Tipo", render: (r) => r.tipo ?? "—" },
+    { key: "zona_id", header: "Zona", render: (r) => <ZonaRef id={r.zona_id} /> },
+    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
+  ],
+  datosGenerales: (r) => [
+    { label: "Código", value: r.codigo, code: true },
+    { label: "Nombre", value: r.nombre ?? "—" },
+    { label: "Tipo", value: r.tipo ?? "—" },
+    { label: "Zona", value: <ZonaRef id={r.zona_id} /> },
+    { label: "Creado", value: formatearFecha(r.created_at) },
+  ],
+  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+  activo: (r) => r.activo,
+  crearHref: catalogoLista("racks") + "/nuevo",
+  editarHref: (id) => catalogoEditar("racks", id),
+  eliminarHref: (id) => catalogoEliminar("racks", id),
+  desactivar: desactivarRack,
+};
+
+const seccionAdapter: CatalogAdapter<Seccion> = {
+  titulo: "Secciones",
+  descripcion: "Subdivisiones de un rack (niveles, pasillos, bahías).",
+  singular: "Sección",
+  icon: "zona",
+  listar: listarSecciones,
+  obtener: obtenerSeccion,
+  columnas: [
+    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
+    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
+    { key: "nivel", header: "Nivel", render: (r) => r.nivel ?? "—" },
+    { key: "rack_id", header: "Rack", render: (r) => <RackRef id={r.rack_id} /> },
+    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
+  ],
+  datosGenerales: (r) => [
+    { label: "Código", value: r.codigo, code: true },
+    { label: "Nombre", value: r.nombre ?? "—" },
+    { label: "Nivel", value: r.nivel ?? "—" },
+    { label: "Rack", value: <RackRef id={r.rack_id} /> },
+    { label: "Descripción", value: r.descripcion ?? "—" },
+    { label: "Creado", value: formatearFecha(r.created_at) },
+  ],
+  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+  activo: (r) => r.activo,
+  crearHref: catalogoLista("secciones") + "/nuevo",
+  editarHref: (id) => catalogoEditar("secciones", id),
+  eliminarHref: (id) => catalogoEliminar("secciones", id),
+  desactivar: desactivarSeccion,
+};
+
+const cajaAdapter: CatalogAdapter<Caja> = {
+  titulo: "Cajas",
+  descripcion: "Contenedores dentro de una ubicación que agrupan stock.",
+  singular: "Caja",
+  icon: "caja",
+  listar: listarCajas,
+  obtener: obtenerCaja,
+  columnas: [
+    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
+    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
+    {
+      key: "ubicacion_id",
+      header: "Ubicación",
+      render: (r) => <UbicacionRef id={r.ubicacion_id} />,
+    },
+    {
+      key: "producto_id",
+      header: "Producto",
+      render: (r) => (r.producto_id ? <ProductoRef id={r.producto_id} /> : "—"),
+    },
+    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
+  ],
+  datosGenerales: (r) => [
+    { label: "Código", value: r.codigo, code: true },
+    { label: "Nombre", value: r.nombre ?? "—" },
+    { label: "Ubicación", value: <UbicacionRef id={r.ubicacion_id} /> },
+    {
+      label: "Producto restringido",
+      value: r.producto_id ? <ProductoRef id={r.producto_id} /> : "—",
+    },
+    { label: "Lote restringido", value: r.lote_id ? <LoteRef id={r.lote_id} /> : "—" },
+    { label: "Etiqueta", value: r.etiqueta ?? "—", code: true },
+    { label: "Creado", value: formatearFecha(r.created_at) },
+  ],
+  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+  activo: (r) => r.activo,
+  crearHref: catalogoLista("cajas") + "/nuevo",
+  editarHref: (id) => catalogoEditar("cajas", id),
+  eliminarHref: (id) => catalogoEliminar("cajas", id),
+  desactivar: desactivarCaja,
 };
 
 export const CATALOGOS: Record<string, CatalogAdapter<any>> = {
   almacenes: almacenAdapter,
+  zonas: zonaAdapter,
+  racks: rackAdapter,
+  secciones: seccionAdapter,
   ubicaciones: ubicacionAdapter,
+  cajas: cajaAdapter,
   productos: productoAdapter,
   lotes: loteAdapter,
   categorias: categoriaAdapter,

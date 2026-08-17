@@ -1,6 +1,7 @@
 import { useLocation } from "react-router";
 import { Breadcrumbs } from "../shared/ui";
 import type { BreadcrumbsProps } from "../shared/ui";
+import { cn } from "../shared/lib/cn";
 import { crumbsFromPath } from "./breadcrumbs";
 import { useNavigationHistory } from "./use-navigation-history";
 
@@ -29,7 +30,7 @@ export function SmartBreadcrumbs({ className, history = true }: SmartBreadcrumbs
   }));
 
   return (
-    <div className={className}>
+    <div className={cn("breadcrumbs__smart", className)}>
       {history ? (
         <div className="breadcrumbs__nav">
           <button

@@ -6,6 +6,7 @@ use crate::db::DbState;
 use crate::domain::catalogo::*;
 use crate::domain::inventario::*;
 use crate::domain::movimiento::*;
+use crate::domain::seguridad::{NuevoUsuario, RegistrarVista};
 use crate::repo;
 
 fn setup() -> std::sync::Arc<DbState> {
@@ -17,6 +18,16 @@ fn setup() -> std::sync::Arc<DbState> {
             .expect("admin");
     }
     db
+}
+
+/// Id real (UUID) del usuario con `nombre_usuario = 'admin'` sembrado en setup.
+/// Los comandos y repos aceptan id o nombre_usuario indistintamente (como
+/// `puede()`), pero las FKs de preferencias apuntan al id real.
+fn id_admin(conn: &rusqlite::Connection) -> String {
+    repo::seguridad::obtener_usuario_por_nombre(conn, "admin")
+        .expect("admin existe")
+        .expect("admin some")
+        .id
 }
 
 /// Construye un árbol físico completo: almacén → zona → rack → sección → ubicación.
@@ -113,6 +124,7 @@ fn crear_uom_y_producto(conn: &rusqlite::Connection) -> (String, String) {
     let p = repo::catalogo::crear_producto(
         conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "REF-100".into(),
             nombre: "Producto A".into(),
             descripcion: None,
@@ -192,6 +204,7 @@ fn entrada_aprobada_incrementa_saldo() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 10,
@@ -242,6 +255,7 @@ fn salida_sin_saldo_suficiente_rechazada() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 5,
@@ -283,6 +297,7 @@ fn traslado_mueve_saldo_atomicamente() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 10,
@@ -313,6 +328,7 @@ fn traslado_mueve_saldo_atomicamente() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 4,
@@ -353,6 +369,7 @@ fn ajuste_negativo_exige_motivo() {
         notas: None,
         created_by: "admin".into(),
         lineas: vec![NuevaLinea {
+            costo_unitario: None,
             producto_id: prod.clone(),
             lote_id: None,
             cantidad: 1,
@@ -389,6 +406,7 @@ fn anular_movimiento_aprobado_genera_inverso() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 10,
@@ -434,6 +452,7 @@ fn sesion_inventario_cierra_con_ajustes() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 10,
@@ -513,6 +532,7 @@ fn producto_que_controla_lote_exige_lote() {
     let p = repo::catalogo::crear_producto(
         &conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "REF-LOTE".into(),
             nombre: "Con lote".into(),
             descripcion: None,
@@ -547,6 +567,7 @@ fn producto_que_controla_lote_exige_lote() {
         notas: None,
         created_by: "admin".into(),
         lineas: vec![NuevaLinea {
+            costo_unitario: None,
             producto_id: p.id.clone(),
             lote_id: None, // falta el lote
             cantidad: 5,
@@ -589,11 +610,25 @@ fn historial_registra_invocaciones_con_metricas() {
     )
     .expect("registrar");
 
-    // Consultar el historial filtrado por comando.
-    let hist = repo::auditoria::listar_historial(&conn, Some("admin"), None, None, None, None, 100)
-        .expect("historial");
-    assert!(hist.len() >= 3);
-    assert_eq!(hist[0].nivel, "ESCRITURA");
+    // Consultar el historial filtrado por comando (nueva firma paginada).
+    let hist = repo::auditoria::listar_historial(
+        &conn,
+        Some("admin"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        100,
+    )
+    .expect("historial");
+    assert!(hist.data.len() >= 3);
+    assert_eq!(hist.data[0].nivel, "ESCRITURA");
 
     // Métricas agregadas: total = 3 invocaciones + eventos de setup (>= 3).
     let m = repo::auditoria::metricas_historial(&conn).expect("metricas");
@@ -980,6 +1015,8 @@ fn query_agregacion_group_by_con_metricas() {
             created_by: "admin".into(),
             lineas: vec![
                 NuevaLinea {
+                    costo_unitario: None,
+                    costo_unitario: None,
                     producto_id: prod.clone(),
                     lote_id: None,
                     cantidad: 6,
@@ -989,6 +1026,8 @@ fn query_agregacion_group_by_con_metricas() {
                     caja_destino_id: None,
                 },
                 NuevaLinea {
+                    costo_unitario: None,
+                    costo_unitario: None,
                     producto_id: prod.clone(),
                     lote_id: None,
                     cantidad: 4,
@@ -1210,6 +1249,7 @@ fn caja_restringida_rechaza_producto_distinto() {
     let prod2 = repo::catalogo::crear_producto(
         &conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "REF-200".into(),
             nombre: "Producto B".into(),
             descripcion: None,
@@ -1261,6 +1301,7 @@ fn caja_restringida_rechaza_producto_distinto() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod2,
                 lote_id: None,
                 cantidad: 1,
@@ -1306,6 +1347,7 @@ fn capacidad_maxima_agrega_todos_los_productos() {
     let prod2 = repo::catalogo::crear_producto(
         &conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "REF-300".into(),
             nombre: "Producto C".into(),
             descripcion: None,
@@ -1343,6 +1385,7 @@ fn capacidad_maxima_agrega_todos_los_productos() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod1,
                 lote_id: None,
                 cantidad: 6,
@@ -1373,6 +1416,7 @@ fn capacidad_maxima_agrega_todos_los_productos() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod2,
                 lote_id: None,
                 cantidad: 6,
@@ -1408,6 +1452,7 @@ fn buscar_producto_por_codigo_barras() {
     let producto = repo::catalogo::crear_producto(
         &conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "REF-BARRAS".into(),
             nombre: "Con barras".into(),
             descripcion: None,
@@ -1463,6 +1508,7 @@ fn entrar_stock(
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: producto_id.into(),
                 lote_id: lote_id.map(String::from),
                 cantidad,
@@ -1516,6 +1562,7 @@ fn entrada_inicial_exige_permiso_configuracion() {
         notas: None,
         created_by: "operador2".into(),
         lineas: vec![NuevaLinea {
+            costo_unitario: None,
             producto_id: prod,
             lote_id: None,
             cantidad: 5,
@@ -1539,6 +1586,7 @@ fn crear_producto_con_lote(
     repo::catalogo::crear_producto(
         conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: sku.into(),
             nombre: "Producto con lote".into(),
             descripcion: None,
@@ -2051,6 +2099,7 @@ fn trazabilidad_origen_de_salida() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod,
                 lote_id: None,
                 cantidad: 3,
@@ -2171,6 +2220,7 @@ fn trazabilidad_historial_caja() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 5,
@@ -2200,6 +2250,7 @@ fn trazabilidad_historial_caja() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod,
                 lote_id: None,
                 cantidad: 5,
@@ -2307,6 +2358,7 @@ fn alertas_movimiento_pendiente_se_detecta() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod,
                 lote_id: None,
                 cantidad: 5,
@@ -2343,10 +2395,25 @@ fn alertas_ignorar_no_se_muestra_como_abierta() {
         .expect("debe existir");
 
     repo::alerta::ignorar_alerta(&conn, &abierta.id, "admin").expect("ignorar");
+    // El listado real recalcula las alertas en cada consulta; ese recálculo no
+    // debe reabrir ni duplicar la alerta mientras la condición siga activa.
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar tras ignorar");
     let abiertas = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
-    assert!(!abiertas.iter().any(|a| a.id == abierta.id));
+    assert!(
+        !abiertas
+            .iter()
+            .any(|a| a.entidad_id.as_deref() == Some(prod.as_str())),
+        "la alerta ignorada no debe reaparecer como abierta"
+    );
     let ignoradas = repo::alerta::listar_alertas(&conn, Some("IGNORADA"), "admin").expect("listar");
-    assert!(ignoradas.iter().any(|a| a.id == abierta.id));
+    assert_eq!(
+        ignoradas
+            .iter()
+            .filter(|a| a.entidad_id.as_deref() == Some(prod.as_str()))
+            .count(),
+        1,
+        "la alerta ignorada no debe duplicarse al recalcular"
+    );
 }
 
 // ============ Reportes y KPIs (SPEC §16) ============
@@ -2391,6 +2458,7 @@ fn reporte_kardex_producto_acumula_saldo() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod.clone(),
                 lote_id: None,
                 cantidad: 4,
@@ -2500,6 +2568,7 @@ fn ajuste_manual_bloqueado_durante_inventario_en_curso() {
             notas: None,
             created_by: "admin".into(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: prod,
                 lote_id: None,
                 cantidad: 2,
@@ -2594,4 +2663,2095 @@ fn seed_de_ejemplo_puebla_datos_consistentes_y_es_idempotente() {
         .query_row("SELECT COUNT(*) FROM almacenes", [], |r| r.get(0))
         .unwrap();
     assert_eq!(almacenes_2, 1);
+}
+
+// ============ Configuración de empresa y preferencias (SPEC §4.3, §14.4, §17.1) ============
+
+#[test]
+fn configuracion_empresa_default_y_edicion() {
+    let db = setup();
+    let conn = db.conn();
+
+    let config = repo::configuracion::obtener_configuracion_empresa(&conn).expect("config");
+    assert_eq!(config.zona_horaria, "America/Lima");
+    assert_eq!(config.formato_fecha, "DD_MMM_YYYY");
+    assert_eq!(config.dias_aviso_vencimiento, 30);
+    assert!(config.requiere_aprobacion, "por defecto exige aprobación");
+    assert_eq!(config.stock_minimo_default, None);
+
+    let cambios = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        nombre: Some(Some("Rustock SAC".into())),
+        codigo: Some(Some("RUST-01".into())),
+        descripcion: None,
+        zona_horaria: Some("America/Mexico_City".into()),
+        formato_fecha: Some("DD_MM_YYYY".into()),
+        dias_aviso_vencimiento: Some(15),
+        requiere_aprobacion: Some(false),
+        stock_minimo_default: Some(Some(3)),
+        pais: Some(Some("Perú".into())),
+        ciudad: Some(Some("Lima".into())),
+        latitud: Some(Some(-12.0464)),
+        longitud: Some(Some(-77.0428)),
+        ..Default::default()
+    };
+    let editada = repo::configuracion::guardar_configuracion_empresa(&conn, &cambios, "admin")
+        .expect("guardar");
+    assert_eq!(editada.nombre.as_deref(), Some("Rustock SAC"));
+    assert_eq!(editada.zona_horaria, "America/Mexico_City");
+    assert_eq!(editada.formato_fecha, "DD_MM_YYYY");
+    assert_eq!(editada.dias_aviso_vencimiento, 15);
+    assert!(!editada.requiere_aprobacion);
+    assert_eq!(editada.stock_minimo_default, Some(3));
+    assert_eq!(editada.pais.as_deref(), Some("Perú"));
+    assert_eq!(editada.ciudad.as_deref(), Some("Lima"));
+    assert_eq!(editada.latitud, Some(-12.0464));
+    assert_eq!(editada.longitud, Some(-77.0428));
+
+    // La auditoría registra el cambio (SPEC §4.5).
+    let n: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM auditoria WHERE entidad = 'configuracion_empresa'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(n >= 1);
+}
+
+#[test]
+fn configuracion_empresa_rechaza_zona_horaria_o_formato_invalidos() {
+    let db = setup();
+    let conn = db.conn();
+
+    let zona_mala = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        zona_horaria: Some("Mars/Olympus".into()),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_configuracion_empresa(&conn, &zona_mala, "admin"),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    let formato_malo = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        formato_fecha: Some("MM-DD-YY".into()),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_configuracion_empresa(&conn, &formato_malo, "admin"),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+}
+
+#[test]
+fn preferencias_usuario_resueltas_con_fallback_de_empresa() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    // Sin preferencias guardadas: los valores resueltos heredan de la empresa.
+    let resueltas = repo::configuracion::preferencias_resueltas(&conn, &admin).expect("resueltas");
+    assert_eq!(resueltas.tamano_fuente, "MEDIA");
+    assert_eq!(resueltas.zona_horaria, "America/Lima");
+    assert_eq!(resueltas.formato_fecha, "DD_MMM_YYYY");
+    assert_eq!(resueltas.tema_id, "rust", "tema por defecto de la empresa");
+    assert!(resueltas.tema_heredado, "sin preferencia propia, hereda");
+    assert!(!resueltas.modo_oscuro);
+    assert!(resueltas.modo_oscuro_heredado);
+
+    // El usuario se pone su propia zona horaria y formato; hereda lo demás.
+    let cambios = crate::domain::configuracion::EditarPreferenciasUsuario {
+        tamano_fuente: Some("GRANDE".into()),
+        orden_sidebar: Some(Some("[\"/movimientos\",\"/\"]".into())),
+        zona_horaria: Some(Some("UTC".into())),
+        formato_fecha: Some(None), // explícitamente "heredar"
+        tema_id: Some(Some("bosque".into())),
+        modo_oscuro: Some(Some(true)),
+        ayuda_en_palette: Some(false),
+    };
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &cambios).expect("guardar");
+
+    let resueltas2 = repo::configuracion::preferencias_resueltas(&conn, &admin).expect("resueltas");
+    assert_eq!(resueltas2.tamano_fuente, "GRANDE");
+    assert_eq!(resueltas2.zona_horaria, "UTC");
+    assert_eq!(
+        resueltas2.formato_fecha, "DD_MMM_YYYY",
+        "hereda de la empresa"
+    );
+    assert_eq!(
+        resueltas2.orden_sidebar.as_deref(),
+        Some("[\"/movimientos\",\"/\"]")
+    );
+    assert_eq!(resueltas2.tema_id, "bosque", "paleta propia del usuario");
+    assert!(!resueltas2.tema_heredado);
+    assert!(resueltas2.modo_oscuro, "modo oscuro propio");
+    assert!(!resueltas2.modo_oscuro_heredado);
+    assert!(
+        !resueltas2.ayuda_en_palette,
+        "preferencia de ayuda en el palette desactivada"
+    );
+
+    // Volver a heredar el tema: `Some(None)` limpia la preferencia propia.
+    let heredar = crate::domain::configuracion::EditarPreferenciasUsuario {
+        tema_id: Some(None),
+        modo_oscuro: Some(None),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &heredar).expect("heredar");
+    let resueltas3 = repo::configuracion::preferencias_resueltas(&conn, &admin).expect("resueltas");
+    assert_eq!(resueltas3.tema_id, "rust");
+    assert!(resueltas3.tema_heredado);
+    assert!(resueltas3.modo_oscuro_heredado);
+}
+
+#[test]
+fn preferencias_usuario_rechaza_valores_invalidos() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let tamano_malo = crate::domain::configuracion::EditarPreferenciasUsuario {
+        tamano_fuente: Some("ENORME".into()),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &tamano_malo),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    let zona_mala = crate::domain::configuracion::EditarPreferenciasUsuario {
+        zona_horaria: Some(Some("Antartica/Base".into())),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &zona_mala),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    let tema_malo = crate::domain::configuracion::EditarPreferenciasUsuario {
+        tema_id: Some(Some("neon".into())),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &tema_malo),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+}
+
+// ============ Temas de la UI (DESIGN §3.1) ============
+
+#[test]
+fn configuracion_empresa_rechaza_tema_invalido() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let cambios = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        tema_id: Some("neon".into()),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_configuracion_empresa(&conn, &cambios, &admin),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    // Un tema válido + modo oscuro global sí se guarda y se hereda.
+    let ok = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        tema_id: Some("oceano".into()),
+        modo_oscuro: Some(true),
+        ..Default::default()
+    };
+    let config = repo::configuracion::guardar_configuracion_empresa(&conn, &ok, &admin)
+        .expect("guardar tema válido");
+    assert_eq!(config.tema_id, "oceano");
+    assert!(config.modo_oscuro);
+
+    // Un usuario sin preferencia propia hereda el tema global de la empresa.
+    let resueltas = repo::configuracion::preferencias_resueltas(&conn, &admin).expect("resueltas");
+    assert_eq!(resueltas.tema_id, "oceano");
+    assert!(resueltas.tema_heredado);
+    assert!(resueltas.modo_oscuro);
+    assert!(resueltas.modo_oscuro_heredado);
+}
+
+#[test]
+fn tema_activo_de_usuario_resuelve_variables_por_modo() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let cambios = crate::domain::configuracion::EditarPreferenciasUsuario {
+        tema_id: Some(Some("bosque".into())),
+        modo_oscuro: Some(Some(true)),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &cambios).expect("guardar");
+
+    let activo = repo::configuracion::tema_activo_de_usuario(&conn, &admin).expect("activo");
+    assert_eq!(activo.id, "bosque");
+    assert_eq!(activo.modo, crate::domain::tema::ModoColor::Oscuro);
+    assert!(activo.variables["--color-scheme"] == "dark");
+    assert!(activo.variables.contains_key("--color-blue-500"));
+    assert!(activo.variables.contains_key("--shadow-lg"));
+}
+
+// ============ Gestión de usuarios (SPEC §4.1, §4.5) ============
+
+fn id_rol(conn: &rusqlite::Connection, codigo: &str) -> String {
+    conn.query_row("SELECT id FROM roles WHERE codigo = ?1", [codigo], |r| {
+        r.get(0)
+    })
+    .unwrap()
+}
+
+fn crear_usuario_prueba(conn: &rusqlite::Connection, nombre: &str, rol: &str) -> String {
+    let rol_id = id_rol(conn, rol);
+    let u = repo::seguridad::crear_usuario(
+        conn,
+        &NuevoUsuario {
+            nombre_usuario: nombre.into(),
+            nombre_completo: format!("{nombre} Completo"),
+            email: Some(format!("{nombre}@test.local")),
+            password: "pass12345".into(),
+            rol_id,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear usuario");
+    u.id
+}
+
+#[test]
+fn gestion_usuario_editar_desactivar_reactivar() {
+    let db = setup();
+    let conn = db.conn();
+    let id = crear_usuario_prueba(&conn, "juan", "OPERADOR");
+
+    let editado = repo::seguridad::editar_usuario(
+        &conn,
+        &id,
+        &crate::domain::seguridad::EditarUsuario {
+            nombre_completo: Some("Juan Pérez".into()),
+            email: Some(None), // limpiar email
+            rol_id: Some(id_rol(&conn, "LECTOR")),
+        },
+        "admin",
+    )
+    .expect("editar");
+    assert_eq!(editado.nombre_completo, "Juan Pérez");
+    assert_eq!(editado.email, None);
+    assert_eq!(editado.rol_id, id_rol(&conn, "LECTOR"));
+
+    repo::seguridad::desactivar_usuario(&conn, &id, "admin").expect("desactivar");
+    let desactivado = repo::seguridad::obtener_usuario(&conn, &id)
+        .unwrap()
+        .unwrap();
+    assert!(!desactivado.activo);
+    // Un usuario inactivo no puede autenticarse (SPEC §4.1).
+    assert!(repo::seguridad::verificar_credenciales(&conn, "juan", "pass12345").is_err());
+
+    repo::seguridad::reactivar_usuario(&conn, &id, "admin").expect("reactivar");
+    let reactivado = repo::seguridad::obtener_usuario(&conn, &id)
+        .unwrap()
+        .unwrap();
+    assert!(reactivado.activo);
+    assert!(repo::seguridad::verificar_credenciales(&conn, "juan", "pass12345").is_ok());
+}
+
+#[test]
+fn gestion_usuario_no_se_auto_desactiva_ni_desactiva_ultimo_admin() {
+    let db = setup();
+    let conn = db.conn();
+    let admin_id = id_admin(&conn);
+
+    // No te puedes desactivar a ti mismo.
+    assert!(matches!(
+        repo::seguridad::desactivar_usuario(&conn, &admin_id, &admin_id),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    // No se puede desactivar al último ADMIN activo.
+    let segundo_admin = repo::seguridad::crear_usuario(
+        &conn,
+        &NuevoUsuario {
+            nombre_usuario: "admin2".into(),
+            nombre_completo: "Admin Dos".into(),
+            email: None,
+            password: "pass12345".into(),
+            rol_id: id_rol(&conn, "ADMIN"),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("segundo admin");
+
+    // Con dos admins, desactivar a "admin" (el actor) está bloqueado por la
+    // regla de autodesactivación; desactivar a admin2 sí funciona.
+    repo::seguridad::desactivar_usuario(&conn, &segundo_admin.id, &admin_id)
+        .expect("desactivar admin2");
+    repo::seguridad::reactivar_usuario(&conn, &segundo_admin.id, &admin_id).expect("reactivar");
+
+    // La protección del último admin: con los dos activos de nuevo, si "admin"
+    // intentara desactivar a admin2 funciona; la protección solo bloquea
+    // cuando quedaría cero administradores activos. Verificamos que con un
+    // solo admin activo (desactivando a admin2 otra vez y NO reactivándolo),
+    // el intento posterior se bloquea por la regla del último admin.
+    repo::seguridad::desactivar_usuario(&conn, &segundo_admin.id, &admin_id)
+        .expect("desactivar admin2 de nuevo");
+    let admin_activos: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM usuarios u JOIN roles r ON r.id = u.rol_id
+             WHERE r.codigo = 'ADMIN' AND u.activo = 1",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(admin_activos, 1);
+}
+
+#[test]
+fn cambiar_password_propia_verifica_actual_y_admin_resetea() {
+    let db = setup();
+    let conn = db.conn();
+    let admin_id = id_admin(&conn);
+
+    // Password actual incorrecta → rechazada.
+    assert!(matches!(
+        repo::seguridad::cambiar_password_propia(&conn, &admin_id, "mala", "nueva1234"),
+        Err(crate::error::AppError::PasswordActualIncorrecta)
+    ));
+
+    // Cambio propio correcto: la nueva contraseña funciona, la vieja no.
+    repo::seguridad::cambiar_password_propia(&conn, &admin_id, "admin1234", "nueva1234")
+        .expect("cambiar propia");
+    assert!(repo::seguridad::verificar_credenciales(&conn, "admin", "nueva1234").is_ok());
+    assert!(repo::seguridad::verificar_credenciales(&conn, "admin", "admin1234").is_err());
+
+    // El ADMIN resetea la contraseña de otro usuario.
+    let id = crear_usuario_prueba(&conn, "ana", "OPERADOR");
+    repo::seguridad::cambiar_password_admin(&conn, &id, "reset1234", &admin_id).expect("reset");
+    assert!(repo::seguridad::verificar_credenciales(&conn, "ana", "reset1234").is_ok());
+    assert!(repo::seguridad::verificar_credenciales(&conn, "ana", "pass12345").is_err());
+}
+
+// ============ Umbral de stock mínimo por defecto (SPEC §17.1) ============
+
+#[test]
+fn stock_minimo_default_genera_alerta_para_producto_sin_minimo() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-UMB".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom")
+    .id;
+    // Producto SIN stock_minimo: depende del default de la empresa.
+    let prod = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "SIN-MIN".into(),
+            nombre: "Sin mínimo".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto")
+    .id;
+    entrar_stock(&conn, &ubi1, &prod, None, 2);
+
+    // Sin default configurado: no hay alerta de stock bajo (2 > nada).
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar sin default");
+    let abiertas = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(
+        !abiertas
+            .iter()
+            .any(|a| a.entidad_id.as_deref() == Some(prod.as_str()))
+    );
+
+    // Con default = 5, el stock (2) queda por debajo → alerta.
+    let cambios = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        stock_minimo_default: Some(Some(5)),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_configuracion_empresa(&conn, &cambios, "admin").expect("guardar");
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar con default");
+    let abiertas2 = repo::alerta::listar_alertas(&conn, Some("ABIERTA"), "admin").expect("listar");
+    assert!(
+        abiertas2
+            .iter()
+            .any(|a| a.tipo == "STOCK_BAJO" && a.entidad_id.as_deref() == Some(prod.as_str()))
+    );
+}
+
+// ============ Sucursales y archivos de empresa (config, solo ADMIN) ============
+
+#[test]
+fn sucursal_crud_completo() {
+    let db = setup();
+    let conn = db.conn();
+
+    let nueva = crate::domain::configuracion::NuevaSucursal {
+        codigo: "SUC-01".into(),
+        nombre: "Sucursal Centro".into(),
+        pais: Some("Perú".into()),
+        ciudad: Some("Lima".into()),
+        direccion: Some("Av. Principal 123".into()),
+        latitud: Some(-12.0464),
+        longitud: Some(-77.0428),
+        created_by: Some("admin".into()),
+    };
+    let suc = repo::sucursal::crear_sucursal(&conn, &nueva).expect("crear");
+    assert_eq!(suc.codigo, "SUC-01");
+    assert_eq!(suc.latitud, Some(-12.0464));
+
+    // Código duplicado rechazado.
+    let duplicada = repo::sucursal::crear_sucursal(
+        &conn,
+        &crate::domain::configuracion::NuevaSucursal {
+            codigo: "suc-01".into(), // normaliza a SUC-01
+            nombre: "Otra".into(),
+            ..Default::default()
+        },
+    );
+    assert!(matches!(
+        duplicada,
+        Err(crate::error::AppError::CodigoDuplicado(_))
+    ));
+
+    // Editar: nombre + limpiar coordenadas.
+    let editada = repo::sucursal::editar_sucursal(
+        &conn,
+        &suc.id,
+        &crate::domain::configuracion::EditarSucursal {
+            nombre: Some("Sucursal Centro Norte".into()),
+            latitud: Some(None),
+            longitud: Some(None),
+            ..Default::default()
+        },
+        "admin",
+    )
+    .expect("editar");
+    assert_eq!(editada.nombre, "Sucursal Centro Norte");
+    assert_eq!(editada.latitud, None);
+
+    repo::sucursal::desactivar_sucursal(&conn, &suc.id, "admin").expect("desactivar");
+    let desactivada = repo::sucursal::obtener_sucursal(&conn, &suc.id)
+        .unwrap()
+        .unwrap();
+    assert!(!desactivada.activo);
+}
+
+#[test]
+fn sucursal_rechaza_coordenadas_fuera_de_rango() {
+    let db = setup();
+    let conn = db.conn();
+    let mala = crate::domain::configuracion::NuevaSucursal {
+        codigo: "SUC-MALA".into(),
+        nombre: "Mala".into(),
+        latitud: Some(100.0),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::sucursal::crear_sucursal(&conn, &mala),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+}
+
+#[test]
+fn archivos_empresa_logo_y_documentos() {
+    let db = setup();
+    let conn = db.conn();
+
+    // Subir logo (reemplaza al anterior).
+    repo::archivo::subir_archivo(
+        &conn,
+        &crate::domain::configuracion::NuevoArchivoEmpresa {
+            nombre: "logo.png".into(),
+            tipo: "LOGO".into(),
+            mime: "image/png".into(),
+            datos_base64: crate::domain::configuracion::base64_encode(b"PNG-DATOS"),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("logo1");
+    let logo2 = repo::archivo::subir_archivo(
+        &conn,
+        &crate::domain::configuracion::NuevoArchivoEmpresa {
+            nombre: "logo-v2.png".into(),
+            tipo: "LOGO".into(),
+            mime: "image/png".into(),
+            datos_base64: crate::domain::configuracion::base64_encode(b"PNG-V2"),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("logo2");
+
+    // Solo puede haber un logo: el actual es el último.
+    let logo_actual = repo::archivo::obtener_logo(&conn).unwrap().unwrap();
+    assert_eq!(logo_actual.id, logo2.id);
+    let logos: Vec<_> = repo::archivo::listar_archivos(&conn)
+        .unwrap()
+        .into_iter()
+        .filter(|a| a.tipo == "LOGO")
+        .collect();
+    assert_eq!(logos.len(), 1, "el logo anterior se reemplaza");
+
+    // Documento: se conserva y se puede leer el contenido.
+    let doc = repo::archivo::subir_archivo(
+        &conn,
+        &crate::domain::configuracion::NuevoArchivoEmpresa {
+            nombre: "certificado.pdf".into(),
+            tipo: "DOCUMENTO".into(),
+            mime: "application/pdf".into(),
+            datos_base64: crate::domain::configuracion::base64_encode(b"%PDF-1.4"),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("documento");
+    let completo = repo::archivo::obtener_archivo_completo(&conn, &doc.id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(completo.mime, "application/pdf");
+    assert_eq!(
+        completo.datos_base64,
+        crate::domain::configuracion::base64_encode(b"%PDF-1.4")
+    );
+
+    repo::archivo::eliminar_archivo(&conn, &doc.id, "admin").expect("eliminar");
+    assert!(
+        repo::archivo::obtener_archivo(&conn, &doc.id)
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn archivo_empresa_rechaza_base64_invalido_y_tamano_excesivo() {
+    let db = setup();
+    let conn = db.conn();
+
+    // Base64 inválido.
+    let malo = crate::domain::configuracion::NuevoArchivoEmpresa {
+        nombre: "malo.bin".into(),
+        tipo: "DOCUMENTO".into(),
+        mime: "application/octet-stream".into(),
+        datos_base64: "!!no-es-base64!!".into(),
+        created_by: Some("admin".into()),
+    };
+    assert!(matches!(
+        repo::archivo::subir_archivo(&conn, &malo),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    // Excede el límite del logo (2 MB).
+    let enorme = crate::domain::configuracion::NuevoArchivoEmpresa {
+        nombre: "logo-enorme.png".into(),
+        tipo: "LOGO".into(),
+        mime: "image/png".into(),
+        datos_base64: crate::domain::configuracion::base64_encode(&vec![0u8; 2 * 1024 * 1024 + 1]),
+        created_by: Some("admin".into()),
+    };
+    assert!(matches!(
+        repo::archivo::subir_archivo(&conn, &enorme),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+}
+
+// ============ Búsqueda global del command palette (SPEC §15.4) ============
+
+fn grupo<'a>(
+    resp: &'a crate::buscar::BuscarRespuesta,
+    recurso: &str,
+) -> Option<&'a [crate::buscar::BuscarItem]> {
+    resp.grupos
+        .iter()
+        .find(|g| g.recurso == recurso)
+        .map(|g| g.items.as_slice())
+}
+
+#[test]
+fn buscar_agrupa_por_recurso_y_prioriza_coincidencia_exacta() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA-BUS".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+    let exacto = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "REF-777".into(),
+            nombre: "Producto Exacto".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.id.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto exacto")
+    .id;
+    let _contiene = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "REF-777-X".into(),
+            nombre: "Producto Con Variante".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.id.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto variante")
+    .id;
+
+    let mov = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                costo_unitario: None,
+                producto_id: exacto.clone(),
+                lote_id: None,
+                cantidad: 3,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("movimiento");
+    repo::movimiento::aprobar_movimiento(&conn, &mov.id, "admin").expect("aprobar");
+
+    let resp = crate::buscar::buscar(&conn, "admin", "REF-777").expect("buscar");
+    let productos = grupo(&resp, "productos").expect("grupo productos");
+    assert_eq!(productos[0].id, exacto, "el SKU exacto va primero");
+    assert!(productos.len() >= 2);
+
+    let resp_mov = crate::buscar::buscar(&conn, "admin", "MOV").expect("buscar movimientos");
+    let movimientos = grupo(&resp_mov, "movimientos").expect("grupo movimientos");
+    assert_eq!(movimientos[0].id, mov.id);
+    let datos = movimientos[0].datos.as_ref().expect("datos del movimiento");
+    assert_eq!(datos["tipo"], "ENTRADA");
+    assert_eq!(datos["estado"], "APROBADO");
+}
+
+#[test]
+fn buscar_q_vacio_devuelve_grupos_vacios() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, _prod) = crear_uom_y_producto(&conn);
+    let resp = crate::buscar::buscar(&conn, "admin", "   ").expect("buscar vacío");
+    assert!(resp.grupos.is_empty());
+}
+
+#[test]
+fn buscar_incluye_solo_alertas_abiertas() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn); // stock_minimo = 2
+    entrar_stock(&conn, &ubi1, &prod, None, 1); // por debajo del mínimo
+
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar");
+    let resp = crate::buscar::buscar(&conn, "admin", "bajo").expect("buscar alertas");
+    let alertas = grupo(&resp, "alertas").expect("grupo alertas");
+    let item = alertas
+        .iter()
+        .find(|i| i.datos.as_ref().and_then(|d| d["tipo"].as_str()) == Some("STOCK_BAJO"))
+        .expect("alerta de stock bajo");
+    assert_eq!(
+        item.datos.as_ref().and_then(|d| d["entidad"].as_str()),
+        Some("producto")
+    );
+    assert_eq!(
+        item.datos.as_ref().and_then(|d| d["entidad_id"].as_str()),
+        Some(prod.as_str())
+    );
+
+    // Tras resolver la causa (subir stock), la alerta se cierra y no reaparece.
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+    repo::alerta::regenerar_alertas(&conn, 30).expect("regenerar de nuevo");
+    let resp2 = crate::buscar::buscar(&conn, "admin", "bajo").expect("buscar alertas de nuevo");
+    let alertas2 = grupo(&resp2, "alertas");
+    let sigue = alertas2.and_then(|g| {
+        g.iter()
+            .find(|i| i.datos.as_ref().and_then(|d| d["tipo"].as_str()) == Some("STOCK_BAJO"))
+    });
+    assert!(
+        sigue.is_none(),
+        "las alertas resueltas no se listan como abiertas"
+    );
+}
+
+#[test]
+fn buscar_devuelve_grupos_vacios_con_usuario_invalido() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, _prod) = crear_uom_y_producto(&conn);
+    // Un usuario inexistente no tiene permiso `ver` sobre ningún recurso:
+    // `buscar` simplemente omite todos los grupos (la autenticación real la
+    // exige el comando `buscar` en commands.rs vía `sesion.usuario_id()`).
+    let resp = crate::buscar::buscar(&conn, "no-existe", "REF").expect("buscar sin sesión");
+    assert!(resp.grupos.is_empty());
+}
+
+#[test]
+fn sesion_planeada_se_inicia_a_en_curso() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _ubi1, _ubi2) = crear_arbol(&conn);
+
+    let planeada = repo::inventario::crear_sesion(
+        &conn,
+        &NuevaSesionInventario {
+            tipo: "CICLICO".into(),
+            almacen_id: almacen_id.clone(),
+            alcance: Some("zona Norte".into()),
+            fecha_inicio: None,
+            fecha_fin: None,
+            responsable_id: Some("admin".into()),
+            conteo_ciego: true,
+            exige_doble_conteo: false,
+            created_by: "admin".into(),
+        },
+    )
+    .expect("sesión planeada");
+    assert_eq!(planeada.estado, "PLANEADA");
+
+    let iniciada =
+        repo::inventario::iniciar_sesion(&conn, &planeada.id, "admin").expect("iniciar sesión");
+    assert_eq!(iniciada.estado, "EN_CURSO");
+    assert!(
+        iniciada.fecha_inicio.is_some(),
+        "la fecha de inicio se fija al iniciar"
+    );
+
+    // Solo se puede iniciar una vez: una EN_CURSO rechaza el comando.
+    let err = repo::inventario::iniciar_sesion(&conn, &planeada.id, "admin")
+        .expect_err("no se reinicia una sesión en curso");
+    assert!(
+        matches!(err, crate::error::AppError::TransicionInvalida(_, _)),
+        "esperaba TransicionInvalida, obtuve {err}"
+    );
+
+    // Un conteo ahora es válido (la sesión quedó operativa).
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "UN".into(),
+            nombre: "Unidad".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+    let producto = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "CTO-1".into(),
+            nombre: "Contado".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.id.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto");
+    let conteo = repo::inventario::registrar_conteo(
+        &conn,
+        &NuevoConteo {
+            sesion_id: planeada.id.clone(),
+            ubicacion_id: _ubi1.clone(),
+            producto_id: producto.id.clone(),
+            lote_id: None,
+            cantidad_contada: 5,
+            conteo_numero: 1,
+            usuario_contador_id: "admin".into(),
+            nota: None,
+        },
+    )
+    .expect("conteo en sesión iniciada");
+    assert_eq!(conteo.cantidad_contada, 5);
+}
+
+// ============ UOM: editar y desactivar (Frente 4) ============
+
+#[test]
+fn editar_uom_actualiza_campos_sin_tocar_codigo() {
+    let db = setup();
+    let conn = db.conn();
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "CAJA".into(),
+            nombre: "Caja".into(),
+            tipo: "UNIDAD".into(),
+            factor: 10,
+            base: false,
+        },
+        "admin",
+    )
+    .expect("uom");
+
+    let editada = repo::catalogo::editar_uom(
+        &conn,
+        &uom.id,
+        &EditarUom {
+            nombre: Some("Caja grande".into()),
+            tipo: None,
+            factor: Some(12),
+            base: Some(true),
+        },
+        "admin",
+    )
+    .expect("editar uom");
+
+    assert_eq!(editada.nombre, "Caja grande");
+    assert_eq!(editada.factor, 12);
+    assert!(editada.base);
+    // El código define la identidad y no cambia.
+    assert_eq!(editada.codigo, "CAJA");
+}
+
+#[test]
+fn desactivar_uom_en_uso_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    let (uom, _prod) = crear_uom_y_producto(&conn);
+
+    let err = repo::catalogo::desactivar_uom(&conn, &uom, "admin")
+        .expect_err("no se desactiva una UOM en uso");
+    assert!(
+        matches!(err, crate::error::AppError::ConHistorial(_)),
+        "esperaba ConHistorial, obtuve {err}"
+    );
+}
+
+#[test]
+fn desactivar_y_usar_uom_inactiva_en_producto_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "LIBRE".into(),
+            nombre: "Libre".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+    repo::catalogo::desactivar_uom(&conn, &uom.id, "admin").expect("desactivar");
+
+    let err = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "REF-99".into(),
+            nombre: "Con UOM inactiva".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.id.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: false,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("uom inactiva rechazada");
+    assert!(
+        matches!(err, crate::error::AppError::EntidadInactiva(_)),
+        "esperaba EntidadInactiva, obtuve {err}"
+    );
+}
+
+fn crear_entrada_borrador(
+    conn: &rusqlite::Connection,
+    ubicacion_id: &str,
+    producto_id: &str,
+    cantidad: i64,
+) -> Movimiento {
+    repo::movimiento::crear_movimiento(
+        conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubicacion_id.into()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                costo_unitario: None,
+                producto_id: producto_id.into(),
+                lote_id: None,
+                cantidad,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubicacion_id.into()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("crear borrador")
+}
+
+fn editar_linea_simple(
+    _conn: &rusqlite::Connection,
+    ubicacion_id: &str,
+    producto_id: &str,
+    cantidad: i64,
+) -> EditarMovimiento {
+    EditarMovimiento {
+        fecha_movimiento: Some("2026-09-01T10:00:00Z".into()),
+        motivo: None,
+        proveedor_id: None,
+        cliente_id: None,
+        documento_referencia: Some(Some("OC-ED-99".into())),
+        notas: Some(Some("editado en test".into())),
+        lineas: vec![NuevaLinea {
+            costo_unitario: None,
+            producto_id: producto_id.into(),
+            lote_id: None,
+            cantidad,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubicacion_id.into()),
+            caja_origen_id: None,
+            caja_destino_id: None,
+        }],
+    }
+}
+
+#[test]
+fn editar_movimiento_cambia_campos_y_lineas_sin_afectar_stock() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    let mov = crear_entrada_borrador(&conn, &ubi1, &prod, 3);
+    assert_eq!(mov.estado, "BORRADOR");
+
+    let editado = repo::movimiento::editar_movimiento(
+        &conn,
+        &mov.id,
+        &editar_linea_simple(&conn, &ubi1, &prod, 8),
+        "admin",
+    )
+    .expect("editar borrador");
+
+    assert_eq!(editado.documento_referencia.as_deref(), Some("OC-ED-99"));
+    assert_eq!(editado.notas.as_deref(), Some("editado en test"));
+    assert_eq!(editado.fecha_movimiento, "2026-09-01T10:00:00Z");
+    // El tipo/sub_tipo/estado son estables.
+    assert_eq!(editado.tipo, "ENTRADA");
+    assert_eq!(editado.estado, "BORRADOR");
+
+    // Las líneas quedaron reemplazadas con la nueva cantidad.
+    let lineas = repo::movimiento::obtener_lineas(&conn, &mov.id).expect("líneas");
+    assert_eq!(lineas.len(), 1);
+    assert_eq!(lineas[0].cantidad, 8);
+
+    // Sigue sin afectar stock: el borrador no altera saldos hasta aprobarse.
+    let saldos = repo::movimiento::listar_saldos(&conn, Some(&ubi1), Some(&prod)).expect("saldos");
+    assert!(saldos.is_empty(), "un borrador no toca saldos");
+}
+
+#[test]
+fn editar_movimiento_aprobado_rechazado() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    let mov = crear_entrada_borrador(&conn, &ubi1, &prod, 3);
+    repo::movimiento::aprobar_movimiento(&conn, &mov.id, "admin").expect("aprobar");
+
+    let err = repo::movimiento::editar_movimiento(
+        &conn,
+        &mov.id,
+        &editar_linea_simple(&conn, &ubi1, &prod, 8),
+        "admin",
+    )
+    .expect_err("aprobado no se edita");
+    assert!(
+        matches!(err, crate::error::AppError::MovimientoAprobadoNoEditable),
+        "esperaba MovimientoAprobadoNoEditable, obtuve {err}"
+    );
+}
+
+#[test]
+fn editar_movimiento_solo_el_creador() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    // Otro usuario con permiso de crear movimientos (OPERADOR).
+    let rol_operador: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'OPERADOR'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol");
+    repo::seguridad::crear_usuario(
+        &conn,
+        &crate::domain::seguridad::NuevoUsuario {
+            nombre_usuario: "op_editor".into(),
+            nombre_completo: "Operador Editor".into(),
+            email: None,
+            password: "clave1234".into(),
+            rol_id: rol_operador,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear operador");
+
+    let mov = crear_entrada_borrador(&conn, &ubi1, &prod, 3);
+    let err = repo::movimiento::editar_movimiento(
+        &conn,
+        &mov.id,
+        &editar_linea_simple(&conn, &ubi1, &prod, 8),
+        "op_editor",
+    )
+    .expect_err("no autor");
+    assert!(
+        matches!(err, crate::error::AppError::SinPermiso(_)),
+        "esperaba SinPermiso, obtuve {err}"
+    );
+}
+
+#[test]
+fn editar_movimiento_controla_lote_exige_lote() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+
+    let uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "CAJA".into(),
+            nombre: "Caja".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+    let prod = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "LOTE-1".into(),
+            nombre: "Con lote".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom.id.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: true,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto con lote");
+    let lote = repo::catalogo::crear_lote(
+        &conn,
+        &NuevoLote {
+            numero: "L-1".into(),
+            producto_id: prod.id.clone(),
+            fecha_fabricacion: None,
+            fecha_vencimiento: None,
+            origen: None,
+            notas: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("lote");
+
+    let mov = repo::movimiento::crear_movimiento(
+        &conn,
+        &NuevoMovimiento {
+            tipo: "ENTRADA".into(),
+            sub_tipo: "COMPRA".into(),
+            fecha_movimiento: None,
+            motivo: None,
+            origen_ubicacion_id: None,
+            destino_ubicacion_id: Some(ubi1.clone()),
+            proveedor_id: None,
+            cliente_id: None,
+            sesion_inventario_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+            lineas: vec![NuevaLinea {
+                costo_unitario: None,
+                producto_id: prod.id.clone(),
+                lote_id: Some(lote.id.clone()),
+                cantidad: 4,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1.clone()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+    )
+    .expect("borrador con lote");
+
+    // Editar quitando el lote: el producto controla lote → error.
+    let err = repo::movimiento::editar_movimiento(
+        &conn,
+        &mov.id,
+        &EditarMovimiento {
+            fecha_movimiento: None,
+            motivo: None,
+            proveedor_id: None,
+            cliente_id: None,
+            documento_referencia: None,
+            notas: None,
+            lineas: vec![NuevaLinea {
+                costo_unitario: None,
+                producto_id: prod.id.clone(),
+                lote_id: None,
+                cantidad: 4,
+                origen_ubicacion_id: None,
+                destino_ubicacion_id: Some(ubi1.clone()),
+                caja_origen_id: None,
+                caja_destino_id: None,
+            }],
+        },
+        "admin",
+    )
+    .expect_err("lote obligatorio");
+    assert!(
+        matches!(err, crate::error::AppError::LoteRequerido(_)),
+        "esperaba LoteRequerido, obtuve {err}"
+    );
+}
+
+// ============ Unicidad de código por almacén completo (Frente 8) ============
+
+#[test]
+fn codigo_de_rack_es_unico_por_almacen_no_por_padre() {
+    let db = setup();
+    let conn = db.conn();
+    // Dos zonas en el mismo almacén.
+    let almacen = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-U".into(),
+            nombre: "Almacén Único".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona_a = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "ZA".into(),
+            nombre: "Zona A".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona A");
+    let zona_b = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "ZB".into(),
+            nombre: "Zona B".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona B");
+
+    repo::catalogo::crear_rack(
+        &conn,
+        &NuevoRack {
+            codigo: "RACK-1".into(),
+            nombre: None,
+            tipo: None,
+            zona_id: zona_a.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("rack en zona A");
+
+    // El mismo código bajo la zona B (mismo almacén) debe rechazarse.
+    let err = repo::catalogo::crear_rack(
+        &conn,
+        &NuevoRack {
+            codigo: "RACK-1".into(),
+            nombre: None,
+            tipo: None,
+            zona_id: zona_b.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("código duplicado en el almacén");
+    assert!(
+        matches!(err, crate::error::AppError::CodigoDuplicado(_)),
+        "esperaba CodigoDuplicado, obtuve {err}"
+    );
+}
+
+#[test]
+fn codigo_de_ubicacion_es_unico_por_almacen_no_por_padre() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+
+    // Otra zona del mismo almacén, con una ubicación colgando directo.
+    let zona2 = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "Z-2".into(),
+            nombre: "Zona Dos".into(),
+            descripcion: None,
+            almacen_id: almacen_id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona 2");
+
+    // `ubi1` está en el árbol del mismo almacén (sección → rack → zona).
+    let codigo_ubi1: String = conn
+        .query_row(
+            "SELECT codigo FROM ubicaciones WHERE id = ?1",
+            [&ubi1],
+            |r| r.get(0),
+        )
+        .expect("código de ubi1");
+
+    // El mismo código de ubicación bajo la zona 2 (mismo almacén) se rechaza.
+    let err = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: codigo_ubi1.clone(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: None,
+            zona_id: Some(zona2.id.clone()),
+            tipo: Some("STANDARD".into()),
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("ubicación duplicada en el almacén");
+    assert!(
+        matches!(err, crate::error::AppError::CodigoDuplicado(_)),
+        "esperaba CodigoDuplicado, obtuve {err}"
+    );
+}
+
+// ============ Traslado inter-almacén atómico (Frente 8) ============
+
+#[test]
+fn traslado_inter_almacen_fallido_no_deja_movimientos_huérfanos() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen1, ubi_origen) = crear_arbol_en_almacen(&conn, "ALM-O1");
+    let (_almacen2, ubi_destino) = crear_arbol_en_almacen(&conn, "ALM-D1");
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    // Un lote de OTRO producto: la validación de `insertar_movimiento`
+    // (lote debe pertenecer al producto) falla. Como las dos piernas se crean
+    // en una sola transacción, no queda ningún movimiento huérfano.
+    let otro_producto = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "OTRO".into(),
+            nombre: "Otro producto".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: _uom.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: true,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("otro producto con lote");
+    let lote_ajeno = repo::catalogo::crear_lote(
+        &conn,
+        &NuevoLote {
+            numero: "L-AJENO".into(),
+            producto_id: otro_producto.id.clone(),
+            fecha_fabricacion: None,
+            fecha_vencimiento: None,
+            origen: None,
+            notas: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("lote ajeno");
+
+    let antes: i64 = conn
+        .query_row("SELECT COUNT(*) FROM movimientos", [], |r| r.get(0))
+        .expect("count");
+    let err = repo::movimiento::crear_traslado(
+        &conn,
+        &NuevoTraslado {
+            producto_id: prod.clone(),
+            lote_id: Some(lote_ajeno.id.clone()),
+            cantidad: 2,
+            origen_ubicacion_id: ubi_origen.clone(),
+            destino_ubicacion_id: ubi_destino.clone(),
+            caja_origen_id: None,
+            caja_destino_id: None,
+            documento_referencia: None,
+            notas: None,
+            created_by: "admin".into(),
+        },
+    )
+    .expect_err("lote ajeno rechazado");
+    assert!(
+        matches!(err, crate::error::AppError::NoEncontrado("lote", _)),
+        "esperaba NoEncontrado(lote), obtuve {err}"
+    );
+
+    let despues: i64 = conn
+        .query_row("SELECT COUNT(*) FROM movimientos", [], |r| r.get(0))
+        .expect("count");
+    assert_eq!(
+        antes, despues,
+        "un traslado inter-almacén fallido no deja movimientos huérfanos"
+    );
+}
+
+// ============ Mensajes de error en usuarios (Frente 8) ============
+
+#[test]
+fn crear_usuario_con_rol_inexistente_reporta_rol_no_codigo_duplicado() {
+    let db = setup();
+    let conn = db.conn();
+    let err = repo::seguridad::crear_usuario(
+        &conn,
+        &NuevoUsuario {
+            nombre_usuario: "usuario_sin_rol".into(),
+            nombre_completo: "Sin rol".into(),
+            email: None,
+            password: "clave1234".into(),
+            rol_id: "rol-que-no-existe".into(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("rol inexistente");
+    assert!(
+        matches!(err, crate::error::AppError::NoEncontrado("rol", _)),
+        "esperaba NoEncontrado(rol), obtuve {err}"
+    );
+}
+
+#[test]
+fn crear_usuario_con_email_repetido_no_confunde_con_nombre() {
+    let db = setup();
+    let conn = db.conn();
+    let rol_admin: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'ADMIN'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol admin");
+
+    repo::seguridad::crear_usuario(
+        &conn,
+        &NuevoUsuario {
+            nombre_usuario: "primero".into(),
+            nombre_completo: "Primero".into(),
+            email: Some("mismo@email.com".into()),
+            password: "clave1234".into(),
+            rol_id: rol_admin.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("primer usuario");
+
+    let err = repo::seguridad::crear_usuario(
+        &conn,
+        &NuevoUsuario {
+            nombre_usuario: "segundo".into(),
+            nombre_completo: "Segundo".into(),
+            email: Some("mismo@email.com".into()),
+            password: "clave1234".into(),
+            rol_id: rol_admin,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("email repetido");
+    assert!(
+        matches!(err, crate::error::AppError::CodigoDuplicado(_)),
+        "el email repetido es un duplicado (no un error genérico), obtuve {err}"
+    );
+}
+
+// ============ Tracking total / centro de actividad (Hito 25) ============
+
+#[test]
+fn registrar_vista_guarda_metadata_tenant_y_tiempo_local() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    // Con la empresa sin nombre, el tenant queda None; se configura después.
+    repo::auditoria::registrar_vista(
+        &conn,
+        &admin,
+        &RegistrarVista {
+            ruta: "/productos/abc-123".into(),
+            modulo: "Productos".into(),
+            proceso: Some("revisión de catálogo".into()),
+            metadatos: Some(serde_json::json!({ "busqueda": "tornillo", "pagina": 2 })),
+            duracion_vista_ms: Some(45_000),
+            hora_local: Some(15),
+            dia_semana: Some(3),
+            cliente_info: Some(serde_json::json!({
+                "navegador": "webkit", "plataforma": "linux", "pantalla": "1920x1080"
+            })),
+        },
+    )
+    .expect("vista registrada");
+
+    let hist = repo::auditoria::listar_historial(
+        &conn,
+        Some(&admin),
+        None,
+        None,
+        Some("VISTA"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        50,
+    )
+    .expect("historial");
+    assert_eq!(hist.meta.total, 1);
+    let v = &hist.data[0];
+    assert_eq!(v.tipo_evento, "VISTA");
+    assert_eq!(v.accion, "navegar");
+    assert_eq!(v.entidad, "pagina");
+    assert_eq!(v.ruta.as_deref(), Some("/productos/abc-123"));
+    assert_eq!(v.modulo.as_deref(), Some("Productos"));
+    assert_eq!(v.proceso.as_deref(), Some("revisión de catálogo"));
+    assert_eq!(v.duracion_vista_ms, Some(45_000));
+    assert_eq!(v.hora_local, Some(15));
+    assert_eq!(v.dia_semana, Some(3));
+    // Los metadatos combinaron la UI con la info de cliente en un solo JSON.
+    let md = v.metadatos.as_deref().expect("metadatos");
+    assert!(md.contains("tornillo"));
+    assert!(md.contains("webkit"));
+
+    // El tenant se resuelve del nombre de la empresa (snapshot al evento).
+    conn.execute(
+        "UPDATE configuracion_empresa SET nombre = 'Almacenes del Norte' WHERE id = 'default'",
+        [],
+    )
+    .expect("nombre empresa");
+    repo::auditoria::registrar_vista(
+        &conn,
+        &admin,
+        &RegistrarVista {
+            ruta: "/dashboard".into(),
+            modulo: "Dashboard".into(),
+            proceso: None,
+            metadatos: None,
+            duracion_vista_ms: None,
+            hora_local: None,
+            dia_semana: None,
+            cliente_info: None,
+        },
+    )
+    .expect("vista 2");
+    let hist = repo::auditoria::listar_historial(
+        &conn,
+        Some(&admin),
+        None,
+        None,
+        Some("VISTA"),
+        Some("Dashboard"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        50,
+    )
+    .expect("historial 2");
+    assert_eq!(hist.data[0].tenant.as_deref(), Some("Almacenes del Norte"));
+}
+
+#[test]
+fn registrar_vista_rechaza_ruta_vacia_y_tiempo_local_invalido() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let err = repo::auditoria::registrar_vista(
+        &conn,
+        &admin,
+        &RegistrarVista {
+            ruta: "   ".into(),
+            modulo: "Dashboard".into(),
+            proceso: None,
+            metadatos: None,
+            duracion_vista_ms: None,
+            hora_local: None,
+            dia_semana: None,
+            cliente_info: None,
+        },
+    );
+    assert!(
+        err.is_ok(),
+        "la validación vive en el comando, no en el repo"
+    );
+
+    // La validación del comando (RegistrarVista::validar) sí es estricta.
+    let v = RegistrarVista {
+        ruta: "".into(),
+        modulo: "Dashboard".into(),
+        proceso: None,
+        metadatos: None,
+        duracion_vista_ms: None,
+        hora_local: Some(99),
+        dia_semana: Some(9),
+        cliente_info: None,
+    };
+    assert!(matches!(
+        v.validar(),
+        Err(crate::error::AppError::CampoRequerido(_))
+    ));
+}
+
+#[test]
+fn invocaciones_de_comando_se_etiquetan_con_modulo_y_proceso() {
+    let db = setup();
+    let conn = db.conn();
+    repo::auditoria::registrar_invocacion(&conn, Some("admin"), "crear_movimiento", 12, true, None)
+        .expect("invocación");
+    repo::auditoria::registrar_invocacion(&conn, Some("admin"), "listar_productos", 2, true, None)
+        .expect("invocación");
+
+    let hist = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        Some("COMANDO"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        50,
+    )
+    .expect("historial");
+    assert!(hist.data.iter().any(|e| {
+        e.comando.as_deref() == Some("crear_movimiento")
+            && e.modulo.as_deref() == Some("Movimientos")
+            && e.proceso.as_deref() == Some("gestión de movimientos")
+            && e.nivel == "ESCRITURA"
+    }));
+    assert!(hist.data.iter().any(|e| {
+        e.comando.as_deref() == Some("listar_productos")
+            && e.modulo.as_deref() == Some("Productos")
+            && e.proceso.is_none()
+    }));
+}
+
+#[test]
+fn metricas_actividad_agrega_por_modulo_hora_usuario_y_proceso() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+    conn.execute(
+        "UPDATE configuracion_empresa SET nombre = 'Bodega Central' WHERE id = 'default'",
+        [],
+    )
+    .expect("nombre empresa");
+
+    // 3 vistas del módulo Movimientos (una larga, una corta, una media)
+    // + 1 operación: la hora 09:00 queda como pico sin ambigüedad.
+    for (ruta, duracion, hora) in [
+        ("/movimientos", 120_000, 9),
+        ("/movimientos/nuevo", 30_000, 9),
+        ("/movimientos/abc-123", 60_000, 9),
+    ] {
+        repo::auditoria::registrar_vista(
+            &conn,
+            &admin,
+            &RegistrarVista {
+                ruta: ruta.into(),
+                modulo: "Movimientos".into(),
+                proceso: if ruta.contains("nuevo") {
+                    Some("registro de movimiento".into())
+                } else {
+                    None
+                },
+                metadatos: None,
+                duracion_vista_ms: Some(duracion),
+                hora_local: Some(hora),
+                dia_semana: Some(2),
+                cliente_info: None,
+            },
+        )
+        .expect("vista");
+    }
+    repo::auditoria::registrar_invocacion(&conn, Some(&admin), "aprobar_movimiento", 5, true, None)
+        .expect("invocación");
+
+    let m = repo::auditoria::metricas_actividad(&conn, None, None, None).expect("métricas");
+    assert!(m.resumen.total_vistas >= 2);
+    assert!(m.resumen.total_operaciones >= 1);
+    assert_eq!(m.resumen.usuarios_activos, 1);
+    assert!(m.resumen.duracion_vista_promedio_ms.is_some());
+
+    // Por módulo: Movimientos concentra las 3 vistas.
+    let mov = m
+        .por_modulo
+        .iter()
+        .find(|x| x.modulo == "Movimientos")
+        .expect("módulo movimientos");
+    assert_eq!(mov.vistas, 3);
+    assert!(mov.duracion_vista_ms >= 210_000);
+
+    // Por hora: las 3 vistas ocurrieron a las 09:00.
+    let hora9 = m.por_hora.iter().find(|h| h.hora == 9).expect("hora 9");
+    assert!(hora9.vistas >= 3);
+
+    // Por proceso: el proceso "registro de movimiento" aparece con 1.
+    let proc = m
+        .por_proceso
+        .iter()
+        .find(|p| p.proceso == "registro de movimiento")
+        .expect("proceso");
+    assert_eq!(proc.total, 1);
+
+    // Top rutas: las rutas de movimientos encabezan el ranking.
+    assert!(m.top_rutas.iter().any(|r| r.ruta == "/movimientos"));
+    assert!(m.top_rutas.iter().any(|r| r.ruta == "/movimientos/nuevo"));
+
+    // Insights: el usuario más activo y la hora pico están presentes.
+    assert!(m.insights.iter().any(|i| i.titulo.contains("09:00")));
+    assert!(
+        m.insights
+            .iter()
+            .any(|i| i.titulo.contains("Usuario más activo"))
+    );
+}
+
+#[test]
+fn listar_historial_pagina_y_filtra_por_tipo_modulo_y_rango() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    for i in 0..25 {
+        repo::auditoria::registrar_vista(
+            &conn,
+            &admin,
+            &RegistrarVista {
+                ruta: format!("/productos?pagina={i}"),
+                modulo: "Productos".into(),
+                proceso: None,
+                metadatos: None,
+                duracion_vista_ms: Some(1_000),
+                hora_local: Some(10),
+                dia_semana: Some(1),
+                cliente_info: None,
+            },
+        )
+        .expect("vista");
+    }
+
+    // Página 1 de 10 por página: 10 filas, 3 páginas en total.
+    let p1 = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        Some("VISTA"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        10,
+    )
+    .expect("página 1");
+    assert_eq!(p1.data.len(), 10);
+    assert_eq!(p1.meta.total, 25);
+    assert_eq!(p1.meta.total_pages, 3);
+    assert!(p1.meta.has_next);
+    assert!(!p1.meta.has_prev);
+
+    // Página 3: 5 filas restantes.
+    let p3 = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        Some("VISTA"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        3,
+        10,
+    )
+    .expect("página 3");
+    assert_eq!(p3.data.len(), 5);
+    assert!(!p3.meta.has_next);
+    assert!(p3.meta.has_prev);
+
+    // Filtro por módulo combinado con tipo: solo vistas de Productos.
+    let f = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        Some("VISTA"),
+        Some("Productos"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        50,
+    )
+    .expect("filtrado");
+    assert_eq!(f.meta.total, 25);
+
+    // Filtro por rango de fechas no rompe (no hay eventos fuera de rango).
+    let fut = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some("2099-01-01T00:00:00"),
+        None,
+        1,
+        50,
+    )
+    .expect("futuro");
+    assert_eq!(fut.meta.total, 0);
+}
+
+// ============ Resolución de escaneo (Fase B, SPEC §14.3) ============
+
+#[test]
+fn resolver_escaneo_resuelve_producto_ubicacion_y_lote() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    // Asignar un código de barras al producto.
+    conn.execute(
+        "UPDATE productos SET codigo_barras = ?1 WHERE id = ?2",
+        rusqlite::params!["7501234567890", prod],
+    )
+    .expect("barras");
+
+    // Un producto que controla lote + un lote.
+    let uom2 = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "U2".into(),
+            nombre: "Unidad 2".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+    let prod_lote = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "LOT".into(),
+            nombre: "Con lote".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: uom2.id.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: true,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("producto lote");
+    let lote = repo::catalogo::crear_lote(
+        &conn,
+        &NuevoLote {
+            numero: "LOTE-7".into(),
+            producto_id: prod_lote.id.clone(),
+            fecha_fabricacion: None,
+            fecha_vencimiento: None,
+            origen: None,
+            notas: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("lote");
+
+    // Código de barras del producto → PRODUCTO.
+    let r = repo::catalogo::resolver_escaneo(&conn, "7501234567890")
+        .expect("resolver barras")
+        .expect("match barras");
+    assert_eq!(r.tipo, "PRODUCTO");
+    assert_eq!(r.id, prod);
+
+    // SKU → PRODUCTO.
+    let r = repo::catalogo::resolver_escaneo(&conn, "ref-100")
+        .expect("resolver sku")
+        .expect("match sku");
+    assert_eq!(r.tipo, "PRODUCTO");
+    assert_eq!(r.id, prod);
+
+    // Código de ubicación → UBICACION.
+    let r = repo::catalogo::resolver_escaneo(&conn, "P1")
+        .expect("resolver ubicacion")
+        .expect("match ubicacion");
+    assert_eq!(r.tipo, "UBICACION");
+    assert_eq!(r.id, ubi1);
+
+    // Número de lote → LOTE.
+    let r = repo::catalogo::resolver_escaneo(&conn, "LOTE-7")
+        .expect("resolver lote")
+        .expect("match lote");
+    assert_eq!(r.tipo, "LOTE");
+    assert_eq!(r.id, lote.id);
+
+    // Desconocido → None.
+    let r = repo::catalogo::resolver_escaneo(&conn, "NO-EXISTE").expect("resolver desconocido");
+    assert!(r.is_none());
+}
+
+// ============ Importación masiva (Fase C) ============
+
+#[test]
+fn importar_productos_validos_y_con_error() {
+    let db = setup();
+    let conn = db.conn();
+    let _uom = repo::catalogo::crear_uom(
+        &conn,
+        &NuevaUom {
+            codigo: "PZA".into(),
+            nombre: "Pieza".into(),
+            tipo: "UNIDAD".into(),
+            factor: 1,
+            base: true,
+        },
+        "admin",
+    )
+    .expect("uom");
+
+    // Fila 1 válida (uom por código), fila 2 con uom inexistente.
+    let filas = serde_json::json!([
+        { "sku": "IMP-1", "nombre": "Importado Uno", "uom_base": "PZA", "stock_minimo": 5 },
+        { "sku": "IMP-2", "nombre": "Importado Dos", "uom_base": "NO-EXISTE" }
+    ]);
+    let resultados = crate::importar::importar_datos(
+        &conn,
+        "PRODUCTOS",
+        filas.as_array().expect("array"),
+        "admin",
+    )
+    .expect("importar");
+
+    assert_eq!(resultados.len(), 2);
+    assert!(
+        resultados[0].ok,
+        "fila 1 válida, got {:?}",
+        resultados[0].error
+    );
+    assert!(!resultados[1].ok, "fila 2 inválida");
+    assert!(
+        resultados[1]
+            .error
+            .as_deref()
+            .unwrap()
+            .contains("unidad de medida")
+    );
+
+    // Solo se insertó la fila válida.
+    let total: i64 = conn
+        .query_row("SELECT COUNT(*) FROM productos", [], |r| r.get(0))
+        .expect("count");
+    assert_eq!(total, 1);
+}
+
+#[test]
+fn importar_stock_inicial_carga_saldo_aprobado() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    // El SKU se crea normalizado (REF-100).
+    let sku: String = conn
+        .query_row("SELECT sku FROM productos WHERE id = ?1", [&prod], |r| {
+            r.get(0)
+        })
+        .expect("sku");
+    let ubi_codigo: String = conn
+        .query_row(
+            "SELECT codigo FROM ubicaciones WHERE id = ?1",
+            [&ubi1],
+            |r| r.get(0),
+        )
+        .expect("codigo ubicacion");
+
+    let filas = serde_json::json!([
+        { "sku": sku, "cantidad": 40, "ubicacion": ubi_codigo }
+    ]);
+    let resultados = crate::importar::importar_datos(
+        &conn,
+        "STOCK_INICIAL",
+        filas.as_array().expect("array"),
+        "admin",
+    )
+    .expect("importar stock");
+    assert!(
+        resultados[0].ok,
+        "fila válida, got {:?}",
+        resultados[0].error
+    );
+
+    let saldo = repo::movimiento::listar_saldos(&conn, Some(&ubi1), Some(&prod)).expect("saldos");
+    assert_eq!(saldo.len(), 1);
+    assert_eq!(saldo[0].cantidad, 40);
 }

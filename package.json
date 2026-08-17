@@ -21,13 +21,15 @@
     "release:patch": "node scripts/release.mjs patch --tag",
     "release:minor": "node scripts/release.mjs minor --tag",
     "release:major": "node scripts/release.mjs major --tag",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:web": "node scripts/web.mjs"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/geist-sans": "^5.3.0",
     "@hookform/resolvers": "^5.7.1",
     "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-virtual": "^3.14.9",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "date-fns": "^4.4.0",

@@ -30,21 +30,21 @@
   border-color: transparent;
   color: var(--color-white);
   box-shadow: var(--shadow-xs);
-  transition: var(--transition-elevate);
 }
 
 .btn--primary:hover {
   background-color: var(--color-blue-600);
   border-color: transparent;
+  color: var(--color-white);
+  text-decoration: none;
   box-shadow: var(--shadow-glow-primary);
-  transform: translateY(-1px);
 }
 
 .btn--primary:active {
   background-color: var(--color-blue-700);
   border-color: var(--color-blue-700);
+  color: var(--color-white);
   box-shadow: var(--shadow-xs);
-  transform: translateY(0);
 }
 
 .btn--secondary {
@@ -55,10 +55,13 @@
 
 .btn--secondary:hover {
   background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+  text-decoration: none;
 }
 
 .btn--secondary:active {
   background-color: var(--color-gray-200);
+  color: var(--color-gray-700);
 }
 
 .btn--danger {
@@ -66,21 +69,21 @@
   border-color: transparent;
   color: var(--color-white);
   box-shadow: var(--shadow-xs);
-  transition: var(--transition-elevate);
 }
 
 .btn--danger:hover {
   background-color: var(--color-danger-600);
   border-color: transparent;
+  color: var(--color-white);
+  text-decoration: none;
   box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
 }
 
 .btn--danger:active {
   background-color: var(--color-danger-600);
   border-color: transparent;
+  color: var(--color-white);
   box-shadow: var(--shadow-xs);
-  transform: translateY(0);
 }
 
 .btn--ghost {
@@ -91,6 +94,8 @@
 
 .btn--ghost:hover {
   background-color: var(--color-blue-50);
+  color: var(--color-blue-600);
+  text-decoration: none;
 }
 
 .btn--link {
@@ -501,6 +506,20 @@
 
 .table-wrap {
   overflow-x: auto;
+}
+
+/* Tabla virtualizada (STACK §4.6): contenedor de scroll vertical con altura
+   acotada; solo se renderizan las filas visibles + overscan. Las filas
+   separadoras (`table__spacer`) reservan el alto total para que el scroll
+   sea continuo. */
+.table-wrap--virtual {
+  max-height: 30rem;
+  overflow-y: auto;
+}
+
+.table__spacer {
+  border: 0;
+  padding: 0;
 }
 
 .badge {
@@ -956,4 +975,424 @@
     right: var(--space-4);
     bottom: var(--space-4);
   }
+}
+
+/* ============ Gráficas de reportes (CSS puro, DESIGN §3/§6) ============ */
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 11rem;
+  padding: var(--space-4) var(--space-2) 0;
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.chart__col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.chart__bar {
+  width: 70%;
+  min-height: 2px;
+  background: var(--color-blue-500);
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
+}
+
+.chart__bar--muted {
+  background: var(--color-gray-300);
+}
+
+.chart__label {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+.chart-row__label {
+  flex-shrink: 0;
+  width: 9rem;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-row__track {
+  flex: 1 1 auto;
+  height: var(--space-2);
+  overflow: hidden;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-full);
+}
+
+.chart-row__fill {
+  height: 100%;
+  background: var(--color-blue-500);
+  border-radius: var(--radius-full);
+}
+
+.chart-row__value {
+  flex-shrink: 0;
+  width: 4.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+  text-align: right;
+}
+
+/* ============ Selector de tema (DESIGN §3.1) ============ */
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.theme-picker__paleta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition-elevate);
+}
+
+.theme-picker__paleta:hover {
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-picker__paleta.is-selected {
+  border-color: var(--color-blue-500);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.theme-picker__muestras {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.theme-picker__muestra {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-full);
+}
+
+.theme-picker__muestra--heredar {
+  background: var(--color-surface-muted);
+}
+
+.theme-picker__nombre {
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+}
+
+/* ============ Selector de modo claro/oscuro ============ */
+
+.modo-picker {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.modo-picker__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--size-md);
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modo-picker__boton:hover {
+  background: var(--color-gray-100);
+}
+
+.modo-picker__boton.is-selected {
+  background: var(--color-blue-500);
+  border-color: transparent;
+  color: var(--color-white);
+}
+
+.modo-picker__muestra {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--radius-full);
+}
+
+.modo-picker__muestra--claro {
+  background: var(--color-white);
+  border: var(--border-width) solid var(--color-gray-300);
+}
+
+.modo-picker__muestra--oscuro {
+  background: var(--color-ink-900);
+  border: var(--border-width) solid var(--color-ink-600);
+}
+
+.modo-picker__muestra--heredar {
+  background: var(--color-gray-400);
+}
+
+/* ============ Notas y avisos de la sección Ayuda ============ */
+
+.ayuda-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.ayuda-nota__icon {
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+}
+
+.ayuda-nota__text {
+  min-width: 0;
+}
+
+.ayuda-nota--info {
+  background-color: var(--color-info-bg);
+  border-color: var(--color-blue-200);
+}
+
+.ayuda-nota--info .ayuda-nota__icon {
+  color: var(--color-info-text);
+}
+
+.ayuda-nota--info .ayuda-nota__text {
+  color: var(--color-info-text);
+}
+
+.ayuda-nota--warning {
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-500);
+}
+
+.ayuda-nota--warning .ayuda-nota__icon {
+  color: var(--color-warning-text);
+}
+
+.ayuda-nota--warning .ayuda-nota__text {
+  color: var(--color-warning-text);
+}
+
+.ayuda-nota--success {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-500);
+}
+
+.ayuda-nota--success .ayuda-nota__icon {
+  color: var(--color-success-text);
+}
+
+.ayuda-nota--success .ayuda-nota__text {
+  color: var(--color-success-text);
+}
+
+/* ============ Grid de documentación del índice de Ayuda ============ */
+
+.ayuda-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+
+.ayuda-grid__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-elevate);
+}
+
+.ayuda-grid__card:hover {
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.ayuda-grid__card:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--space-1);
+}
+
+.ayuda-grid__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-md);
+  height: var(--size-md);
+  color: var(--color-blue-600);
+  background-color: var(--color-blue-50);
+  border-radius: var(--radius-md);
+}
+
+.ayuda-grid__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ayuda-grid__titulo {
+  color: var(--color-gray-800);
+}
+
+.ayuda-grid__resumen {
+  line-height: var(--text-sm--lh);
+}
+
+.ayuda-grid__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-blue-600);
+}
+
+.ayuda-grid__cta .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ============ Árbol físico del almacén (DESIGN §6.6) ============ */
+
+.arbol-almacen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.arbol-almacen ul {
+  list-style: none;
+  margin: 0;
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--color-gray-200);
+  margin-left: var(--space-3);
+}
+
+.arbol-almacen li {
+  margin: var(--space-1) 0;
+}
+
+.arbol-almacen__nodo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.arbol-almacen__nodo:hover {
+  background-color: var(--color-blue-50);
+}
+
+/* ============ Favoritos de filtros (Fase A) ============ */
+
+.favoritos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.favoritos__guardar {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.favoritos__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.favoritos__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: var(--border-width) solid var(--color-gray-300);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  overflow: hidden;
+}
+
+.favoritos__chip-aplicar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-blue-600);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.favoritos__chip-aplicar:hover {
+  background-color: var(--color-blue-50);
+}
+
+.favoritos__chip-quitar {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-gray-500);
+  cursor: pointer;
+}
+
+.favoritos__chip-quitar:hover {
+  color: var(--color-danger-500);
 }

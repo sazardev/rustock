@@ -10,7 +10,9 @@ export interface ButtonLinkProps {
   icon?: IconName;
   href: string;
   className?: string;
-  children: ReactNode;
+  /** Texto descriptivo para enlaces solo-icono (accesibilidad, DESIGN §10). */
+  ariaLabel?: string;
+  children?: ReactNode;
 }
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
@@ -34,11 +36,13 @@ export function ButtonLink({
   icon,
   href,
   className,
+  ariaLabel,
   children,
 }: ButtonLinkProps) {
   return (
     <RouterLink
       to={href}
+      aria-label={ariaLabel}
       className={cn("btn", VARIANT_CLASS[variant], SIZE_CLASS[size], className)}
     >
       {icon ? <Icon name={icon} className="btn__icon" aria-hidden="true" /> : null}

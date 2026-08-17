@@ -45,7 +45,7 @@ export function AppShell({
         role="presentation"
       />
       <aside className="app-shell__sidebar">{sidebar}</aside>
-      <main className="app-shell__content" onScroll={handleContentScroll}>
+      <main id="contenido" className="app-shell__content" onScroll={handleContentScroll}>
         <div className="content content__inner">{children}</div>
       </main>
     </div>

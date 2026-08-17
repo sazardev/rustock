@@ -93,7 +93,7 @@ fn gerente(recurso: &str, accion: &str) -> bool {
         ("traslado", "crear") | ("traslado", "aprobar") | ("traslado", "anular") => true,
         ("ajuste", "crear") | ("ajuste", "aprobar") | ("ajuste", "anular") => true,
         ("inventario", "ejecutar") | ("inventario", "cerrar") => true,
-        ("comentario", "crear") => true,
+        ("comentario", "crear") | ("comentario", "eliminar") => true,
         ("reporte", "ver") | ("reporte", "exportar") => true,
         ("producto", "crear") | ("producto", "editar") | ("producto", "desactivar") => true,
         ("proveedor", "crear") | ("proveedor", "editar") | ("proveedor", "desactivar") => true,

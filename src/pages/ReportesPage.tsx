@@ -1,5 +1,5 @@
 import { ButtonLink, Card, PageHeader } from "../shared/ui";
-import { PATH, catalogoLista } from "../app/route-paths";
+import { PATH } from "../app/route-paths";
 
 interface Reporte {
   id: string;
@@ -12,14 +12,14 @@ const REPORTES: Reporte[] = [
   {
     id: "stock",
     nombre: "Stock actual",
-    descripcion: "Existencias por producto; use filtros y agregaciones en el catálogo.",
-    href: catalogoLista("productos"),
+    descripcion: "Existencias por producto, ubicación y lote, con resumen de unidades.",
+    href: PATH.reporteStock,
   },
   {
     id: "movimientos",
     nombre: "Movimientos",
-    descripcion: "Historial de entradas, salidas, traslados y ajustes.",
-    href: PATH.movimientos,
+    descripcion: "Historial de movimientos con filtros por tipo, estado y periodo.",
+    href: PATH.reporteMovimientos,
   },
   {
     id: "vencimientos",
@@ -36,14 +36,38 @@ const REPORTES: Reporte[] = [
   {
     id: "precision",
     nombre: "Precisión de inventario",
-    descripcion: "Precisión por sesión de conteo cerrada.",
-    href: PATH.inventario,
+    descripcion: "Precisión por SKU, cantidad y ubicación de cada sesión cerrada.",
+    href: PATH.reportePrecision,
   },
   {
     id: "auditoria",
     nombre: "Auditoría",
-    descripcion: "Trazabilidad de cambios sobre los registros.",
-    href: PATH.historial,
+    descripcion: "Quién hizo qué, filtrable por usuario, nivel y rango de fechas.",
+    href: PATH.reporteAuditoria,
+  },
+  {
+    id: "entradas",
+    nombre: "Entradas del periodo",
+    descripcion: "Compras, devoluciones de cliente y ajustes positivos por periodo.",
+    href: PATH.reporteEntradas,
+  },
+  {
+    id: "salidas",
+    nombre: "Salidas del periodo",
+    descripcion: "Despachos a cliente, devoluciones a proveedor y traslados de salida.",
+    href: PATH.reporteSalidas,
+  },
+  {
+    id: "mermas",
+    nombre: "Mermas y ajustes",
+    descripcion: "Mermas y ajustes de stock con su motivo y totales por sub-tipo.",
+    href: PATH.reporteMermasAjustes,
+  },
+  {
+    id: "usuarios",
+    nombre: "Desempeño de usuarios",
+    descripcion: "Número de movimientos registrados por usuario y periodo.",
+    href: PATH.reporteUsuarios,
   },
 ];
 

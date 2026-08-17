@@ -640,7 +640,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="iconos"
         title="Iconografía"
-        description="Set oficial Lucide con semántica canónica (§6.13)."
+        description="Set oficial de iconos con semántica canónica."
       >
         <DemoIconos />
       </ShowcaseSection>
@@ -648,7 +648,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="paleta"
         title="Paleta de colores"
-        description="Tokens de color declarados en DESIGN §3.1 — familias Ink, Signal y Gray."
+        description="Tokens de color declarados en el sistema de diseño."
       >
         <DemoPaleta />
       </ShowcaseSection>
@@ -656,7 +656,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="sombras"
         title="Sombras y elevación"
-        description="Elevación deliberada con tinte frío, nunca decorativa (DESIGN §3.5)."
+        description="Elevación deliberada, nunca decorativa."
       >
         <DemoSombras />
       </ShowcaseSection>
@@ -664,7 +664,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="tipografia"
         title="Tipografía"
-        description="Geist Sans para la interfaz y Geist Mono para códigos, con cifras tabulares (§3.2)."
+        description="Open Sans para la interfaz y JetBrains Mono para códigos, con cifras tabulares."
       >
         <DemoTipografia />
       </ShowcaseSection>
@@ -672,7 +672,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="botones"
         title="Botones"
-        description="Variantes, tamaños y estados de los botones (§6.2)."
+        description="Variantes, tamaños y estados de los botones."
       >
         <DemoBotones />
       </ShowcaseSection>
@@ -680,7 +680,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="campos"
         title="Campos de formulario"
-        description="Inputs, textareas, checks y radios con sus estados (§6.4)."
+        description="Inputs, textareas, checks y radios con sus estados."
       >
         <DemoCampos />
       </ShowcaseSection>
@@ -688,7 +688,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="tablas"
         title="Tablas"
-        description="Columnas ordenables, celdas mono y acciones por fila (§6.5)."
+        description="Columnas ordenables, celdas mono y acciones por fila."
       >
         <DemoTabla />
       </ShowcaseSection>
@@ -696,7 +696,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="paginacion"
         title="Paginación"
-        description="Controles de paginación con resumen de registros (§7.1)."
+        description="Controles de paginación con resumen de registros."
       >
         <DemoPaginacion />
       </ShowcaseSection>
@@ -704,7 +704,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="estados"
         title="Estados vacíos y carga"
-        description="Skeletons, empty states y paneles de error (§6.11, §8.4)."
+        description="Skeletons, empty states y paneles de error."
       >
         <DemoEstados />
       </ShowcaseSection>
@@ -712,7 +712,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="insignias"
         title="Insignias y etiquetas"
-        description="Estados con fondo tintado, borde y texto semántico (§6.7)."
+        description="Estados con fondo tintado, borde y texto semántico."
       >
         <DemoBadges />
       </ShowcaseSection>
@@ -720,7 +720,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="tarjetas"
         title="Tarjetas y paneles"
-        description="Paneles con encabezado y detalle en grid (§6.6)."
+        description="Paneles con encabezado y detalle en grid."
       >
         <DemoTarjetas />
       </ShowcaseSection>
@@ -728,7 +728,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="filtros"
         title="Búsqueda y filtros"
-        description="Barra de filtros con chips removibles (§6.10)."
+        description="Barra de filtros con chips removibles."
       >
         <DemoFiltros />
       </ShowcaseSection>
@@ -736,7 +736,7 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="toast"
         title="Notificaciones"
-        description="Toasts transitorios para feedback de mutaciones (§6.12)."
+        description="Toasts transitorios para feedback de mutaciones."
       >
         <DemoToast />
       </ShowcaseSection>

@@ -1,7 +1,7 @@
 export const PATH = {
   login: "/login",
   configurarAdministrador: "/configurar-administrador",
-  dashboard: "/",
+  dashboard: "/dashboard",
   movimientos: "/movimientos",
   movimientosNuevo: "/movimientos/nuevo",
   inventario: "/inventario",
@@ -14,10 +14,18 @@ export const PATH = {
   reporteKardex: "/reportes/kardex",
   reportePrecision: "/reportes/precision",
   reporteAuditoria: "/reportes/auditoria",
+  reporteEntradas: "/reportes/entradas",
+  reporteSalidas: "/reportes/salidas",
+  reporteMermasAjustes: "/reportes/mermas-ajustes",
+  reporteUsuarios: "/reportes/usuarios",
   historial: "/historial",
   usuarios: "/usuarios",
+  perfil: "/perfil",
   configuracion: "/configuracion",
+  sucursales: "/sucursales",
   galeria: "/galeria",
+  ayuda: "/ayuda",
+  ayudaGlosario: "/ayuda/glosario",
   accesoNoPermitido: "/acceso-no-permitido",
   noEncontrado: "/no-encontrado",
 } as const;
@@ -28,6 +36,10 @@ export function reporteKardexProducto(productoId: string): string {
 
 export function movimientoDetalle(id: string): string {
   return `/movimientos/${id}`;
+}
+
+export function movimientoEditar(id: string): string {
+  return `/movimientos/${id}/editar`;
 }
 
 export function movimientoAprobar(id: string): string {
@@ -54,6 +66,10 @@ export function catalogoLista(slug: string): string {
   return `/${slug}`;
 }
 
+export function catalogoNuevo(slug: string): string {
+  return `/${slug}/nuevo`;
+}
+
 export function catalogoDetalle(slug: string, id: string): string {
   return `/${slug}/${id}`;
 }
@@ -64,4 +80,9 @@ export function catalogoEditar(slug: string, id: string): string {
 
 export function catalogoEliminar(slug: string, id: string): string {
   return `/${slug}/${id}/eliminar`;
+}
+
+/** Ruta de la página de ayuda de un módulo (ej. "operacion/movimientos"). */
+export function ayudaModulo(id: string): string {
+  return `/ayuda/${id}`;
 }

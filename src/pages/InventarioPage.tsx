@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { listarSesionesInventario } from "../shared/backend";
+import { listarSesionesInventario, obtenerSesionInventario } from "../shared/backend";
 import { esPaginado, type EstadoSesionInventario, type SesionInventario } from "../shared/types";
 import {
   Badge,
@@ -30,8 +30,16 @@ const PAGE_SIZE = 20;
 
 export function InventarioPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [estado, setEstado] = useState<EstadoSesionInventario | "">("");
+
+  function prefetchDetalle(s: SesionInventario) {
+    void queryClient.prefetchQuery({
+      queryKey: ["sesion-inventario", s.id],
+      queryFn: () => obtenerSesionInventario(s.id),
+    });
+  }
 
   const query = useQuery({
     queryKey: ["sesiones-inventario", { page, estado }],
@@ -111,6 +119,7 @@ export function InventarioPage() {
           rowKey={(s) => s.id}
           loading={query.isLoading}
           onRowClick={(s) => navigate(sesionInventarioDetalle(s.id))}
+          prefetch={prefetchDetalle}
           emptyTitle="No hay sesiones de inventario"
           emptyDescription="Cree una sesión de conteo para verificar las existencias de un almacén."
           emptyAction={

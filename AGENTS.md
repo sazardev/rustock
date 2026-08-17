@@ -14,19 +14,19 @@
 - `MEMORY.md` — session memory: current state, decision log, environment gotchas, work-in-progress. Read it first thing in a session, update it at each milestone.
 
 Key DESIGN.md constraints (all enforced):
-- `border-radius: 0` everywhere; no shadows, gradients, blur, 3D effects.
+- Soft corners: `border-radius` only via tokens `--radius-sm/md/lg/xl/full`; never `0` nor literal values.
 - **Zero modals** — no dialogs/drawers/popovers/confirmations. Every action (view/create/edit/delete/approve/cancel) is a separate page with its own deep link, e.g. `/recursos/:id/eliminar`.
 - **Zero emojis** anywhere in the UI.
 - Icons: only **Lucide** (`lucide-react`), fixed canonical mapping per action (§6.13).
 - Fonts: **Open Sans** (UI) + **JetBrains Mono** (codes/SKU/quantities). Only.
-- Blue palette + flat/square tokens from §3. No colors outside the declared palette.
+- Rust palette ("Rust & Iron"): warm neutrals + iron-dark navigation surfaces + single rust accent (oxide) from §3. No colors outside the declared palette.
 - UI copy is professional Spanish, never casual.
-- Note: current `src/styles.css` still uses Inter/neutral tokens — a leftover from scaffolding. Any UI work must align it with DESIGN.md tokens first.
+- Brand: `LogoMark` (`src/shared/ui/LogoMark.tsx`), a flat warehouse box in rust tones without background — also the favicon (`public/rustock.svg`).
 
 ## Commands
 
 ```bash
-npm run dev            # Vite dev server (port 1420, strictPort)
+npm run dev            # Vite dev server (port 6821, strictPort)
 npm run build          # typecheck (tsc --noEmit) + vite build -> dist/
 npm run typecheck      # tsc --noEmit only
 npm run lint           # oxlint src (Rust-native linter, TS7-compatible)
@@ -34,7 +34,8 @@ npm run lint:fix       # oxlint --fix src
 npm run format         # prettier --write src/**/*.{ts,tsx,css}
 npm run format:check   # prettier --check
 npm run design         # scripts/design-guard.mjs — DESIGN.md compliance gate
-npm run tauri dev      # run the desktop app in dev mode (spawns vite on 1420)
+npm run tauri dev      # run the desktop app in dev mode (spawns vite on 6821)
+npm run tauri:web      # web mode sin ventana: vite (6821) + backend Rust sin GTK (API :1421)
 npm run tauri build    # release: frontend build + cargo release + bundling
 cargo check            # Rust check only (from src-tauri/)
 ```
@@ -68,7 +69,7 @@ Custom gates that run in both hooks:
 - Navegación: **react-router 8** (`react-router`, no `react-router-dom`). Layout del shell en `src/app/AppLayout.tsx` (AppShell + Topbar + Sidebar), rutas en `src/app/router.tsx`, grupos de navegación en `src/app/nav.ts`. Páginas en `src/pages/` (patrón: PageHeader + contenido). Deep-linking obligatorio (DESIGN §5); cada acción es una ruta propia.
 - Librería UI compartida: `src/shared/ui/` (barrel `index.ts`). Todo componente declarado en DESIGN.md vive aquí: `Icon` (mapa canónico §6.13), `Button`, `ButtonLink`, `Link`, `Field`/`Input`/`Select`/`Textarea`/`Checkbox`/`Radio`, `Table`, `Pagination`, `Badge`, `Card`, `PageHeader`, `EmptyState`, `Skeleton`, `DetailList`, `ToastProvider`/`useToast`, `ErrorPanel`, `AppShell`/`Topbar`/`Sidebar`/`Brand`/`Breadcrumbs`, `Search`/`FilterBar`. Los componentes de navegación (`Link`, `ButtonLink`, `Sidebar`, `Brand`, `Breadcrumbs`) usan `react-router` internamente. Los componentes consumen las clases de `src/styles/*.css`; nunca se hardcodean tokens en JSX.
 - Backend: `src-tauri/src/lib.rs` (app builder + command registration via `tauri::generate_handler!`) and `src-tauri/src/main.rs` (calls `rustock_lib::run()`). Crate is named **`rustock_lib`** — the name matters for imports and mobile build.
-- Tauri config: `src-tauri/tauri.conf.json`. Frontend served from `../dist`; dev URL `http://localhost:1420`.
+- Tauri config: `src-tauri/tauri.conf.json`. Frontend served from `../dist`; dev URL `http://localhost:6821`.
 - Capabilities/permissions: `src-tauri/capabilities/default.json` (add plugin permissions there).
 
 ## Toolchain quirks
@@ -84,10 +85,11 @@ Custom gates that run in both hooks:
 - `dist/` and `src-tauri/target/` are build artifacts (gitignored). `src-tauri/gen/schemas/` is generated (gitignored); regenerate via a tauri build/dev if missing.
 - `typescript-eslint` is NOT used — it rejects TS 7.0.2 (peer `<6.1.0`). The linter is **oxlint + oxlint-tsgolint**, which supports TS 7. Don't re-add typescript-eslint.
 - lefthook glob matching defaults to `gobwas` which mishandles `{ts,tsx}`; `lefthook.yml` sets `glob_matcher: doublestar`. Keep that setting if you edit patterns.
+- **En entornos sin servidor X/Wayland funcional (WSL, SSH puro, CI) `npm run tauri dev` se cuelga** antes de `setup()`: GTK/WebKit no puede crear la ventana (el proceso queda en `unix_wait_for_peer` sin llegar a abrir el backend `:1421`). Usar **`npm run tauri:web`** (modo navegador sin ventana: `RUSTOCK_WEB_ONLY=1` en `main.rs` → `run_web()` en `lib.rs`, arranca solo SQLite + el servidor HTTP `:1421` sin tocar GTK; `scripts/web.mjs` lanza vite en `:6821` + `cargo run`). Misma base de datos y misma lógica de negocio que el modo escritorio.
 
 ## opencode guardrails (project config)
 
-- `opencode.json` — loads AGENTS/SPEC/DESIGN/STACK as mandatory instructions every session; permission rules: `git push*`, `git * --no-verify*` and `rm -rf *` are **denied**, most other bash is `ask`, git read/add is allowed. Default agent is `rustock`.
+- `opencode.json` — loads AGENTS/SPEC/DESIGN/STACK as mandatory instructions every session; all tools and bash commands are allowed (no permission prompts). Default agent is `rustock`.
 - `.opencode/agent/rustock.md` — primary agent with the full discipline prompt (read specs first, no modals, no emojis, logic in Rust, never bypass hooks).
 - `.opencode/command/verify.md` — run the full quality pipeline (`/verify`).
 - `.opencode/command/feature.md` — implement a SPEC feature end-to-end (`/feature`).

@@ -1,4 +1,10 @@
-import type { ReactNode } from "react";
+import {
+  useId,
+  useState,
+  type FocusEvent as ReactFocusEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { Link as RouterLink, NavLink } from "react-router";
 import { cn } from "../lib/cn";
 import { Icon, type IconName } from "./Icon";
@@ -108,6 +114,8 @@ export interface SidebarItem {
   href: string;
   icon: IconName;
   end?: boolean;
+  /** Breve descripción del módulo; se muestra en el tooltip del modo compacto. */
+  descripcion?: string;
 }
 
 export interface SidebarGroup {
@@ -118,28 +126,104 @@ export interface SidebarGroup {
 export interface SidebarProps {
   groups: SidebarGroup[];
   onNavigate?: () => void;
+  /** Modo compacto (solo iconos): títulos de grupo como divisores y tooltip en hover/foco. */
+  collapsed?: boolean;
   className?: string;
 }
 
-export function Sidebar({ groups, onNavigate, className }: SidebarProps) {
+interface TooltipPos {
+  x: number;
+  y: number;
+}
+
+/**
+ * Ítem de navegación. En modo compacto el label queda oculto visualmente y un
+ * tooltip propio (position: fixed, calculado del elemento) aparece en hover y
+ * foco con el nombre del módulo y una breve descripción de lo que maneja.
+ */
+function SidebarNavItem({
+  item,
+  collapsed,
+  onNavigate,
+}: {
+  item: SidebarItem;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const tipId = useId();
+  const [tooltip, setTooltip] = useState<TooltipPos | null>(null);
+
+  function showTooltip(
+    event: ReactPointerEvent<HTMLAnchorElement> | ReactFocusEvent<HTMLAnchorElement>,
+  ) {
+    if (!collapsed) {
+      return;
+    }
+    const nav = event.currentTarget.closest(".sidebar");
+    const item = event.currentTarget;
+    if (!nav || !item) {
+      return;
+    }
+    const navRect = nav.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    setTooltip({
+      x: navRect.right + 8,
+      y: itemRect.top + itemRect.height / 2,
+    });
+  }
+
+  function hideTooltip() {
+    setTooltip(null);
+  }
+
+  const tipStyle = tooltip ? { left: tooltip.x, top: tooltip.y } : undefined;
+
   return (
-    <nav className={cn("sidebar", className)} aria-label="Navegación principal">
+    <NavLink
+      to={item.href}
+      end={item.end}
+      onPointerEnter={showTooltip}
+      onPointerLeave={hideTooltip}
+      onFocus={showTooltip}
+      onBlur={hideTooltip}
+      className={({ isActive }) => cn("sidebar__item", isActive && "sidebar__item--active")}
+      onClick={onNavigate}
+      aria-label={collapsed ? item.label : undefined}
+      aria-describedby={collapsed && tooltip ? tipId : undefined}
+    >
+      <span className="sidebar__item-icon">
+        <Icon name={item.icon} size={16} aria-hidden="true" />
+      </span>
+      <span className="sidebar__item-label">{item.label}</span>
+      {collapsed && tooltip ? (
+        <span id={tipId} role="tooltip" className="sidebar__tooltip" style={tipStyle}>
+          <span className="sidebar__tooltip-title">{item.label}</span>
+          {item.descripcion ? (
+            <span className="sidebar__tooltip-desc">{item.descripcion}</span>
+          ) : null}
+        </span>
+      ) : null}
+    </NavLink>
+  );
+}
+
+export function Sidebar({ groups, onNavigate, collapsed = false, className }: SidebarProps) {
+  return (
+    <nav
+      className={cn("sidebar", collapsed && "sidebar--collapsed", className)}
+      aria-label="Navegación principal"
+    >
       {groups.map((group) => (
         <div className="sidebar__group" key={group.title}>
           <h2 className="sidebar__group-title">{group.title}</h2>
+          <span className="sidebar__divider" role="separator" aria-label={group.title} />
           {group.items.map((item) => (
-            <NavLink
+            <SidebarNavItem
               key={item.href}
-              to={item.href}
-              end={item.end}
-              className={({ isActive }) => cn("sidebar__item", isActive && "sidebar__item--active")}
-              onClick={onNavigate}
-            >
-              <span className="sidebar__item-icon">
-                <Icon name={item.icon} size={16} aria-hidden="true" />
-              </span>
-              <span className="sidebar__item-label">{item.label}</span>
-            </NavLink>
+              item={item}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       ))}

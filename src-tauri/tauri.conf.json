@@ -5,7 +5,7 @@
   "identifier": "com.rustock.app",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:6821",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
@@ -29,6 +29,10 @@
   "bundle": {
     "active": true,
     "targets": ["deb", "rpm"],
+    "shortDescription": "Gestión de inventario y almacén (mini-WMS) self-hosted",
+    "longDescription": "Rustock es un sistema de gestión de inventario y almacén self-hosted: productos, ubicaciones, movimientos FIFO/FEFO, inventario físico con conteos, trazabilidad inmutable y control por roles.",
+    "category": "Business",
+    "copyright": "Copyright © 2026 Rustock",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

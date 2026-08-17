@@ -1,6 +1,9 @@
 export { Icon, ICON_MAP } from "./Icon";
 export type { IconName, IconProps } from "./Icon";
 
+export { ExportButtons } from "./ExportButtons";
+export type { ExportButtonsProps } from "./ExportButtons";
+
 export { Text } from "./Text";
 export type { TextProps, TextSize, TextWeight, TextColor } from "./Text";
 
@@ -70,8 +73,11 @@ export type { AppShellProps } from "./AppShell";
 export { Topbar } from "./Topbar";
 export type { TopbarProps } from "./Topbar";
 
-export { Brand, TopbarNavToggle, TopbarSidebarToggle } from "./Brand";
-export type { BrandProps, TopbarNavToggleProps, TopbarSidebarToggleProps } from "./Brand";
+export { Brand, TopbarNavToggle } from "./Brand";
+export type { BrandProps, TopbarNavToggleProps } from "./Brand";
+
+export { LogoMark } from "./LogoMark";
+export type { LogoMarkProps } from "./LogoMark";
 
 export { AlertsIndicator, TopbarUser, Breadcrumbs, Sidebar, SkipLink } from "./Chrome";
 export type {
@@ -87,6 +93,9 @@ export type {
 export { Search } from "./Search";
 export type { SearchProps } from "./Search";
 
+export { Kbd } from "./Kbd";
+export type { KbdProps } from "./Kbd";
+
 export { FilterBar, FilterField, FilterChip, FilterChips } from "./FilterBar";
 export type {
   FilterBarProps,
@@ -97,3 +106,6 @@ export type {
 
 export { FormGrid, FormActions } from "./FormGrid";
 export type { FormGridProps, FormActionsProps } from "./FormGrid";
+
+export { PaletaPicker, ModoPicker } from "./ThemePicker";
+export type { PaletaPickerProps, ModoPickerProps } from "./ThemePicker";

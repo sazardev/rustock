@@ -1,0 +1,221 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useNavigate, useParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import {
+  crearCategoria,
+  editarCategoria,
+  listarCategorias,
+  obtenerCategoria,
+} from "../shared/backend";
+import { esPaginado } from "../shared/types";
+import { invalidarRecurso } from "../shared/invalidar";
+import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
+import { mensajeError } from "../shared/format";
+import {
+  CrearRapido,
+  usePeticionCreacion,
+  usePreservarFormulario,
+  useSeleccionCreada,
+  urlConRegreso,
+  urlConSeleccion,
+} from "../shared/creacion-rapida";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  ErrorPanel,
+  Field,
+  FormActions,
+  FormGrid,
+  Input,
+  PageHeader,
+  Select,
+  Textarea,
+} from "../shared/ui";
+
+const esquema = z.object({
+  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
+  parent_id: z.string().optional(),
+  descripcion: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof esquema>;
+
+const INVALIDAR_CATEGORIAS = ["categorias", "selector"] as const;
+
+export function CategoriaFormPage() {
+  const { id } = useParams<{ id?: string }>();
+  const esEdicion = Boolean(id);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const { volver, campo } = usePeticionCreacion();
+  const retornaAFormulario = !esEdicion && Boolean(volver && campo);
+
+  const categoriaQuery = useQuery({
+    queryKey: ["categoria", id],
+    queryFn: () => obtenerCategoria(id as string),
+    enabled: esEdicion,
+  });
+
+  const categoriasQuery = useQuery({
+    queryKey: ["categorias", "selector"],
+    queryFn: () => listarCategorias({ page_size: 200, sort: "nombre" }),
+  });
+  const categorias =
+    categoriasQuery.data && esPaginado(categoriasQuery.data) ? categoriasQuery.data.data : [];
+  const padresPosibles = esEdicion ? categorias.filter((c) => c.id !== id) : categorias;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(esquema),
+    defaultValues: { nombre: "", parent_id: "", descripcion: "" },
+  });
+
+  // Conserva el borrador al salir a crear una categoría padre (encadenado) y
+  // lo restaura al volver (crear o cancelar).
+  const { descartar } = usePreservarFormulario(
+    "/categorias/nuevo",
+    () => getValues(),
+    (valores) => reset(valores as FormValues),
+    !esEdicion,
+  );
+
+  useSeleccionCreada(
+    "parent_id",
+    (nuevoId) => setValue("parent_id", nuevoId),
+    INVALIDAR_CATEGORIAS,
+    !esEdicion,
+  );
+
+  useEffect(() => {
+    if (categoriaQuery.data) {
+      reset({
+        nombre: categoriaQuery.data.nombre,
+        parent_id: categoriaQuery.data.parent_id ?? "",
+        descripcion: categoriaQuery.data.descripcion ?? "",
+      });
+    }
+  }, [categoriaQuery.data, reset]);
+
+  const guardarMut = useMutation({
+    mutationFn: (v: FormValues) =>
+      esEdicion
+        ? editarCategoria(id as string, {
+            nombre: v.nombre,
+            descripcion: v.descripcion || null,
+            parent_id: v.parent_id || null,
+          })
+        : crearCategoria({
+            nombre: v.nombre,
+            descripcion: v.descripcion || null,
+            parent_id: v.parent_id || null,
+          }),
+    onSuccess: (categoria) => {
+      descartar();
+      invalidarRecurso(queryClient, "categorias", "categoria");
+      if (volver && campo && !esEdicion) {
+        navigate(urlConSeleccion(volver, campo, categoria.id));
+      } else {
+        navigate(catalogoDetalle("categorias", categoria.id));
+      }
+    },
+    onError: (err) => setError(mensajeError(err)),
+  });
+
+  if (esEdicion && categoriaQuery.isLoading) {
+    return <PageHeader title="Editar categoría" description="Cargando…" />;
+  }
+
+  return (
+    <>
+      <PageHeader
+        title={
+          esEdicion ? `Editar categoría — ${categoriaQuery.data?.nombre ?? ""}` : "Nueva categoría"
+        }
+        description={
+          retornaAFormulario
+            ? "Crea la categoría y vuelve al formulario anterior con ella seleccionada."
+            : "Las categorías clasifican productos y pueden organizarse en jerarquía de árbol."
+        }
+      />
+
+      <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
+        <Card title="Datos generales">
+          <Card.Body>
+            {error ? (
+              <ErrorPanel title="No se pudo guardar la categoría" className="mb-4">
+                {error}
+              </ErrorPanel>
+            ) : null}
+            <FormGrid columns={2}>
+              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+                <Input id="nombre" {...register("nombre")} />
+              </Field>
+              <Field
+                label="Categoría padre"
+                htmlFor="parent_id"
+                help="Si no se indica, la categoría queda en la raíz del árbol."
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      id="parent_id"
+                      placeholder="Sin categoría (raíz)"
+                      {...register("parent_id")}
+                    >
+                      {padresPosibles.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {!esEdicion && !retornaAFormulario ? (
+                    <CrearRapido campo="parent_id" rutaNueva={catalogoNuevo("categorias")}>
+                      Nueva categoría
+                    </CrearRapido>
+                  ) : null}
+                </div>
+              </Field>
+            </FormGrid>
+            <Field label="Descripción" htmlFor="descripcion">
+              <Textarea id="descripcion" rows={3} {...register("descripcion")} />
+            </Field>
+          </Card.Body>
+        </Card>
+
+        <FormActions>
+          <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? "Guardar cambios"
+                : "Crear categoría"}
+          </Button>
+          <ButtonLink
+            variant="secondary"
+            href={
+              retornaAFormulario
+                ? urlConRegreso(volver as string)
+                : esEdicion
+                  ? catalogoDetalle("categorias", id as string)
+                  : catalogoLista("categorias")
+            }
+          >
+            Cancelar
+          </ButtonLink>
+        </FormActions>
+      </form>
+    </>
+  );
+}

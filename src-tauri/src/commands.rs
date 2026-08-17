@@ -3,12 +3,12 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::db::DbState;
-use crate::domain::Listado;
 use crate::domain::catalogo::*;
 use crate::domain::inventario::*;
 use crate::domain::movimiento::*;
 use crate::domain::seguridad::*;
-use crate::error::AppResult;
+use crate::domain::{Listado, Paginado};
+use crate::error::{AppError, AppResult};
 use crate::query::{self, ListParams};
 use crate::repo;
 use crate::security::puede;
@@ -100,6 +100,26 @@ pub fn quien_soy(
     };
     let conn = db.conn();
     repo::seguridad::obtener_usuario(&conn, &actual.usuario_id)
+}
+
+/// Consulta de capacidad (SPEC §4.3): ¿tiene el usuario de la sesión el
+/// permiso `recurso:accion`? La UI la usa para mostrar/ocultar acciones
+/// (ej. "crear y aprobar" solo para quien puede aprobar). Es una consulta
+/// pura de la matriz, sin auditoría (no altera datos).
+#[tauri::command]
+pub fn puedo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    recurso: String,
+    accion: String,
+) -> AppResult<bool> {
+    let conn = db.conn();
+    let actor = sesion.usuario_id()?;
+    match puede(&conn, Some(&actor), &recurso, &accion) {
+        Ok(()) => Ok(true),
+        Err(AppError::SinPermiso(_)) => Ok(false),
+        Err(e) => Err(e),
+    }
 }
 
 // ============ Almacén ============
@@ -593,6 +613,37 @@ pub fn buscar_producto_por_codigo_barras(
     })
 }
 
+/// Resuelve un código escaneado (tipo teclado) a una entidad del dominio para
+/// la captura rápida (SPEC §14.3). Consulta pura: el escaneo nunca crea datos.
+#[tauri::command]
+pub fn resolver_escaneo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    codigo: String,
+) -> AppResult<Option<repo::catalogo::EscaneoResuelto>> {
+    con_auditoria!(db, sesion, "resolver_escaneo", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        repo::catalogo::resolver_escaneo(&conn, &codigo)
+    })
+}
+
+/// Importación masiva (Fase C): valida e inserta filas de catálogo o stock
+/// inicial contra las mismas reglas que `crear_*`, reportando errores por fila.
+#[tauri::command]
+pub fn importar_datos(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    tipo: String,
+    filas: Vec<serde_json::Value>,
+) -> AppResult<Vec<crate::importar::ResultadoImportacion>> {
+    con_auditoria!(db, sesion, "importar_datos", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        crate::importar::importar_datos(&conn, &tipo, &filas, &actor)
+    })
+}
+
 // ============ Lote ============
 
 #[tauri::command]
@@ -824,6 +875,33 @@ pub fn obtener_uom(
 }
 
 #[tauri::command]
+pub fn editar_uom(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarUom,
+) -> AppResult<Uom> {
+    con_auditoria!(db, sesion, "editar_uom", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_uom(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_uom(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_uom", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_uom(&conn, &id, &actor)
+    })
+}
+
+#[tauri::command]
 pub fn listar_categorias(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -905,6 +983,19 @@ pub fn listar_usuarios(
 }
 
 #[tauri::command]
+pub fn obtener_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Usuario>> {
+    con_auditoria!(db, sesion, "obtener_usuario", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "usuario", "ver")?;
+        repo::seguridad::obtener_usuario(&conn, &id)
+    })
+}
+
+#[tauri::command]
 pub fn crear_usuario(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -942,6 +1033,369 @@ pub fn bootstrap_admin(
     repo::seguridad::bootstrap_admin(&conn, &nombre_usuario, &nombre_completo, &password)
 }
 
+/// Edita nombre completo, email y/o rol de un usuario. `nombre_usuario` es
+/// estable (SPEC §14.7). Permiso `usuario:editar` (solo ADMIN por defecto).
+#[tauri::command]
+pub fn editar_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: crate::domain::seguridad::EditarUsuario,
+) -> AppResult<Usuario> {
+    con_auditoria!(db, sesion, "editar_usuario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::seguridad::editar_usuario(&conn, &id, &cambios, &actor)
+    })
+}
+
+/// Desactiva un usuario (borrado lógico, SPEC §14.5). No permite desactivarse
+/// a uno mismo ni al último ADMIN activo. Permiso `usuario:editar`.
+#[tauri::command]
+pub fn desactivar_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_usuario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::seguridad::desactivar_usuario(&conn, &id, &actor)
+    })
+}
+
+/// Reactiva un usuario desactivado. Permiso `usuario:editar`.
+#[tauri::command]
+pub fn reactivar_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Usuario> {
+    con_auditoria!(db, sesion, "reactivar_usuario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::seguridad::reactivar_usuario(&conn, &id, &actor)
+    })
+}
+
+/// Cambia la contraseña del propio usuario verificando la actual. Solo
+/// requiere sesión activa (cada quien gestiona su credencial, SPEC §4.1).
+#[tauri::command]
+pub fn cambiar_password(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    password_actual: String,
+    password_nueva: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "cambiar_password", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::seguridad::cambiar_password_propia(&conn, &actor, &password_actual, &password_nueva)
+    })
+}
+
+/// Cambia la contraseña de cualquier usuario (reset del ADMIN). Permiso
+/// `usuario:editar` (solo ADMIN por defecto, SPEC §4.4).
+#[tauri::command]
+pub fn cambiar_password_admin(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    password_nueva: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "cambiar_password_admin", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::seguridad::cambiar_password_admin(&conn, &id, &password_nueva, &actor)
+    })
+}
+
+// ============ Configuración de empresa y preferencias (SPEC §4.3, §14.4, §17.1) ============
+
+/// Devuelve la configuración de empresa (la fila que elige el ADMIN).
+/// Permiso `configuracion:ver` (solo ADMIN por defecto, SPEC §4.4).
+#[tauri::command]
+pub fn obtener_configuracion_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<crate::domain::configuracion::ConfiguracionEmpresa> {
+    con_auditoria!(db, sesion, "obtener_configuracion_empresa", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        repo::configuracion::obtener_configuracion_empresa(&conn)
+    })
+}
+
+/// Actualiza la configuración de empresa (campos parciales). Permiso
+/// `configuracion:editar` (solo ADMIN por defecto).
+#[tauri::command]
+pub fn guardar_configuracion_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    cambios: crate::domain::configuracion::EditarConfiguracionEmpresa,
+) -> AppResult<crate::domain::configuracion::ConfiguracionEmpresa> {
+    con_auditoria!(db, sesion, "guardar_configuracion_empresa", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "configuracion", "editar")?;
+        repo::configuracion::guardar_configuracion_empresa(&conn, &cambios, &actor)
+    })
+}
+
+/// Preferencias **resueltas** de la sesión activa (fallbacks de la empresa ya
+/// aplicados). Solo requiere autenticación: son ajustes personales de UI y de
+/// presentación, no un recurso de negocio (SPEC §14.4).
+#[tauri::command]
+pub fn obtener_preferencias_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<crate::domain::configuracion::PreferenciasResueltas> {
+    con_auditoria!(db, sesion, "obtener_preferencias_usuario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::configuracion::preferencias_resueltas(&conn, &actor)
+    })
+}
+
+/// Guarda las preferencias personales de la sesión activa (tamaño de fuente,
+/// orden del sidebar, zona horaria/formato de fecha propios con `null` =
+/// heredar de la empresa, paleta de tema y modo oscuro). Solo requiere
+/// autenticación.
+#[tauri::command]
+pub fn guardar_preferencias_usuario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    cambios: crate::domain::configuracion::EditarPreferenciasUsuario,
+) -> AppResult<crate::domain::configuracion::PreferenciasResueltas> {
+    con_auditoria!(db, sesion, "guardar_preferencias_usuario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::configuracion::guardar_preferencias_usuario(&conn, &actor, &cambios)?;
+        repo::configuracion::preferencias_resueltas(&conn, &actor)
+    })
+}
+
+// ============ Temas de la UI (DESIGN §3.1) ============
+
+/// Lista las paletas predefinidas con sus muestras de acento (para el
+/// selector). Solo requiere autenticación: es presentación, no un recurso
+/// de negocio.
+#[tauri::command]
+pub fn listar_temas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<crate::domain::tema::ResumenTema>> {
+    con_auditoria!(db, sesion, "listar_temas", {
+        sesion.usuario_id()?;
+        Ok(crate::domain::tema::listar_temas())
+    })
+}
+
+/// Variables CSS de un tema concreto (paleta + modo), para vista previa y
+/// para aplicar el tema activo. El `tema_id` se valida contra la lista;
+/// `modo_oscuro` elige la variante.
+#[tauri::command]
+pub fn obtener_tema(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    tema_id: String,
+    modo_oscuro: bool,
+) -> AppResult<crate::domain::tema::TemaActivo> {
+    con_auditoria!(db, sesion, "obtener_tema", {
+        sesion.usuario_id()?;
+        let modo = if modo_oscuro {
+            crate::domain::tema::ModoColor::Oscuro
+        } else {
+            crate::domain::tema::ModoColor::Claro
+        };
+        crate::domain::tema::obtener_tema(&tema_id, modo).ok_or_else(|| {
+            crate::error::AppError::CampoInvalido(format!("tema '{tema_id}' no existe"))
+        })
+    })
+}
+
+/// Tema activo resuelto para la sesión (preferencia propia o global de la
+/// empresa). Solo requiere autenticación.
+#[tauri::command]
+pub fn obtener_tema_activo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<crate::domain::tema::TemaActivo> {
+    con_auditoria!(db, sesion, "obtener_tema_activo", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::configuracion::tema_activo_de_usuario(&conn, &actor)
+    })
+}
+
+/// Tema global de la empresa (sin sesión), para pintar el login/la landing
+/// con la apariencia que eligió el ADMIN antes de autenticarse. Es solo
+/// configuración de presentación, sin datos de negocio.
+#[tauri::command]
+pub fn obtener_tema_global(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<crate::domain::tema::TemaActivo> {
+    let _ = sesion;
+    let conn = db.conn();
+    let config = repo::configuracion::obtener_configuracion_empresa(&conn)?;
+    let modo = if config.modo_oscuro {
+        crate::domain::tema::ModoColor::Oscuro
+    } else {
+        crate::domain::tema::ModoColor::Claro
+    };
+    crate::domain::tema::obtener_tema(&config.tema_id, modo).ok_or_else(|| {
+        crate::error::AppError::CampoInvalido(format!("tema '{}' no existe", config.tema_id))
+    })
+}
+
+// ============ Sucursales (config de empresa, solo ADMIN) ============
+
+#[tauri::command]
+pub fn listar_sucursales(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<crate::domain::configuracion::Sucursal>> {
+    con_auditoria!(db, sesion, "listar_sucursales", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        repo::sucursal::listar_sucursales(&conn)
+    })
+}
+
+#[tauri::command]
+pub fn crear_sucursal(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: crate::domain::configuracion::NuevaSucursal,
+) -> AppResult<crate::domain::configuracion::Sucursal> {
+    con_auditoria!(db, sesion, "crear_sucursal", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "configuracion", "editar")?;
+        nuevo.created_by = Some(actor);
+        repo::sucursal::crear_sucursal(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_sucursal(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<crate::domain::configuracion::Sucursal>> {
+    con_auditoria!(db, sesion, "obtener_sucursal", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        repo::sucursal::obtener_sucursal(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_sucursal(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: crate::domain::configuracion::EditarSucursal,
+) -> AppResult<crate::domain::configuracion::Sucursal> {
+    con_auditoria!(db, sesion, "editar_sucursal", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "configuracion", "editar")?;
+        repo::sucursal::editar_sucursal(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_sucursal(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_sucursal", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "configuracion", "editar")?;
+        repo::sucursal::desactivar_sucursal(&conn, &id, &actor)
+    })
+}
+
+// ============ Archivos de empresa (logo + documentos, solo ADMIN) ============
+
+/// Lista los metadatos de los archivos (sin contenido) para la UI.
+#[tauri::command]
+pub fn listar_archivos_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<crate::domain::configuracion::ArchivoEmpresa>> {
+    con_auditoria!(db, sesion, "listar_archivos_empresa", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        repo::archivo::listar_archivos(&conn)
+    })
+}
+
+/// Sube un archivo (logo o documento). Los bytes llegan en base64 (el JSON de
+/// IPC/HTTP no transporta binario). El logo reemplaza al anterior.
+#[tauri::command]
+pub fn subir_archivo_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: crate::domain::configuracion::NuevoArchivoEmpresa,
+) -> AppResult<crate::domain::configuracion::ArchivoEmpresa> {
+    con_auditoria!(db, sesion, "subir_archivo_empresa", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "configuracion", "editar")?;
+        nuevo.created_by = Some(actor);
+        repo::archivo::subir_archivo(&conn, &nuevo)
+    })
+}
+
+/// Devuelve el archivo con su contenido en base64 (para ver/descargar).
+#[tauri::command]
+pub fn obtener_archivo_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<crate::domain::configuracion::ArchivoEmpresaCompleto>> {
+    con_auditoria!(db, sesion, "obtener_archivo_empresa", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        repo::archivo::obtener_archivo_completo(&conn, &id)
+    })
+}
+
+/// El logo actual de la empresa (con contenido), o `None` si no hay.
+#[tauri::command]
+pub fn obtener_logo_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Option<crate::domain::configuracion::ArchivoEmpresaCompleto>> {
+    con_auditoria!(db, sesion, "obtener_logo_empresa", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        let Some(meta) = repo::archivo::obtener_logo(&conn)? else {
+            return Ok(None);
+        };
+        repo::archivo::obtener_archivo_completo(&conn, &meta.id)
+    })
+}
+
+#[tauri::command]
+pub fn eliminar_archivo_empresa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "eliminar_archivo_empresa", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "configuracion", "editar")?;
+        repo::archivo::eliminar_archivo(&conn, &id, &actor)
+    })
+}
+
 // ============ Movimientos ============
 
 #[tauri::command]
@@ -969,6 +1423,20 @@ pub fn crear_traslado(
         nuevo.created_by = sesion.usuario_id()?;
         let conn = db.conn();
         repo::movimiento::crear_traslado(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn editar_movimiento(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarMovimiento,
+) -> AppResult<Movimiento> {
+    con_auditoria!(db, sesion, "editar_movimiento", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::movimiento::editar_movimiento(&conn, &id, &cambios, &actor)
     })
 }
 
@@ -1149,6 +1617,19 @@ pub fn obtener_sesion_inventario(
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
         repo::inventario::obtener_sesion(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn iniciar_sesion_inventario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<SesionInventario> {
+    con_auditoria!(db, sesion, "iniciar_sesion_inventario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::inventario::iniciar_sesion(&conn, &id, &actor)
     })
 }
 
@@ -1357,8 +1838,11 @@ pub fn historial_caja(
 
 // ============ Alertas (SPEC §17) ============
 
-/// Recalcula y lista las alertas (SPEC §17.1). Cada alerta solo es visible
-/// para quien tenga `ver` sobre el recurso de su entidad (SPEC §17.2).
+/// Recalcula y lista las alertas (SPEC §17.1). El horizonte de "lote por
+/// vencer" usa el umbral configurado en la empresa cuando no se pasa
+/// `dias_por_vencer` (SPEC §17.1: "próximos N días, configurable"). Cada
+/// alerta solo es visible para quien tenga `ver` sobre el recurso de su
+/// entidad (SPEC §17.2).
 #[tauri::command]
 pub fn listar_alertas(
     db: State<'_, Arc<DbState>>,
@@ -1369,7 +1853,8 @@ pub fn listar_alertas(
     con_auditoria!(db, sesion, "listar_alertas", {
         let actor = sesion.usuario_id()?;
         let conn = db.conn();
-        repo::alerta::regenerar_alertas(&conn, dias_por_vencer.unwrap_or(30))?;
+        let dias = repo::configuracion::dias_aviso_o_por_defecto(&conn, dias_por_vencer)?;
+        repo::alerta::regenerar_alertas(&conn, dias)?;
         repo::alerta::listar_alertas(&conn, estado.as_deref(), &actor)
     })
 }
@@ -1463,6 +1948,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         login,
         logout,
         quien_soy,
+        puedo,
         listar_almacenes,
         crear_almacen,
         obtener_almacen,
@@ -1499,6 +1985,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         editar_producto,
         desactivar_producto,
         buscar_producto_por_codigo_barras,
+        resolver_escaneo,
+        importar_datos,
         listar_lotes,
         crear_lote,
         obtener_lote,
@@ -1516,17 +2004,44 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         listar_uoms,
         crear_uom,
         obtener_uom,
+        editar_uom,
+        desactivar_uom,
         listar_categorias,
         crear_categoria,
         obtener_categoria,
         editar_categoria,
         desactivar_categoria,
         listar_usuarios,
+        obtener_usuario,
         crear_usuario,
         listar_roles,
         bootstrap_admin,
+        editar_usuario,
+        desactivar_usuario,
+        reactivar_usuario,
+        cambiar_password,
+        cambiar_password_admin,
+        obtener_configuracion_empresa,
+        guardar_configuracion_empresa,
+        obtener_preferencias_usuario,
+        guardar_preferencias_usuario,
+        listar_temas,
+        obtener_tema,
+        obtener_tema_activo,
+        obtener_tema_global,
+        listar_sucursales,
+        crear_sucursal,
+        obtener_sucursal,
+        editar_sucursal,
+        desactivar_sucursal,
+        listar_archivos_empresa,
+        subir_archivo_empresa,
+        obtener_archivo_empresa,
+        obtener_logo_empresa,
+        eliminar_archivo_empresa,
         crear_movimiento,
         crear_traslado,
+        editar_movimiento,
         enviar_a_aprobacion,
         aprobar_movimiento,
         anular_movimiento,
@@ -1539,6 +2054,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         crear_sesion_inventario,
         listar_sesiones_inventario,
         obtener_sesion_inventario,
+        iniciar_sesion_inventario,
         registrar_conteo,
         listar_conteos,
         diferencias_sesion,
@@ -1562,13 +2078,32 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         precision_sesion,
         listar_historial,
         metricas_historial,
+        registrar_vista,
+        metricas_actividad,
+        buscar,
     ]
 }
 
 // ============ Historial y métricas (SPEC §4.5, §13, §16) ============
 
-/// Lista el historial de actividad del usuario (filtrable). Gateado por el
-/// permiso del reporte de auditoría (SPEC §16.2).
+/// Registra la visita del frontend a una página (tracking total, Hito 25).
+/// Es el único comando que no pasa por `con_auditoria!`: el propio evento
+/// VISTA es el registro de auditoría (no duplicamos una fila por visita).
+/// Requiere sesión activa (nunca funciona sin usuario autenticado).
+#[tauri::command]
+pub fn registrar_vista(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    vista: crate::domain::seguridad::RegistrarVista,
+) -> AppResult<()> {
+    vista.validar()?;
+    let actor = sesion.usuario_id()?;
+    let conn = db.conn();
+    repo::auditoria::registrar_vista(&conn, &actor, &vista)
+}
+
+/// Lista el historial de actividad (filtrable y paginado, SPEC §15). Gateado
+/// por el permiso del reporte de auditoría (SPEC §16.2).
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn listar_historial(
@@ -1577,10 +2112,16 @@ pub fn listar_historial(
     usuario_id: Option<String>,
     comando: Option<String>,
     nivel: Option<String>,
+    tipo_evento: Option<String>,
+    modulo: Option<String>,
+    ruta: Option<String>,
+    proceso: Option<String>,
+    exito: Option<bool>,
     desde: Option<String>,
     hasta: Option<String>,
-    limit: Option<i64>,
-) -> AppResult<Vec<crate::domain::seguridad::EventoAuditoria>> {
+    page: Option<i64>,
+    page_size: Option<i64>,
+) -> AppResult<Paginado<crate::domain::seguridad::EventoAuditoria>> {
     con_auditoria!(db, sesion, "listar_historial", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
@@ -1589,9 +2130,15 @@ pub fn listar_historial(
             usuario_id.as_deref(),
             comando.as_deref(),
             nivel.as_deref(),
+            tipo_evento.as_deref(),
+            modulo.as_deref(),
+            ruta.as_deref(),
+            proceso.as_deref(),
+            exito,
             desde.as_deref(),
             hasta.as_deref(),
-            limit.unwrap_or(100),
+            page.unwrap_or(1),
+            page_size.unwrap_or(50),
         )
     })
 }
@@ -1606,5 +2153,47 @@ pub fn metricas_historial(
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
         repo::auditoria::metricas_historial(&conn)
+    })
+}
+
+/// Análisis profundo de actividad (Hito 25): resumen, desgloses por módulo,
+/// día, hora, día de la semana, usuario, proceso y ruta, más insights
+/// automáticos. Gateado por `reporte:ver`.
+#[tauri::command]
+pub fn metricas_actividad(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    desde: Option<String>,
+    hasta: Option<String>,
+    usuario_id: Option<String>,
+) -> AppResult<repo::auditoria::MetricasActividad> {
+    con_auditoria!(db, sesion, "metricas_actividad", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::auditoria::metricas_actividad(
+            &conn,
+            desde.as_deref(),
+            hasta.as_deref(),
+            usuario_id.as_deref(),
+        )
+    })
+}
+
+// ============ Búsqueda global del command palette (SPEC §15.4) ============
+
+/// Búsqueda global multi-recurso para el command palette: una sola llamada
+/// que consulta los recursos que el usuario tiene permiso de `ver` y devuelve
+/// resultados agrupados y ordenados por relevancia. Es un servicio de lectura
+/// (nunca altera datos); las alertas solo se muestran abiertas.
+#[tauri::command]
+pub fn buscar(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    q: String,
+) -> AppResult<crate::buscar::BuscarRespuesta> {
+    con_auditoria!(db, sesion, "buscar", {
+        let conn = db.conn();
+        let usuario_id = sesion.usuario_id()?;
+        crate::buscar::buscar(&conn, &usuario_id, &q)
     })
 }

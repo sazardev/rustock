@@ -335,6 +335,7 @@ pub struct Uom {
     pub tipo: String,
     pub factor: i64,
     pub base: bool,
+    pub activo: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -348,6 +349,34 @@ pub struct NuevaUom {
     pub factor: i64,
     #[serde(default)]
     pub base: bool,
+}
+
+/// Cambios aceptados sobre una UOM (SPEC §3.9). `codigo` es estable (define
+/// la identidad); se actualizan nombre, tipo, factor y base.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct EditarUom {
+    pub nombre: Option<String>,
+    pub tipo: Option<String>,
+    pub factor: Option<i64>,
+    pub base: Option<bool>,
+}
+
+impl EditarUom {
+    pub fn validar(&self) -> Result<(), crate::error::AppError> {
+        if let Some(n) = &self.nombre
+            && n.trim().is_empty()
+        {
+            return Err(crate::error::AppError::CampoRequerido("nombre".into()));
+        }
+        if let Some(f) = self.factor
+            && f < 1
+        {
+            return Err(crate::error::AppError::CampoInvalido(
+                "factor debe ser mayor o igual a 1".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 fn default_factor() -> i64 {
@@ -460,6 +489,9 @@ pub struct Producto {
     pub controla_lote: bool,
     pub controla_vencimiento: bool,
     pub perecedero: bool,
+    /// Costo unitario actual (valorización, Fase D). Se actualiza con el método
+    /// configurado al aprobar entradas.
+    pub costo_unitario: Option<f64>,
     pub activo: bool,
     #[serde(flatten)]
     pub auditoria: Auditoria,
@@ -494,6 +526,9 @@ pub struct NuevoProducto {
     pub controla_vencimiento: bool,
     #[serde(default)]
     pub perecedero: bool,
+    /// Costo unitario inicial del producto (valorización, Fase D).
+    #[serde(default)]
+    pub costo_unitario: Option<f64>,
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
@@ -542,6 +577,7 @@ pub struct EditarProducto {
     pub controla_lote: Option<bool>,
     pub controla_vencimiento: Option<bool>,
     pub perecedero: Option<bool>,
+    pub costo_unitario: Option<f64>,
 }
 
 // ============ Lote (SPEC §3.12) ============

@@ -146,26 +146,30 @@ muestra los KPI. ✅ backend (detalle completo en MEMORY.md, Hito 7).
 
 ---
 
-## Fase 8 — Pulido UX y desempeño
+## Fase 8 — Pulido UX y desempeño ✅ (completada)
 
 **Base:** DESIGN.md completo + STACK.md §8 (decisiones de rendimiento).
 
-- [ ] Virtualización de listas grandes (@tanstack/react-virtual)
-- [ ] Code-splitting por ruta (lazy)
-- [ ] Cache de servidor (react-query)
-- [ ] Estados vacíos, skeletons, error panels, toasts en todas las páginas
-- [ ] Accesibilidad (foco visible, contraste AA, teclado)
-- [ ] Audit final contra el checklist de DESIGN §11
+- [x] Virtualización de listas grandes (@tanstack/react-virtual) — en la
+      `Table` genérica (umbral > 80 filas)
+- [x] Code-splitting por ruta (lazy) — 53 chunks JS en el build
+- [x] Cache de servidor (react-query)
+- [x] Estados vacíos, skeletons, error panels, toasts en todas las páginas
+- [x] Accesibilidad (foco visible, contraste AA, teclado, skip-link)
+- [x] Audit final contra el checklist de DESIGN §11
 
 ---
 
-## Fase 9 — Empaquetado y release
+## Fase 9 — Empaquetado y release ✅ (completada)
 
 **Base:** STACK.md §3.2 (perfil release), §9 (comandos).
 
-- [ ] Revisar `tauri build` (deb/rpm) con el binario optimizado
-- [ ] Ajustar iconos de la app, metadatos y descripción del producto
-- [ ] Documentación de instalación y primer arranque (bootstrap de ADMIN)
+- [x] Revisar `tauri build` (deb/rpm) con el binario optimizado — el binario
+      release compila; el empaquetado deb/rpm se verifica en una máquina con
+      `dpkg-deb`/`rpmbuild` (no presentes en este entorno)
+- [x] Ajustar iconos de la app, metadatos y descripción del producto
+- [x] Documentación de instalación y primer arranque (bootstrap de ADMIN) —
+      `INSTALACION.md`
 
 ---
 

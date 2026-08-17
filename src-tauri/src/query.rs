@@ -80,7 +80,7 @@ pub struct ResourceSchema {
 }
 
 impl ResourceSchema {
-    fn columna(&self, nombre: &str) -> AppResult<&ColumnDef> {
+    pub(crate) fn columna(&self, nombre: &str) -> AppResult<&ColumnDef> {
         self.columnas
             .iter()
             .find(|c| c.nombre == nombre)
@@ -295,30 +295,45 @@ fn construir_where(
     };
 
     if let Some(q) = &params.q {
-        let terminos: Vec<&str> = q.split_whitespace().collect();
-        let buscables: Vec<&ColumnDef> = schema.columnas.iter().filter(|c| c.buscable).collect();
-        if !terminos.is_empty() && !buscables.is_empty() {
-            let mut grupos_terminos = Vec::new();
-            for t in &terminos {
-                let ors: Vec<String> = buscables
-                    .iter()
-                    .map(|c| format!("{} LIKE ? ESCAPE '\\'", c.expr))
-                    .collect();
-                grupos_terminos.push(format!("({})", ors.join(" OR ")));
-                for _ in &buscables {
-                    binds.push(SqlValue::Text(escapar_like(t, true, true)));
-                }
-            }
-            let clausula_q = format!("({})", grupos_terminos.join(" AND "));
+        let (condicion, q_binds) = condicion_busqueda(schema, q);
+        if !condicion.is_empty() {
             if where_sql.is_empty() {
-                where_sql = format!(" WHERE {clausula_q}");
+                where_sql = format!(" WHERE {condicion}");
             } else {
-                where_sql.push_str(&format!(" AND {clausula_q}"));
+                where_sql.push_str(&format!(" AND {condicion}"));
             }
+            binds.extend(q_binds);
         }
     }
 
     Ok((where_sql, binds))
+}
+
+/// Condición SQL (sin prefijo `WHERE`) para la búsqueda libre `q` sobre las
+/// columnas buscables de un schema, más sus valores ligados. Es la misma
+/// lógica que el parámetro `q` de [`construir_where`] (SPEC §15.4: términos
+/// separados por espacio, todos deben coincidir, case-insensitive), pero
+/// reutilizable para el command palette (`buscar.rs`), que necesita consultar
+/// varios recursos con el mismo término sin pasar por `ListParams`.
+pub(crate) fn condicion_busqueda(schema: &ResourceSchema, q: &str) -> (String, Vec<SqlValue>) {
+    let terminos: Vec<&str> = q.split_whitespace().collect();
+    let buscables: Vec<&ColumnDef> = schema.columnas.iter().filter(|c| c.buscable).collect();
+    if terminos.is_empty() || buscables.is_empty() {
+        return (String::new(), Vec::new());
+    }
+    let mut binds = Vec::new();
+    let mut grupos_terminos = Vec::new();
+    for t in &terminos {
+        let ors: Vec<String> = buscables
+            .iter()
+            .map(|c| format!("{} LIKE ? ESCAPE '\\'", c.expr))
+            .collect();
+        grupos_terminos.push(format!("({})", ors.join(" OR ")));
+        for _ in &buscables {
+            binds.push(SqlValue::Text(escapar_like(t, true, true)));
+        }
+    }
+    (format!("({})", grupos_terminos.join(" AND ")), binds)
 }
 
 fn construir_order(schema: &ResourceSchema, sort: Option<&str>) -> AppResult<String> {
@@ -450,7 +465,7 @@ fn es_verdadero(valor: &str) -> bool {
 /// Escapa `%`, `_` y `\` de un valor de usuario antes de envolverlo en
 /// comodines LIKE, para que el operador de filtro nunca inyecte comodines
 /// implícitos desde datos arbitrarios.
-fn escapar_like(valor: &str, comodin_izq: bool, comodin_der: bool) -> String {
+pub(crate) fn escapar_like(valor: &str, comodin_izq: bool, comodin_der: bool) -> String {
     let escapado = valor
         .replace('\\', "\\\\")
         .replace('%', "\\%")
@@ -1229,6 +1244,7 @@ pub static UOM_SCHEMA: ResourceSchema = ResourceSchema {
         col("tipo", "uo.tipo", ColTipo::Texto, true, true, true),
         col("factor", "uo.factor", ColTipo::Entero, true, true, false),
         col("base", "uo.base", ColTipo::Booleano, true, true, false),
+        col("activo", "uo.activo", ColTipo::Booleano, true, true, false),
         col(
             "created_at",
             "uo.created_at",

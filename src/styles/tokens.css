@@ -1,41 +1,46 @@
 :root {
-  color-scheme: light;
+  /* El tema activo lo sobrescribe en runtime (variables inline del backend):
+     "light" o "dark" según el modo elegido (DESIGN §3.1). */
+  color-scheme: var(--color-scheme, light);
 
-  --color-ink-950: #080d1a;
-  --color-ink-900: #0e1526;
-  --color-ink-800: #161e35;
-  --color-ink-700: #212b47;
-  --color-ink-600: #38446b;
-  --color-ink-400: #7986ad;
-  --color-ink-200: #b7c0de;
-  --color-ink-50: #f1f3fc;
+  /* Escala Ink — superficies oscuras de hierro/grafito con tinte cálido (sidebar, énfasis) */
+  --color-ink-950: #150f0b;
+  --color-ink-900: #1f1813;
+  --color-ink-800: #2c231b;
+  --color-ink-700: #3d3226;
+  --color-ink-600: #554635;
+  --color-ink-400: #a18c78;
+  --color-ink-200: #c9bcab;
+  --color-ink-50: #f5f0e9;
 
-  --color-blue-50: #eef1ff;
-  --color-blue-100: #dce3ff;
-  --color-blue-200: #b9c7ff;
-  --color-blue-300: #8fa3ff;
-  --color-blue-400: #6480ff;
-  --color-blue-500: #4c5ff7;
-  --color-blue-600: #3b49de;
-  --color-blue-700: #2e37b0;
-  --color-blue-800: #242c87;
-  --color-blue-900: #1c2266;
+  /* Escala Rust — acento único de óxido (sustituye al indigo; "signal") */
+  --color-blue-50: #fdf2ec;
+  --color-blue-100: #fbe2d4;
+  --color-blue-200: #f6c7ab;
+  --color-blue-300: #eea276;
+  --color-blue-400: #dd7143;
+  --color-blue-500: #b7410e;
+  --color-blue-600: #9c370c;
+  --color-blue-700: #7c2c0a;
+  --color-blue-800: #5e2108;
+  --color-blue-900: #401605;
 
-  --color-gray-50: #f7f8fb;
-  --color-gray-100: #eef0f6;
-  --color-gray-200: #dfe2ec;
-  --color-gray-300: #c5cad9;
-  --color-gray-400: #9aa2b5;
-  --color-gray-500: #6d7690;
-  --color-gray-600: #4b5570;
-  --color-gray-700: #333c54;
-  --color-gray-800: #1c2338;
-  --color-gray-900: #0f1424;
+  /* Neutros cálidos (grises con tinte tierra — contenido) */
+  --color-gray-50: #fbfaf8;
+  --color-gray-100: #f4f2ee;
+  --color-gray-200: #e8e4dd;
+  --color-gray-300: #d1cbc1;
+  --color-gray-400: #aaa096;
+  --color-gray-500: #81776b;
+  --color-gray-600: #5f574d;
+  --color-gray-700: #463f37;
+  --color-gray-800: #302b25;
+  --color-gray-900: #201c17;
 
   --color-white: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-muted: #f7f8fb;
-  --color-surface-sunken: #eef0f6;
+  --color-surface-muted: #fbfaf8;
+  --color-surface-sunken: #f4f2ee;
   --color-surface-inverse: var(--color-ink-900);
 
   --color-success-500: #16a34a;
@@ -49,12 +54,12 @@
   --color-success-bg: #effbf3;
   --color-warning-bg: #fff8eb;
   --color-danger-bg: #fff0f2;
-  --color-info-bg: #eef1ff;
+  --color-info-bg: #fdf2ec;
 
   --color-success-text: #166534;
   --color-warning-text: #92400e;
   --color-danger-text: #9f1239;
-  --color-info-text: #2e37b0;
+  --color-info-text: #7c2c0a;
 
   --font-sans: "Geist Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
@@ -97,16 +102,17 @@
   --border-color: var(--color-gray-200);
   --border-color-strong: var(--color-gray-300);
 
-  --shadow-xs: 0 1px 2px rgba(15, 20, 40, 0.04);
-  --shadow-sm:
-    0 1px 3px rgba(15, 20, 40, 0.06), 0 1px 2px rgba(15, 20, 40, 0.04);
-  --shadow-md:
-    0 6px 16px -4px rgba(15, 20, 40, 0.1), 0 2px 4px -2px rgba(15, 20, 40, 0.05);
-  --shadow-lg:
-    0 16px 32px -8px rgba(15, 20, 40, 0.14), 0 4px 8px -4px rgba(15, 20, 40, 0.06);
+  /* Sombras con tinte cálido — elevación ambiental, nunca negro puro */
+  --shadow-xs: 0 1px 2px rgba(21, 15, 11, 0.05);
+  --shadow-sm: 0 1px 3px rgba(21, 15, 11, 0.07), 0 1px 2px rgba(21, 15, 11, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(21, 15, 11, 0.12), 0 2px 4px -2px rgba(21, 15, 11, 0.06);
+  --shadow-lg: 0 16px 32px -8px rgba(21, 15, 11, 0.16), 0 4px 8px -4px rgba(21, 15, 11, 0.07);
   --shadow-focus-ring: 0 0 0 2px var(--color-white), 0 0 0 4px var(--color-blue-300);
-  --shadow-glow-primary:
-    0 0 0 1px rgba(76, 95, 247, 0.16), 0 6px 16px -2px rgba(76, 95, 247, 0.22);
+  --shadow-glow-primary: 0 0 0 1px rgba(183, 65, 14, 0.18), 0 6px 16px -2px rgba(183, 65, 14, 0.25);
+  /* Fondo de la barra superior al hacer scroll y velo de superposición:
+     los redefine el tema activo en runtime (DESIGN §3.1). */
+  --topbar-scroll-bg: rgba(255, 255, 255, 0.85);
+  --scrim-overlay: rgba(21, 15, 11, 0.4);
 
   --size-xs: 1.5rem;
   --size-sm: 2rem;
@@ -127,20 +133,18 @@
 
   --z-topbar: 100;
   --z-sidebar: 200;
+  --z-tooltip: 250;
   --z-toast: 300;
 
   --duration-fast: 150ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --transition:
-    background-color 150ms var(--ease-standard),
-    border-color 150ms var(--ease-standard),
-    color 150ms var(--ease-standard),
-    opacity 150ms var(--ease-standard);
+    background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard),
+    color 150ms var(--ease-standard), opacity 150ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard);
   --transition-elevate:
-    background-color 150ms var(--ease-standard),
-    border-color 150ms var(--ease-standard),
-    box-shadow 180ms var(--ease-standard),
-    transform 180ms var(--ease-standard);
+    background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard), transform 180ms var(--ease-standard);
 
   --focus-ring-width: 2px;
   --focus-ring-color: var(--color-blue-300);

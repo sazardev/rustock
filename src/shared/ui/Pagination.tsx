@@ -8,6 +8,9 @@ export interface PaginationProps {
   from: number;
   to: number;
   onPageChange: (page: number) => void;
+  /** Prefetch de una página (STACK §8.4): se invoca al pasar el ratón sobre
+   *  los botones Anterior/Siguiente para precargarla. */
+  onPrefetch?: (page: number) => void;
   className?: string;
 }
 
@@ -18,6 +21,7 @@ export function Pagination({
   from,
   to,
   onPageChange,
+  onPrefetch,
   className,
 }: PaginationProps) {
   return (
@@ -31,6 +35,7 @@ export function Pagination({
           size="sm"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
+          onMouseEnter={onPrefetch && page > 1 ? () => onPrefetch(page - 1) : undefined}
         >
           Anterior
         </Button>
@@ -42,6 +47,7 @@ export function Pagination({
           size="sm"
           disabled={page >= pageCount}
           onClick={() => onPageChange(page + 1)}
+          onMouseEnter={onPrefetch && page < pageCount ? () => onPrefetch(page + 1) : undefined}
         >
           Siguiente
         </Button>

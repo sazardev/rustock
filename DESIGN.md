@@ -1,6 +1,6 @@
 # DESIGN.md — Rustock
 
-> **Sistema de diseño de la interfaz de Rustock — "Ink & Signal".**
+> **Sistema de diseño de la interfaz de Rustock — "Rust & Iron".**
 > Complementa al `SPEC.md` (lógica de negocio). Este documento define **cómo se ve y cómo se siente** la aplicación: tokens, layout, navegación, componentes, patrones de página, experiencia y las reglas de consistencia que no admiten excepción.
 
 ---
@@ -75,12 +75,12 @@
 
 Rustock es una herramienta de trabajo: **precisa, moderna y con carácter**. El diseño no compite con los datos; los ordena con elegancia y les da un escenario a la altura de la operación que representan.
 
-La identidad se llama **"Ink & Signal"**: superficies de tinta profunda (`ink`) que anclan la navegación, y un acento indigo vibrante (`signal`) que marca exactamente lo que importa — la acción principal, el elemento activo, el dato que cambia. Todo lo demás se queda en calma.
+La identidad se llama **"Rust & Iron"**: superficies de hierro oscuro (`iron`) que anclan la navegación, y un acento de óxido (`rust`) que marca exactamente lo que importa — la acción principal, el elemento activo, el dato que cambia. Todo lo demás se queda en calma. La referencia visual es una caja de almacén a medio oxidar: sólida, resistente, con carácter de taller.
 
-- **Contraste de superficie con propósito** — la barra lateral vive en una superficie oscura de tinta (`--color-ink-900`); el contenido vive en un lienzo claro y cálido. El contraste separa "dónde navego" de "qué estoy viendo", sin necesidad de líneas ni decoración adicional.
+- **Contraste de superficie con propósito** — la barra lateral vive en una superficie oscura de hierro (`--color-ink-900`); el contenido vive en un lienzo claro y cálido. El contraste separa "dónde navego" de "qué estoy viendo", sin necesidad de líneas ni decoración adicional.
 - **Redondeado con precisión** — esquinas suaves (`--radius-md`/`--radius-lg`) en todos los componentes, pero comedidas: ni agresivas ni infantiles. La curva es una firma, no un capricho.
-- **Elevación deliberada, nunca decorativa** — se permite una **sombra suave, difusa y de tinte frío** (§3.5) para separar capas (tarjetas, menús, toasts) de su fondo. La sombra siempre comunica jerarquía real (esto flota sobre esto); nunca se usa para "decorar".
-- **Un acento, una función** — el indigo `--color-blue-500` ("signal") se reserva exclusivamente para: acción primaria, elemento activo, foco y enlaces. Si algo no es la acción principal ni un enlace, no lleva el acento.
+- **Elevación deliberada, nunca decorativa** — se permite una **sombra suave, difusa y de tinte cálido** (§3.5) para separar capas (tarjetas, menús, toasts) de su fondo. La sombra siempre comunica jerarquía real (esto flota sobre esto); nunca se usa para "decorar".
+- **Un acento, una función** — el óxido `--color-blue-500` (escala Rust) se reserva exclusivamente para: acción primaria, elemento activo, foco y enlaces. Si algo no es la acción principal ni un enlace, no lleva el acento.
 - **Tipografía como sistema, no como decoración** — una sola familia para interfaz (**Geist Sans**) y una sola familia mono para datos (**Geist Mono**), de la misma fundición, con métricas armónicas entre sí. Los números tabulares se alinean siempre en columna.
 - **Con foco en el dato** — códigos, SKU, cantidades y fechas técnicas se muestran en mono con cifras tabulares; son el protagonista visual de cada pantalla.
 - **Microdetalle sin ruido** — transiciones cortas, un leve desplazamiento vertical al pasar el cursor sobre tarjetas y filas, un resplandor sutil en el elemento activo. Elegancia hecha de detalles casi imperceptibles, no de efectos.
@@ -122,50 +122,50 @@ La "Filosofía de profesionalismo" es parte integral de la identidad visual: cua
 
 ### 3.1 Color
 
-La paleta tiene tres familias con roles distintos y no intercambiables: **Ink** (superficies oscuras de navegación), **Signal** (el único acento vibrante) y **Gray** (neutros de contenido). Esta separación es lo que da coherencia: el acento nunca se usa como fondo grande, y los neutros nunca cargan significado por sí mismos.
+La paleta tiene tres familias con roles distintos y no intercambiables: **Iron** (superficies oscuras de navegación), **Rust** (el único acento de óxido) y **Gray** (neutros de contenido, con tinte tierra cálido). Esta separación es lo que da coherencia: el acento nunca se usa como fondo grande, y los neutros nunca cargan significado por sí mismos. La paleta evoca una caja de almacén de metal a medio oxidar.
 
-**Escala Ink (superficies oscuras — sidebar, encabezados de énfasis):**
-
-| Token | Valor | Uso |
-|---|---|---|
-| `--color-ink-950` | `#080D1A` | Fondo de énfasis máximo (raro; solo bloques destacados) |
-| `--color-ink-900` | `#0E1526` | **Fondo de la barra lateral** |
-| `--color-ink-800` | `#161E35` | Fondo de ítem de sidebar en hover |
-| `--color-ink-700` | `#212B47` | Bordes y separadores sobre superficie oscura |
-| `--color-ink-600` | `#38446B` | Bordes activos, iconos secundarios sobre oscuro |
-| `--color-ink-400` | `#7986AD` | Texto secundario sobre superficie oscura |
-| `--color-ink-200` | `#B7C0DE` | Texto de ítems inactivos del sidebar |
-| `--color-ink-50` | `#F1F3FC` | Texto de ítems activos/hover sobre oscuro |
-
-**Escala Signal (acento único — indigo vibrante):**
+**Escala Iron (superficies oscuras — sidebar, encabezados de énfasis):**
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-blue-50` | `#EEF1FF` | Fondos de resaltado muy suave, insignias de información |
-| `--color-blue-100` | `#DCE3FF` | Fondos de selección ligera, hover de filas |
-| `--color-blue-200` | `#B9C7FF` | Bordes de componentes activos |
-| `--color-blue-300` | `#8FA3FF` | Anillo de foco, acentos de información |
-| `--color-blue-400` | `#6480FF` | Enlaces en hover |
-| `--color-blue-500` | `#4C5FF7` | **Acción primaria, enlaces, elemento activo — el único acento** |
-| `--color-blue-600` | `#3B49DE` | Hover/pressed de acciones primarias |
-| `--color-blue-700` | `#2E37B0` | Acentos oscuros sobre fondos claros |
-| `--color-blue-800` | `#242C87` | Textos de énfasis en indigo oscuro |
-| `--color-blue-900` | `#1C2266` | Reservado — no usar como fondo grande |
+| `--color-ink-950` | `#150F0B` | Fondo de énfasis máximo (raro; solo bloques destacados) |
+| `--color-ink-900` | `#1F1813` | **Fondo de la barra lateral** |
+| `--color-ink-800` | `#2C231B` | Fondo de ítem de sidebar en hover |
+| `--color-ink-700` | `#3D3226` | Bordes y separadores sobre superficie oscura |
+| `--color-ink-600` | `#554635` | Bordes activos, iconos secundarios sobre oscuro |
+| `--color-ink-400` | `#A18C78` | Texto secundario sobre superficie oscura |
+| `--color-ink-200` | `#C9BCAB` | Texto de ítems inactivos del sidebar |
+| `--color-ink-50` | `#F5F0E9` | Texto de ítems activos/hover sobre oscuro |
 
-**Neutros (grises con tinte azul frío — contenido):**
+**Escala Rust (acento único — óxido):**
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-gray-50` | `#F7F8FB` | Fondo general del área de contenido |
-| `--color-gray-100` | `#EEF0F6` | Fondos alternados de filas, paneles secundarios |
-| `--color-gray-200` | `#DFE2EC` | Bordes de componentes, separadores |
-| `--color-gray-300` | `#C5CAD9` | Bordes en hover, inputs deshabilitados |
-| `--color-gray-400` | `#9AA2B5` | Texto secundario, placeholders |
-| `--color-gray-500` | `#6D7690` | Texto atenuado, metadatos |
-| `--color-gray-600` | `#4B5570` | Texto principal secundario |
-| `--color-gray-700` | `#333C54` | Texto principal |
-| `--color-gray-800` | `#1C2338` | Texto de títulos, cabeceras |
-| `--color-gray-900` | `#0F1424` | Texto más oscuro, contenido crítico |
+| `--color-blue-50` | `#FDF2EC` | Fondos de resaltado muy suave, insignias de información |
+| `--color-blue-100` | `#FBE2D4` | Fondos de selección ligera, hover de filas |
+| `--color-blue-200` | `#F6C7AB` | Bordes de componentes activos |
+| `--color-blue-300` | `#EEA276` | Anillo de foco, acentos de información |
+| `--color-blue-400` | `#DD7143` | Enlaces en hover |
+| `--color-blue-500` | `#B7410E` | **Acción primaria, enlaces, elemento activo — el único acento** |
+| `--color-blue-600` | `#9C370C` | Hover/pressed de acciones primarias |
+| `--color-blue-700` | `#7C2C0A` | Acentos oscuros sobre fondos claros |
+| `--color-blue-800` | `#5E2108` | Textos de énfasis en óxido oscuro |
+| `--color-blue-900` | `#401605` | Reservado — no usar como fondo grande |
+
+**Neutros (grises con tinte tierra cálido — contenido):**
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--color-gray-50` | `#FBFAF8` | Fondo general del área de contenido |
+| `--color-gray-100` | `#F4F2EE` | Fondos alternados de filas, paneles secundarios |
+| `--color-gray-200` | `#E8E4DD` | Bordes de componentes, separadores |
+| `--color-gray-300` | `#D1CBC1` | Bordes en hover, inputs deshabilitados |
+| `--color-gray-400` | `#AAA096` | Texto secundario, placeholders |
+| `--color-gray-500` | `#81776B` | Texto atenuado, metadatos |
+| `--color-gray-600` | `#5F574D` | Texto principal secundario |
+| `--color-gray-700` | `#463F37` | Texto principal |
+| `--color-gray-800` | `#302B25` | Texto de títulos, cabeceras |
+| `--color-gray-900` | `#201C17` | Texto más oscuro, contenido crítico |
 
 **Blanco / superficies:**
 
@@ -173,9 +173,9 @@ La paleta tiene tres familias con roles distintos y no intercambiables: **Ink** 
 |---|---|---|
 | `--color-white` | `#FFFFFF` | Fondos de tarjetas, paneles, inputs |
 | `--color-surface` | `#FFFFFF` | Superficie por defecto |
-| `--color-surface-muted` | `#F7F8FB` | Superficie secundaria, fondo de página |
-| `--color-surface-sunken` | `#EEF0F6` | Superficie hundida (bloques de código, celdas de resumen) |
-| `--color-surface-inverse` | `#0E1526` | Superficie oscura (sidebar) — alias de `--color-ink-900` |
+| `--color-surface-muted` | `#FBFAF8` | Superficie secundaria, fondo de página |
+| `--color-surface-sunken` | `#F4F2EE` | Superficie hundida (bloques de código, celdas de resumen) |
+| `--color-surface-inverse` | `#1F1813` | Superficie oscura (sidebar) — alias de `--color-ink-900` |
 
 **Semántico (estados y acciones):**
 
@@ -187,7 +187,7 @@ La paleta tiene tres familias con roles distintos y no intercambiables: **Ink** 
 | `--color-warning-600` | `#B45309` | Hover/pressed de advertencia |
 | `--color-danger-500` | `#E11D48` | Eliminar, anular, error, merma |
 | `--color-danger-600` | `#BE123C` | Hover/pressed de peligro |
-| `--color-info-500` | `#4C5FF7` | Información, enlaces — alias de `--color-blue-500` |
+| `--color-info-500` | `#B7410E` | Información, enlaces — alias de `--color-blue-500` |
 
 **Fondos de estado (superficies tintadas para insignias y paneles de estado):**
 
@@ -196,7 +196,7 @@ La paleta tiene tres familias con roles distintos y no intercambiables: **Ink** 
 | `--color-success-bg` | `#EFFBF3` | Insignia "aprobado / entrada" |
 | `--color-warning-bg` | `#FFF8EB` | Insignia "pendiente / bajo" |
 | `--color-danger-bg` | `#FFF0F2` | Insignia "anulado / error / merma" |
-| `--color-info-bg` | `#EEF1FF` | Insignia "información" |
+| `--color-info-bg` | `#FDF2EC` | Insignia "información" |
 
 **Texto sobre fondos tintados:**
 
@@ -205,9 +205,21 @@ La paleta tiene tres familias con roles distintos y no intercambiables: **Ink** 
 | `--color-success-text` | `#166534` |
 | `--color-warning-text` | `#92400E` |
 | `--color-danger-text` | `#9F1239` |
-| `--color-info-text` | `#2E37B0` |
+| `--color-info-text` | `#7C2C0A` |
 
-**Regla de uso de familias:** `Ink` solo aparece en el sidebar y en bloques de énfasis puntuales explícitamente definidos en este documento. `Signal` solo aparece en elementos activos, foco, enlaces y el botón primario. Ningún otro componente usa estas dos familias como fondo extenso.
+**Regla de uso de familias:** `Iron` solo aparece en el sidebar y en bloques de énfasis puntuales explícitamente definidos en este documento. `Rust` solo aparece en elementos activos, foco, enlaces y el botón primario. Ningún otro componente usa estas dos familias como fondo extenso.
+
+> **Paleta configurable (Hito 21):** la paleta de tokens es **dinámica**. El
+> backend expone 6 paletas predefinidas (Óxido, Bosque, Océano, Uva, Miel,
+> Pizarra) y un modo claro/oscuro; la elección vive en la configuración de la
+> empresa (global, ADMIN) y en las preferencias de cada usuario (con
+> "heredar"). El tema activo se aplica en runtime sobrescribiendo las
+> variables de `:root` (mapa token→valor generado en Rust); los componentes
+> siguen consumiendo **solo** tokens. La identidad base "Rust & Iron"
+> (neutros y superficies) se mantiene por modo; la paleta cambia el acento.
+> El logo (`LogoMark`) se tiñe con el acento activo; el favicon
+> (`public/rustock.svg`) conserva el óxido fijo porque no puede usar
+> variables CSS del documento.
 
 ### 3.2 Tipografía
 
@@ -285,16 +297,22 @@ El radio es **la firma visual** del sistema: esquinas suaves, medidas y consiste
 
 ### 3.5 Sombras y elevación
 
-La elevación es un lenguaje deliberado: cada nivel de sombra corresponde a una distancia real entre capas, nunca a un capricho decorativo. Las sombras son siempre **suaves, difusas y con un tinte frío** (nunca negro puro) para que se sientan como luz ambiental, no como un recorte pegado encima.
+La elevación es un lenguaje deliberado: cada nivel de sombra corresponde a una distancia real entre capas, nunca a un capricho decorativo. Las sombras son siempre **suaves, difusas y con un tinte cálido** (nunca negro puro) para que se sientan como luz ambiental de taller, no como un recorte pegado encima.
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--shadow-xs` | `0 1px 2px rgba(15, 20, 40, 0.04)` | Inputs y botones en reposo (apenas perceptible) |
-| `--shadow-sm` | `0 1px 3px rgba(15, 20, 40, 0.06), 0 1px 2px rgba(15, 20, 40, 0.04)` | Tarjetas y paneles en reposo |
-| `--shadow-md` | `0 6px 16px -4px rgba(15, 20, 40, 0.10), 0 2px 4px -2px rgba(15, 20, 40, 0.05)` | Tarjetas en hover, filas seleccionadas, dropdowns |
-| `--shadow-lg` | `0 16px 32px -8px rgba(15, 20, 40, 0.14), 0 4px 8px -4px rgba(15, 20, 40, 0.06)` | Toasts, menús flotantes de bajo compromiso (búsqueda global) |
+| `--shadow-xs` | `0 1px 2px rgba(21, 15, 11, 0.05)` | Inputs y botones en reposo (apenas perceptible) |
+| `--shadow-sm` | `0 1px 3px rgba(21, 15, 11, 0.07), 0 1px 2px rgba(21, 15, 11, 0.04)` | Tarjetas y paneles en reposo |
+| `--shadow-md` | `0 6px 16px -4px rgba(21, 15, 11, 0.12), 0 2px 4px -2px rgba(21, 15, 11, 0.06)` | Tarjetas en hover, filas seleccionadas, dropdowns |
+| `--shadow-lg` | `0 16px 32px -8px rgba(21, 15, 11, 0.16), 0 4px 8px -4px rgba(21, 15, 11, 0.07)` | Toasts, menús flotantes de bajo compromiso (búsqueda global) |
 | `--shadow-focus-ring` | `0 0 0 2px var(--color-white), 0 0 0 4px var(--color-blue-300)` | Anillo de foco de dos capas sobre cualquier fondo |
-| `--shadow-glow-primary` | `0 0 0 1px rgba(76, 95, 247, 0.16), 0 6px 16px -2px rgba(76, 95, 247, 0.22)` | Ítem activo del sidebar, botón primario en hover |
+| `--shadow-glow-primary` | `0 0 0 1px rgba(183, 65, 14, 0.18), 0 6px 16px -2px rgba(183, 65, 14, 0.25)` | Ítem activo del sidebar, botón primario en hover |
+| `--topbar-scroll-bg` | `rgba(255, 255, 255, 0.85)` | Fondo de la barra superior al hacer scroll (única concesión de transparencia, §4.2) |
+| `--scrim-overlay` | `rgba(21, 15, 11, 0.4)` | Velo de superposición del nav móvil |
+
+> Los cuatro últimos tokens los redefine el tema activo en runtime (Hito 21):
+> las sombras se atenúan y oscurecen en modo oscuro, y los fondos
+> translúcidos cambian de tono con el modo.
 
 **Reglas:**
 - `box-shadow` **solo** con estos tokens. Prohibido cualquier valor de sombra literal o `box-shadow` negro puro.
@@ -357,7 +375,7 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 ### 4.2 Barra superior
 
 Contenido (de izquierda a derecha):
-1. **Marca Rustock** (logo cuadrado redondeado de 32px sobre `--color-blue-500` + palabra en Geist Sans semibold `--color-gray-800`). Es un enlace a `/`.
+1. **Marca Rustock** (logo de 32px: caja de almacén en tonos de óxido sin fondo — `LogoMark` — + palabra en Geist Sans semibold `--color-gray-800`). Es un enlace a `/`.
 2. **Breadcrumbs** del nivel actual (ver §4.5).
 3. **Búsqueda global** (input píldora con ícono, mono para resultados) — ver §6.10.
 4. **Indicador de alertas activas** (contador en insignia `--color-danger-500`, enlace a página de alertas).
@@ -505,7 +523,7 @@ Para un recurso genérico `recurso`:
 ### 5.5 Reglas de enlaces y navegación
 
 - **Todo** dato identificable es un enlace: SKU → `/productos/:id`, ubicación → `/ubicaciones/:id`, usuario → `/usuarios/:id`, número de movimiento → `/movimientos/:id`.
-- Los enlaces dentro de tablas usan el estilo "texto indigo, sin subrayado, hover con subrayado" (o se marca la fila entera como clickable con navegación).
+- Los enlaces dentro de tablas usan el estilo "texto óxido, sin subrayado, hover con subrayado" (o se marca la fila entera como clickable con navegación).
 - La navegación **nunca** abre pestañas nuevas salvo enlaces externos documentales.
 - Al guardar con éxito desde una página de creación → se navega al **detalle** del registro creado.
 - Al guardar con éxito desde una página de edición → se navega al **detalle** (o permanece en edición si hay ediciones consecutivas; se define por pantalla y debe ser consistente dentro de la misma pantalla).
@@ -542,16 +560,17 @@ Para un recurso genérico `recurso`:
 | `link` | transparente | sin borde | `--color-blue-600` | ninguna | Enlace con apariencia de botón |
 
 **Estados:**
-- `hover`: `primary` → fondo `--color-blue-600` + `--shadow-glow-primary`; `secondary` → fondo `--color-gray-100`; `danger` → fondo `--color-danger-600` + `--shadow-sm`; `ghost` → fondo `--color-blue-50`. El botón `primary` y `danger` además se desplazan `-1px` en el eje vertical (transform sutil, 150ms) al pasar el cursor.
+- `hover`: `primary` → fondo `--color-blue-600` + `--shadow-glow-primary`; `secondary` → fondo `--color-gray-100`; `danger` → fondo `--color-danger-600` + `--shadow-sm`; `ghost` → fondo `--color-blue-50`. El hover es **solo de superficie y elevación**: el botón **nunca se desplaza** y su texto **nunca cambia de color** (la variante `link` es la única excepción, porque se comporta como un enlace).
 - `focus`: `--shadow-focus-ring` (anillo de dos capas, §3.5), sin desplazamiento.
 - `disabled`: opacidad `0.5`, cursor `not-allowed`, sin estados hover ni sombra.
-- `active` (presionado): vuelve a `transform: translateY(0)` y pierde el nivel de sombra elevado (efecto de "presión" real).
+- `active` (presionado): vuelve a su sombra de reposo (efecto de "presión" real, sin desplazamiento).
 
 **Reglas:**
 - Una página tiene **un solo** botón `primary` (la acción principal).
 - Las acciones destructivas **solo** usan `danger` y viven en la página de confirmación de eliminación/anulación.
 - Los botones dentro de tablas se muestran como `ghost`/`link` (acciones ligeras); las acciones fuertes viven en la página de detalle.
 - El botón `primary` puede presentarse en píldora (`--radius-full`) cuando es el CTA principal de una página de listado.
+- El texto del botón **nunca** cambia de color ni se subraya en hover en ninguna variante (salvo `link`). Esto aplica también a `ButtonLink`: al renderizar un `<a>`, su estilo de hover propio tiene prioridad sobre el `a:hover` global (§6.3) para conservar el color del texto — p. ej. blanco sobre `primary`/`danger`.
 
 ### 6.3 Enlaces
 
@@ -641,6 +660,16 @@ Todo encabezado de página sigue la misma estructura:
 - Input con ícono de lupa, radio `--radius-full` (píldora); al escribir, despliega un panel de resultados con `--shadow-lg` agrupados por tipo (Productos, Ubicaciones, Movimientos, Lotes, Proveedores, Clientes).
 - Resultados en **mono** para códigos; navegan al detalle de cada resultado.
 - El Enter ejecuta la búsqueda y navega a la página de búsqueda global (listado agregado).
+
+> **Implementación (command palette):** la búsqueda global se materializa como
+> el **command palette "Buscar en todo Rustock"** (`Ctrl/Cmd+K` o clic en la
+> píldora): un panel flotante sobre la app que busca **todo** — páginas, rutas,
+> acciones de creación (por rol), reportes, ayuda/glosario y datos de negocio
+> en vivo (catálogos, movimientos, sesiones, alertas), cada resultado con su
+> ruta de detalle. Es navegación pura (nunca muta datos), así que convive con
+> la regla de cero modales (§5.1): no es un diálogo de confirmación ni de
+> edición, es el panel de resultados que esta sección ya especificaba.
+
 
 **Barra de filtros (listados):**
 - Fila de controles sobre la tabla: campo de búsqueda `q`, selector de campo, operador y valor para filtros avanzados.
@@ -839,7 +868,7 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 - **Tab**: recorrido lógico de formularios y enlaces.
 - **Enter**: envío de formularios.
 - **Esc**: en formularios con selector de fecha en línea, lo cierra (sin acciones destructivas).
-- **Atajos** (documentados en la página de configuración/ayuda): `/` enfoca búsqueda global; `N` nueva entidad en listados.
+- **Atajos** (documentados en la página de configuración/ayuda): `Ctrl/Cmd+K` abre el command palette "Buscar en todo Rustock" (§6.10); `/` enfoca la búsqueda global; `N` nueva entidad en listados.
 - Foco visible en **todos** los elementos interactivos (`--shadow-focus-ring`).
 
 ### 8.3 Retroalimentación
@@ -857,8 +886,8 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 
 ### 8.5 Consistencia de microinteracciones
 
-- Transiciones: `background-color`, `border-color`, `color`, `opacity`, `box-shadow` y `transform` (solo `translateY` de 1–2px), con duración `150–180ms` y easing `cubic-bezier(0.2, 0, 0, 1)` — entrada rápida, salida suave, sin rebote.
-- El único desplazamiento permitido es el de tarjetas/botones interactivos al hacer hover (§6.2, §6.6); ningún otro elemento se mueve.
+- Transiciones: `background-color`, `border-color`, `color`, `opacity` y `box-shadow`, con duración `150–180ms` y easing `cubic-bezier(0.2, 0, 0, 1)` — entrada rápida, salida suave, sin rebote.
+- El único desplazamiento permitido es el de **tarjetas interactivas** al hacer hover (§6.6, `translateY` de 1–2px); los **botones nunca se desplazan** (§6.2).
 - Sin animaciones de entrada/salida de páginas.
 - Sin paralaje, sin partículas, sin easing con rebote ("bounce") ni efectos elásticos.
 
@@ -944,4 +973,4 @@ Antes de dar una pantalla por terminada, debe cumplir:
 
 ---
 
-*Fin del DESIGN — Rustock v0.2 "Ink & Signal". Este documento es la única fuente de verdad del aspecto y la experiencia de la interfaz.*
+*Fin del DESIGN — Rustock v0.3 "Rust & Iron". Este documento es la única fuente de verdad del aspecto y la experiencia de la interfaz.*

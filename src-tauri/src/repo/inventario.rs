@@ -48,6 +48,41 @@ pub fn obtener_sesion(conn: &Connection, id: &str) -> AppResult<Option<SesionInv
     rows.next().transpose().map_err(AppError::from)
 }
 
+/// Pasa una sesión `PLANEADA` a `EN_CURSO` (SPEC §11.1): fija `fecha_inicio`
+/// al momento actual. Exige `inventario:ejecutar`. Las sesiones creadas con
+/// `fecha_inicio` ya nacen `EN_CURSO`; este comando cubre las planeadas.
+pub fn iniciar_sesion(conn: &Connection, id: &str, by: &str) -> AppResult<SesionInventario> {
+    puede(conn, Some(by), "inventario", "ejecutar")?;
+    let tx = conn.unchecked_transaction()?;
+    let estado: String = tx
+        .query_row(
+            "SELECT estado FROM sesiones_inventario WHERE id = ?1",
+            [id],
+            |r| r.get(0),
+        )
+        .map_err(|_| AppError::NoEncontrado("sesión de inventario", id.to_string()))?;
+    if estado != "PLANEADA" {
+        return Err(AppError::TransicionInvalida("EN_CURSO".into(), estado));
+    }
+    let ts = ahora();
+    tx.execute(
+        "UPDATE sesiones_inventario SET estado = 'EN_CURSO', fecha_inicio = ?2 WHERE id = ?1",
+        rusqlite::params![id, ts],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        &tx,
+        Some(by),
+        "iniciar",
+        "inventario",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    tx.commit()?;
+    Ok(obtener_sesion(conn, id)?.expect("existe"))
+}
+
 fn map_sesion(r: &rusqlite::Row<'_>) -> rusqlite::Result<SesionInventario> {
     Ok(SesionInventario {
         id: r.get(0)?,

@@ -1,5 +1,3 @@
-import type { EventoAuditoria } from "./audit";
-
 /**
  * Gateway de API de Rustock.
  *
@@ -16,7 +14,17 @@ export function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-const API_BASE = "http://127.0.0.1:1421/api";
+/**
+ * Base del API HTTP local. Por defecto `127.0.0.1:1421` (el puerto del
+ * backend Rust, configurable con `RUSTOCK_HTTP_PORT`); en modo navegador se
+ * puede sobrescribir con `VITE_RUSTOCK_API` (lo define `scripts/web.mjs`
+ * cuando se usa un puerto alternativo).
+ */
+const API_BASE =
+  (import.meta.env.VITE_RUSTOCK_API as string | undefined) ?? "http://127.0.0.1:1421/api";
+
+/** Base del API HTTP local (exportada para el beacon del tracking, Hito 25). */
+export { API_BASE };
 
 /**
  * Invoca un comando del backend. En Tauri usa el IPC real; en un navegador
@@ -51,41 +59,3 @@ async function webInvoke<T>(command: string, args: Record<string, unknown>): Pro
   }
   return payload.data as T;
 }
-
-/**
- * Registra un evento en el historial local de navegación del SPA (no es el
- * historial de auditoría del backend, SPEC §4.5 — ese vive en `auditoria` y
- * se consulta vía `listar_historial`/`metricas_historial`). Este historial
- * local solo anota qué páginas visitó el usuario dentro de la app, algo que
- * el backend no modela porque navegar no es una acción de negocio.
- */
-export function historialRegistrar(
-  entrada: Omit<EventoAuditoria, "id" | "timestamp"> & { timestamp?: string },
-): void {
-  const eventos = historialLeer();
-  const evento: EventoAuditoria = {
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    timestamp: entrada.timestamp ?? new Date().toISOString(),
-    ...entrada,
-  };
-  eventos.unshift(evento);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(eventos.slice(0, MAX_EVENTOS)));
-  } catch {
-    // almacenamiento no disponible: el historial vive solo en memoria
-    memoria = eventos;
-  }
-}
-
-export function historialLeer(): EventoAuditoria[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as EventoAuditoria[]) : memoria;
-  } catch {
-    return memoria;
-  }
-}
-
-const STORAGE_KEY = "rustock.historial";
-const MAX_EVENTOS = 500;
-let memoria: EventoAuditoria[] = [];

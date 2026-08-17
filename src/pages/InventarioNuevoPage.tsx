@@ -2,12 +2,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { crearSesionInventario, listarAlmacenes } from "../shared/backend";
 import { esPaginado } from "../shared/types";
+import { invalidarRecurso } from "../shared/invalidar";
 import { PATH, sesionInventarioDetalle } from "../app/route-paths";
+import { catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { CrearRapido, usePreservarFormulario, useSeleccionCreada } from "../shared/creacion-rapida";
 import {
   Button,
   ButtonLink,
@@ -40,8 +43,11 @@ const esquema = z.object({
 
 type FormValues = z.infer<typeof esquema>;
 
+const INVALIDAR_ALMACENES = ["almacenes", "selector"] as const;
+
 export function InventarioNuevoPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
   const almacenesQuery = useQuery({
@@ -54,6 +60,9 @@ export function InventarioNuevoPage() {
   const {
     register,
     handleSubmit,
+    reset,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(esquema),
@@ -67,6 +76,20 @@ export function InventarioNuevoPage() {
     },
   });
 
+  // Conserva el borrador al salir a crear un almacén (creación rápida) y lo
+  // restaura al volver (crear o cancelar).
+  const { descartar } = usePreservarFormulario(
+    "/inventario/nuevo",
+    () => getValues(),
+    (valores) => reset(valores as FormValues),
+  );
+
+  useSeleccionCreada(
+    "almacen_id",
+    (nuevoId) => setValue("almacen_id", nuevoId),
+    INVALIDAR_ALMACENES,
+  );
+
   const crearMut = useMutation({
     mutationFn: (v: FormValues) =>
       crearSesionInventario({
@@ -77,7 +100,11 @@ export function InventarioNuevoPage() {
         conteo_ciego: v.conteo_ciego,
         exige_doble_conteo: v.exige_doble_conteo,
       }),
-    onSuccess: (sesion) => navigate(sesionInventarioDetalle(sesion.id)),
+    onSuccess: (sesion) => {
+      descartar();
+      invalidarRecurso(queryClient, "sesiones-inventario", "sesion-inventario");
+      navigate(sesionInventarioDetalle(sesion.id));
+    },
     onError: (err) => setError(mensajeError(err)),
   });
 
@@ -109,13 +136,20 @@ export function InventarioNuevoPage() {
                 required
                 error={errors.almacen_id?.message}
               >
-                <Select id="almacen_id" placeholder="Selecciona" {...register("almacen_id")}>
-                  {almacenes.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.codigo} — {a.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select id="almacen_id" placeholder="Selecciona" {...register("almacen_id")}>
+                      {almacenes.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.codigo} — {a.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <CrearRapido campo="almacen_id" rutaNueva={catalogoNuevo("almacenes")}>
+                    Nuevo almacén
+                  </CrearRapido>
+                </div>
               </Field>
               <Field
                 label="Alcance"

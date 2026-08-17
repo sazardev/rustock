@@ -32,6 +32,7 @@ import {
   movimientoAnular,
   movimientoAprobar,
   movimientoDetalle,
+  movimientoEditar,
   PATH,
 } from "../app/route-paths";
 import {
@@ -167,6 +168,18 @@ export function MovimientoDetallePage() {
         }
         actions={
           <div className="flex gap-2">
+            <ButtonLink
+              variant="secondary"
+              icon="agregar"
+              href={`${PATH.movimientosNuevo}?tipo=${movimiento.tipo}&duplicarDe=${movimientoId}`}
+            >
+              Duplicar
+            </ButtonLink>
+            {movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION" ? (
+              <ButtonLink variant="secondary" icon="editar" href={movimientoEditar(movimientoId)}>
+                Editar
+              </ButtonLink>
+            ) : null}
             {movimiento.estado === "BORRADOR" ? (
               <Button
                 variant="secondary"

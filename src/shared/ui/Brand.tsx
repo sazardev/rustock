@@ -2,17 +2,22 @@ import { Link as RouterLink } from "react-router";
 import { cn } from "../lib/cn";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
+import { LogoMark } from "./LogoMark";
 
 export interface BrandProps {
   name?: string;
   href?: string;
   className?: string;
+  /** Tamaño del logo en píxeles (por defecto 32, el alto de la topbar). */
+  logoSize?: number;
 }
 
-export function Brand({ name = "Rustock", href = "/", className }: BrandProps) {
+export function Brand({ name = "Rustock", href = "/", className, logoSize = 32 }: BrandProps) {
   return (
     <RouterLink to={href} className={cn("topbar__brand", className)}>
-      <span className="topbar__logo" aria-hidden="true" />
+      <span className="topbar__logo" aria-hidden="true">
+        <LogoMark size={logoSize} />
+      </span>
       <span>{name}</span>
     </RouterLink>
   );
@@ -20,10 +25,16 @@ export function Brand({ name = "Rustock", href = "/", className }: BrandProps) {
 
 export interface TopbarNavToggleProps {
   onClick?: () => void;
+  /** Indica si la navegación/sidebar está expandida (para aria-expanded). */
+  expanded?: boolean;
   ariaLabel?: string;
 }
 
-export function TopbarNavToggle({ onClick, ariaLabel = "Abrir navegación" }: TopbarNavToggleProps) {
+export function TopbarNavToggle({
+  onClick,
+  expanded = false,
+  ariaLabel = "Alternar navegación",
+}: TopbarNavToggleProps) {
   return (
     <Button
       type="button"
@@ -31,40 +42,10 @@ export function TopbarNavToggle({ onClick, ariaLabel = "Abrir navegación" }: To
       size="icon"
       className="topbar__nav-toggle"
       aria-label={ariaLabel}
-      aria-expanded="false"
+      aria-expanded={expanded}
       onClick={onClick}
     >
       <Icon name="menu" size={16} aria-hidden="true" />
-    </Button>
-  );
-}
-
-export interface TopbarSidebarToggleProps {
-  collapsed?: boolean;
-  onClick?: () => void;
-  ariaLabel?: string;
-}
-
-export function TopbarSidebarToggle({
-  collapsed = false,
-  onClick,
-  ariaLabel,
-}: TopbarSidebarToggleProps) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="topbar__sidebar-toggle"
-      aria-label={ariaLabel ?? (collapsed ? "Expandir barra lateral" : "Contraer barra lateral")}
-      aria-pressed={collapsed}
-      onClick={onClick}
-    >
-      <Icon
-        name={collapsed ? "panelIzquierdo" : "panelIzquierdoCerrar"}
-        size={16}
-        aria-hidden="true"
-      />
     </Button>
   );
 }

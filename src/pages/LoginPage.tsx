@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
+import { Link as RouterLink, useNavigate } from "react-router";
 import { z } from "zod";
 import { PATH } from "../app/route-paths";
 import { useSession } from "../shared/session";
-import { Brand, Button, Card, ErrorPanel, Field, Input, Link, Text } from "../shared/ui";
+import { Button, Card, ErrorPanel, Field, Input, Link, LogoMark, Text } from "../shared/ui";
 
 const esquema = z.object({
   nombre_usuario: z.string().trim().min(1, "El usuario es obligatorio"),
@@ -38,7 +38,10 @@ export function LoginPage() {
     <div className="auth-shell">
       <div className="auth-shell__panel">
         <div className="auth-shell__brand">
-          <Brand name="Rustock" href={PATH.login} />
+          <RouterLink to={PATH.login} className="auth-shell__brand-link">
+            <LogoMark size={72} />
+            <span className="auth-shell__brand-name">Rustock</span>
+          </RouterLink>
         </div>
         <Card title="Iniciar sesión">
           <Card.Body>

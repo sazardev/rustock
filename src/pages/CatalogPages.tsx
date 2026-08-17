@@ -5,6 +5,8 @@ import type { CatalogAdapter } from "./catalog-adapters";
 import { esPaginado } from "../shared/types";
 import { mensajeError } from "../shared/format";
 import { catalogoDetalle, catalogoLista } from "../app/route-paths";
+import { ArbolAlmacen } from "./ArbolAlmacen";
+import { FavoritosFiltros } from "../shared/favoritos";
 import {
   Button,
   ButtonLink,
@@ -31,6 +33,7 @@ export function CatalogListPage<T extends { id: string }>({
   slug: string;
 }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
 
@@ -42,6 +45,23 @@ export function CatalogListPage<T extends { id: string }>({
 
   const listado = query.data && esPaginado(query.data) ? query.data : null;
   const filas = listado?.data ?? [];
+
+  // Prefetch bajo demanda (STACK §8.4): el detalle al pasar el ratón sobre la
+  // fila, y la página siguiente al pasar sobre los controles de paginación.
+  function prefetchDetalle(row: T) {
+    void queryClient.prefetchQuery({
+      queryKey: ["catalogo-detalle", slug, row.id],
+      queryFn: () => adapter.obtener(row.id),
+    });
+  }
+
+  function prefetchPagina(p: number) {
+    void queryClient.prefetchQuery({
+      queryKey: ["catalogo", slug, { page: p, q }],
+      queryFn: () =>
+        adapter.listar({ page: p, page_size: PAGE_SIZE, q: q || undefined, sort: "-created_at" }),
+    });
+  }
 
   return (
     <>
@@ -75,6 +95,15 @@ export function CatalogListPage<T extends { id: string }>({
         </FilterField>
       </FilterBar>
 
+      <FavoritosFiltros
+        clave={`catalogo:${slug}`}
+        estadoActual={() => ({ q })}
+        onAplicar={(estado) => {
+          setQ(String(estado.q ?? ""));
+          setPage(1);
+        }}
+      />
+
       <Card>
         <Table
           columns={adapter.columnas}
@@ -82,6 +111,7 @@ export function CatalogListPage<T extends { id: string }>({
           rowKey={(r) => r.id}
           loading={query.isLoading}
           onRowClick={(r) => navigate(catalogoDetalle(slug, r.id))}
+          prefetch={prefetchDetalle}
           emptyTitle={`No hay ${adapter.singular.toLowerCase()} todavía`}
           emptyDescription={
             adapter.crearHref
@@ -104,6 +134,7 @@ export function CatalogListPage<T extends { id: string }>({
             from={(listado.meta.page - 1) * listado.meta.page_size + 1}
             to={Math.min(listado.meta.page * listado.meta.page_size, listado.meta.total)}
             onPageChange={setPage}
+            onPrefetch={prefetchPagina}
           />
         ) : null}
       </Card>
@@ -147,6 +178,11 @@ export function CatalogDetailPage<T extends { id: string }>({
         description={`Detalle de ${adapter.singular.toLowerCase()}.`}
         actions={
           <div className="flex gap-2">
+            {adapter.duplicarHref ? (
+              <ButtonLink variant="secondary" icon="agregar" href={adapter.duplicarHref(id)}>
+                Duplicar
+              </ButtonLink>
+            ) : null}
             {adapter.editarHref ? (
               <ButtonLink variant="secondary" icon="editar" href={adapter.editarHref(id)}>
                 Editar
@@ -166,6 +202,8 @@ export function CatalogDetailPage<T extends { id: string }>({
           <DetailList items={adapter.datosGenerales(row)} />
         </Card.Body>
       </Card>
+
+      {slug === "almacenes" ? <ArbolAlmacen almacenId={id} /> : null}
     </>
   );
 }
@@ -192,7 +230,9 @@ export function CatalogEliminarPage<T extends { id: string }>({
   const desactivarMut = useMutation({
     mutationFn: () => adapter.desactivar!(id),
     onSuccess: () => {
+      // Listado universal + selectores/reportes que consumen el mismo recurso.
       queryClient.invalidateQueries({ queryKey: ["catalogo", slug] });
+      queryClient.invalidateQueries({ queryKey: [slug] });
       toast(`${adapter.singular} desactivado.`, "success");
       navigate(catalogoLista(slug));
     },

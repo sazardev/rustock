@@ -2,34 +2,88 @@
  * Formato y mapas de presentación compartidos entre páginas (fechas, tonos de
  * Badge por tipo/estado). Centralizado para que Movimientos, Dashboard y
  * Alertas se vean consistentes (DESIGN.md).
+ *
+ * El formato de fechas respeta la zona horaria y el formato elegidos en las
+ * preferencias de la sesión (SPEC §14.4): si no hay preferencias cargadas,
+ * cae al formato por defecto del diseño (DD MMM YYYY, `es-ES`).
  */
 import type { BadgeTone, IconName } from "./ui";
+import { preferenciasActuales } from "./preferencias";
 import type {
   EstadoAlerta,
   EstadoMovimiento,
   EstadoSesionInventario,
   SeveridadAlerta,
+  SubTipoMovimiento,
   TipoMovimiento,
 } from "./types";
+
+const ZONA_DEFECTO = "America/Lima";
+const FORMATO_DEFECTO = "DD_MMM_YYYY";
+
+interface OpcionesFecha {
+  timeZone: string;
+  formato: string;
+}
+
+function opcionesFecha(): OpcionesFecha {
+  const prefs = preferenciasActuales();
+  return {
+    timeZone: prefs?.zona_horaria || ZONA_DEFECTO,
+    formato: prefs?.formato_fecha || FORMATO_DEFECTO,
+  };
+}
+
+function construirFecha(d: Date, opciones: OpcionesFecha, conHora: boolean): string {
+  const base: Intl.DateTimeFormatOptions = { timeZone: opciones.timeZone };
+  let fecha: string;
+  switch (opciones.formato) {
+    case "YYYY_MM_DD":
+      // en-CA produce el formato ISO yyyy-MM-dd de forma nativa.
+      fecha = new Intl.DateTimeFormat("en-CA", {
+        ...base,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(d);
+      break;
+    case "DD_MM_YYYY":
+      fecha = new Intl.DateTimeFormat("es-ES", {
+        ...base,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(d);
+      break;
+    default:
+      fecha = new Intl.DateTimeFormat("es-ES", {
+        ...base,
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(d);
+  }
+  if (!conHora) return fecha;
+  const hora = new Intl.DateTimeFormat("es-ES", {
+    ...base,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+  return `${fecha} ${hora}`;
+}
 
 export function formatearFecha(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("es-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return construirFecha(d, opcionesFecha(), true);
 }
 
 export function formatearFechaCorta(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+  return construirFecha(d, opcionesFecha(), false);
 }
 
 export const TIPO_MOVIMIENTO_LABEL: Record<TipoMovimiento, string> = {
@@ -56,6 +110,19 @@ export const TIPO_MOVIMIENTO_ICON: Record<TipoMovimiento, IconName> = {
   CONSUMO: "salida",
 };
 
+export const SUB_TIPO_MOVIMIENTO_LABEL: Record<SubTipoMovimiento, string> = {
+  COMPRA: "Compra",
+  DEVOLUCION_CLIENTE: "Devolución de cliente",
+  AJUSTE_POSITIVO: "Ajuste positivo",
+  INICIAL: "Inicial",
+  TRASLADO_ENTRADA: "Traslado (entrada)",
+  CLIENTE: "Cliente",
+  DEVOLUCION_PROVEEDOR: "Devolución a proveedor",
+  MERMA: "Merma",
+  AJUSTE_NEGATIVO: "Ajuste negativo",
+  TRASLADO_SALIDA: "Traslado (salida)",
+};
+
 export const ESTADO_MOVIMIENTO_LABEL: Record<EstadoMovimiento, string> = {
   BORRADOR: "Borrador",
   PENDIENTE_APROBACION: "Pendiente de aprobación",
@@ -79,7 +146,7 @@ export const SEVERIDAD_ALERTA_TONE: Record<SeveridadAlerta, BadgeTone> = {
 export const ESTADO_ALERTA_LABEL: Record<EstadoAlerta, string> = {
   ABIERTA: "Abierta",
   RESUELTA: "Resuelta",
-  IGNORADA: "Ignorada",
+  IGNORADA: "Archivada",
 };
 
 export const ESTADO_ALERTA_TONE: Record<EstadoAlerta, BadgeTone> = {
@@ -110,6 +177,11 @@ export const ESTADO_SESION_TONE: Record<EstadoSesionInventario, BadgeTone> = {
   EN_CURSO: "info",
   CERRADA: "success",
   ANULADA: "danger",
+};
+
+export const TIPO_SESION_LABEL: Record<string, string> = {
+  COMPLETO: "Completo",
+  CICLICO: "Cíclico",
 };
 
 export const TIPO_DIFERENCIA_LABEL: Record<string, string> = {

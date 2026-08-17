@@ -43,6 +43,32 @@ export function esPaginado<T>(listado: Listado<T>): listado is Paginado<T> {
   return "data" in listado;
 }
 
+// ============ Búsqueda global del command palette (SPEC §15.4) ============
+
+/** Un resultado de la búsqueda global, normalizado para el command palette. */
+export interface BuscarItem {
+  id: string;
+  /** Etiqueta principal (código/SKU/número/nombre). */
+  titulo: string;
+  /** Etiqueta secundaria legible, o null cuando se compone en `datos`. */
+  subtitulo: string | null;
+  /** Datos crudos adicionales (clave = nombre de columna): tipo/estado de un
+   * movimiento o sesión, entidad ancla de una alerta. */
+  datos: Record<string, string> | null;
+}
+
+/** Un grupo de resultados para una entidad (recurso) concreta. */
+export interface BuscarGrupo {
+  /** Clave de recurso (misma nomenclatura que `CATALOGOS` del frontend). */
+  recurso: string;
+  items: BuscarItem[];
+}
+
+export interface BuscarRespuesta {
+  query: string;
+  grupos: BuscarGrupo[];
+}
+
 /** Parámetros del motor de consulta universal (SPEC §15). */
 export interface ListParams {
   page?: number;
@@ -288,6 +314,7 @@ export interface Uom {
   tipo: TipoUom;
   factor: number;
   base: boolean;
+  activo: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -297,6 +324,13 @@ export interface NuevaUom {
   nombre: string;
   tipo: TipoUom;
   factor?: number;
+  base?: boolean;
+}
+
+export interface EditarUom {
+  nombre?: string | null;
+  tipo?: TipoUom;
+  factor?: number | null;
   base?: boolean;
 }
 
@@ -509,6 +543,20 @@ export interface NuevoMovimiento {
   lineas: NuevaLinea[];
 }
 
+/** Cambios sobre un movimiento en BORRADOR/PENDIENTE_APROBACION (SPEC §6.2).
+ *  `tipo`/`sub_tipo`/`numero` son estables; solo se actualizan campos
+ *  operativos y se reemplazan las líneas. Enviar `null` en un campo opcional
+ *  lo deja nulo; omitirlo (undefined) lo deja como está. */
+export interface EditarMovimiento {
+  fecha_movimiento?: string | null;
+  motivo?: string | null;
+  proveedor_id?: string | null;
+  cliente_id?: string | null;
+  documento_referencia?: string | null;
+  notas?: string | null;
+  lineas: NuevaLinea[];
+}
+
 export interface Saldo {
   ubicacion_id: string;
   producto_id: string;
@@ -521,6 +569,21 @@ export interface SugerenciaLinea {
   ubicacion_id: string;
   lote_id: string | null;
   cantidad: number;
+}
+
+/** Resultado de resolver un código escaneado (SPEC §14.3, captura rápida). */
+export interface EscaneoResuelto {
+  tipo: "PRODUCTO" | "UBICACION" | "LOTE" | "CAJA";
+  id: string;
+  etiqueta: string;
+}
+
+/** Resultado de una fila importada (importación masiva). */
+export interface ResultadoImportacion {
+  fila: number;
+  ok: boolean;
+  error: string | null;
+  id: string | null;
 }
 
 export interface NuevoTraslado {
@@ -741,4 +804,258 @@ export interface KardexLinea {
   entrada: number;
   salida: number;
   saldo_acumulado: number;
+}
+
+// ============ Configuración de empresa y preferencias (SPEC §4.3, §14.4, §17.1) ============
+
+/** Formatos de fecha soportados (DESIGN §9.2). */
+export type FormatoFecha = "DD_MMM_YYYY" | "DD_MM_YYYY" | "YYYY_MM_DD";
+/** Tamaños de fuente de la UI. */
+export type TamanioFuente = "PEQUENA" | "MEDIA" | "GRANDE";
+
+export interface ConfiguracionEmpresa {
+  id: string;
+  nombre: string | null;
+  codigo: string | null;
+  descripcion: string | null;
+  zona_horaria: string;
+  formato_fecha: string;
+  dias_aviso_vencimiento: number;
+  requiere_aprobacion: boolean;
+  stock_minimo_default: number | null;
+  pais: string | null;
+  ciudad: string | null;
+  direccion: string | null;
+  codigo_postal: string | null;
+  razon_social: string | null;
+  documento_fiscal: string | null;
+  direccion_fiscal: string | null;
+  telefono: string | null;
+  email_contacto: string | null;
+  sitio_web: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  /** Paleta de tema global (DESIGN §3.1). */
+  tema_id: string;
+  /** Modo oscuro global (interruptor claro/oscuro). */
+  modo_oscuro: boolean;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export interface EditarConfiguracionEmpresa {
+  nombre?: string | null;
+  codigo?: string | null;
+  descripcion?: string | null;
+  zona_horaria?: string;
+  formato_fecha?: string;
+  dias_aviso_vencimiento?: number;
+  requiere_aprobacion?: boolean;
+  stock_minimo_default?: number | null;
+  pais?: string | null;
+  ciudad?: string | null;
+  direccion?: string | null;
+  codigo_postal?: string | null;
+  razon_social?: string | null;
+  documento_fiscal?: string | null;
+  direccion_fiscal?: string | null;
+  telefono?: string | null;
+  email_contacto?: string | null;
+  sitio_web?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+  /** Id de la paleta de tema (se valida contra la lista de paletas). */
+  tema_id?: string;
+  /** Modo oscuro global. */
+  modo_oscuro?: boolean;
+}
+
+/** Preferencias de la sesión activa resueltas (fallbacks de la empresa aplicados). */
+export interface PreferenciasResueltas {
+  usuario_id: string;
+  tamano_fuente: string;
+  orden_sidebar: string | null;
+  zona_horaria: string;
+  formato_fecha: string;
+  dias_aviso_vencimiento: number;
+  requiere_aprobacion: boolean;
+  stock_minimo_default: number | null;
+  /** Paleta de tema activa (resuelta). */
+  tema_id: string;
+  /** true si el usuario no fijó paleta propia (hereda la de la empresa). */
+  tema_heredado: boolean;
+  /** Modo oscuro activo (resuelto). */
+  modo_oscuro: boolean;
+  /** true si el usuario no fijó modo propio (hereda el de la empresa). */
+  modo_oscuro_heredado: boolean;
+  /** ¿Mostrar sugerencias de Ayuda en el command palette (Ctrl+K)? */
+  ayuda_en_palette: boolean;
+}
+
+export interface EditarPreferenciasUsuario {
+  tamano_fuente?: string;
+  /** JSON string con el orden de hrefs del sidebar, o null para el orden por defecto. */
+  orden_sidebar?: string | null;
+  /** null = heredar de la empresa. */
+  zona_horaria?: string | null;
+  /** null = heredar de la empresa. */
+  formato_fecha?: string | null;
+  /** Paleta de tema: omitir = no cambiar, null = heredar de la empresa, string = fijar. */
+  tema_id?: string | null;
+  /** Modo oscuro: omitir = no cambiar, null = heredar de la empresa, boolean = fijar. */
+  modo_oscuro?: boolean | null;
+  /** Mostrar ayuda en el command palette: omitir = no cambiar. */
+  ayuda_en_palette?: boolean;
+}
+
+export interface EditarUsuario {
+  nombre_completo?: string;
+  email?: string | null;
+  rol_id?: string;
+}
+
+/** Zonas horarias que la UI ofrece (espejo de ZONAS_HORARIAS en Rust). */
+export const ZONAS_HORARIAS = [
+  "America/Lima",
+  "America/Mexico_City",
+  "America/Bogota",
+  "America/Santiago",
+  "America/Argentina/Buenos_Aires",
+  "America/Caracas",
+  "America/Guatemala",
+  "America/Panama",
+  "America/Havana",
+  "America/Sao_Paulo",
+  "Europe/Madrid",
+  "UTC",
+] as const;
+
+/** Etiquetas legibles de las zonas horarias para la UI. */
+export const ZONA_HORARIA_LABEL: Record<string, string> = {
+  "America/Lima": "(UTC-5) Lima",
+  "America/Mexico_City": "(UTC-6) Ciudad de México",
+  "America/Bogota": "(UTC-5) Bogotá",
+  "America/Santiago": "(UTC-4) Santiago",
+  "America/Argentina/Buenos_Aires": "(UTC-3) Buenos Aires",
+  "America/Caracas": "(UTC-4) Caracas",
+  "America/Guatemala": "(UTC-6) Guatemala",
+  "America/Panama": "(UTC-5) Panamá",
+  "America/Havana": "(UTC-5) La Habana",
+  "America/Sao_Paulo": "(UTC-3) São Paulo",
+  "Europe/Madrid": "(UTC+1) Madrid",
+  UTC: "(UTC+0) Tiempo universal coordinado",
+};
+
+export const FORMATO_FECHA_LABEL: Record<string, string> = {
+  DD_MMM_YYYY: "08 ago 2026",
+  DD_MM_YYYY: "08/08/2026",
+  YYYY_MM_DD: "2026-08-08",
+};
+
+export const TAMANIO_FUENTE_LABEL: Record<string, string> = {
+  PEQUENA: "Pequeña",
+  MEDIA: "Media",
+  GRANDE: "Grande",
+};
+
+// ============ Sucursales (config de empresa, solo ADMIN) ============
+
+export interface Sucursal extends Auditoria {
+  id: string;
+  codigo: string;
+  nombre: string;
+  pais: string | null;
+  ciudad: string | null;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  activo: boolean;
+}
+
+export interface NuevaSucursal {
+  codigo: string;
+  nombre: string;
+  pais?: string | null;
+  ciudad?: string | null;
+  direccion?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+}
+
+export interface EditarSucursal {
+  nombre?: string;
+  pais?: string | null;
+  ciudad?: string | null;
+  direccion?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+}
+
+// ============ Archivos de empresa (logo + documentos, solo ADMIN) ============
+
+export interface ArchivoEmpresa {
+  id: string;
+  nombre: string;
+  tipo: "LOGO" | "DOCUMENTO";
+  mime: string;
+  tamano: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface ArchivoEmpresaCompleto extends ArchivoEmpresa {
+  datos_base64: string;
+}
+
+export interface NuevoArchivoEmpresa {
+  nombre: string;
+  tipo: "LOGO" | "DOCUMENTO";
+  mime: string;
+  datos_base64: string;
+}
+
+/** Países que la UI ofrece (nombres en español, código ISO). */
+export const PAISES = [
+  "Argentina",
+  "Bolivia",
+  "Brasil",
+  "Chile",
+  "Colombia",
+  "Costa Rica",
+  "Cuba",
+  "Ecuador",
+  "El Salvador",
+  "España",
+  "Guatemala",
+  "Honduras",
+  "México",
+  "Nicaragua",
+  "Panamá",
+  "Paraguay",
+  "Perú",
+  "República Dominicana",
+  "Uruguay",
+  "Venezuela",
+  "Estados Unidos",
+  "Otro",
+] as const;
+
+// ============ Temas de la UI (DESIGN §3.1) ============
+
+export type ModoColor = "CLARO" | "OSCURO";
+
+/** Resumen de una paleta predefinida para el selector. */
+export interface ResumenTema {
+  id: string;
+  nombre: string;
+  color_claro: string;
+  color_oscuro: string;
+}
+
+/** Tema resuelto: el mapa de variables CSS token -> valor para aplicar. */
+export interface TemaActivo {
+  id: string;
+  nombre: string;
+  modo: ModoColor;
+  variables: Record<string, string>;
 }

@@ -1,4 +1,3 @@
-import { PATH } from "./route-paths";
 import { CATALOGOS } from "../pages/catalogs";
 
 export interface Crumb {
@@ -26,6 +25,7 @@ const CRUMB_MAP: CrumbSegment[] = [
   { segment: "usuarios", label: "Usuarios y roles" },
   { segment: "configuracion", label: "Configuración" },
   { segment: "galeria", label: "Galería de diseño" },
+  { segment: "ayuda", label: "Ayuda" },
   { segment: "acceso-no-permitido", label: "Sin acceso" },
   { segment: "no-encontrado", label: "No encontrado" },
 ];
@@ -52,7 +52,7 @@ const ACTION_LABELS: Record<string, string> = {
  */
 export function crumbsFromPath(pathname: string): Crumb[] {
   const parts = pathname.split("/").filter(Boolean);
-  const crumbs: Crumb[] = [{ label: "Rustock", href: PATH.dashboard }];
+  const crumbs: Crumb[] = [];
 
   if (parts.length === 0) {
     crumbs.push({ label: "Dashboard" });

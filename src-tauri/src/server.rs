@@ -35,20 +35,30 @@ use crate::sesion::{SesionActiva, SesionState};
 
 const PUERTO: u16 = 1421;
 
+/// Puerto del API HTTP local. Configurable con `RUSTOCK_HTTP_PORT` (útil si
+/// `1421` está ocupado); por defecto `1421`.
+pub fn puerto_http() -> u16 {
+    std::env::var("RUSTOCK_HTTP_PORT")
+        .ok()
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(PUERTO)
+}
+
 /// Arranca el servidor en un hilo aparte. No bloquea: si el puerto ya está
 /// ocupado (ej. otra instancia corriendo), se registra el error y la app
 /// sigue funcionando igual como app de escritorio pura.
 pub fn iniciar(db: Arc<DbState>, sesion: Arc<SesionState>) {
     std::thread::spawn(move || {
-        let server = match Server::http(("127.0.0.1", PUERTO)) {
+        let puerto = puerto_http();
+        let server = match Server::http(("127.0.0.1", puerto)) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("[server] no se pudo abrir el puerto {PUERTO}: {e}");
+                eprintln!("[server] no se pudo abrir el puerto {puerto}: {e}");
                 return;
             }
         };
         println!(
-            "[server] API HTTP local en http://127.0.0.1:{PUERTO} (para el frontend en modo navegador)"
+            "[server] API HTTP local en http://127.0.0.1:{puerto} (para el frontend en modo navegador)"
         );
         for request in server.incoming_requests() {
             manejar(&db, &sesion, request);
@@ -132,6 +142,10 @@ fn i64_opt(v: &Value, clave: &str) -> Option<i64> {
     v.get(clave).and_then(|x| x.as_i64())
 }
 
+fn bool_opt(v: &Value, clave: &str) -> Option<bool> {
+    v.get(clave).and_then(|x| x.as_bool())
+}
+
 fn de_req<T: serde::de::DeserializeOwned>(v: &Value, clave: &str) -> AppResult<T> {
     let val = campo(v, clave)?;
     serde_json::from_value(val.clone())
@@ -212,6 +226,17 @@ fn despachar(
             };
             let conn = db.conn();
             ok(repo::seguridad::obtener_usuario(&conn, &actual.usuario_id)?)
+        }
+        "puedo" => {
+            let recurso = str_req(args, "recurso")?;
+            let accion = str_req(args, "accion")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            match crate::security::puede(&conn, Some(&actor), &recurso, &accion) {
+                Ok(()) => ok(true),
+                Err(crate::error::AppError::SinPermiso(_)) => ok(false),
+                Err(e) => Err(e),
+            }
         }
         "bootstrap_admin" => {
             let nombre_usuario = str_req(args, "nombreUsuario")?;
@@ -500,6 +525,23 @@ fn despachar(
                 )?)
             })
         }
+        "resolver_escaneo" => {
+            con_auditoria!(db, sesion, "resolver_escaneo", {
+                let codigo = str_req(args, "codigo")?;
+                let conn = db.conn();
+                puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+                ok(repo::catalogo::resolver_escaneo(&conn, &codigo)?)
+            })
+        }
+        "importar_datos" => con_auditoria!(db, sesion, "importar_datos", {
+            let tipo = str_req(args, "tipo")?;
+            let filas: Vec<serde_json::Value> = de_req(args, "filas")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(crate::importar::importar_datos(
+                &conn, &tipo, &filas, &actor,
+            )?)
+        }),
 
         // ============ Lote ============
         "listar_lotes" => con_auditoria!(db, sesion, "listar_lotes", {
@@ -623,6 +665,19 @@ fn despachar(
             puede(&conn, Some(&sesion.usuario_id()?), "uom", "ver")?;
             ok(repo::catalogo::obtener_uom(&conn, &id)?)
         }),
+        "editar_uom" => con_auditoria!(db, sesion, "editar_uom", {
+            let id = str_req(args, "id")?;
+            let cambios: EditarUom = de_req(args, "cambios")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::editar_uom(&conn, &id, &cambios, &actor)?)
+        }),
+        "desactivar_uom" => con_auditoria!(db, sesion, "desactivar_uom", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::desactivar_uom(&conn, &id, &actor)?)
+        }),
         "listar_categorias" => con_auditoria!(db, sesion, "listar_categorias", {
             let conn = db.conn();
             puede(&conn, Some(&sesion.usuario_id()?), "categoria", "ver")?;
@@ -676,10 +731,213 @@ fn despachar(
             let conn = db.conn();
             ok(repo::seguridad::crear_usuario(&conn, &nuevo)?)
         }),
+        "obtener_usuario" => con_auditoria!(db, sesion, "obtener_usuario", {
+            let id = str_req(args, "id")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "usuario", "ver")?;
+            ok(repo::seguridad::obtener_usuario(&conn, &id)?)
+        }),
         "listar_roles" => con_auditoria!(db, sesion, "listar_roles", {
             let conn = db.conn();
             puede(&conn, Some(&sesion.usuario_id()?), "rol", "ver")?;
             ok(repo::seguridad::listar_roles(&conn)?)
+        }),
+        "editar_usuario" => con_auditoria!(db, sesion, "editar_usuario", {
+            let id = str_req(args, "id")?;
+            let cambios: crate::domain::seguridad::EditarUsuario = de_req(args, "cambios")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::seguridad::editar_usuario(
+                &conn, &id, &cambios, &actor,
+            )?)
+        }),
+        "desactivar_usuario" => con_auditoria!(db, sesion, "desactivar_usuario", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::seguridad::desactivar_usuario(&conn, &id, &actor)?)
+        }),
+        "reactivar_usuario" => con_auditoria!(db, sesion, "reactivar_usuario", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::seguridad::reactivar_usuario(&conn, &id, &actor)?)
+        }),
+        "cambiar_password" => con_auditoria!(db, sesion, "cambiar_password", {
+            let password_actual = str_req(args, "passwordActual")?;
+            let password_nueva = str_req(args, "passwordNueva")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::seguridad::cambiar_password_propia(
+                &conn,
+                &actor,
+                &password_actual,
+                &password_nueva,
+            )?)
+        }),
+        "cambiar_password_admin" => con_auditoria!(db, sesion, "cambiar_password_admin", {
+            let id = str_req(args, "id")?;
+            let password_nueva = str_req(args, "passwordNueva")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::seguridad::cambiar_password_admin(
+                &conn,
+                &id,
+                &password_nueva,
+                &actor,
+            )?)
+        }),
+
+        // ============ Configuración de empresa y preferencias ============
+        "obtener_configuracion_empresa" => {
+            con_auditoria!(db, sesion, "obtener_configuracion_empresa", {
+                let conn = db.conn();
+                puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+                ok(repo::configuracion::obtener_configuracion_empresa(&conn)?)
+            })
+        }
+        "guardar_configuracion_empresa" => {
+            con_auditoria!(db, sesion, "guardar_configuracion_empresa", {
+                let cambios: crate::domain::configuracion::EditarConfiguracionEmpresa =
+                    de_req(args, "cambios")?;
+                let actor = sesion.usuario_id()?;
+                let conn = db.conn();
+                puede(&conn, Some(&actor), "configuracion", "editar")?;
+                ok(repo::configuracion::guardar_configuracion_empresa(
+                    &conn, &cambios, &actor,
+                )?)
+            })
+        }
+        "obtener_preferencias_usuario" => {
+            con_auditoria!(db, sesion, "obtener_preferencias_usuario", {
+                let actor = sesion.usuario_id()?;
+                let conn = db.conn();
+                ok(repo::configuracion::preferencias_resueltas(&conn, &actor)?)
+            })
+        }
+        "guardar_preferencias_usuario" => {
+            con_auditoria!(db, sesion, "guardar_preferencias_usuario", {
+                let cambios: crate::domain::configuracion::EditarPreferenciasUsuario =
+                    de_req(args, "cambios")?;
+                let actor = sesion.usuario_id()?;
+                let conn = db.conn();
+                repo::configuracion::guardar_preferencias_usuario(&conn, &actor, &cambios)?;
+                ok(repo::configuracion::preferencias_resueltas(&conn, &actor)?)
+            })
+        }
+
+        // ============ Temas de la UI (DESIGN §3.1) ============
+        "listar_temas" => con_auditoria!(db, sesion, "listar_temas", {
+            sesion.usuario_id()?;
+            ok(crate::domain::tema::listar_temas())
+        }),
+        "obtener_tema" => con_auditoria!(db, sesion, "obtener_tema", {
+            sesion.usuario_id()?;
+            let tema_id = str_req(args, "tema_id")?;
+            let modo_oscuro = bool_opt(args, "modo_oscuro").unwrap_or(false);
+            let modo = if modo_oscuro {
+                crate::domain::tema::ModoColor::Oscuro
+            } else {
+                crate::domain::tema::ModoColor::Claro
+            };
+            ok(crate::domain::tema::obtener_tema(&tema_id, modo)
+                .ok_or_else(|| AppError::CampoInvalido(format!("tema '{tema_id}' no existe")))?)
+        }),
+        "obtener_tema_activo" => con_auditoria!(db, sesion, "obtener_tema_activo", {
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::configuracion::tema_activo_de_usuario(&conn, &actor)?)
+        }),
+        "obtener_tema_global" => {
+            let conn = db.conn();
+            let config = repo::configuracion::obtener_configuracion_empresa(&conn)?;
+            let modo = if config.modo_oscuro {
+                crate::domain::tema::ModoColor::Oscuro
+            } else {
+                crate::domain::tema::ModoColor::Claro
+            };
+            ok(
+                crate::domain::tema::obtener_tema(&config.tema_id, modo).ok_or_else(|| {
+                    AppError::CampoInvalido(format!("tema '{}' no existe", config.tema_id))
+                })?,
+            )
+        }
+
+        // ============ Sucursales (config de empresa, solo ADMIN) ============
+        "listar_sucursales" => con_auditoria!(db, sesion, "listar_sucursales", {
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+            ok(repo::sucursal::listar_sucursales(&conn)?)
+        }),
+        "crear_sucursal" => con_auditoria!(db, sesion, "crear_sucursal", {
+            let mut nuevo: crate::domain::configuracion::NuevaSucursal = de_req(args, "nuevo")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "configuracion", "editar")?;
+            nuevo.created_by = Some(actor);
+            ok(repo::sucursal::crear_sucursal(&conn, &nuevo)?)
+        }),
+        "obtener_sucursal" => con_auditoria!(db, sesion, "obtener_sucursal", {
+            let id = str_req(args, "id")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+            ok(repo::sucursal::obtener_sucursal(&conn, &id)?)
+        }),
+        "editar_sucursal" => con_auditoria!(db, sesion, "editar_sucursal", {
+            let id = str_req(args, "id")?;
+            let cambios: crate::domain::configuracion::EditarSucursal = de_req(args, "cambios")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "configuracion", "editar")?;
+            ok(repo::sucursal::editar_sucursal(
+                &conn, &id, &cambios, &actor,
+            )?)
+        }),
+        "desactivar_sucursal" => con_auditoria!(db, sesion, "desactivar_sucursal", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "configuracion", "editar")?;
+            ok(repo::sucursal::desactivar_sucursal(&conn, &id, &actor)?)
+        }),
+
+        // ============ Archivos de empresa (logo + documentos, solo ADMIN) ============
+        "listar_archivos_empresa" => con_auditoria!(db, sesion, "listar_archivos_empresa", {
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+            ok(repo::archivo::listar_archivos(&conn)?)
+        }),
+        "subir_archivo_empresa" => con_auditoria!(db, sesion, "subir_archivo_empresa", {
+            let mut nuevo: crate::domain::configuracion::NuevoArchivoEmpresa =
+                de_req(args, "nuevo")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "configuracion", "editar")?;
+            nuevo.created_by = Some(actor);
+            ok(repo::archivo::subir_archivo(&conn, &nuevo)?)
+        }),
+        "obtener_archivo_empresa" => con_auditoria!(db, sesion, "obtener_archivo_empresa", {
+            let id = str_req(args, "id")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+            ok(repo::archivo::obtener_archivo_completo(&conn, &id)?)
+        }),
+        "obtener_logo_empresa" => con_auditoria!(db, sesion, "obtener_logo_empresa", {
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+            let meta = repo::archivo::obtener_logo(&conn)?;
+            let completo = match meta {
+                Some(m) => repo::archivo::obtener_archivo_completo(&conn, &m.id)?,
+                None => None,
+            };
+            ok(completo)
+        }),
+        "eliminar_archivo_empresa" => con_auditoria!(db, sesion, "eliminar_archivo_empresa", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "configuracion", "editar")?;
+            ok(repo::archivo::eliminar_archivo(&conn, &id, &actor)?)
         }),
 
         // ============ Movimientos ============
@@ -694,6 +952,15 @@ fn despachar(
             nuevo.created_by = sesion.usuario_id()?;
             let conn = db.conn();
             ok(repo::movimiento::crear_traslado(&conn, &nuevo)?)
+        }),
+        "editar_movimiento" => con_auditoria!(db, sesion, "editar_movimiento", {
+            let id = str_req(args, "id")?;
+            let cambios: EditarMovimiento = de_req(args, "cambios")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::movimiento::editar_movimiento(
+                &conn, &id, &cambios, &actor,
+            )?)
         }),
         "enviar_a_aprobacion" => con_auditoria!(db, sesion, "enviar_a_aprobacion", {
             let id = str_req(args, "id")?;
@@ -797,6 +1064,12 @@ fn despachar(
             let conn = db.conn();
             puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
             ok(repo::inventario::obtener_sesion(&conn, &id)?)
+        }),
+        "iniciar_sesion_inventario" => con_auditoria!(db, sesion, "iniciar_sesion_inventario", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::inventario::iniciar_sesion(&conn, &id, &actor)?)
         }),
         "registrar_conteo" => con_auditoria!(db, sesion, "registrar_conteo", {
             let mut nuevo: NuevoConteo = de_req(args, "nuevo")?;
@@ -920,10 +1193,11 @@ fn despachar(
         // ============ Alertas ============
         "listar_alertas" => con_auditoria!(db, sesion, "listar_alertas", {
             let estado = str_opt(args, "estado");
-            let dias_por_vencer = i64_opt(args, "diasPorVencer").unwrap_or(30);
+            let dias_por_vencer = i64_opt(args, "diasPorVencer");
             let actor = sesion.usuario_id()?;
             let conn = db.conn();
-            repo::alerta::regenerar_alertas(&conn, dias_por_vencer)?;
+            let dias = repo::configuracion::dias_aviso_o_por_defecto(&conn, dias_por_vencer)?;
+            repo::alerta::regenerar_alertas(&conn, dias)?;
             ok(repo::alerta::listar_alertas(
                 &conn,
                 estado.as_deref(),
@@ -973,13 +1247,28 @@ fn despachar(
         }),
 
         // ============ Historial y métricas ============
+        "registrar_vista" => {
+            // Tracking de navegación: es el propio registro de auditoría, por
+            // eso no pasa por `con_auditoria!` (no duplica filas por visita).
+            let vista: crate::domain::seguridad::RegistrarVista = de_req(args, "vista")?;
+            vista.validar()?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::auditoria::registrar_vista(&conn, &actor, &vista)?)
+        }
         "listar_historial" => con_auditoria!(db, sesion, "listar_historial", {
             let usuario_id = str_opt(args, "usuarioId");
             let comando_f = str_opt(args, "comando");
             let nivel = str_opt(args, "nivel");
+            let tipo_evento = str_opt(args, "tipoEvento");
+            let modulo = str_opt(args, "modulo");
+            let ruta = str_opt(args, "ruta");
+            let proceso = str_opt(args, "proceso");
+            let exito = bool_opt(args, "exito");
             let desde = str_opt(args, "desde");
             let hasta = str_opt(args, "hasta");
-            let limit = i64_opt(args, "limit").unwrap_or(100);
+            let page = i64_opt(args, "page").unwrap_or(1);
+            let page_size = i64_opt(args, "pageSize").unwrap_or(50);
             let conn = db.conn();
             puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
             ok(repo::auditoria::listar_historial(
@@ -987,9 +1276,15 @@ fn despachar(
                 usuario_id.as_deref(),
                 comando_f.as_deref(),
                 nivel.as_deref(),
+                tipo_evento.as_deref(),
+                modulo.as_deref(),
+                ruta.as_deref(),
+                proceso.as_deref(),
+                exito,
                 desde.as_deref(),
                 hasta.as_deref(),
-                limit,
+                page,
+                page_size,
             )?)
         }),
         "metricas_historial" => con_auditoria!(db, sesion, "metricas_historial", {
@@ -997,9 +1292,151 @@ fn despachar(
             puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
             ok(repo::auditoria::metricas_historial(&conn)?)
         }),
+        "metricas_actividad" => con_auditoria!(db, sesion, "metricas_actividad", {
+            let desde = str_opt(args, "desde");
+            let hasta = str_opt(args, "hasta");
+            let usuario_id = str_opt(args, "usuarioId");
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+            ok(repo::auditoria::metricas_actividad(
+                &conn,
+                desde.as_deref(),
+                hasta.as_deref(),
+                usuario_id.as_deref(),
+            )?)
+        }),
+
+        // ============ Búsqueda global del command palette ============
+        "buscar" => con_auditoria!(db, sesion, "buscar", {
+            let q = str_opt(args, "q").unwrap_or_default();
+            let conn = db.conn();
+            let usuario_id = sesion.usuario_id()?;
+            ok(crate::buscar::buscar(&conn, &usuario_id, &q)?)
+        }),
 
         _ => Err(AppError::CampoRequerido(format!(
             "comando desconocido: {comando}"
         ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn setup() -> (Arc<DbState>, Arc<SesionState>) {
+        let db = DbState::init_in_memory().expect("db");
+        {
+            let conn = db.conn();
+            crate::security::seed_roles(&conn).expect("roles");
+            crate::repo::seguridad::bootstrap_admin(&conn, "admin", "Administrador", "admin1234")
+                .expect("admin");
+        }
+        let sesion = Arc::new(SesionState::default());
+        (db, sesion)
+    }
+
+    #[test]
+    fn dispatcher_puedo_refleja_la_matriz_de_permisos() {
+        let (db, sesion) = setup();
+        let admin_id = {
+            let conn = db.conn();
+            crate::repo::seguridad::obtener_usuario_por_nombre(&conn, "admin")
+                .expect("admin existe")
+                .expect("admin some")
+                .id
+        };
+        sesion.iniciar(SesionActiva {
+            usuario_id: admin_id,
+            nombre_usuario: "admin".into(),
+            rol_codigo: "ADMIN".into(),
+        });
+
+        // El ADMIN puede aprobar movimientos (matriz completa).
+        let r = despachar(
+            &db,
+            &sesion,
+            "puedo",
+            &json!({ "recurso": "movimiento", "accion": "aprobar" }),
+        )
+        .expect("puedo movimiento aprobar");
+        assert_eq!(r, json!(true));
+
+        // El ADMIN no tiene una restricción: "eliminar" de usuario sí (matriz).
+        let r = despachar(
+            &db,
+            &sesion,
+            "puedo",
+            &json!({ "recurso": "configuracion", "accion": "editar" }),
+        )
+        .expect("puedo configuracion editar");
+        assert_eq!(r, json!(true));
+
+        // Sin sesión, `puedo` exige autenticación (no lo inventa).
+        let (db2, sesion2) = setup();
+        let err = despachar(
+            &db2,
+            &sesion2,
+            "puedo",
+            &json!({ "recurso": "movimiento", "accion": "aprobar" }),
+        )
+        .expect_err("sin sesión");
+        assert!(matches!(err, crate::error::AppError::NoAutenticado));
+    }
+
+    #[test]
+    fn dispatcher_temas_devuelve_paletas_variables_y_global() {
+        let (db, sesion) = setup();
+        // OJO: el lock de la db se suelta antes de `despachar` (que vuelve a
+        // pedir `db.conn()`); retenerlo aquí causaría un deadlock del mutex.
+        let admin_id = {
+            let conn = db.conn();
+            crate::repo::seguridad::obtener_usuario_por_nombre(&conn, "admin")
+                .expect("admin existe")
+                .expect("admin some")
+                .id
+        };
+        sesion.iniciar(SesionActiva {
+            usuario_id: admin_id,
+            nombre_usuario: "admin".into(),
+            rol_codigo: "ADMIN".into(),
+        });
+
+        // listar_temas: las 6 paletas predefinidas.
+        let r = despachar(&db, &sesion, "listar_temas", &Value::Null).expect("listar_temas");
+        let temas = r.as_array().expect("array de temas");
+        assert_eq!(temas.len(), 6);
+
+        // obtener_tema: variables del modo pedido.
+        let r = despachar(
+            &db,
+            &sesion,
+            "obtener_tema",
+            &json!({ "tema_id": "bosque", "modo_oscuro": true }),
+        )
+        .expect("obtener_tema");
+        assert_eq!(r["id"], "bosque");
+        assert_eq!(r["modo"], "OSCURO");
+        assert_eq!(r["variables"]["--color-scheme"], "dark");
+        assert!(r["variables"]["--color-blue-500"].as_str().is_some());
+
+        // obtener_tema_activo: por defecto hereda la empresa (óxido claro).
+        let r = despachar(&db, &sesion, "obtener_tema_activo", &Value::Null).expect("activo");
+        assert_eq!(r["id"], "rust");
+        assert_eq!(r["modo"], "CLARO");
+
+        // obtener_tema_global: sin sesión, devuelve el tema de la empresa.
+        let r = despachar(&db, &sesion, "obtener_tema_global", &Value::Null).expect("global");
+        assert_eq!(r["id"], "rust");
+
+        // Tema inválido en el dispatcher: error claro, no rompe el JSON.
+        let r = despachar(
+            &db,
+            &sesion,
+            "obtener_tema",
+            &json!({ "tema_id": "neon", "modo_oscuro": false }),
+        );
+        assert!(r.is_err(), "tema inexistente debe fallar");
     }
 }

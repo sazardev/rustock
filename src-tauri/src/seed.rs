@@ -42,6 +42,7 @@ fn linea(
     destino: Option<String>,
 ) -> NuevaLinea {
     NuevaLinea {
+        costo_unitario: None,
         producto_id: producto_id.to_string(),
         lote_id,
         cantidad,
@@ -304,6 +305,7 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
     let tornillo = repo::catalogo::crear_producto(
         conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "SKU-1001".into(),
             nombre: "Tornillo M6 x 25mm".into(),
             descripcion: Some("Tornillo hexagonal galvanizado".into()),
@@ -325,6 +327,7 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
     let arandela = repo::catalogo::crear_producto(
         conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "SKU-1002".into(),
             nombre: "Arandela plana 5/16\"".into(),
             descripcion: None,
@@ -346,6 +349,7 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
     let cinta = repo::catalogo::crear_producto(
         conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "SKU-1003".into(),
             nombre: "Cinta de embalaje 48mm".into(),
             descripcion: Some("Rollo de 100m".into()),
@@ -367,6 +371,7 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
     let adhesivo = repo::catalogo::crear_producto(
         conn,
         &NuevoProducto {
+            costo_unitario: None,
             sku: "SKU-1004".into(),
             nombre: "Adhesivo de contacto 1kg".into(),
             descripcion: Some("Pegamento industrial".into()),

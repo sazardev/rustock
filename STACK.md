@@ -228,7 +228,7 @@ Las capacidades de permisos se declaran en `src-tauri/capabilities/` (mínimo ne
 
 | Comando | Uso |
 |---|---|
-| `npm run dev` | Vite dev server (puerto 1420) |
+| `npm run dev` | Vite dev server (puerto 6821) |
 | `npm run build` | `tsc --noEmit` + `vite build` → `dist/` |
 | `npm run typecheck` | Typecheck con TS 7 (instantáneo) |
 | `npm run tauri dev` | App de escritorio en modo dev |

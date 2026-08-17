@@ -1,4 +1,5 @@
 import { ButtonLink, Card, EmptyState } from "../shared/ui";
+import { PATH } from "../app/route-paths";
 
 export function NotFoundPage() {
   return (
@@ -11,7 +12,7 @@ export function NotFoundPage() {
             description="La página que busca no existe o fue movida."
             action={
               <>
-                <ButtonLink variant="primary" href="/">
+                <ButtonLink variant="primary" href={PATH.dashboard}>
                   Ir al dashboard
                 </ButtonLink>
               </>

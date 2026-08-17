@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   diferenciasSesion,
+  iniciarSesionInventario,
   listarConteos,
   obtenerSesionInventario,
   precisionSesion,
@@ -9,6 +10,7 @@ import {
 import type { Conteo, DiferenciaInventario } from "../shared/types";
 import {
   Badge,
+  Button,
   ButtonLink,
   Card,
   DetailList,
@@ -16,6 +18,7 @@ import {
   Link,
   PageHeader,
   Table,
+  useToast,
   type TableColumn,
 } from "../shared/ui";
 import { AlmacenRef, LoteRef, ProductoRef, UbicacionRef } from "../shared/refs";
@@ -32,6 +35,8 @@ import {
 export function SesionInventarioDetallePage() {
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const sesionQuery = useQuery({
     queryKey: ["sesion-inventario", sesionId],
@@ -51,6 +56,16 @@ export function SesionInventarioDetallePage() {
     queryKey: ["precision-sesion", sesionId],
     queryFn: () => precisionSesion(sesionId),
     enabled: sesion?.estado === "CERRADA",
+  });
+
+  const iniciarMut = useMutation({
+    mutationFn: () => iniciarSesionInventario(sesionId),
+    onSuccess: (sesionIniciada) => {
+      queryClient.setQueryData(["sesion-inventario", sesionId], sesionIniciada);
+      queryClient.invalidateQueries({ queryKey: ["sesiones-inventario"] });
+      toast("Sesión iniciada: ya puedes registrar conteos.", "success");
+    },
+    onError: (err) => toast(mensajeError(err), "error"),
   });
 
   const conteoColumns: Array<TableColumn<Conteo>> = [
@@ -125,6 +140,15 @@ export function SesionInventarioDetallePage() {
                 Cerrar sesión
               </ButtonLink>
             </div>
+          ) : sesion.estado === "PLANEADA" ? (
+            <Button
+              variant="primary"
+              icon="aprobar"
+              onClick={() => iniciarMut.mutate()}
+              disabled={iniciarMut.isPending}
+            >
+              {iniciarMut.isPending ? "Iniciando…" : "Iniciar sesión"}
+            </Button>
           ) : undefined
         }
       />

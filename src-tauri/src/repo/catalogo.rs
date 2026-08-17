@@ -1,8 +1,9 @@
 use rusqlite::Connection;
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::domain::catalogo::*;
-use crate::domain::{TipoUbicacion, ahora};
+use crate::domain::{TipoUbicacion, ahora, normalizar_codigo};
 use crate::error::{AppError, AppResult};
 use crate::security::puede;
 
@@ -24,6 +25,39 @@ fn verificar_activo(
         return Err(AppError::EntidadInactiva(etiqueta));
     }
     Ok(())
+}
+
+/// Almacén al que pertenece una zona (para validar unicidad por almacén,
+/// SPEC §3.2-§3.5: el `codigo` de cada nodo del árbol es único dentro de su
+/// almacén, no solo dentro de su padre inmediato).
+fn almacen_de_zona(conn: &Connection, zona_id: &str) -> AppResult<String> {
+    conn.query_row(
+        "SELECT almacen_id FROM zonas WHERE id = ?1",
+        [zona_id],
+        |r| r.get(0),
+    )
+    .map_err(|_| AppError::NoEncontrado("zona", zona_id.to_string()))
+}
+
+fn almacen_de_rack(conn: &Connection, rack_id: &str) -> AppResult<String> {
+    conn.query_row(
+        "SELECT z.almacen_id FROM racks r JOIN zonas z ON z.id = r.zona_id WHERE r.id = ?1",
+        [rack_id],
+        |r| r.get(0),
+    )
+    .map_err(|_| AppError::NoEncontrado("rack", rack_id.to_string()))
+}
+
+fn almacen_de_seccion(conn: &Connection, seccion_id: &str) -> AppResult<String> {
+    conn.query_row(
+        "SELECT z.almacen_id FROM secciones s
+         JOIN racks r ON r.id = s.rack_id
+         JOIN zonas z ON z.id = r.zona_id
+         WHERE s.id = ?1",
+        [seccion_id],
+        |r| r.get(0),
+    )
+    .map_err(|_| AppError::NoEncontrado("sección", seccion_id.to_string()))
 }
 
 // ============ Almacén (SPEC §3.1) ============
@@ -279,9 +313,13 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
     let id = Uuid::new_v4().to_string();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let ts = ahora();
+    // Unicidad por almacén completo (SPEC §3.3): el rack cuelga de una zona,
+    // se resuelve el almacén de la zona y se valida contra todo ese almacén.
     let existe: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM racks WHERE zona_id = ?1 AND codigo = ?2",
-        rusqlite::params![nuevo.zona_id, codigo],
+        "SELECT COUNT(*) FROM racks r
+         JOIN zonas z ON z.id = r.zona_id
+         WHERE z.almacen_id = ?1 AND r.codigo = ?2",
+        rusqlite::params![almacen_de_zona(conn, &nuevo.zona_id)?, codigo],
         |r| r.get(0),
     )?;
     if existe > 0 {
@@ -400,9 +438,14 @@ pub fn crear_seccion(conn: &Connection, nuevo: &NuevaSeccion) -> AppResult<Secci
     let id = Uuid::new_v4().to_string();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let ts = ahora();
+    // Unicidad por almacén completo (SPEC §3.4): se resuelve el almacén del
+    // rack padre y se valida contra todo ese almacén.
     let existe: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM secciones WHERE rack_id = ?1 AND codigo = ?2",
-        rusqlite::params![nuevo.rack_id, codigo],
+        "SELECT COUNT(*) FROM secciones s
+         JOIN racks ra ON ra.id = s.rack_id
+         JOIN zonas z ON z.id = ra.zona_id
+         WHERE z.almacen_id = ?1 AND s.codigo = ?2",
+        rusqlite::params![almacen_de_rack(conn, &nuevo.rack_id)?, codigo],
         |r| r.get(0),
     )?;
     if existe > 0 {
@@ -520,11 +563,11 @@ pub fn desactivar_seccion(conn: &Connection, id: &str, actor: &str) -> AppResult
 pub fn crear_ubicacion(conn: &Connection, nuevo: &NuevaUbicacion) -> AppResult<Ubicacion> {
     puede(conn, nuevo.created_by.as_deref(), "ubicacion", "crear")?;
     nuevo.validar_padre()?;
-    let (columna_padre, id_padre, tabla_padre, etiqueta_padre) =
+    let (id_padre, tabla_padre, etiqueta_padre) =
         match (&nuevo.seccion_id, &nuevo.rack_id, &nuevo.zona_id) {
-            (Some(s), _, _) => ("seccion_id", s, "secciones", "sección"),
-            (_, Some(r), _) => ("rack_id", r, "racks", "rack"),
-            (_, _, Some(z)) => ("zona_id", z, "zonas", "zona"),
+            (Some(s), _, _) => (s, "secciones", "sección"),
+            (_, Some(r), _) => (r, "racks", "rack"),
+            (_, _, Some(z)) => (z, "zonas", "zona"),
             _ => unreachable!("validar_padre ya garantizó exactamente un padre"),
         };
     verificar_activo(conn, tabla_padre, id_padre, etiqueta_padre)?;
@@ -532,9 +575,22 @@ pub fn crear_ubicacion(conn: &Connection, nuevo: &NuevaUbicacion) -> AppResult<U
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let tipo = nuevo.tipo()?.as_str().to_string();
     let ts = ahora();
+    // Unicidad por almacén completo (SPEC §3.5): se resuelve el almacén del
+    // padre y se valida contra todo ese almacén (dos padres distintos del
+    // mismo almacén no pueden compartir código de ubicación).
+    let almacen_id = match (&nuevo.seccion_id, &nuevo.rack_id, &nuevo.zona_id) {
+        (Some(s), _, _) => almacen_de_seccion(conn, s)?,
+        (_, Some(r), _) => almacen_de_rack(conn, r)?,
+        (_, _, Some(z)) => almacen_de_zona(conn, z)?,
+        _ => unreachable!("validar_padre ya garantizó exactamente un padre"),
+    };
     let existe: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM ubicaciones WHERE {columna_padre} = ?1 AND codigo = ?2"),
-        rusqlite::params![id_padre, codigo],
+        "SELECT COUNT(*) FROM ubicaciones u WHERE u.codigo = ?2 AND COALESCE(
+            (SELECT za.almacen_id FROM secciones se JOIN racks ra ON ra.id = se.rack_id JOIN zonas za ON za.id = ra.zona_id WHERE se.id = u.seccion_id),
+            (SELECT za.almacen_id FROM racks ra JOIN zonas za ON za.id = ra.zona_id WHERE ra.id = u.rack_id),
+            (SELECT za.almacen_id FROM zonas za WHERE za.id = u.zona_id)
+        ) = ?1",
+        rusqlite::params![almacen_id, codigo],
         |r| r.get(0),
     )?;
     if existe > 0 {
@@ -971,7 +1027,7 @@ pub fn crear_uom(conn: &Connection, nuevo: &NuevaUom, actor: &str) -> AppResult<
 
 pub fn obtener_uom(conn: &Connection, id: &str) -> AppResult<Option<Uom>> {
     let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, tipo, factor, base, created_at, updated_at
+        "SELECT id, codigo, nombre, tipo, factor, base, activo, created_at, updated_at
          FROM uoms WHERE id = ?1",
     )?;
     let mut rows = stmt.query_map([id], |r| {
@@ -982,11 +1038,77 @@ pub fn obtener_uom(conn: &Connection, id: &str) -> AppResult<Option<Uom>> {
             tipo: r.get(3)?,
             factor: r.get(4)?,
             base: r.get::<_, i64>(5)? != 0,
-            created_at: r.get(6)?,
-            updated_at: r.get(7)?,
+            activo: r.get::<_, i64>(6)? != 0,
+            created_at: r.get(7)?,
+            updated_at: r.get(8)?,
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// Edita una UOM (SPEC §3.9). `codigo` es estable; se actualizan nombre,
+/// tipo, factor y base. Exige `uom:editar`.
+pub fn editar_uom(conn: &Connection, id: &str, cambios: &EditarUom, actor: &str) -> AppResult<Uom> {
+    cambios.validar()?;
+    puede(conn, Some(actor), "uom", "editar")?;
+    let actual = obtener_uom(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("unidad de medida", id.to_string()))?;
+    let nombre = cambios
+        .nombre
+        .clone()
+        .map(|n| n.trim().to_string())
+        .unwrap_or(actual.nombre);
+    let tipo = cambios.tipo.clone().unwrap_or(actual.tipo);
+    let factor = cambios.factor.unwrap_or(actual.factor);
+    let base = cambios.base.unwrap_or(actual.base);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE uoms SET nombre = ?2, tipo = ?3, factor = ?4, base = ?5, updated_at = ?6 WHERE id = ?1",
+        rusqlite::params![id, nombre, tipo, factor, base as i64, ts],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "uom",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_uom(conn, id)?.expect("existe"))
+}
+
+/// Borrado lógico de una UOM. No se puede desactivar si algún producto la
+/// referencia como `uom_base_id`/`uom_venta_id`/`uom_compra_id` (quedaría
+/// huérfano, SPEC §14.1). Exige `uom:desactivar`.
+pub fn desactivar_uom(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "uom", "desactivar")?;
+    let referenciada: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM productos
+         WHERE uom_base_id = ?1 OR uom_venta_id = ?1 OR uom_compra_id = ?1",
+        [id],
+        |r| r.get(0),
+    )?;
+    if referenciada > 0 {
+        return Err(AppError::ConHistorial("unidad de medida"));
+    }
+    let ts = ahora();
+    conn.execute(
+        "UPDATE uoms SET activo = 0, updated_at = ?2 WHERE id = ?1",
+        rusqlite::params![id, ts],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "uom",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
 }
 
 // ============ Proveedor (SPEC §3.10) ============
@@ -1217,13 +1339,21 @@ pub fn crear_producto(conn: &Connection, nuevo: &NuevoProducto) -> AppResult<Pro
     nuevo.validar()?;
     puede(conn, nuevo.created_by.as_deref(), "producto", "crear")?;
     // La UOM no tiene `activo` (SPEC §3.9): solo se valida existencia.
-    let uom_existe: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM uoms WHERE id = ?1",
-        [&nuevo.uom_base_id],
-        |r| r.get(0),
-    )?;
-    if uom_existe == 0 {
-        return Err(AppError::NoEncontrado("uom", nuevo.uom_base_id.clone()));
+    // (Con `activo` añadido por configuración, además debe estar activa.)
+    let uom_base = obtener_uom(conn, &nuevo.uom_base_id)?
+        .ok_or_else(|| AppError::NoEncontrado("uom", nuevo.uom_base_id.clone()))?;
+    if !uom_base.activo {
+        return Err(AppError::EntidadInactiva("unidad de medida"));
+    }
+    for uom_id in [&nuevo.uom_venta_id, &nuevo.uom_compra_id]
+        .into_iter()
+        .flatten()
+    {
+        let uom = obtener_uom(conn, uom_id)?
+            .ok_or_else(|| AppError::NoEncontrado("uom", uom_id.clone()))?;
+        if !uom.activo {
+            return Err(AppError::EntidadInactiva("unidad de medida"));
+        }
     }
     let id = Uuid::new_v4().to_string();
     let sku = nuevo.sku_normalizado();
@@ -1231,14 +1361,14 @@ pub fn crear_producto(conn: &Connection, nuevo: &NuevoProducto) -> AppResult<Pro
     conn.execute(
         "INSERT INTO productos (id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
                 codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
-                controla_lote, controla_vencimiento, perecedero, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 1, ?17, ?18, ?19, ?19)",
+                controla_lote, controla_vencimiento, perecedero, costo_unitario, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 1, ?18, ?19, ?20, ?20)",
         rusqlite::params![
             id, sku, nuevo.nombre.trim(), nuevo.descripcion, nuevo.categoria_id, nuevo.uom_base_id,
             nuevo.uom_venta_id, nuevo.uom_compra_id, nuevo.codigo_barras, nuevo.peso_unitario,
             nuevo.volumen_unitario, nuevo.stock_minimo, nuevo.stock_maximo,
             nuevo.controla_lote as i64, nuevo.controla_vencimiento as i64, nuevo.perecedero as i64,
-            ts, ts, nuevo.created_by
+            nuevo.costo_unitario, ts, ts, nuevo.created_by
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado(sku))?;
@@ -1249,7 +1379,7 @@ pub fn obtener_producto(conn: &Connection, id: &str) -> AppResult<Option<Product
     let mut stmt = conn.prepare(
         "SELECT id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
                 codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
-                controla_lote, controla_vencimiento, perecedero, activo,
+                controla_lote, controla_vencimiento, perecedero, costo_unitario, activo,
                 created_by, created_at, updated_by, updated_at
          FROM productos WHERE id = ?1",
     )?;
@@ -1275,12 +1405,13 @@ fn map_producto(r: &rusqlite::Row<'_>) -> rusqlite::Result<Producto> {
         controla_lote: r.get::<_, i64>(13)? != 0,
         controla_vencimiento: r.get::<_, i64>(14)? != 0,
         perecedero: r.get::<_, i64>(15)? != 0,
-        activo: r.get::<_, i64>(16)? != 0,
+        costo_unitario: r.get(16)?,
+        activo: r.get::<_, i64>(17)? != 0,
         auditoria: crate::domain::Auditoria {
-            created_by: r.get(17)?,
-            created_at: r.get(18)?,
-            updated_by: r.get(19)?,
-            updated_at: r.get(20)?,
+            created_by: r.get(18)?,
+            created_at: r.get(19)?,
+            updated_by: r.get(20)?,
+            updated_at: r.get(21)?,
         },
     })
 }
@@ -1300,6 +1431,14 @@ pub fn editar_producto(
     let categoria_id = cambios.categoria_id.clone().or(actual.categoria_id);
     let uom_venta_id = cambios.uom_venta_id.clone().or(actual.uom_venta_id);
     let uom_compra_id = cambios.uom_compra_id.clone().or(actual.uom_compra_id);
+    // Si se indica una UOM de venta/compra, debe existir y estar activa.
+    for uom_id in [&uom_venta_id, &uom_compra_id].into_iter().flatten() {
+        let uom = obtener_uom(conn, uom_id)?
+            .ok_or_else(|| AppError::NoEncontrado("uom", uom_id.clone()))?;
+        if !uom.activo {
+            return Err(AppError::EntidadInactiva("unidad de medida"));
+        }
+    }
     let codigo_barras = cambios.codigo_barras.clone().or(actual.codigo_barras);
     let peso_unitario = cambios.peso_unitario.or(actual.peso_unitario);
     let volumen_unitario = cambios.volumen_unitario.or(actual.volumen_unitario);
@@ -1310,6 +1449,7 @@ pub fn editar_producto(
         .controla_vencimiento
         .unwrap_or(actual.controla_vencimiento);
     let perecedero = cambios.perecedero.unwrap_or(actual.perecedero);
+    let costo_unitario = cambios.costo_unitario.or(actual.costo_unitario);
     if controla_vencimiento && !controla_lote {
         return Err(AppError::CampoRequerido(
             "controla_lote (controla_vencimiento lo implica)".into(),
@@ -1320,12 +1460,12 @@ pub fn editar_producto(
         "UPDATE productos SET nombre = ?2, descripcion = ?3, categoria_id = ?4, uom_venta_id = ?5,
                 uom_compra_id = ?6, codigo_barras = ?7, peso_unitario = ?8, volumen_unitario = ?9,
                 stock_minimo = ?10, stock_maximo = ?11, controla_lote = ?12, controla_vencimiento = ?13,
-                perecedero = ?14, updated_at = ?15, updated_by = ?16
+                perecedero = ?14, costo_unitario = ?15, updated_at = ?16, updated_by = ?17
          WHERE id = ?1",
         rusqlite::params![
             id, nombre, descripcion, categoria_id, uom_venta_id, uom_compra_id, codigo_barras,
             peso_unitario, volumen_unitario, stock_minimo, stock_maximo, controla_lote as i64,
-            controla_vencimiento as i64, perecedero as i64, ts, actor
+            controla_vencimiento as i64, perecedero as i64, costo_unitario, ts, actor
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado("codigo_barras".into()))?;
@@ -1372,12 +1512,100 @@ pub fn buscar_producto_por_codigo_barras(
     let mut stmt = conn.prepare(
         "SELECT id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
                 codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
-                controla_lote, controla_vencimiento, perecedero, activo,
+                controla_lote, controla_vencimiento, perecedero, costo_unitario, activo,
                 created_by, created_at, updated_by, updated_at
          FROM productos WHERE codigo_barras = ?1",
     )?;
     let mut rows = stmt.query_map([codigo_barras], map_producto)?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+// ============ Resolución de escaneo (SPEC §14.3, captura rápida) ============
+
+/// Resultado de resolver un código escaneado (modo captura): qué entidad es y
+/// su id para alimentar el formulario. `tipo` ∈ PRODUCTO | UBICACION | LOTE |
+/// CAJA. Solo lectura — el escaneo nunca crea datos.
+#[derive(Debug, Clone, Serialize)]
+pub struct EscaneoResuelto {
+    pub tipo: String,
+    pub id: String,
+    pub etiqueta: String,
+}
+
+/// Resuelve un código escaneado (tipo teclado) a una entidad del dominio:
+/// producto por código de barras o SKU, ubicación por código, lote por número
+/// y caja por código. Devuelve el primer match (prioridad producto → ubicación
+/// → lote → caja) o `None` si no coincide con nada.
+pub fn resolver_escaneo(conn: &Connection, codigo: &str) -> AppResult<Option<EscaneoResuelto>> {
+    let c = codigo.trim();
+    if c.is_empty() {
+        return Ok(None);
+    }
+
+    // Producto por código de barras exacto (tiene prioridad: es la lectura
+    // directa del escáner, SPEC §14.3).
+    if let Ok(fila) = conn.query_row(
+        "SELECT id, sku FROM productos WHERE codigo_barras = ?1",
+        [c],
+        |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+    ) {
+        return Ok(Some(EscaneoResuelto {
+            tipo: "PRODUCTO".into(),
+            id: fila.0,
+            etiqueta: fila.1,
+        }));
+    }
+
+    // Producto por SKU normalizado.
+    let sku = normalizar_codigo(c);
+    if let Ok(fila) = conn.query_row(
+        "SELECT id, sku FROM productos WHERE sku = ?1",
+        [&sku],
+        |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+    ) {
+        return Ok(Some(EscaneoResuelto {
+            tipo: "PRODUCTO".into(),
+            id: fila.0,
+            etiqueta: fila.1,
+        }));
+    }
+
+    // Ubicación por código.
+    if let Ok(fila) = conn.query_row(
+        "SELECT id, codigo FROM ubicaciones WHERE codigo = ?1",
+        [c],
+        |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+    ) {
+        return Ok(Some(EscaneoResuelto {
+            tipo: "UBICACION".into(),
+            id: fila.0,
+            etiqueta: fila.1,
+        }));
+    }
+
+    // Lote por número.
+    if let Ok(fila) = conn.query_row("SELECT id, numero FROM lotes WHERE numero = ?1", [c], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+    }) {
+        return Ok(Some(EscaneoResuelto {
+            tipo: "LOTE".into(),
+            id: fila.0,
+            etiqueta: fila.1,
+        }));
+    }
+
+    // Caja por código.
+    if let Ok(fila) = conn.query_row("SELECT id, codigo FROM cajas WHERE codigo = ?1", [c], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+    }) {
+        return Ok(Some(EscaneoResuelto {
+            tipo: "CAJA".into(),
+            id: fila.0,
+            etiqueta: fila.1,
+        }));
+    }
+
+    Ok(None)
 }
 
 // ============ Lote (SPEC §3.12) ============

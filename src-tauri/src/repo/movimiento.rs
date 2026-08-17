@@ -118,9 +118,14 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
     let almacen_destino =
         crate::repo::catalogo::resolver_almacen_id_de_ubicacion(conn, &nuevo.destino_ubicacion_id)?;
 
+    // Una sola transacción para el traslado: si origen y destino están en el
+    // mismo almacén se crea un único movimiento; si no, las dos piernas
+    // (salida + entrada) se crean como un hecho atómico (SPEC §9.3).
+    let tx = conn.unchecked_transaction()?;
+
     if almacen_origen == almacen_destino {
-        let mov = crear_movimiento(
-            conn,
+        let mov = insertar_movimiento(
+            &tx,
             &NuevoMovimiento {
                 tipo: "TRASLADO".into(),
                 sub_tipo: "TRASLADO_SALIDA".into(),
@@ -134,6 +139,7 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
                 documento_referencia: nuevo.documento_referencia.clone(),
                 notas: nuevo.notas.clone(),
                 lineas: vec![NuevaLinea {
+                    costo_unitario: None,
                     producto_id: nuevo.producto_id.clone(),
                     lote_id: nuevo.lote_id.clone(),
                     cantidad: nuevo.cantidad,
@@ -145,6 +151,7 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
                 created_by: nuevo.created_by.clone(),
             },
         )?;
+        tx.commit()?;
         return Ok(TrasladoCreado {
             salida: mov,
             entrada: None,
@@ -156,8 +163,8 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
         .clone()
         .unwrap_or_else(|| format!("TRASLADO-{}", Uuid::new_v4()));
 
-    let salida = crear_movimiento(
-        conn,
+    let salida = insertar_movimiento(
+        &tx,
         &NuevoMovimiento {
             tipo: "SALIDA".into(),
             sub_tipo: "TRASLADO_SALIDA".into(),
@@ -171,6 +178,7 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
             documento_referencia: Some(referencia.clone()),
             notas: nuevo.notas.clone(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: nuevo.producto_id.clone(),
                 lote_id: nuevo.lote_id.clone(),
                 cantidad: nuevo.cantidad,
@@ -183,8 +191,8 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
         },
     )?;
 
-    let entrada = crear_movimiento(
-        conn,
+    let entrada = insertar_movimiento(
+        &tx,
         &NuevoMovimiento {
             tipo: "ENTRADA".into(),
             sub_tipo: "TRASLADO_ENTRADA".into(),
@@ -198,6 +206,7 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
             documento_referencia: Some(referencia),
             notas: nuevo.notas.clone(),
             lineas: vec![NuevaLinea {
+                costo_unitario: None,
                 producto_id: nuevo.producto_id.clone(),
                 lote_id: nuevo.lote_id.clone(),
                 cantidad: nuevo.cantidad,
@@ -210,6 +219,7 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
         },
     )?;
 
+    tx.commit()?;
     Ok(TrasladoCreado {
         salida,
         entrada: Some(entrada),
@@ -218,28 +228,39 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
 
 /// Crea un movimiento en estado BORRADOR (SPEC §6.2). No afecta stock.
 pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Movimiento> {
-    nuevo.validar()?;
-    puede(conn, Some(&nuevo.created_by), "movimiento", "crear")?;
-
-    let tipo = nuevo.tipo()?.as_str();
-    let sub_tipo = nuevo.sub_tipo()?.as_str();
-
     // Entrada inicial (SPEC §7.5): reservada a quien puede administrar la
-    // configuración del sistema (ADMIN/GERENTE), además del permiso general.
-    if sub_tipo == "INICIAL" {
+    // configuración del sistema (ADMIN/GERENTE), además de `movimiento:crear`
+    // (que valida `insertar_movimiento`).
+    if nuevo.sub_tipo()?.as_str() == "INICIAL" {
         puede(conn, Some(&nuevo.created_by), "configuracion", "ejecutar")?;
     }
+
+    let tx = conn.unchecked_transaction()?;
+    let mov = insertar_movimiento(&tx, nuevo)?;
+    tx.commit()?;
+    Ok(mov)
+}
+
+/// Inserta un movimiento `BORRADOR` dentro de la transacción `tx` (sin
+/// gestionarla): compartida por `crear_movimiento` y `crear_traslado`, que
+/// así pueden crear las dos piernas de un traslado inter-almacén como un
+/// solo hecho atómico (SPEC §9.3) — si la segunda falla, la primera se
+/// revierte y no queda ningún movimiento huérfano. Valida las reglas de
+/// creación (permiso `movimiento:crear`, líneas) para ambos callers.
+fn insertar_movimiento(tx: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Movimiento> {
+    nuevo.validar()?;
+    puede(tx, Some(&nuevo.created_by), "movimiento", "crear")?;
+    let tipo = nuevo.tipo()?.as_str();
+    let sub_tipo = nuevo.sub_tipo()?.as_str();
     let id = Uuid::new_v4().to_string();
     let ts = ahora();
     let anio = &ts[..4];
-    let numero = generar_numero(conn, anio)?;
+    let numero = generar_numero(tx, anio)?;
     let fecha_movimiento = nuevo.fecha_movimiento.clone().unwrap_or_else(ahora);
-
-    let tx = conn.unchecked_transaction()?;
 
     // Validaciones por línea (producto activo, lote requerido, etc.).
     for linea in &nuevo.lineas {
-        let reglas = reglas_producto(&tx, &linea.producto_id)?;
+        let reglas = reglas_producto(tx, &linea.producto_id)?;
         if !reglas.activo {
             return Err(AppError::EntidadInactiva("producto"));
         }
@@ -276,8 +297,8 @@ pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult
         let lid = Uuid::new_v4().to_string();
         tx.execute(
             "INSERT INTO movimiento_lineas (id, movimiento_id, producto_id, lote_id, cantidad,
-                    origen_ubicacion_id, destino_ubicacion_id, caja_origen_id, caja_destino_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    origen_ubicacion_id, destino_ubicacion_id, caja_origen_id, caja_destino_id, costo_unitario)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             rusqlite::params![
                 lid,
                 id,
@@ -287,12 +308,13 @@ pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult
                 linea.origen_ubicacion_id,
                 linea.destino_ubicacion_id,
                 linea.caja_origen_id,
-                linea.caja_destino_id
+                linea.caja_destino_id,
+                linea.costo_unitario
             ],
         )?;
     }
 
-    EventoAuditoria(&tx).registrar(
+    EventoAuditoria(tx).registrar(
         Some(&nuevo.created_by),
         "crear",
         "movimiento",
@@ -300,8 +322,158 @@ pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult
         None,
         None,
     )?;
+    Ok(obtener_movimiento(tx, &id)?.expect("recién insertado"))
+}
+
+/// Edita un movimiento en `BORRADOR`/`PENDIENTE_APROBACION` (SPEC §6.2: los
+/// aprobados son inmutables). Solo el creador puede editarlo. Reemplaza las
+/// líneas con las mismas validaciones de `crear_movimiento` (producto activo,
+/// `controla_lote` exige lote, lote pertenece al producto, motivo obligatorio
+/// para ajustes/mermas). `tipo`/`sub_tipo`/`numero` no se tocan.
+pub fn editar_movimiento(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarMovimiento,
+    actor: &str,
+) -> AppResult<Movimiento> {
+    puede(conn, Some(actor), "movimiento", "crear")?;
+    if cambios.lineas.is_empty() {
+        return Err(AppError::CampoRequerido("lineas".into()));
+    }
+    for linea in &cambios.lineas {
+        if linea.cantidad <= 0 {
+            return Err(AppError::CampoRequerido("cantidad (> 0)".into()));
+        }
+    }
+
+    let tx = conn.unchecked_transaction()?;
+    let actual = obtener_movimiento(&tx, id)?
+        .ok_or_else(|| AppError::NoEncontrado("movimiento", id.to_string()))?;
+
+    // SPEC §6.2: "BORRADOR: editable por su creador". Un aprobado jamás se edita.
+    if actual.created_by != actor {
+        return Err(AppError::SinPermiso(
+            "movimiento:editar (solo el creador)".into(),
+        ));
+    }
+    let estado = EstadoMovimiento::parse(&actual.estado)
+        .ok_or_else(|| AppError::CampoRequerido("estado".into()))?;
+    if estado != EstadoMovimiento::Borrador && estado != EstadoMovimiento::PendienteAprobacion {
+        return Err(AppError::MovimientoAprobadoNoEditable);
+    }
+
+    // Motivo obligatorio para ajustes/mermas (SPEC §10.3), con el sub_tipo
+    // estable del movimiento (no se puede cambiar de tipo al editar).
+    let subtipo = SubTipoMovimiento::parse(&actual.sub_tipo)
+        .ok_or_else(|| AppError::CampoRequerido("sub_tipo".into()))?;
+    let requiere_motivo = matches!(
+        subtipo,
+        SubTipoMovimiento::AjustePositivo
+            | SubTipoMovimiento::AjusteNegativo
+            | SubTipoMovimiento::Merma
+    );
+    let motivo = match &cambios.motivo {
+        Some(Some(v)) => Some(v.clone()),
+        Some(None) => None,
+        None => actual.motivo.clone(),
+    };
+    if requiere_motivo {
+        let m = motivo.as_deref().unwrap_or("").trim();
+        if m.len() < 3 {
+            return Err(AppError::MotivoRequerido);
+        }
+    }
+
+    // Validaciones por línea, idénticas a crear_movimiento (SPEC §6.1, §3.7).
+    for linea in &cambios.lineas {
+        let reglas = reglas_producto(&tx, &linea.producto_id)?;
+        if !reglas.activo {
+            return Err(AppError::EntidadInactiva("producto"));
+        }
+        if reglas.controla_lote && linea.lote_id.is_none() {
+            return Err(AppError::LoteRequerido(reglas.sku));
+        }
+        if let Some(lote_id) = &linea.lote_id {
+            let existe: i64 = tx.query_row(
+                "SELECT COUNT(*) FROM lotes WHERE id = ?1 AND producto_id = ?2",
+                rusqlite::params![lote_id, linea.producto_id],
+                |r| r.get(0),
+            )?;
+            if existe == 0 {
+                return Err(AppError::NoEncontrado("lote", lote_id.clone()));
+            }
+        }
+    }
+
+    // Cabecera: solo campos operativos, los estables no se tocan.
+    let fecha_movimiento = cambios
+        .fecha_movimiento
+        .clone()
+        .unwrap_or(actual.fecha_movimiento);
+    let proveedor_id = match &cambios.proveedor_id {
+        Some(Some(v)) => Some(v.clone()),
+        Some(None) => None,
+        None => actual.proveedor_id,
+    };
+    let cliente_id = match &cambios.cliente_id {
+        Some(Some(v)) => Some(v.clone()),
+        Some(None) => None,
+        None => actual.cliente_id,
+    };
+    let documento_referencia = match &cambios.documento_referencia {
+        Some(Some(v)) => Some(v.clone()),
+        Some(None) => None,
+        None => actual.documento_referencia,
+    };
+    let notas = match &cambios.notas {
+        Some(Some(v)) => Some(v.clone()),
+        Some(None) => None,
+        None => actual.notas,
+    };
+    tx.execute(
+        "UPDATE movimientos SET fecha_movimiento = ?2, motivo = ?3, proveedor_id = ?4,
+                cliente_id = ?5, documento_referencia = ?6, notas = ?7
+         WHERE id = ?1",
+        rusqlite::params![
+            id,
+            fecha_movimiento,
+            motivo,
+            proveedor_id,
+            cliente_id,
+            documento_referencia,
+            notas
+        ],
+    )?;
+
+    // Reemplazar líneas: borrar las actuales e insertar las nuevas.
+    tx.execute(
+        "DELETE FROM movimiento_lineas WHERE movimiento_id = ?1",
+        [id],
+    )?;
+    for linea in &cambios.lineas {
+        let lid = Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO movimiento_lineas (id, movimiento_id, producto_id, lote_id, cantidad,
+                    origen_ubicacion_id, destino_ubicacion_id, caja_origen_id, caja_destino_id, costo_unitario)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            rusqlite::params![
+                lid,
+                id,
+                linea.producto_id,
+                linea.lote_id,
+                linea.cantidad,
+                linea.origen_ubicacion_id,
+                linea.destino_ubicacion_id,
+                linea.caja_origen_id,
+                linea.caja_destino_id,
+                linea.costo_unitario
+            ],
+        )?;
+    }
+
+    EventoAuditoria(&tx).registrar(Some(actor), "editar", "movimiento", Some(id), None, None)?;
     tx.commit()?;
-    Ok(obtener_movimiento(conn, &id)?.expect("recién insertado"))
+    Ok(obtener_movimiento(conn, id)?.expect("existe"))
 }
 
 /// Pasa un movimiento de BORRADOR a PENDIENTE_APROBACION.
@@ -353,7 +525,7 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
     // Cargar líneas.
     let mut stmt = tx.prepare(
         "SELECT id, producto_id, lote_id, cantidad, origen_ubicacion_id, destino_ubicacion_id,
-                caja_origen_id, caja_destino_id
+                caja_origen_id, caja_destino_id, costo_unitario
          FROM movimiento_lineas WHERE movimiento_id = ?1",
     )?;
     let lineas = stmt
@@ -368,6 +540,7 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
                 destino_ubicacion_id: r.get(5)?,
                 caja_origen_id: r.get(6)?,
                 caja_destino_id: r.get(7)?,
+                costo_unitario: r.get(8)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -449,6 +622,16 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
         }
         if let Some(caja_id) = &linea.caja_destino_id {
             validar_restriccion_caja(&tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
+        }
+
+        // Valorización (Fase D): si la línea es una entrada con costo, se
+        // actualiza el costo del producto según el método configurado (antes
+        // de aplicar la línea, para usar el saldo previo en el promedio).
+        if destino.is_some()
+            && let Some(costo) = linea.costo_unitario
+            && costo > 0.0
+        {
+            actualizar_costo_producto(&tx, &linea.producto_id, costo, linea.cantidad)?;
         }
 
         aplicar_linea(&tx, linea, origen.as_deref(), destino.as_deref())?;
@@ -741,6 +924,53 @@ fn validar_restriccion_caja(
     Ok(())
 }
 
+/// Método de valorización configurado (`PROMEDIO` | `ULTIMO`). Default `ULTIMO`.
+fn metodo_valorizacion(tx: &Connection) -> String {
+    tx.query_row(
+        "SELECT metodo_valorizacion FROM configuracion_empresa WHERE id = 'default'",
+        [],
+        |r| r.get(0),
+    )
+    .unwrap_or_else(|_| "ULTIMO".into())
+}
+
+/// Actualiza el `costo_unitario` del producto al aprobar una entrada (Fase D):
+/// `ULTIMO` fija el costo de la línea; `PROMEDIO` pondera con el stock previo.
+/// Se llama ANTES de `aplicar_linea` para usar el saldo previo en el promedio.
+fn actualizar_costo_producto(
+    tx: &Connection,
+    producto: &str,
+    costo: f64,
+    cantidad: i64,
+) -> AppResult<()> {
+    let metodo = metodo_valorizacion(tx);
+    let costo_nuevo = if metodo == "PROMEDIO" {
+        let stock_previo: i64 = tx.query_row(
+            "SELECT COALESCE(SUM(cantidad), 0) FROM saldos WHERE producto_id = ?1",
+            [producto],
+            |r| r.get(0),
+        )?;
+        let costo_actual: Option<f64> = tx.query_row(
+            "SELECT costo_unitario FROM productos WHERE id = ?1",
+            [producto],
+            |r| r.get(0),
+        )?;
+        match (costo_actual, stock_previo) {
+            (Some(ca), s) if s > 0 && ca > 0.0 => {
+                (ca * s as f64 + costo * cantidad as f64) / (s + cantidad) as f64
+            }
+            _ => costo,
+        }
+    } else {
+        costo
+    };
+    tx.execute(
+        "UPDATE productos SET costo_unitario = ?2 WHERE id = ?1",
+        rusqlite::params![producto, costo_nuevo],
+    )?;
+    Ok(())
+}
+
 fn origen_obligatorio(_tx: &Connection, _sub: &str, linea: &LineaMovimiento) -> AppResult<String> {
     linea
         .origen_ubicacion_id
@@ -809,6 +1039,34 @@ pub fn obtener_movimiento(conn: &Connection, id: &str) -> AppResult<Option<Movim
     )?;
     let mut rows = stmt.query_map([id], map_movimiento)?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// Líneas de un movimiento en orden de inserción (SPEC §6.1). Usado por los
+/// tests de edición; la UI las lee vía el motor de consulta universal.
+#[allow(dead_code)]
+pub fn obtener_lineas(conn: &Connection, movimiento_id: &str) -> AppResult<Vec<LineaMovimiento>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, movimiento_id, producto_id, lote_id, cantidad, origen_ubicacion_id,
+                destino_ubicacion_id, caja_origen_id, caja_destino_id, costo_unitario
+         FROM movimiento_lineas WHERE movimiento_id = ?1 ORDER BY rowid",
+    )?;
+    let rows = stmt
+        .query_map([movimiento_id], |r| {
+            Ok(LineaMovimiento {
+                id: r.get(0)?,
+                movimiento_id: r.get(1)?,
+                producto_id: r.get(2)?,
+                lote_id: r.get(3)?,
+                cantidad: r.get(4)?,
+                origen_ubicacion_id: r.get(5)?,
+                destino_ubicacion_id: r.get(6)?,
+                caja_origen_id: r.get(7)?,
+                caja_destino_id: r.get(8)?,
+                costo_unitario: r.get(9)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
 }
 
 fn map_movimiento(r: &rusqlite::Row<'_>) -> rusqlite::Result<Movimiento> {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useLocation, useParams } from "react-router";
 import {
   listarConteos,
   listarLotes,
@@ -28,7 +28,9 @@ import {
 } from "../shared/ui";
 import { ProductoRef, UbicacionRef } from "../shared/refs";
 import { PATH, sesionInventarioDetalle } from "../app/route-paths";
+import { catalogoNuevo } from "../app/route-paths";
 import { formatearFecha, mensajeError } from "../shared/format";
+import { CrearRapido, usePreservarFormulario, useSeleccionCreada } from "../shared/creacion-rapida";
 
 const VACIO = {
   ubicacion_id: "",
@@ -39,12 +41,26 @@ const VACIO = {
   nota: "",
 };
 
+const INVALIDAR_UBICACIONES = ["ubicaciones", "selector-conteo"] as const;
+const INVALIDAR_PRODUCTOS = ["productos", "selector-conteo"] as const;
+// Prefijo: invalida los lotes de cualquier producto (["lotes","por-producto",...]).
+const INVALIDAR_LOTES = ["lotes", "por-producto"] as const;
+
 export function SesionInventarioConteosPage() {
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(VACIO);
   const [error, setError] = useState<string | null>(null);
+
+  // Conserva el formulario de conteo al salir a crear una ubicación, producto
+  // o lote (creación rápida) y lo restaura al volver.
+  usePreservarFormulario(
+    location.pathname,
+    () => form,
+    (valores) => setForm(valores as typeof VACIO),
+  );
 
   const sesionQuery = useQuery({
     queryKey: ["sesion-inventario", sesionId],
@@ -94,6 +110,24 @@ export function SesionInventarioConteosPage() {
     onError: (err) => setError(mensajeError(err)),
   });
 
+  // Creación rápida: al volver de /productos/nuevo o /ubicaciones/nuevo, el
+  // registro recién creado queda preseleccionado en el formulario de conteo.
+  useSeleccionCreada(
+    "ubicacion_id",
+    (nuevoId) => setForm((f) => ({ ...f, ubicacion_id: nuevoId })),
+    INVALIDAR_UBICACIONES,
+  );
+  useSeleccionCreada(
+    "producto_id",
+    (nuevoId) => setForm((f) => ({ ...f, producto_id: nuevoId, lote_id: "" })),
+    INVALIDAR_PRODUCTOS,
+  );
+  useSeleccionCreada(
+    "lote_id",
+    (nuevoId) => setForm((f) => ({ ...f, lote_id: nuevoId })),
+    INVALIDAR_LOTES,
+  );
+
   const columns: Array<TableColumn<Conteo>> = [
     {
       key: "ubicacion_id",
@@ -141,47 +175,68 @@ export function SesionInventarioConteosPage() {
           ) : null}
           <FormGrid columns={2}>
             <Field label="Ubicación" required>
-              <Select
-                aria-label="Ubicación"
-                placeholder="Selecciona"
-                value={form.ubicacion_id}
-                onChange={(e) => setForm({ ...form, ubicacion_id: e.target.value })}
-              >
-                {ubicaciones.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.codigo}
-                  </option>
-                ))}
-              </Select>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    aria-label="Ubicación"
+                    placeholder="Selecciona"
+                    value={form.ubicacion_id}
+                    onChange={(e) => setForm({ ...form, ubicacion_id: e.target.value })}
+                  >
+                    {ubicaciones.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.codigo}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <CrearRapido campo="ubicacion_id" rutaNueva={catalogoNuevo("ubicaciones")}>
+                  Nueva ubicación
+                </CrearRapido>
+              </div>
             </Field>
             <Field label="Producto" required>
-              <Select
-                aria-label="Producto"
-                placeholder="Selecciona"
-                value={form.producto_id}
-                onChange={(e) => setForm({ ...form, producto_id: e.target.value, lote_id: "" })}
-              >
-                {productos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.sku} — {p.nombre}
-                  </option>
-                ))}
-              </Select>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    aria-label="Producto"
+                    placeholder="Selecciona"
+                    value={form.producto_id}
+                    onChange={(e) => setForm({ ...form, producto_id: e.target.value, lote_id: "" })}
+                  >
+                    {productos.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} — {p.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <CrearRapido campo="producto_id" rutaNueva={catalogoNuevo("productos")}>
+                  Nuevo producto
+                </CrearRapido>
+              </div>
             </Field>
             {productoSeleccionado?.controla_lote ? (
               <Field label="Lote" required>
-                <Select
-                  aria-label="Lote"
-                  placeholder="Selecciona"
-                  value={form.lote_id}
-                  onChange={(e) => setForm({ ...form, lote_id: e.target.value })}
-                >
-                  {lotes.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.numero}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      aria-label="Lote"
+                      placeholder="Selecciona"
+                      value={form.lote_id}
+                      onChange={(e) => setForm({ ...form, lote_id: e.target.value })}
+                    >
+                      {lotes.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.numero}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <CrearRapido campo="lote_id" rutaNueva={catalogoNuevo("lotes")}>
+                    Nuevo lote
+                  </CrearRapido>
+                </div>
               </Field>
             ) : null}
             <Field label="Cantidad contada" required help="0 = producto ausente en esta ubicación.">

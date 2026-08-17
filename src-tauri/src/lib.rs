@@ -1,7 +1,9 @@
+mod buscar;
 mod commands;
 mod db;
 mod domain;
 mod error;
+mod importar;
 mod query;
 mod repo;
 mod security;
@@ -70,4 +72,53 @@ pub fn run() {
         .invoke_handler(commands::handler())
         .run(tauri::generate_context!())
         .expect("error while running rustock");
+}
+
+/// Ruta de la base de datos: `RUSTOCK_DB_PATH` si se define, si no la misma
+/// app data dir que usa el modo escritorio (`~/.local/share/com.rustock.app/
+/// rustock.db`, con `XDG_DATA_HOME` si está definida). Así el modo web y el
+/// modo ventana comparten los mismos datos.
+fn ruta_base_de_datos() -> PathBuf {
+    if let Ok(p) = std::env::var("RUSTOCK_DB_PATH")
+        && !p.is_empty()
+    {
+        return PathBuf::from(p);
+    }
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    let data_home =
+        std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| format!("{home}/.local/share"));
+    PathBuf::from(data_home)
+        .join("com.rustock.app")
+        .join("rustock.db")
+}
+
+/// Modo navegador sin ventana (`RUSTOCK_WEB_ONLY=1`): arranca solo la capa de
+/// datos + el servidor HTTP local (`server.rs`, `127.0.0.1:1421`) sin
+/// inicializar GTK/WebKit ni crear ventana alguna. Pensado para entornos sin
+/// servidor X/Wayland funcional (WSL, CI) donde la ventana nativa no puede
+/// crearse y para el script `npm run tauri:web`. Misma lógica de negocio,
+/// mismos permisos, misma sesión en memoria que el modo escritorio.
+pub fn run_web() {
+    let db_path = ruta_base_de_datos();
+    if let Some(dir) = db_path.parent() {
+        std::fs::create_dir_all(dir).expect("no se pudo crear el directorio de datos");
+    }
+    let db = DbState::init(&db_path).expect("no se pudo abrir la base de datos");
+    {
+        let conn = db.conn();
+        seed_roles(&conn).expect("no se pudieron sembrar los roles por defecto");
+        #[cfg(debug_assertions)]
+        if std::env::var("RUSTOCK_SEED").is_ok_and(|v| v == "1") {
+            seed::sembrar_si_vacio(&conn).expect("no se pudieron sembrar los datos de ejemplo");
+        }
+    }
+    let sesion = Arc::new(SesionState::default());
+    server::iniciar(db, sesion);
+    println!(
+        "[rustock-web] backend HTTP en 127.0.0.1:{} — Ctrl+C para detener",
+        server::puerto_http()
+    );
+    loop {
+        std::thread::park();
+    }
 }
