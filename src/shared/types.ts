@@ -116,9 +116,21 @@ export interface Rol {
   updated_at: string;
 }
 
+/**
+ * Posición en el mapa 2D/3D de almacenes. `null` = sin posición asignada
+ * (el mapa hace fallback a una rejilla automática). `pos_z`/`altura` no los
+ * usa el mapa 2D actual; quedan listos para la futura vista 3D.
+ */
+export interface PosicionMapa {
+  pos_x: number | null;
+  pos_y: number | null;
+  pos_z: number | null;
+  altura: number | null;
+}
+
 // ============ Almacén (SPEC §3.1) ============
 
-export interface Almacen extends Auditoria {
+export interface Almacen extends Auditoria, PosicionMapa {
   id: string;
   codigo: string;
   nombre: string;
@@ -142,7 +154,7 @@ export interface EditarAlmacen {
 
 // ============ Zona (SPEC §3.2) ============
 
-export interface Zona extends Auditoria {
+export interface Zona extends Auditoria, PosicionMapa {
   id: string;
   codigo: string;
   nombre: string;
@@ -163,14 +175,36 @@ export interface EditarZona {
   descripcion?: string | null;
 }
 
+// ============ Pasillo (SPEC §3.3b) ============
+
+export interface Pasillo extends Auditoria, PosicionMapa {
+  id: string;
+  codigo: string;
+  nombre: string | null;
+  zona_id: string;
+  activo: boolean;
+}
+
+export interface NuevoPasillo {
+  codigo: string;
+  nombre?: string | null;
+  zona_id: string;
+}
+
+export interface EditarPasillo {
+  nombre?: string | null;
+}
+
 // ============ Rack (SPEC §3.3) ============
 
-export interface Rack extends Auditoria {
+export interface Rack extends Auditoria, PosicionMapa {
   id: string;
   codigo: string;
   nombre: string | null;
   tipo: string | null;
   zona_id: string;
+  /** Etiqueta opcional dentro de un pasillo de la misma zona (SPEC §3.3b). */
+  pasillo_id: string | null;
   activo: boolean;
 }
 
@@ -179,11 +213,14 @@ export interface NuevoRack {
   nombre?: string | null;
   tipo?: string | null;
   zona_id: string;
+  pasillo_id?: string | null;
 }
 
+/** `pasillo_id`: `undefined` = no tocar, `null` = quitar, string = reasignar. */
 export interface EditarRack {
   nombre?: string | null;
   tipo?: string | null;
+  pasillo_id?: string | null;
 }
 
 // ============ Sección (SPEC §3.4) ============
@@ -224,7 +261,7 @@ export type TipoUbicacion =
   | "DANADO"
   | "EXPEDICION";
 
-export interface Ubicacion extends Auditoria {
+export interface Ubicacion extends Auditoria, PosicionMapa {
   id: string;
   codigo: string;
   nombre: string | null;

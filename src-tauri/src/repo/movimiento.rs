@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{Connection, TransactionBehavior};
 use uuid::Uuid;
 
 use crate::domain::movimiento::*;
@@ -18,13 +18,24 @@ type LineaInversa = (
 );
 
 /// Genera el número correlativo del movimiento (SPEC §6.1): MOV-YYYY-NNNNNN.
+///
+/// El incremento es atómico: se apoya en la tabla `correlativos`, cuyo
+/// `UPDATE ... RETURNING` adquiere el candado de escritura de la fila. Al
+/// ejecutarse dentro de una transacción `IMMEDIATE` (ver `crear_movimiento`/
+/// `crear_traslado`/`anular_movimiento`), dos creaciones concurrentes quedan
+/// serializadas y no colisionan en el `UNIQUE(numero)`.
 fn generar_numero(conn: &Connection, anio: &str) -> AppResult<String> {
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM movimientos WHERE numero LIKE ?1",
-        [format!("MOV-{anio}-%")],
+    let clave = format!("MOV-{anio}");
+    conn.execute(
+        "INSERT OR IGNORE INTO correlativos (clave, valor) VALUES (?1, 0)",
+        [clave.clone()],
+    )?;
+    let valor: i64 = conn.query_row(
+        "UPDATE correlativos SET valor = valor + 1 WHERE clave = ?1 RETURNING valor",
+        [clave],
         |r| r.get(0),
     )?;
-    Ok(format!("MOV-{anio}-{:06}", count + 1))
+    Ok(format!("MOV-{anio}-{:06}", valor))
 }
 
 /// Lee un producto y devuelve si controla lote / vencimiento / está activo.
@@ -121,7 +132,7 @@ pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<Tra
     // Una sola transacción para el traslado: si origen y destino están en el
     // mismo almacén se crea un único movimiento; si no, las dos piernas
     // (salida + entrada) se crean como un hecho atómico (SPEC §9.3).
-    let tx = conn.unchecked_transaction()?;
+    let tx = rusqlite::Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
 
     if almacen_origen == almacen_destino {
         let mov = insertar_movimiento(
@@ -235,7 +246,7 @@ pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult
         puede(conn, Some(&nuevo.created_by), "configuracion", "ejecutar")?;
     }
 
-    let tx = conn.unchecked_transaction()?;
+    let tx = rusqlite::Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     let mov = insertar_movimiento(&tx, nuevo)?;
     tx.commit()?;
     Ok(mov)
@@ -659,7 +670,7 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
 /// Anular: si el movimiento afectó stock (APROBADO), genera el inverso (SPEC §6.2).
 pub fn anular_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Movimiento> {
     puede(conn, Some(by), "movimiento", "anular")?;
-    let tx = conn.unchecked_transaction()?;
+    let tx = rusqlite::Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     let (estado, tipo, sub_tipo) = estado_tipo(&tx, id)?;
     match estado {
         EstadoMovimiento::Aprobado => {

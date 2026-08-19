@@ -178,6 +178,20 @@ pub fn editar_almacen(
 }
 
 #[tauri::command]
+pub fn mover_almacen(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    pos: PosicionMapa,
+) -> AppResult<Almacen> {
+    con_auditoria!(db, sesion, "mover_almacen", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::mover_almacen(&conn, &id, &pos, &actor)
+    })
+}
+
+#[tauri::command]
 pub fn desactivar_almacen(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -246,6 +260,20 @@ pub fn editar_zona(
 }
 
 #[tauri::command]
+pub fn mover_zona(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    pos: PosicionMapa,
+) -> AppResult<Zona> {
+    con_auditoria!(db, sesion, "mover_zona", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::mover_zona(&conn, &id, &pos, &actor)
+    })
+}
+
+#[tauri::command]
 pub fn desactivar_zona(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
@@ -255,6 +283,88 @@ pub fn desactivar_zona(
         let actor = sesion.usuario_id()?;
         let conn = db.conn();
         repo::catalogo::desactivar_zona(&conn, &id, &actor)
+    })
+}
+
+// ============ Pasillo ============
+
+#[tauri::command]
+pub fn listar_pasillos(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    params: ListParams,
+) -> AppResult<Listado> {
+    con_auditoria!(db, sesion, "listar_pasillos", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "pasillo", "ver")?;
+        query::listar(&conn, &query::PASILLO_SCHEMA, &params)
+    })
+}
+
+#[tauri::command]
+pub fn crear_pasillo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nuevo: NuevoPasillo,
+) -> AppResult<Pasillo> {
+    con_auditoria!(db, sesion, "crear_pasillo", {
+        nuevo.created_by = Some(sesion.usuario_id()?);
+        let conn = db.conn();
+        repo::catalogo::crear_pasillo(&conn, &nuevo)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_pasillo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<Pasillo>> {
+    con_auditoria!(db, sesion, "obtener_pasillo", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "pasillo", "ver")?;
+        repo::catalogo::obtener_pasillo(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn editar_pasillo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: EditarPasillo,
+) -> AppResult<Pasillo> {
+    con_auditoria!(db, sesion, "editar_pasillo", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::editar_pasillo(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn mover_pasillo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    pos: PosicionMapa,
+) -> AppResult<Pasillo> {
+    con_auditoria!(db, sesion, "mover_pasillo", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::mover_pasillo(&conn, &id, &pos, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn desactivar_pasillo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "desactivar_pasillo", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::desactivar_pasillo(&conn, &id, &actor)
     })
 }
 
@@ -310,6 +420,20 @@ pub fn editar_rack(
         let actor = sesion.usuario_id()?;
         let conn = db.conn();
         repo::catalogo::editar_rack(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn mover_rack(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    pos: PosicionMapa,
+) -> AppResult<Rack> {
+    con_auditoria!(db, sesion, "mover_rack", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::mover_rack(&conn, &id, &pos, &actor)
     })
 }
 
@@ -446,6 +570,20 @@ pub fn editar_ubicacion(
         let actor = sesion.usuario_id()?;
         let conn = db.conn();
         repo::catalogo::editar_ubicacion(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn mover_ubicacion(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    pos: PosicionMapa,
+) -> AppResult<Ubicacion> {
+    con_auditoria!(db, sesion, "mover_ubicacion", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::catalogo::mover_ubicacion(&conn, &id, &pos, &actor)
     })
 }
 
@@ -1953,16 +2091,25 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         crear_almacen,
         obtener_almacen,
         editar_almacen,
+        mover_almacen,
         desactivar_almacen,
         listar_zonas,
         crear_zona,
         obtener_zona,
         editar_zona,
+        mover_zona,
         desactivar_zona,
+        listar_pasillos,
+        crear_pasillo,
+        obtener_pasillo,
+        editar_pasillo,
+        mover_pasillo,
+        desactivar_pasillo,
         listar_racks,
         crear_rack,
         obtener_rack,
         editar_rack,
+        mover_rack,
         desactivar_rack,
         listar_secciones,
         crear_seccion,
@@ -1973,6 +2120,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         crear_ubicacion,
         obtener_ubicacion,
         editar_ubicacion,
+        mover_ubicacion,
         desactivar_ubicacion,
         listar_cajas,
         crear_caja,

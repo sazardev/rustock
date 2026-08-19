@@ -95,10 +95,40 @@ export const NAV_GROUPS: NavGroup[] = [
         descripcion: "Zonas, racks y secciones del árbol físico",
       },
       {
+        label: "Zonas",
+        href: "/zonas",
+        icon: "zona",
+        descripcion: "Divisiones lógicas o físicas dentro de un almacén",
+      },
+      {
+        label: "Pasillos",
+        href: "/pasillos",
+        icon: "zona",
+        descripcion: "Pasillos físicos que agrupan racks dentro de una zona",
+      },
+      {
+        label: "Racks",
+        href: "/racks",
+        icon: "zona",
+        descripcion: "Estructuras de almacenamiento dentro de una zona",
+      },
+      {
+        label: "Secciones",
+        href: "/secciones",
+        icon: "zona",
+        descripcion: "Subdivisiones de un rack (niveles, bahías)",
+      },
+      {
         label: "Ubicaciones",
         href: "/ubicaciones",
         icon: "ubicacion",
         descripcion: "Puntos de almacenamiento y su contenido",
+      },
+      {
+        label: "Cajas",
+        href: "/cajas",
+        icon: "caja",
+        descripcion: "Contenedores dentro de una ubicación que agrupan stock",
       },
       {
         label: "Productos",

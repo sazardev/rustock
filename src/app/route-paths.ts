@@ -78,6 +78,15 @@ export function catalogoEditar(slug: string, id: string): string {
   return `/${slug}/${id}/editar`;
 }
 
+export function almacenMapa(id: string, resaltarId?: string): string {
+  const base = `/almacenes/${id}/mapa`;
+  return resaltarId ? `${base}?resaltar=${resaltarId}` : base;
+}
+
+export function almacenMapa3D(id: string): string {
+  return `/almacenes/${id}/mapa-3d`;
+}
+
 export function catalogoEliminar(slug: string, id: string): string {
   return `/${slug}/${id}/eliminar`;
 }

@@ -278,6 +278,13 @@ fn despachar(
                 &conn, &id, &cambios, &actor,
             )?)
         }),
+        "mover_almacen" => con_auditoria!(db, sesion, "mover_almacen", {
+            let id = str_req(args, "id")?;
+            let pos: PosicionMapa = de_req(args, "pos")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::mover_almacen(&conn, &id, &pos, &actor)?)
+        }),
         "desactivar_almacen" => con_auditoria!(db, sesion, "desactivar_almacen", {
             let id = str_req(args, "id")?;
             let actor = sesion.usuario_id()?;
@@ -318,11 +325,63 @@ fn despachar(
             let conn = db.conn();
             ok(repo::catalogo::editar_zona(&conn, &id, &cambios, &actor)?)
         }),
+        "mover_zona" => con_auditoria!(db, sesion, "mover_zona", {
+            let id = str_req(args, "id")?;
+            let pos: PosicionMapa = de_req(args, "pos")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::mover_zona(&conn, &id, &pos, &actor)?)
+        }),
         "desactivar_zona" => con_auditoria!(db, sesion, "desactivar_zona", {
             let id = str_req(args, "id")?;
             let actor = sesion.usuario_id()?;
             let conn = db.conn();
             ok(repo::catalogo::desactivar_zona(&conn, &id, &actor)?)
+        }),
+
+        // ============ Pasillo ============
+        "listar_pasillos" => con_auditoria!(db, sesion, "listar_pasillos", {
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "pasillo", "ver")?;
+            ok(query::listar(
+                &conn,
+                &query::PASILLO_SCHEMA,
+                &params_de(args)?,
+            )?)
+        }),
+        "crear_pasillo" => con_auditoria!(db, sesion, "crear_pasillo", {
+            let mut nuevo: NuevoPasillo = de_req(args, "nuevo")?;
+            nuevo.created_by = Some(sesion.usuario_id()?);
+            let conn = db.conn();
+            ok(repo::catalogo::crear_pasillo(&conn, &nuevo)?)
+        }),
+        "obtener_pasillo" => con_auditoria!(db, sesion, "obtener_pasillo", {
+            let id = str_req(args, "id")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "pasillo", "ver")?;
+            ok(repo::catalogo::obtener_pasillo(&conn, &id)?)
+        }),
+        "editar_pasillo" => con_auditoria!(db, sesion, "editar_pasillo", {
+            let id = str_req(args, "id")?;
+            let cambios: EditarPasillo = de_req(args, "cambios")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::editar_pasillo(
+                &conn, &id, &cambios, &actor,
+            )?)
+        }),
+        "mover_pasillo" => con_auditoria!(db, sesion, "mover_pasillo", {
+            let id = str_req(args, "id")?;
+            let pos: PosicionMapa = de_req(args, "pos")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::mover_pasillo(&conn, &id, &pos, &actor)?)
+        }),
+        "desactivar_pasillo" => con_auditoria!(db, sesion, "desactivar_pasillo", {
+            let id = str_req(args, "id")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::desactivar_pasillo(&conn, &id, &actor)?)
         }),
 
         // ============ Rack ============
@@ -353,6 +412,13 @@ fn despachar(
             let actor = sesion.usuario_id()?;
             let conn = db.conn();
             ok(repo::catalogo::editar_rack(&conn, &id, &cambios, &actor)?)
+        }),
+        "mover_rack" => con_auditoria!(db, sesion, "mover_rack", {
+            let id = str_req(args, "id")?;
+            let pos: PosicionMapa = de_req(args, "pos")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::mover_rack(&conn, &id, &pos, &actor)?)
         }),
         "desactivar_rack" => con_auditoria!(db, sesion, "desactivar_rack", {
             let id = str_req(args, "id")?;
@@ -429,6 +495,13 @@ fn despachar(
             ok(repo::catalogo::editar_ubicacion(
                 &conn, &id, &cambios, &actor,
             )?)
+        }),
+        "mover_ubicacion" => con_auditoria!(db, sesion, "mover_ubicacion", {
+            let id = str_req(args, "id")?;
+            let pos: PosicionMapa = de_req(args, "pos")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::catalogo::mover_ubicacion(&conn, &id, &pos, &actor)?)
         }),
         "desactivar_ubicacion" => con_auditoria!(db, sesion, "desactivar_ubicacion", {
             let id = str_req(args, "id")?;

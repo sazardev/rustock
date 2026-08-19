@@ -10,12 +10,14 @@ import {
   listarRacks,
   listarSecciones,
   listarZonas,
+  moverUbicacion,
   obtenerUbicacion,
 } from "../shared/backend";
 import { esPaginado, type TipoUbicacion } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { PosicionFormCard } from "../shared/posicion-form-card";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -35,6 +37,7 @@ import {
   Input,
   PageHeader,
   Select,
+  useToast,
 } from "../shared/ui";
 
 const TIPOS_UBICACION: Array<{ valor: TipoUbicacion; etiqueta: string }> = [
@@ -92,6 +95,7 @@ export function UbicacionFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   const { volver, campo } = usePeticionCreacion();
   const retornaAFormulario = !esEdicion && Boolean(volver && campo);
 
@@ -284,6 +288,20 @@ export function UbicacionFormPage() {
     onError: (err) => setError(mensajeError(err)),
   });
 
+  const moverMut = useMutation({
+    mutationFn: (pos: {
+      pos_x: number | null;
+      pos_y: number | null;
+      pos_z: number | null;
+      altura: number | null;
+    }) => moverUbicacion(id as string, pos),
+    onSuccess: () => {
+      invalidarRecurso(queryClient, "ubicaciones", "ubicacion");
+      toast("Posición guardada.", "success");
+    },
+    onError: (err) => toast(mensajeError(err), "error"),
+  });
+
   if (esEdicion && ubicacionQuery.isLoading) {
     return <PageHeader title="Editar ubicación" description="Cargando…" />;
   }
@@ -420,6 +438,19 @@ export function UbicacionFormPage() {
           </ButtonLink>
         </FormActions>
       </form>
+
+      {esEdicion && ubicacionQuery.data ? (
+        <PosicionFormCard
+          valores={{
+            pos_x: ubicacionQuery.data.pos_x,
+            pos_y: ubicacionQuery.data.pos_y,
+            pos_z: ubicacionQuery.data.pos_z,
+            altura: ubicacionQuery.data.altura,
+          }}
+          guardando={moverMut.isPending}
+          onGuardar={(pos) => moverMut.mutate(pos)}
+        />
+      ) : null}
     </>
   );
 }

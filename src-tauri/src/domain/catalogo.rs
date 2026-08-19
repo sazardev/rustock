@@ -18,6 +18,22 @@ where
 
 use super::{Auditoria, TipoUbicacion, normalizar_codigo};
 
+/// Posición en el mapa 2D/3D del almacén. Todos los campos son opcionales:
+/// `None` significa "sin posición asignada todavía" (el frontend hace
+/// fallback a una rejilla automática). `pos_z`/`altura` no se usan por el
+/// mapa 2D actual; quedan listos para la futura vista 3D (apilado vertical).
+#[derive(Debug, Clone, Deserialize)]
+pub struct PosicionMapa {
+    #[serde(default)]
+    pub pos_x: Option<f64>,
+    #[serde(default)]
+    pub pos_y: Option<f64>,
+    #[serde(default)]
+    pub pos_z: Option<f64>,
+    #[serde(default)]
+    pub altura: Option<f64>,
+}
+
 // ============ Almacén (SPEC §3.1) ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +44,10 @@ pub struct Almacen {
     pub descripcion: Option<String>,
     pub direccion: Option<String>,
     pub activo: bool,
+    pub pos_x: Option<f64>,
+    pub pos_y: Option<f64>,
+    pub pos_z: Option<f64>,
+    pub altura: Option<f64>,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
@@ -82,6 +102,10 @@ pub struct Zona {
     pub descripcion: Option<String>,
     pub almacen_id: String,
     pub activo: bool,
+    pub pos_x: Option<f64>,
+    pub pos_y: Option<f64>,
+    pub pos_z: Option<f64>,
+    pub altura: Option<f64>,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
@@ -105,6 +129,40 @@ pub struct EditarZona {
     pub descripcion: Option<String>,
 }
 
+// ============ Pasillo (SPEC §3.3b) ============
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pasillo {
+    pub id: String,
+    pub codigo: String,
+    pub nombre: Option<String>,
+    pub zona_id: String,
+    pub activo: bool,
+    pub pos_x: Option<f64>,
+    pub pos_y: Option<f64>,
+    pub pos_z: Option<f64>,
+    pub altura: Option<f64>,
+    #[serde(flatten)]
+    pub auditoria: Auditoria,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NuevoPasillo {
+    pub codigo: String,
+    #[serde(default)]
+    pub nombre: Option<String>,
+    pub zona_id: String,
+    /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
+    #[serde(skip_deserializing, default)]
+    pub created_by: Option<String>,
+}
+
+/// `None` en un campo significa "no tocar".
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct EditarPasillo {
+    pub nombre: Option<String>,
+}
+
 // ============ Rack (SPEC §3.3) ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,7 +172,15 @@ pub struct Rack {
     pub nombre: Option<String>,
     pub tipo: Option<String>,
     pub zona_id: String,
+    /// Etiqueta opcional de agrupación dentro de un pasillo de la misma zona
+    /// (SPEC §3.3b). No forma parte del árbol simplificado: el rack siempre
+    /// pertenece a `zona_id`, esto es solo organizativo.
+    pub pasillo_id: Option<String>,
     pub activo: bool,
+    pub pos_x: Option<f64>,
+    pub pos_y: Option<f64>,
+    pub pos_z: Option<f64>,
+    pub altura: Option<f64>,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
@@ -127,16 +193,22 @@ pub struct NuevoRack {
     #[serde(default)]
     pub tipo: Option<String>,
     pub zona_id: String,
+    #[serde(default)]
+    pub pasillo_id: Option<String>,
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
 }
 
-/// `None` en un campo significa "no tocar".
+/// `None` en un campo significa "no tocar". `pasillo_id` usa
+/// `Option<Option<String>>` (ver `EditarCategoria::parent_id`): clave ausente
+/// = no tocar, `null` explícito = quitar el pasillo, valor = reasignar.
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct EditarRack {
     pub nombre: Option<String>,
     pub tipo: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub pasillo_id: Option<Option<String>>,
 }
 
 // ============ Sección (SPEC §3.4) ============
@@ -193,6 +265,10 @@ pub struct Ubicacion {
     pub tipo: String,
     pub capacidad_maxima: Option<i64>,
     pub activo: bool,
+    pub pos_x: Option<f64>,
+    pub pos_y: Option<f64>,
+    pub pos_z: Option<f64>,
+    pub altura: Option<f64>,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }

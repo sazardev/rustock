@@ -1,16 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
-  crearRack,
-  editarRack,
-  listarPasillos,
+  crearPasillo,
+  editarPasillo,
   listarZonas,
-  moverRack,
-  obtenerRack,
+  moverPasillo,
+  obtenerPasillo,
 } from "../shared/backend";
 import { esPaginado } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
@@ -42,28 +41,26 @@ import {
 const esquema = z.object({
   codigo: z.string().trim().min(1, "El código es obligatorio"),
   nombre: z.string().optional(),
-  tipo: z.string().optional(),
   zona_id: z.string().trim().min(1, "Selecciona una zona"),
-  pasillo_id: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof esquema>;
 
 const INVALIDAR_ZONAS = ["zonas", "selector"] as const;
 
-export function RackFormPage() {
+export function PasilloFormPage() {
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
   const { volver, campo } = usePeticionCreacion();
   const retornaAFormulario = !esEdicion && Boolean(volver && campo);
 
-  const rackQuery = useQuery({
-    queryKey: ["rack", id],
-    queryFn: () => obtenerRack(id as string),
+  const pasilloQuery = useQuery({
+    queryKey: ["pasillo", id],
+    queryFn: () => obtenerPasillo(id as string),
     enabled: esEdicion,
   });
 
@@ -79,40 +76,21 @@ export function RackFormPage() {
     reset,
     setValue,
     getValues,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(esquema),
-    defaultValues: { codigo: "", nombre: "", tipo: "", zona_id: "", pasillo_id: "" },
+    defaultValues: { codigo: "", nombre: "", zona_id: "" },
   });
-
-  const zonaIdActual = useWatch({ control, name: "zona_id" });
-  const pasillosQuery = useQuery({
-    queryKey: ["pasillos", "selector", zonaIdActual],
-    queryFn: () =>
-      listarPasillos({ filters: [`zona_id:eq:${zonaIdActual}`], page_size: 200, sort: "codigo" }),
-    enabled: Boolean(zonaIdActual),
-  });
-  const pasillos =
-    pasillosQuery.data && esPaginado(pasillosQuery.data) ? pasillosQuery.data.data : [];
 
   useEffect(() => {
-    const r = rackQuery.data;
-    if (r) {
-      reset({
-        codigo: r.codigo,
-        nombre: r.nombre ?? "",
-        tipo: r.tipo ?? "",
-        zona_id: r.zona_id,
-        pasillo_id: r.pasillo_id ?? "",
-      });
+    const p = pasilloQuery.data;
+    if (p) {
+      reset({ codigo: p.codigo, nombre: p.nombre ?? "", zona_id: p.zona_id });
     }
-  }, [rackQuery.data, reset]);
+  }, [pasilloQuery.data, reset]);
 
-  // Conserva el borrador al salir a crear una zona (creación rápida) y lo
-  // restaura al volver (crear o cancelar). En edición no aplica.
   const { descartar } = usePreservarFormulario(
-    "/racks/nuevo",
+    "/pasillos/nuevo",
     () => getValues(),
     (valores) => reset(valores as FormValues),
     !esEdicion,
@@ -128,27 +106,17 @@ export function RackFormPage() {
   const guardarMut = useMutation({
     mutationFn: (v: FormValues) => {
       if (esEdicion) {
-        return editarRack(id as string, {
-          nombre: v.nombre || null,
-          tipo: v.tipo || null,
-          pasillo_id: v.pasillo_id || null,
-        });
+        return editarPasillo(id as string, { nombre: v.nombre || null });
       }
-      return crearRack({
-        codigo: v.codigo,
-        nombre: v.nombre || null,
-        tipo: v.tipo || null,
-        zona_id: v.zona_id,
-        pasillo_id: v.pasillo_id || null,
-      });
+      return crearPasillo({ codigo: v.codigo, nombre: v.nombre || null, zona_id: v.zona_id });
     },
-    onSuccess: (rack) => {
+    onSuccess: (pasillo) => {
       if (!esEdicion) descartar();
-      invalidarRecurso(queryClient, "racks", "rack");
+      invalidarRecurso(queryClient, "pasillos", "pasillo");
       if (volver && campo && !esEdicion) {
-        navigate(urlConSeleccion(volver, campo, rack.id));
+        navigate(urlConSeleccion(volver, campo, pasillo.id));
       } else {
-        navigate(catalogoDetalle("racks", rack.id));
+        navigate(catalogoDetalle("pasillos", pasillo.id));
       }
     },
     onError: (err) => setError(mensajeError(err)),
@@ -160,26 +128,26 @@ export function RackFormPage() {
       pos_y: number | null;
       pos_z: number | null;
       altura: number | null;
-    }) => moverRack(id as string, pos),
+    }) => moverPasillo(id as string, pos),
     onSuccess: () => {
-      invalidarRecurso(queryClient, "racks", "rack");
+      invalidarRecurso(queryClient, "pasillos", "pasillo");
       toast("Posición guardada.", "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
 
-  if (esEdicion && rackQuery.isLoading) {
-    return <PageHeader title="Editar rack" description="Cargando…" />;
+  if (esEdicion && pasilloQuery.isLoading) {
+    return <PageHeader title="Editar pasillo" description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar rack — ${rackQuery.data?.codigo ?? ""}` : "Nuevo rack"}
+        title={esEdicion ? `Editar pasillo — ${pasilloQuery.data?.codigo ?? ""}` : "Nuevo pasillo"}
         description={
           retornaAFormulario
-            ? "Crea el rack y vuelve al formulario anterior con él seleccionado."
-            : "Un rack es una estructura de almacenamiento dentro de una zona (estantería, pallet, nevera…)."
+            ? "Crea el pasillo y vuelve al formulario anterior con él seleccionado."
+            : "Un pasillo agrupa racks dentro de una zona (un pasillo físico transitable)."
         }
       />
 
@@ -187,7 +155,7 @@ export function RackFormPage() {
         <Card title="Datos generales">
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el rack" className="mb-4">
+              <ErrorPanel title="No se pudo guardar el pasillo" className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -200,16 +168,13 @@ export function RackFormPage() {
                 help={
                   esEdicion
                     ? "El código no se puede modificar."
-                    : "Único dentro del almacén (ej. RACK-A1)."
+                    : "Único dentro del almacén (ej. PAS-01)."
                 }
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
               <Field label="Nombre" htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
-              </Field>
-              <Field label="Tipo" htmlFor="tipo">
-                <Input id="tipo" placeholder="Estantería, pallet, nevera…" {...register("tipo")} />
               </Field>
               <Field label="Zona" htmlFor="zona_id" required error={errors.zona_id?.message}>
                 <div className="flex items-center gap-2">
@@ -234,31 +199,13 @@ export function RackFormPage() {
                   ) : null}
                 </div>
               </Field>
-              <Field
-                label="Pasillo"
-                htmlFor="pasillo_id"
-                help="Opcional: agrupa el rack dentro de un pasillo de esta zona."
-              >
-                <Select
-                  id="pasillo_id"
-                  placeholder="Sin pasillo"
-                  disabled={!zonaIdActual}
-                  {...register("pasillo_id")}
-                >
-                  {pasillos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.codigo} — {p.nombre ?? "sin nombre"}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
             </FormGrid>
           </Card.Body>
         </Card>
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear rack"}
+            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear pasillo"}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -266,8 +213,8 @@ export function RackFormPage() {
               retornaAFormulario
                 ? urlConRegreso(volver as string)
                 : esEdicion
-                  ? catalogoDetalle("racks", id as string)
-                  : catalogoLista("racks")
+                  ? catalogoDetalle("pasillos", id as string)
+                  : catalogoLista("pasillos")
             }
           >
             Cancelar
@@ -275,13 +222,13 @@ export function RackFormPage() {
         </FormActions>
       </form>
 
-      {esEdicion && rackQuery.data ? (
+      {esEdicion && pasilloQuery.data ? (
         <PosicionFormCard
           valores={{
-            pos_x: rackQuery.data.pos_x,
-            pos_y: rackQuery.data.pos_y,
-            pos_z: rackQuery.data.pos_z,
-            altura: rackQuery.data.altura,
+            pos_x: pasilloQuery.data.pos_x,
+            pos_y: pasilloQuery.data.pos_y,
+            pos_z: pasilloQuery.data.pos_z,
+            altura: pasilloQuery.data.altura,
           }}
           guardando={moverMut.isPending}
           onGuardar={(pos) => moverMut.mutate(pos)}

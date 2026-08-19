@@ -147,6 +147,22 @@ impl DbState {
                 UNIQUE(almacen_id, codigo)
             );
 
+            -- Pasillo (SPEC §3.3b): agrupa racks dentro de una zona. Es un
+            -- nivel jerárquico real pero opcional para el rack (rack.pasillo_id
+            -- es nullable) — el rack siempre sigue perteneciendo a su zona.
+            CREATE TABLE IF NOT EXISTS pasillos (
+                id TEXT PRIMARY KEY,
+                codigo TEXT NOT NULL,
+                nombre TEXT,
+                zona_id TEXT NOT NULL REFERENCES zonas(id),
+                activo INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT,
+                updated_by TEXT,
+                UNIQUE(zona_id, codigo)
+            );
+
             CREATE TABLE IF NOT EXISTS racks (
                 id TEXT PRIMARY KEY,
                 codigo TEXT NOT NULL,
@@ -344,6 +360,14 @@ impl DbState {
             CREATE INDEX IF NOT EXISTS idx_movimientos_estado ON movimientos(estado);
             CREATE INDEX IF NOT EXISTS idx_movimientos_ubicacion_origen ON movimientos(origen_ubicacion_id);
             CREATE INDEX IF NOT EXISTS idx_movimientos_ubicacion_destino ON movimientos(destino_ubicacion_id);
+
+            -- Correlativos de número de movimiento (SPEC §6.1). El incremento es
+            -- atómico dentro de la transacción IMMEDIATE del creador, así dos
+            -- creaciones concurrentes no colisionan en el UNIQUE(numero).
+            CREATE TABLE IF NOT EXISTS correlativos (
+                clave TEXT PRIMARY KEY,
+                valor INTEGER NOT NULL DEFAULT 0
+            );
 
             CREATE TABLE IF NOT EXISTS movimiento_lineas (
                 id TEXT PRIMARY KEY,
@@ -625,6 +649,35 @@ impl DbState {
             "configuracion_empresa",
             "metodo_valorizacion",
             "TEXT NOT NULL DEFAULT 'ULTIMO'",
+        )?;
+
+        // Mapa 2D/3D de almacenes: posición libre por entidad del árbol físico.
+        // NULL = sin posición asignada (el frontend hace fallback a rejilla).
+        // pos_z/altura no los usa el mapa 2D actual; quedan listos para la
+        // futura vista 3D de apilado vertical.
+        for tabla in ["almacenes", "zonas", "racks", "ubicaciones", "pasillos"] {
+            asegurar_columna(&tx, tabla, "pos_x", "REAL")?;
+            asegurar_columna(&tx, tabla, "pos_y", "REAL")?;
+            asegurar_columna(&tx, tabla, "pos_z", "REAL")?;
+            asegurar_columna(&tx, tabla, "altura", "REAL")?;
+        }
+
+        // Pasillo (Hito Pasillo): etiqueta opcional de agrupación dentro de la
+        // zona del rack. Aditivo — no toca la FK obligatoria rack.zona_id.
+        asegurar_columna(&tx, "racks", "pasillo_id", "TEXT REFERENCES pasillos(id)")?;
+
+        // Recupera el correlativo máximo ya usado por año (para dbs existentes)
+        // y lo deja como valor de arranque; en dbs nuevas no hay filas y es 0.
+        tx.execute_batch(
+            "
+            INSERT INTO correlativos (clave, valor)
+                SELECT 'MOV-' || substr(numero, 5, 4),
+                       MAX(CAST(substr(numero, 10) AS INTEGER))
+                FROM movimientos
+                WHERE numero LIKE 'MOV-____-%'
+                GROUP BY substr(numero, 5, 4)
+            ON CONFLICT(clave) DO UPDATE SET valor = MAX(valor, excluded.valor);
+            ",
         )?;
 
         tx.commit()?;

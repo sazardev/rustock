@@ -11,6 +11,7 @@ import {
   desactivarCaja,
   desactivarCategoria,
   desactivarCliente,
+  desactivarPasillo,
   desactivarProducto,
   desactivarProveedor,
   desactivarRack,
@@ -22,6 +23,7 @@ import {
   listarCategorias,
   listarClientes,
   listarLotes,
+  listarPasillos,
   listarProveedores,
   listarRacks,
   listarSecciones,
@@ -33,6 +35,7 @@ import {
   obtenerCategoria,
   obtenerCliente,
   obtenerLote,
+  obtenerPasillo,
   obtenerProducto,
   obtenerProveedor,
   obtenerRack,
@@ -46,6 +49,7 @@ import {
   AlmacenRef,
   CategoriaRef,
   LoteRef,
+  PasilloRef,
   ProductoRef,
   RackRef,
   UbicacionRef,
@@ -60,6 +64,7 @@ import type {
   Listado,
   ListParams,
   Lote,
+  Pasillo,
   Producto,
   Proveedor,
   Rack,
@@ -101,6 +106,26 @@ function badgeActivo(activo: boolean) {
       {activo ? "Activo" : "Inactivo"}
     </Badge>
   );
+}
+
+/** Filas de posición en el mapa 2D/3D, comunes a Zona/Pasillo/Rack/Ubicación. */
+function filasPosicion(n: {
+  pos_x: number | null;
+  pos_y: number | null;
+  pos_z: number | null;
+  altura: number | null;
+}): DetailItem[] {
+  return [
+    {
+      label: "Posición (X, Y)",
+      value: n.pos_x !== null && n.pos_y !== null ? `${n.pos_x}, ${n.pos_y}` : "—",
+    },
+    {
+      label: "Altura (Z)",
+      value:
+        n.pos_z !== null || n.altura !== null ? `z=${n.pos_z ?? "—"} · h=${n.altura ?? "—"}` : "—",
+    },
+  ];
 }
 
 const almacenAdapter: CatalogAdapter<Almacen> = {
@@ -157,6 +182,7 @@ const ubicacionAdapter: CatalogAdapter<Ubicacion> = {
     { label: "Nombre", value: r.nombre ?? "—" },
     { label: "Tipo", value: r.tipo },
     { label: "Capacidad máxima", value: r.capacidad_maxima?.toLocaleString() ?? "—" },
+    ...filasPosicion(r),
     { label: "Creado", value: formatearFecha(r.created_at) },
   ],
   tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
@@ -413,6 +439,7 @@ const zonaAdapter: CatalogAdapter<Zona> = {
     { label: "Nombre", value: r.nombre },
     { label: "Descripción", value: r.descripcion ?? "—" },
     { label: "Almacén", value: <AlmacenRef id={r.almacen_id} /> },
+    ...filasPosicion(r),
     { label: "Creado", value: formatearFecha(r.created_at) },
   ],
   tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
@@ -421,6 +448,34 @@ const zonaAdapter: CatalogAdapter<Zona> = {
   editarHref: (id) => catalogoEditar("zonas", id),
   eliminarHref: (id) => catalogoEliminar("zonas", id),
   desactivar: desactivarZona,
+};
+
+const pasilloAdapter: CatalogAdapter<Pasillo> = {
+  titulo: "Pasillos",
+  descripcion: "Pasillos físicos que agrupan racks dentro de una zona.",
+  singular: "Pasillo",
+  icon: "zona",
+  listar: listarPasillos,
+  obtener: obtenerPasillo,
+  columnas: [
+    { key: "codigo", header: "Código", code: true, sortable: true, render: (p) => p.codigo },
+    { key: "nombre", header: "Nombre", render: (p) => p.nombre ?? "—" },
+    { key: "zona_id", header: "Zona", render: (p) => <ZonaRef id={p.zona_id} /> },
+    { key: "activo", header: "Estado", render: (p) => badgeActivo(p.activo) },
+  ],
+  datosGenerales: (p) => [
+    { label: "Código", value: p.codigo, code: true },
+    { label: "Nombre", value: p.nombre ?? "—" },
+    { label: "Zona", value: <ZonaRef id={p.zona_id} /> },
+    ...filasPosicion(p),
+    { label: "Creado", value: formatearFecha(p.created_at) },
+  ],
+  tituloDetalle: (p) => (p.nombre ? `${p.codigo} — ${p.nombre}` : p.codigo),
+  activo: (p) => p.activo,
+  crearHref: catalogoLista("pasillos") + "/nuevo",
+  editarHref: (id) => catalogoEditar("pasillos", id),
+  eliminarHref: (id) => catalogoEliminar("pasillos", id),
+  desactivar: desactivarPasillo,
 };
 
 const rackAdapter: CatalogAdapter<Rack> = {
@@ -435,6 +490,11 @@ const rackAdapter: CatalogAdapter<Rack> = {
     { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
     { key: "tipo", header: "Tipo", render: (r) => r.tipo ?? "—" },
     { key: "zona_id", header: "Zona", render: (r) => <ZonaRef id={r.zona_id} /> },
+    {
+      key: "pasillo_id",
+      header: "Pasillo",
+      render: (r) => (r.pasillo_id ? <PasilloRef id={r.pasillo_id} /> : "—"),
+    },
     { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
   ],
   datosGenerales: (r) => [
@@ -442,6 +502,11 @@ const rackAdapter: CatalogAdapter<Rack> = {
     { label: "Nombre", value: r.nombre ?? "—" },
     { label: "Tipo", value: r.tipo ?? "—" },
     { label: "Zona", value: <ZonaRef id={r.zona_id} /> },
+    {
+      label: "Pasillo",
+      value: r.pasillo_id ? <PasilloRef id={r.pasillo_id} /> : "—",
+    },
+    ...filasPosicion(r),
     { label: "Creado", value: formatearFecha(r.created_at) },
   ],
   tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
@@ -454,7 +519,7 @@ const rackAdapter: CatalogAdapter<Rack> = {
 
 const seccionAdapter: CatalogAdapter<Seccion> = {
   titulo: "Secciones",
-  descripcion: "Subdivisiones de un rack (niveles, pasillos, bahías).",
+  descripcion: "Subdivisiones de un rack (niveles, bahías).",
   singular: "Sección",
   genero: "F",
   icon: "zona",
@@ -529,6 +594,7 @@ const cajaAdapter: CatalogAdapter<Caja> = {
 export const CATALOGOS: Record<string, CatalogAdapter<any>> = {
   almacenes: almacenAdapter,
   zonas: zonaAdapter,
+  pasillos: pasilloAdapter,
   racks: rackAdapter,
   secciones: seccionAdapter,
   ubicaciones: ubicacionAdapter,

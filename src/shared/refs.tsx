@@ -11,6 +11,7 @@ import {
   obtenerCliente,
   obtenerLote,
   obtenerMovimiento,
+  obtenerPasillo,
   obtenerProducto,
   obtenerProveedor,
   obtenerRack,
@@ -85,6 +86,12 @@ export function RackRef({ id }: { id: string }) {
   const query = useQuery({ queryKey: ["rack", id], queryFn: () => obtenerRack(id) });
   if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
   return <Link href={catalogoDetalle("racks", id)}>{query.data.codigo}</Link>;
+}
+
+export function PasilloRef({ id }: { id: string }) {
+  const query = useQuery({ queryKey: ["pasillo", id], queryFn: () => obtenerPasillo(id) });
+  if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
+  return <Link href={catalogoDetalle("pasillos", id)}>{query.data.codigo}</Link>;
 }
 
 export function SeccionRef({ id }: { id: string }) {

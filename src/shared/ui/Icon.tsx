@@ -17,6 +17,7 @@ import {
   FileText,
   Filter,
   FolderTree,
+  Grid3x3,
   HelpCircle,
   History,
   Layers,
@@ -26,8 +27,10 @@ import {
   LogOut,
   type LucideIcon,
   MapPin,
+  Maximize2,
   Menu,
   MessageSquare,
+  Minimize2,
   Move,
   Package,
   PackageOpen,
@@ -35,6 +38,7 @@ import {
   Plus,
   RefreshCw,
   Ruler,
+  Scan,
   ScanBarcode,
   Search,
   Settings,
@@ -98,6 +102,10 @@ export const ICON_MAP = {
   cerrarPanel: X,
   subir: ChevronUp,
   bajar: ChevronDown,
+  pantallaCompleta: Maximize2,
+  salirPantallaCompleta: Minimize2,
+  cuadricula: Grid3x3,
+  encuadrar: Scan,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;

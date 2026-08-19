@@ -148,10 +148,13 @@ const ContactoFormPage = lazyPage(() => import("../pages/ContactoFormPage"), "Co
 const UbicacionFormPage = lazyPage(() => import("../pages/UbicacionFormPage"), "UbicacionFormPage");
 const ZonaFormPage = lazyPage(() => import("../pages/ZonaFormPage"), "ZonaFormPage");
 const RackFormPage = lazyPage(() => import("../pages/RackFormPage"), "RackFormPage");
+const PasilloFormPage = lazyPage(() => import("../pages/PasilloFormPage"), "PasilloFormPage");
 const SeccionFormPage = lazyPage(() => import("../pages/SeccionFormPage"), "SeccionFormPage");
 const CajaFormPage = lazyPage(() => import("../pages/CajaFormPage"), "CajaFormPage");
 const LoteFormPage = lazyPage(() => import("../pages/LoteFormPage"), "LoteFormPage");
 const ImportarPage = lazyPage(() => import("../pages/ImportarPage"), "ImportarPage");
+const AlmacenMapaPage = lazyPage(() => import("../pages/AlmacenMapaPage"), "AlmacenMapaPage");
+const AlmacenMapa3DPage = lazyPage(() => import("../pages/AlmacenMapa3DPage"), "AlmacenMapa3DPage");
 const AyudaIndexPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaIndexPage");
 const AyudaGlosarioPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaGlosarioPage");
 const AyudaModulePage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaModulePage");
@@ -237,6 +240,8 @@ export const router = createBrowserRouter([
           { path: "almacenes/nuevo", element: <AlmacenFormPage /> },
           { path: "almacenes/:id/editar", element: <AlmacenFormPage /> },
           { path: "almacenes/:id/eliminar", element: <CatalogEliminarRoute catalog="almacenes" /> },
+          { path: "almacenes/:id/mapa", element: <AlmacenMapaPage /> },
+          { path: "almacenes/:id/mapa-3d", element: <AlmacenMapa3DPage /> },
           { path: "productos/nuevo", element: <ProductoFormPage /> },
           { path: "productos/:id/editar", element: <ProductoFormPage /> },
           { path: "productos/:id/eliminar", element: <CatalogEliminarRoute catalog="productos" /> },
@@ -267,6 +272,9 @@ export const router = createBrowserRouter([
           { path: "zonas/nuevo", element: <ZonaFormPage /> },
           { path: "zonas/:id/editar", element: <ZonaFormPage /> },
           { path: "zonas/:id/eliminar", element: <CatalogEliminarRoute catalog="zonas" /> },
+          { path: "pasillos/nuevo", element: <PasilloFormPage /> },
+          { path: "pasillos/:id/editar", element: <PasilloFormPage /> },
+          { path: "pasillos/:id/eliminar", element: <CatalogEliminarRoute catalog="pasillos" /> },
           { path: "racks/nuevo", element: <RackFormPage /> },
           { path: "racks/:id/editar", element: <RackFormPage /> },
           { path: "racks/:id/eliminar", element: <CatalogEliminarRoute catalog="racks" /> },

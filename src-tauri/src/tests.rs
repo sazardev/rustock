@@ -61,6 +61,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             nombre: None,
             tipo: None,
             zona_id: zona.id.clone(),
+            pasillo_id: None,
             created_by: Some("admin".into()),
         },
     )
@@ -1278,6 +1279,345 @@ fn ubicacion_exige_exactamente_un_padre() {
     )
     .expect_err("debe fallar sin padre");
     assert!(matches!(err, crate::error::AppError::CampoRequerido(_)));
+}
+
+#[test]
+fn mapa_crear_entidades_no_asigna_posicion() {
+    let db = setup();
+    let conn = db.conn();
+    let almacen = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-MAPA".into(),
+            nombre: "Almacén Mapa".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    assert_eq!(almacen.pos_x, None);
+    assert_eq!(almacen.pos_y, None);
+    assert_eq!(almacen.pos_z, None);
+    assert_eq!(almacen.altura, None);
+}
+
+#[test]
+fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
+    let db = setup();
+    let conn = db.conn();
+    let almacen = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-MAPA-2".into(),
+            nombre: "Almacén Mapa 2".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "Z-MAPA".into(),
+            nombre: "Zona Mapa".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona");
+    let rack = repo::catalogo::crear_rack(
+        &conn,
+        &NuevoRack {
+            codigo: "RACK-MAPA".into(),
+            nombre: None,
+            tipo: None,
+            zona_id: zona.id.clone(),
+            pasillo_id: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("rack");
+    let ubi = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: "UBI-MAPA".into(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: Some(rack.id.clone()),
+            zona_id: None,
+            tipo: Some("STANDARD".into()),
+            capacidad_maxima: Some(50),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion");
+
+    let pos = PosicionMapa {
+        pos_x: Some(10.5),
+        pos_y: Some(-3.0),
+        pos_z: Some(2.0),
+        altura: Some(1.8),
+    };
+
+    let almacen_movido =
+        repo::catalogo::mover_almacen(&conn, &almacen.id, &pos, "admin").expect("mover almacen");
+    assert_eq!(almacen_movido.pos_x, Some(10.5));
+    assert_eq!(almacen_movido.pos_y, Some(-3.0));
+    assert_eq!(almacen_movido.pos_z, Some(2.0));
+    assert_eq!(almacen_movido.altura, Some(1.8));
+    assert_eq!(almacen_movido.nombre, almacen.nombre);
+    assert_eq!(almacen_movido.codigo, almacen.codigo);
+
+    let zona_movida =
+        repo::catalogo::mover_zona(&conn, &zona.id, &pos, "admin").expect("mover zona");
+    assert_eq!(zona_movida.pos_x, Some(10.5));
+    assert_eq!(zona_movida.nombre, zona.nombre);
+
+    let rack_movido =
+        repo::catalogo::mover_rack(&conn, &rack.id, &pos, "admin").expect("mover rack");
+    assert_eq!(rack_movido.pos_x, Some(10.5));
+    assert_eq!(rack_movido.codigo, rack.codigo);
+
+    let ubi_movida =
+        repo::catalogo::mover_ubicacion(&conn, &ubi.id, &pos, "admin").expect("mover ubicacion");
+    assert_eq!(ubi_movida.pos_x, Some(10.5));
+    assert_eq!(ubi_movida.pos_y, Some(-3.0));
+    assert_eq!(ubi_movida.pos_z, Some(2.0));
+    assert_eq!(ubi_movida.altura, Some(1.8));
+    // Los campos de negocio no cambian por mover la posición.
+    assert_eq!(ubi_movida.capacidad_maxima, Some(50));
+    assert_eq!(ubi_movida.tipo, ubi.tipo);
+
+    // Limpiar la posición: enviar None en todos los campos borra las coordenadas.
+    let limpio = PosicionMapa {
+        pos_x: None,
+        pos_y: None,
+        pos_z: None,
+        altura: None,
+    };
+    let ubi_limpia =
+        repo::catalogo::mover_ubicacion(&conn, &ubi.id, &limpio, "admin").expect("limpiar pos");
+    assert_eq!(ubi_limpia.pos_x, None);
+    assert_eq!(ubi_limpia.capacidad_maxima, Some(50));
+}
+
+#[test]
+fn pasillo_crud_y_mover_funciona() {
+    let db = setup();
+    let conn = db.conn();
+    let almacen = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-PAS".into(),
+            nombre: "Almacén Pasillo".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "Z-PAS".into(),
+            nombre: "Zona Pasillo".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona");
+
+    let pasillo = repo::catalogo::crear_pasillo(
+        &conn,
+        &NuevoPasillo {
+            codigo: "PAS-01".into(),
+            nombre: Some("Pasillo 1".into()),
+            zona_id: zona.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("pasillo");
+    assert_eq!(pasillo.pos_x, None);
+
+    // Código duplicado dentro del mismo almacén rechazado.
+    let err = repo::catalogo::crear_pasillo(
+        &conn,
+        &NuevoPasillo {
+            codigo: "PAS-01".into(),
+            nombre: None,
+            zona_id: zona.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("código duplicado");
+    assert!(matches!(err, crate::error::AppError::CodigoDuplicado(_)));
+
+    let movido = repo::catalogo::mover_pasillo(
+        &conn,
+        &pasillo.id,
+        &PosicionMapa {
+            pos_x: Some(5.0),
+            pos_y: Some(10.0),
+            pos_z: None,
+            altura: None,
+        },
+        "admin",
+    )
+    .expect("mover pasillo");
+    assert_eq!(movido.pos_x, Some(5.0));
+
+    let editado = repo::catalogo::editar_pasillo(
+        &conn,
+        &pasillo.id,
+        &EditarPasillo {
+            nombre: Some("Pasillo Uno".into()),
+        },
+        "admin",
+    )
+    .expect("editar pasillo");
+    assert_eq!(editado.nombre, Some("Pasillo Uno".into()));
+    assert_eq!(editado.pos_x, Some(5.0));
+
+    repo::catalogo::desactivar_pasillo(&conn, &pasillo.id, "admin").expect("desactivar pasillo");
+    let inactivo = repo::catalogo::obtener_pasillo(&conn, &pasillo.id)
+        .expect("obtener")
+        .expect("existe");
+    assert!(!inactivo.activo);
+}
+
+#[test]
+fn rack_pasillo_debe_pertenecer_a_la_misma_zona() {
+    let db = setup();
+    let conn = db.conn();
+    let almacen = repo::catalogo::crear_almacen(
+        &conn,
+        &NuevoAlmacen {
+            codigo: "ALM-RP".into(),
+            nombre: "Almacén Rack Pasillo".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona1 = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "Z-RP1".into(),
+            nombre: "Zona 1".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona1");
+    let zona2 = repo::catalogo::crear_zona(
+        &conn,
+        &NuevaZona {
+            codigo: "Z-RP2".into(),
+            nombre: "Zona 2".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona2");
+    let pasillo_zona2 = repo::catalogo::crear_pasillo(
+        &conn,
+        &NuevoPasillo {
+            codigo: "PAS-Z2".into(),
+            nombre: None,
+            zona_id: zona2.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("pasillo zona2");
+
+    // Rack en zona1 con pasillo de zona2: rechazado.
+    let err = repo::catalogo::crear_rack(
+        &conn,
+        &NuevoRack {
+            codigo: "RACK-RP".into(),
+            nombre: None,
+            tipo: None,
+            zona_id: zona1.id.clone(),
+            pasillo_id: Some(pasillo_zona2.id.clone()),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect_err("pasillo de otra zona debe rechazarse");
+    assert!(matches!(err, crate::error::AppError::CampoInvalido(_)));
+
+    // Sin pasillo: se crea normal, pasillo_id queda None.
+    let rack = repo::catalogo::crear_rack(
+        &conn,
+        &NuevoRack {
+            codigo: "RACK-RP".into(),
+            nombre: None,
+            tipo: None,
+            zona_id: zona1.id.clone(),
+            pasillo_id: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("rack sin pasillo");
+    assert_eq!(rack.pasillo_id, None);
+
+    // Pasillo de la misma zona: aceptado en crear y editar.
+    let pasillo_zona1 = repo::catalogo::crear_pasillo(
+        &conn,
+        &NuevoPasillo {
+            codigo: "PAS-Z1".into(),
+            nombre: None,
+            zona_id: zona1.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("pasillo zona1");
+    let rack_editado = repo::catalogo::editar_rack(
+        &conn,
+        &rack.id,
+        &EditarRack {
+            nombre: None,
+            tipo: None,
+            pasillo_id: Some(Some(pasillo_zona1.id.clone())),
+        },
+        "admin",
+    )
+    .expect("editar rack con pasillo válido");
+    assert_eq!(rack_editado.pasillo_id, Some(pasillo_zona1.id.clone()));
+
+    // Editar con pasillo de otra zona: rechazado.
+    let err2 = repo::catalogo::editar_rack(
+        &conn,
+        &rack.id,
+        &EditarRack {
+            nombre: None,
+            tipo: None,
+            pasillo_id: Some(Some(pasillo_zona2.id.clone())),
+        },
+        "admin",
+    )
+    .expect_err("pasillo de otra zona debe rechazarse al editar");
+    assert!(matches!(err2, crate::error::AppError::CampoInvalido(_)));
+
+    // Limpiar el pasillo enviando Some(None).
+    let rack_sin_pasillo = repo::catalogo::editar_rack(
+        &conn,
+        &rack.id,
+        &EditarRack {
+            nombre: None,
+            tipo: None,
+            pasillo_id: Some(None),
+        },
+        "admin",
+    )
+    .expect("limpiar pasillo");
+    assert_eq!(rack_sin_pasillo.pasillo_id, None);
 }
 
 #[test]
@@ -4015,6 +4355,7 @@ fn codigo_de_rack_es_unico_por_almacen_no_por_padre() {
             nombre: None,
             tipo: None,
             zona_id: zona_a.id.clone(),
+            pasillo_id: None,
             created_by: Some("admin".into()),
         },
     )
@@ -4028,6 +4369,7 @@ fn codigo_de_rack_es_unico_por_almacen_no_por_padre() {
             nombre: None,
             tipo: None,
             zona_id: zona_b.id.clone(),
+            pasillo_id: None,
             created_by: Some("admin".into()),
         },
     )

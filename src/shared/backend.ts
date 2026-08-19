@@ -30,6 +30,7 @@ import type {
   EditarMovimiento,
   EditarPreferenciasUsuario,
   EditarProducto,
+  EditarPasillo,
   EditarProveedor,
   EditarRack,
   EditarSeccion,
@@ -67,10 +68,13 @@ import type {
   NuevoProveedor,
   NuevoRack,
   NuevoTraslado,
+  NuevoPasillo,
   NuevoUsuario,
   OrigenLinea,
   LineaMovimiento,
   LotePorVencer,
+  Pasillo,
+  PosicionMapa,
   PreferenciasResueltas,
   PrecisionSesion,
   Producto,
@@ -143,6 +147,8 @@ export const obtenerAlmacen = (id: string): Promise<Almacen | null> =>
   invoke("obtener_almacen", { id });
 export const editarAlmacen = (id: string, cambios: EditarAlmacen): Promise<Almacen> =>
   invoke("editar_almacen", { id, cambios });
+export const moverAlmacen = (id: string, pos: PosicionMapa): Promise<Almacen> =>
+  invoke("mover_almacen", { id, pos });
 export const desactivarAlmacen = (id: string): Promise<void> =>
   invoke("desactivar_almacen", { id });
 
@@ -154,7 +160,24 @@ export const crearZona = (nuevo: NuevaZona): Promise<Zona> => invoke("crear_zona
 export const obtenerZona = (id: string): Promise<Zona | null> => invoke("obtener_zona", { id });
 export const editarZona = (id: string, cambios: EditarZona): Promise<Zona> =>
   invoke("editar_zona", { id, cambios });
+export const moverZona = (id: string, pos: PosicionMapa): Promise<Zona> =>
+  invoke("mover_zona", { id, pos });
 export const desactivarZona = (id: string): Promise<void> => invoke("desactivar_zona", { id });
+
+// ============ Pasillo ============
+
+export const listarPasillos = (p?: ListParams): Promise<Listado<Pasillo>> =>
+  invoke("listar_pasillos", params(p));
+export const crearPasillo = (nuevo: NuevoPasillo): Promise<Pasillo> =>
+  invoke("crear_pasillo", { nuevo });
+export const obtenerPasillo = (id: string): Promise<Pasillo | null> =>
+  invoke("obtener_pasillo", { id });
+export const editarPasillo = (id: string, cambios: EditarPasillo): Promise<Pasillo> =>
+  invoke("editar_pasillo", { id, cambios });
+export const moverPasillo = (id: string, pos: PosicionMapa): Promise<Pasillo> =>
+  invoke("mover_pasillo", { id, pos });
+export const desactivarPasillo = (id: string): Promise<void> =>
+  invoke("desactivar_pasillo", { id });
 
 // ============ Rack ============
 
@@ -164,6 +187,8 @@ export const crearRack = (nuevo: NuevoRack): Promise<Rack> => invoke("crear_rack
 export const obtenerRack = (id: string): Promise<Rack | null> => invoke("obtener_rack", { id });
 export const editarRack = (id: string, cambios: EditarRack): Promise<Rack> =>
   invoke("editar_rack", { id, cambios });
+export const moverRack = (id: string, pos: PosicionMapa): Promise<Rack> =>
+  invoke("mover_rack", { id, pos });
 export const desactivarRack = (id: string): Promise<void> => invoke("desactivar_rack", { id });
 
 // ============ Sección ============
@@ -189,6 +214,8 @@ export const obtenerUbicacion = (id: string): Promise<Ubicacion | null> =>
   invoke("obtener_ubicacion", { id });
 export const editarUbicacion = (id: string, cambios: EditarUbicacion): Promise<Ubicacion> =>
   invoke("editar_ubicacion", { id, cambios });
+export const moverUbicacion = (id: string, pos: PosicionMapa): Promise<Ubicacion> =>
+  invoke("mover_ubicacion", { id, pos });
 export const desactivarUbicacion = (id: string): Promise<void> =>
   invoke("desactivar_ubicacion", { id });
 

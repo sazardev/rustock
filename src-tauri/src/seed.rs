@@ -221,6 +221,7 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             nombre: Some("Rack A1".into()),
             tipo: Some("estanteria".into()),
             zona_id: zona_picking.id.clone(),
+            pasillo_id: None,
             created_by: Some(by.into()),
         },
     )?;

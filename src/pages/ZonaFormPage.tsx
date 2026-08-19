@@ -4,11 +4,12 @@ import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { crearZona, editarZona, listarAlmacenes, obtenerZona } from "../shared/backend";
+import { crearZona, editarZona, listarAlmacenes, moverZona, obtenerZona } from "../shared/backend";
 import { esPaginado } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { PosicionFormCard } from "../shared/posicion-form-card";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -29,6 +30,7 @@ import {
   PageHeader,
   Select,
   Textarea,
+  useToast,
 } from "../shared/ui";
 
 const esquema = z.object({
@@ -48,6 +50,7 @@ export function ZonaFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   const { volver, campo } = usePeticionCreacion();
   const retornaAFormulario = !esEdicion && Boolean(volver && campo);
 
@@ -126,6 +129,20 @@ export function ZonaFormPage() {
       }
     },
     onError: (err) => setError(mensajeError(err)),
+  });
+
+  const moverMut = useMutation({
+    mutationFn: (pos: {
+      pos_x: number | null;
+      pos_y: number | null;
+      pos_z: number | null;
+      altura: number | null;
+    }) => moverZona(id as string, pos),
+    onSuccess: () => {
+      invalidarRecurso(queryClient, "zonas", "zona");
+      toast("Posición guardada.", "success");
+    },
+    onError: (err) => toast(mensajeError(err), "error"),
   });
 
   if (esEdicion && zonaQuery.isLoading) {
@@ -221,6 +238,19 @@ export function ZonaFormPage() {
           </ButtonLink>
         </FormActions>
       </form>
+
+      {esEdicion && zonaQuery.data ? (
+        <PosicionFormCard
+          valores={{
+            pos_x: zonaQuery.data.pos_x,
+            pos_y: zonaQuery.data.pos_y,
+            pos_z: zonaQuery.data.pos_z,
+            altura: zonaQuery.data.altura,
+          }}
+          guardando={moverMut.isPending}
+          onGuardar={(pos) => moverMut.mutate(pos)}
+        />
+      ) : null}
     </>
   );
 }

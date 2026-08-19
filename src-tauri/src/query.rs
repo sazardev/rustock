@@ -553,6 +553,10 @@ pub static ALMACEN_SCHEMA: ResourceSchema = ResourceSchema {
             true,
         ),
         col("activo", "a.activo", ColTipo::Booleano, true, true, false),
+        col("pos_x", "a.pos_x", ColTipo::Real, false, false, false),
+        col("pos_y", "a.pos_y", ColTipo::Real, false, false, false),
+        col("pos_z", "a.pos_z", ColTipo::Real, false, false, false),
+        col("altura", "a.altura", ColTipo::Real, false, false, false),
         col(
             "created_by",
             "a.created_by",
@@ -612,6 +616,10 @@ pub static ZONA_SCHEMA: ResourceSchema = ResourceSchema {
             false,
         ),
         col("activo", "z.activo", ColTipo::Booleano, true, true, false),
+        col("pos_x", "z.pos_x", ColTipo::Real, false, false, false),
+        col("pos_y", "z.pos_y", ColTipo::Real, false, false, false),
+        col("pos_z", "z.pos_z", ColTipo::Real, false, false, false),
+        col("altura", "z.altura", ColTipo::Real, false, false, false),
         col(
             "created_by",
             "z.created_by",
@@ -647,6 +655,54 @@ pub static ZONA_SCHEMA: ResourceSchema = ResourceSchema {
     ],
 };
 
+pub static PASILLO_SCHEMA: ResourceSchema = ResourceSchema {
+    from: "pasillos p",
+    orden_defecto: "p.created_at DESC, p.id DESC",
+    columnas: &[
+        col("id", "p.id", ColTipo::Texto, true, true, false),
+        col("codigo", "p.codigo", ColTipo::Texto, true, true, true),
+        col("nombre", "p.nombre", ColTipo::Texto, false, false, true),
+        col("zona_id", "p.zona_id", ColTipo::Texto, true, true, false),
+        col("activo", "p.activo", ColTipo::Booleano, true, true, false),
+        col("pos_x", "p.pos_x", ColTipo::Real, false, false, false),
+        col("pos_y", "p.pos_y", ColTipo::Real, false, false, false),
+        col("pos_z", "p.pos_z", ColTipo::Real, false, false, false),
+        col("altura", "p.altura", ColTipo::Real, false, false, false),
+        col(
+            "created_by",
+            "p.created_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "created_at",
+            "p.created_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+        col(
+            "updated_by",
+            "p.updated_by",
+            ColTipo::Texto,
+            true,
+            false,
+            false,
+        ),
+        col(
+            "updated_at",
+            "p.updated_at",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
+    ],
+};
+
 pub static RACK_SCHEMA: ResourceSchema = ResourceSchema {
     from: "racks r",
     orden_defecto: "r.created_at DESC, r.id DESC",
@@ -656,7 +712,19 @@ pub static RACK_SCHEMA: ResourceSchema = ResourceSchema {
         col("nombre", "r.nombre", ColTipo::Texto, false, false, true),
         col("tipo", "r.tipo", ColTipo::Texto, true, true, true),
         col("zona_id", "r.zona_id", ColTipo::Texto, true, true, false),
+        col(
+            "pasillo_id",
+            "r.pasillo_id",
+            ColTipo::Texto,
+            true,
+            true,
+            false,
+        ),
         col("activo", "r.activo", ColTipo::Booleano, true, true, false),
+        col("pos_x", "r.pos_x", ColTipo::Real, false, false, false),
+        col("pos_y", "r.pos_y", ColTipo::Real, false, false, false),
+        col("pos_z", "r.pos_z", ColTipo::Real, false, false, false),
+        col("altura", "r.altura", ColTipo::Real, false, false, false),
         col(
             "created_by",
             "r.created_by",
@@ -772,6 +840,10 @@ pub static UBICACION_SCHEMA: ResourceSchema = ResourceSchema {
             false,
         ),
         col("activo", "u.activo", ColTipo::Booleano, true, true, false),
+        col("pos_x", "u.pos_x", ColTipo::Real, false, false, false),
+        col("pos_y", "u.pos_y", ColTipo::Real, false, false, false),
+        col("pos_z", "u.pos_z", ColTipo::Real, false, false, false),
+        col("altura", "u.altura", ColTipo::Real, false, false, false),
         col(
             "created_by",
             "u.created_by",

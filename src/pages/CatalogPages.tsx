@@ -2,10 +2,20 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import type { CatalogAdapter } from "./catalog-adapters";
-import { esPaginado } from "../shared/types";
+import {
+  esPaginado,
+  type Pasillo,
+  type Producto,
+  type Rack,
+  type Ubicacion,
+  type Zona,
+} from "../shared/types";
 import { mensajeError } from "../shared/format";
-import { catalogoDetalle, catalogoLista } from "../app/route-paths";
+import { almacenMapa, catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { ArbolAlmacen } from "./ArbolAlmacen";
+import { MapaContextoCard } from "./MapaContextoCard";
+import { ContenidoInventarioCard } from "./ContenidoInventarioCard";
+import { ProductoUbicacionesCard } from "./ProductoUbicacionesCard";
 import { FavoritosFiltros } from "../shared/favoritos";
 import {
   Button,
@@ -202,6 +212,11 @@ export function CatalogDetailPage<T extends { id: string }>({
         description={`Detalle de ${adapter.singular.toLowerCase()}.`}
         actions={
           <div className="flex gap-2">
+            {slug === "almacenes" ? (
+              <ButtonLink variant="secondary" icon="ubicacion" href={almacenMapa(id)}>
+                Ver mapa
+              </ButtonLink>
+            ) : null}
             {adapter.duplicarHref ? (
               <ButtonLink variant="secondary" icon="agregar" href={adapter.duplicarHref(id)}>
                 Duplicar
@@ -228,6 +243,31 @@ export function CatalogDetailPage<T extends { id: string }>({
       </Card>
 
       {slug === "almacenes" ? <ArbolAlmacen almacenId={id} /> : null}
+      {slug === "zonas" ? (
+        <>
+          <MapaContextoCard tipo="zona" row={row as unknown as Zona} />
+          <ContenidoInventarioCard tipo="zona" row={row as unknown as Zona} />
+        </>
+      ) : null}
+      {slug === "pasillos" ? (
+        <>
+          <MapaContextoCard tipo="pasillo" row={row as unknown as Pasillo} />
+          <ContenidoInventarioCard tipo="pasillo" row={row as unknown as Pasillo} />
+        </>
+      ) : null}
+      {slug === "racks" ? (
+        <>
+          <MapaContextoCard tipo="rack" row={row as unknown as Rack} />
+          <ContenidoInventarioCard tipo="rack" row={row as unknown as Rack} />
+        </>
+      ) : null}
+      {slug === "ubicaciones" ? (
+        <>
+          <MapaContextoCard tipo="ubicacion" row={row as unknown as Ubicacion} />
+          <ContenidoInventarioCard tipo="ubicacion" row={row as unknown as Ubicacion} />
+        </>
+      ) : null}
+      {slug === "productos" ? <ProductoUbicacionesCard row={row as unknown as Producto} /> : null}
     </>
   );
 }

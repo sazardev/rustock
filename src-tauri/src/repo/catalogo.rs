@@ -107,6 +107,7 @@ pub fn crear_almacen(conn: &Connection, nuevo: &NuevoAlmacen) -> AppResult<Almac
 pub fn obtener_almacen(conn: &Connection, id: &str) -> AppResult<Option<Almacen>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, descripcion, direccion, activo,
+                pos_x, pos_y, pos_z, altura,
                 created_by, created_at, updated_by, updated_at
          FROM almacenes WHERE id = ?1",
     )?;
@@ -118,15 +119,39 @@ pub fn obtener_almacen(conn: &Connection, id: &str) -> AppResult<Option<Almacen>
             descripcion: r.get(3)?,
             direccion: r.get(4)?,
             activo: r.get::<_, i64>(5)? != 0,
+            pos_x: r.get(6)?,
+            pos_y: r.get(7)?,
+            pos_z: r.get(8)?,
+            altura: r.get(9)?,
             auditoria: crate::domain::Auditoria {
-                created_by: r.get(6)?,
-                created_at: r.get(7)?,
-                updated_by: r.get(8)?,
-                updated_at: r.get(9)?,
+                created_by: r.get(10)?,
+                created_at: r.get(11)?,
+                updated_by: r.get(12)?,
+                updated_at: r.get(13)?,
             },
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// Actualiza solo la posición en el mapa 2D/3D (drag-and-drop). Deliberadamente
+/// separado de `editar_almacen`: se guarda muy seguido (al soltar el arrastre)
+/// y no debe pasar por la validación de negocio del formulario ni arriesgar
+/// pisar una edición concurrente de otros campos.
+pub fn mover_almacen(
+    conn: &Connection,
+    id: &str,
+    pos: &PosicionMapa,
+    actor: &str,
+) -> AppResult<Almacen> {
+    puede(conn, Some(actor), "almacen", "editar")?;
+    verificar_activo(conn, "almacenes", id, "almacén")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE almacenes SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+    )?;
+    Ok(obtener_almacen(conn, id)?.expect("existe"))
 }
 
 pub fn editar_almacen(
@@ -219,6 +244,7 @@ pub fn crear_zona(conn: &Connection, nuevo: &NuevaZona) -> AppResult<Zona> {
 pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, descripcion, almacen_id, activo,
+                pos_x, pos_y, pos_z, altura,
                 created_by, created_at, updated_by, updated_at
          FROM zonas WHERE id = ?1",
     )?;
@@ -230,15 +256,31 @@ pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
             descripcion: r.get(3)?,
             almacen_id: r.get(4)?,
             activo: r.get::<_, i64>(5)? != 0,
+            pos_x: r.get(6)?,
+            pos_y: r.get(7)?,
+            pos_z: r.get(8)?,
+            altura: r.get(9)?,
             auditoria: crate::domain::Auditoria {
-                created_by: r.get(6)?,
-                created_at: r.get(7)?,
-                updated_by: r.get(8)?,
-                updated_at: r.get(9)?,
+                created_by: r.get(10)?,
+                created_at: r.get(11)?,
+                updated_by: r.get(12)?,
+                updated_at: r.get(13)?,
             },
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_zona`.
+pub fn mover_zona(conn: &Connection, id: &str, pos: &PosicionMapa, actor: &str) -> AppResult<Zona> {
+    puede(conn, Some(actor), "zona", "editar")?;
+    verificar_activo(conn, "zonas", id, "zona")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE zonas SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+    )?;
+    Ok(obtener_zona(conn, id)?.expect("existe"))
 }
 
 pub fn editar_zona(
@@ -305,11 +347,172 @@ pub fn desactivar_zona(conn: &Connection, id: &str, actor: &str) -> AppResult<()
     Ok(())
 }
 
+// ============ Pasillo (SPEC §3.3b) ============
+
+pub fn crear_pasillo(conn: &Connection, nuevo: &NuevoPasillo) -> AppResult<Pasillo> {
+    puede(conn, nuevo.created_by.as_deref(), "pasillo", "crear")?;
+    verificar_activo(conn, "zonas", &nuevo.zona_id, "zona")?;
+    let id = Uuid::new_v4().to_string();
+    let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
+    let ts = ahora();
+    // Unicidad por almacén completo (mismo criterio que Rack, SPEC §3.3).
+    let existe: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM pasillos p
+         JOIN zonas z ON z.id = p.zona_id
+         WHERE z.almacen_id = ?1 AND p.codigo = ?2",
+        rusqlite::params![almacen_de_zona(conn, &nuevo.zona_id)?, codigo],
+        |r| r.get(0),
+    )?;
+    if existe > 0 {
+        return Err(AppError::CodigoDuplicado(codigo));
+    }
+    conn.execute(
+        "INSERT INTO pasillos (id, codigo, nombre, zona_id, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, 1, ?5, ?6, ?7, ?7)",
+        rusqlite::params![id, codigo, nuevo.nombre, nuevo.zona_id, ts, ts, nuevo.created_by],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        nuevo.created_by.as_deref(),
+        "crear",
+        "pasillo",
+        Some(&id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_pasillo(conn, &id)?.expect("recién insertado"))
+}
+
+pub fn obtener_pasillo(conn: &Connection, id: &str) -> AppResult<Option<Pasillo>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, codigo, nombre, zona_id, activo,
+                pos_x, pos_y, pos_z, altura,
+                created_by, created_at, updated_by, updated_at
+         FROM pasillos WHERE id = ?1",
+    )?;
+    let mut rows = stmt.query_map([id], |r| {
+        Ok(Pasillo {
+            id: r.get(0)?,
+            codigo: r.get(1)?,
+            nombre: r.get(2)?,
+            zona_id: r.get(3)?,
+            activo: r.get::<_, i64>(4)? != 0,
+            pos_x: r.get(5)?,
+            pos_y: r.get(6)?,
+            pos_z: r.get(7)?,
+            altura: r.get(8)?,
+            auditoria: crate::domain::Auditoria {
+                created_by: r.get(9)?,
+                created_at: r.get(10)?,
+                updated_by: r.get(11)?,
+                updated_at: r.get(12)?,
+            },
+        })
+    })?;
+    rows.next().transpose().map_err(AppError::from)
+}
+
+/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_pasillo`.
+pub fn mover_pasillo(
+    conn: &Connection,
+    id: &str,
+    pos: &PosicionMapa,
+    actor: &str,
+) -> AppResult<Pasillo> {
+    puede(conn, Some(actor), "pasillo", "editar")?;
+    verificar_activo(conn, "pasillos", id, "pasillo")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE pasillos SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+    )?;
+    Ok(obtener_pasillo(conn, id)?.expect("existe"))
+}
+
+pub fn editar_pasillo(
+    conn: &Connection,
+    id: &str,
+    cambios: &EditarPasillo,
+    actor: &str,
+) -> AppResult<Pasillo> {
+    puede(conn, Some(actor), "pasillo", "editar")?;
+    let actual = obtener_pasillo(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("pasillo", id.to_string()))?;
+    let nombre = cambios.nombre.clone().or(actual.nombre);
+    let ts = ahora();
+    conn.execute(
+        "UPDATE pasillos SET nombre = ?2, updated_at = ?3, updated_by = ?4 WHERE id = ?1",
+        rusqlite::params![id, nombre, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "pasillo",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(obtener_pasillo(conn, id)?.expect("existe"))
+}
+
+/// No se desactiva un pasillo con stock vigente en las ubicaciones
+/// descendientes de los racks que lo tienen asignado (directas o vía sección).
+pub fn desactivar_pasillo(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
+    puede(conn, Some(actor), "pasillo", "desactivar")?;
+    let saldo: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(s.cantidad), 0) FROM saldos s
+         JOIN ubicaciones u ON u.id = s.ubicacion_id
+         WHERE u.rack_id IN (SELECT id FROM racks WHERE pasillo_id = ?1)
+            OR u.seccion_id IN (SELECT id FROM secciones WHERE rack_id IN (SELECT id FROM racks WHERE pasillo_id = ?1))",
+        [id],
+        |r| r.get(0),
+    )?;
+    if saldo > 0 {
+        return Err(AppError::DesactivarConSaldo("pasillo"));
+    }
+    let ts = ahora();
+    conn.execute(
+        "UPDATE pasillos SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",
+        rusqlite::params![id, ts, actor],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "desactivar",
+        "pasillo",
+        Some(id),
+        None,
+        None,
+        None,
+    )?;
+    Ok(())
+}
+
 // ============ Rack (SPEC §3.3) ============
+
+/// Si `pasillo_id` viene informado, valida que ese pasillo pertenezca a la
+/// misma `zona_id` del rack (SPEC §3.3b) — no es parte del árbol
+/// simplificado, es solo una referencia organizativa dentro de la zona.
+fn validar_pasillo_de_zona(conn: &Connection, pasillo_id: &str, zona_id: &str) -> AppResult<()> {
+    let pasillo = obtener_pasillo(conn, pasillo_id)?
+        .ok_or_else(|| AppError::NoEncontrado("pasillo", pasillo_id.to_string()))?;
+    if pasillo.zona_id != zona_id {
+        return Err(AppError::CampoInvalido(
+            "pasillo_id debe pertenecer a la misma zona del rack".into(),
+        ));
+    }
+    Ok(())
+}
 
 pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
     puede(conn, nuevo.created_by.as_deref(), "rack", "crear")?;
     verificar_activo(conn, "zonas", &nuevo.zona_id, "zona")?;
+    if let Some(pasillo_id) = &nuevo.pasillo_id {
+        validar_pasillo_de_zona(conn, pasillo_id, &nuevo.zona_id)?;
+    }
     let id = Uuid::new_v4().to_string();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let ts = ahora();
@@ -326,9 +529,12 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
         return Err(AppError::CodigoDuplicado(codigo));
     }
     conn.execute(
-        "INSERT INTO racks (id, codigo, nombre, tipo, zona_id, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, ?8, ?8)",
-        rusqlite::params![id, codigo, nuevo.nombre, nuevo.tipo, nuevo.zona_id, ts, ts, nuevo.created_by],
+        "INSERT INTO racks (id, codigo, nombre, tipo, zona_id, pasillo_id, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8, ?9, ?9)",
+        rusqlite::params![
+            id, codigo, nuevo.nombre, nuevo.tipo, nuevo.zona_id, nuevo.pasillo_id, ts, ts,
+            nuevo.created_by
+        ],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
@@ -345,7 +551,8 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
 
 pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
     let mut stmt = conn.prepare(
-        "SELECT id, codigo, nombre, tipo, zona_id, activo,
+        "SELECT id, codigo, nombre, tipo, zona_id, pasillo_id, activo,
+                pos_x, pos_y, pos_z, altura,
                 created_by, created_at, updated_by, updated_at
          FROM racks WHERE id = ?1",
     )?;
@@ -356,16 +563,33 @@ pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
             nombre: r.get(2)?,
             tipo: r.get(3)?,
             zona_id: r.get(4)?,
-            activo: r.get::<_, i64>(5)? != 0,
+            pasillo_id: r.get(5)?,
+            activo: r.get::<_, i64>(6)? != 0,
+            pos_x: r.get(7)?,
+            pos_y: r.get(8)?,
+            pos_z: r.get(9)?,
+            altura: r.get(10)?,
             auditoria: crate::domain::Auditoria {
-                created_by: r.get(6)?,
-                created_at: r.get(7)?,
-                updated_by: r.get(8)?,
-                updated_at: r.get(9)?,
+                created_by: r.get(11)?,
+                created_at: r.get(12)?,
+                updated_by: r.get(13)?,
+                updated_at: r.get(14)?,
             },
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
+}
+
+/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_rack`.
+pub fn mover_rack(conn: &Connection, id: &str, pos: &PosicionMapa, actor: &str) -> AppResult<Rack> {
+    puede(conn, Some(actor), "rack", "editar")?;
+    verificar_activo(conn, "racks", id, "rack")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE racks SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+    )?;
+    Ok(obtener_rack(conn, id)?.expect("existe"))
 }
 
 pub fn editar_rack(
@@ -379,10 +603,17 @@ pub fn editar_rack(
         obtener_rack(conn, id)?.ok_or_else(|| AppError::NoEncontrado("rack", id.to_string()))?;
     let nombre = cambios.nombre.clone().or(actual.nombre);
     let tipo = cambios.tipo.clone().or(actual.tipo);
+    let pasillo_id = match &cambios.pasillo_id {
+        Some(nuevo_valor) => nuevo_valor.clone(),
+        None => actual.pasillo_id.clone(),
+    };
+    if let Some(pasillo_id) = &pasillo_id {
+        validar_pasillo_de_zona(conn, pasillo_id, &actual.zona_id)?;
+    }
     let ts = ahora();
     conn.execute(
-        "UPDATE racks SET nombre = ?2, tipo = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?1",
-        rusqlite::params![id, nombre, tipo, ts, actor],
+        "UPDATE racks SET nombre = ?2, tipo = ?3, pasillo_id = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
+        rusqlite::params![id, nombre, tipo, pasillo_id, ts, actor],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
@@ -620,6 +851,7 @@ pub fn crear_ubicacion(conn: &Connection, nuevo: &NuevaUbicacion) -> AppResult<U
 pub fn obtener_ubicacion(conn: &Connection, id: &str) -> AppResult<Option<Ubicacion>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, seccion_id, rack_id, zona_id, tipo, capacidad_maxima, activo,
+                pos_x, pos_y, pos_z, altura,
                 created_by, created_at, updated_by, updated_at
          FROM ubicaciones WHERE id = ?1",
     )?;
@@ -638,13 +870,34 @@ fn map_ubicacion(r: &rusqlite::Row<'_>) -> rusqlite::Result<Ubicacion> {
         tipo: r.get(6)?,
         capacidad_maxima: r.get(7)?,
         activo: r.get::<_, i64>(8)? != 0,
+        pos_x: r.get(9)?,
+        pos_y: r.get(10)?,
+        pos_z: r.get(11)?,
+        altura: r.get(12)?,
         auditoria: crate::domain::Auditoria {
-            created_by: r.get(9)?,
-            created_at: r.get(10)?,
-            updated_by: r.get(11)?,
-            updated_at: r.get(12)?,
+            created_by: r.get(13)?,
+            created_at: r.get(14)?,
+            updated_by: r.get(15)?,
+            updated_at: r.get(16)?,
         },
     })
+}
+
+/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_ubicacion`.
+pub fn mover_ubicacion(
+    conn: &Connection,
+    id: &str,
+    pos: &PosicionMapa,
+    actor: &str,
+) -> AppResult<Ubicacion> {
+    puede(conn, Some(actor), "ubicacion", "editar")?;
+    verificar_activo(conn, "ubicaciones", id, "ubicación")?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE ubicaciones SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+    )?;
+    Ok(obtener_ubicacion(conn, id)?.expect("existe"))
 }
 
 /// Resuelve el `almacen_id` de una ubicación por transitividad (SPEC §3.13),

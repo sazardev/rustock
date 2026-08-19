@@ -1,4 +1,4 @@
-import type { ElementType, ReactNode } from "react";
+import { createElement, type ElementType, type ReactNode } from "react";
 import { cn } from "../lib/cn";
 
 export type TextSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl";
@@ -53,17 +53,17 @@ export function Text({
   className,
   children,
 }: TextProps) {
-  return (
-    <Tag
-      className={cn(
+  return createElement(
+    Tag,
+    {
+      className: cn(
         SIZE_CLASS[size],
         WEIGHT_CLASS[weight],
         COLOR_CLASS[color],
         mono && "font-mono",
         className,
-      )}
-    >
-      {children}
-    </Tag>
+      ),
+    },
+    children,
   );
 }

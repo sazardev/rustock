@@ -1,6 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import { listarRacks, listarSecciones, listarUbicaciones, listarZonas } from "../shared/backend";
-import { esPaginado, type Rack, type Seccion, type Ubicacion, type Zona } from "../shared/types";
+import {
+  listarPasillos,
+  listarRacks,
+  listarSecciones,
+  listarUbicaciones,
+  listarZonas,
+} from "../shared/backend";
+import {
+  esPaginado,
+  type Pasillo,
+  type Rack,
+  type Seccion,
+  type Ubicacion,
+  type Zona,
+} from "../shared/types";
 import { Card, Link, Text } from "../shared/ui";
 import { catalogoDetalle, catalogoNuevo } from "../app/route-paths";
 import { formatearFecha } from "../shared/format";
@@ -18,6 +31,18 @@ export function ArbolAlmacen({ almacenId }: { almacenId: string }) {
   });
   const zonas = zonasQ.data && esPaginado(zonasQ.data) ? zonasQ.data.data : [];
   const zonaIds = zonas.map((z) => z.id);
+
+  const pasillosQ = useQuery({
+    queryKey: ["arbol-almacen", "pasillos", almacenId, zonaIds],
+    queryFn: () =>
+      listarPasillos({
+        filters: [`zona_id:in:${zonaIds.join(",")}`],
+        sort: "codigo",
+        page_size: -1,
+      }),
+    enabled: zonaIds.length > 0,
+  });
+  const pasillos = pasillosQ.data && esPaginado(pasillosQ.data) ? pasillosQ.data.data : [];
 
   const racksQ = useQuery({
     queryKey: ["arbol-almacen", "racks", almacenId, zonaIds],
@@ -62,9 +87,16 @@ export function ArbolAlmacen({ almacenId }: { almacenId: string }) {
     ubicacionesQ.data && esPaginado(ubicacionesQ.data) ? ubicacionesQ.data.data : [];
 
   const cargando =
-    zonasQ.isLoading || racksQ.isLoading || seccionesQ.isLoading || ubicacionesQ.isLoading;
+    zonasQ.isLoading ||
+    pasillosQ.isLoading ||
+    racksQ.isLoading ||
+    seccionesQ.isLoading ||
+    ubicacionesQ.isLoading;
 
-  const racksDe = (zonaId: string) => racks.filter((r) => r.zona_id === zonaId);
+  const pasillosDe = (zonaId: string) => pasillos.filter((p) => p.zona_id === zonaId);
+  // Racks colgados directo de la zona (sin pasillo asignado, SPEC §3.3b).
+  const racksDe = (zonaId: string) => racks.filter((r) => r.zona_id === zonaId && !r.pasillo_id);
+  const racksDePasillo = (pasilloId: string) => racks.filter((r) => r.pasillo_id === pasilloId);
   const seccionesDe = (rackId: string) => secciones.filter((s) => s.rack_id === rackId);
   const ubicacionesDe = (padre: { zona?: string; rack?: string; seccion?: string }) =>
     ubicaciones.filter(
@@ -92,7 +124,9 @@ export function ArbolAlmacen({ almacenId }: { almacenId: string }) {
               <li key={z.id}>
                 <NodoZona
                   zona={z}
+                  pasillos={pasillosDe(z.id)}
                   racks={racksDe(z.id)}
+                  racksDePasillo={racksDePasillo}
                   seccionesDe={seccionesDe}
                   ubicacionesDe={ubicacionesDe}
                 />
@@ -111,12 +145,16 @@ function etiquetaNodo(codigo: string, nombre: string | null): string {
 
 function NodoZona({
   zona,
+  pasillos,
   racks,
+  racksDePasillo,
   seccionesDe,
   ubicacionesDe,
 }: {
   zona: Zona;
+  pasillos: Pasillo[];
   racks: Rack[];
+  racksDePasillo: (pasilloId: string) => Rack[];
   seccionesDe: (rackId: string) => Seccion[];
   ubicacionesDe: (p: { zona?: string; rack?: string; seccion?: string }) => Ubicacion[];
 }) {
@@ -132,8 +170,18 @@ function NodoZona({
           · creada {formatearFecha(zona.created_at)}
         </Text>
       </div>
-      {racks.length > 0 || ubiDirectas.length > 0 ? (
+      {pasillos.length > 0 || racks.length > 0 || ubiDirectas.length > 0 ? (
         <ul>
+          {pasillos.map((p) => (
+            <li key={p.id}>
+              <NodoPasillo
+                pasillo={p}
+                racks={racksDePasillo(p.id)}
+                seccionesDe={seccionesDe}
+                ubicacionesDe={ubicacionesDe}
+              />
+            </li>
+          ))}
           {racks.map((r) => (
             <li key={r.id}>
               <NodoRack rack={r} secciones={seccionesDe(r.id)} ubicacionesDe={ubicacionesDe} />
@@ -142,6 +190,37 @@ function NodoZona({
           {ubiDirectas.map((u) => (
             <li key={u.id}>
               <UbicacionNodo u={u} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
+function NodoPasillo({
+  pasillo,
+  racks,
+  seccionesDe,
+  ubicacionesDe,
+}: {
+  pasillo: Pasillo;
+  racks: Rack[];
+  seccionesDe: (rackId: string) => Seccion[];
+  ubicacionesDe: (p: { zona?: string; rack?: string; seccion?: string }) => Ubicacion[];
+}) {
+  return (
+    <>
+      <div className="arbol-almacen__nodo">
+        <Link href={catalogoDetalle("pasillos", pasillo.id)}>
+          {etiquetaNodo(pasillo.codigo, pasillo.nombre)}
+        </Link>
+      </div>
+      {racks.length > 0 ? (
+        <ul>
+          {racks.map((r) => (
+            <li key={r.id}>
+              <NodoRack rack={r} secciones={seccionesDe(r.id)} ubicacionesDe={ubicacionesDe} />
             </li>
           ))}
         </ul>

@@ -221,16 +221,29 @@ Subdivisión lógica/física del almacén.
 
 Estructura física dentro de una zona.
 
-**Atributos:** `id`, `codigo` (único dentro del almacén, ej. `RACK-A1`), `nombre`, `tipo` (estantería, pallet, nevera, cajón...), `zona_id`, `activo`, `created_at`, `updated_at`, `created_by`, `updated_by`.
+**Atributos:** `id`, `codigo` (único dentro del almacén, ej. `RACK-A1`), `nombre`, `tipo` (estantería, pallet, nevera, cajón...), `zona_id`, `pasillo_id` (opcional), `activo`, `created_at`, `updated_at`, `created_by`, `updated_by`.
 
 **Reglas:**
 - Pertenece a **exactamente una** zona.
 - `codigo` único dentro del almacén.
 - Un rack puede contener secciones y/o ubicaciones directas.
+- Opcionalmente puede etiquetarse con un **pasillo** de esa misma zona (`pasillo_id`, §3.3b) para agrupación física; si se informa, debe pertenecer a la misma zona del rack. Esto es solo organizativo — no forma parte del árbol simplificado (§3.13), el rack siempre pertenece a su `zona_id`.
+
+### 3.3b Pasillo
+
+Subdivisión física de una zona que agrupa racks (un pasillo transitable entre estanterías).
+
+**Atributos:** `id`, `codigo` (único dentro del almacén, ej. `PAS-01`), `nombre`, `zona_id`, `activo`, `created_at`, `updated_at`, `created_by`, `updated_by`.
+
+**Reglas:**
+- Pertenece a **exactamente una** zona.
+- `codigo` único dentro del almacén.
+- No participa del árbol simplificado (§3.13): un rack puede o no tener pasillo asignado, pero siempre pertenece a una zona.
+- No se puede desactivar un pasillo si algún rack asignado a él tiene stock vigente en sus ubicaciones descendientes.
 
 ### 3.4 Sección
 
-Subdivisión de un rack (niveles, pasillos, bahías).
+Subdivisión de un rack (niveles, bahías).
 
 **Atributos:** `id`, `codigo` (único dentro del almacén, ej. `RACK-A1-N2`), `nombre`, `nivel` (opcional, texto/entero), `rack_id`, `descripcion`, `activo`, `created_at`, `updated_at`, `created_by`, `updated_by`.
 
@@ -356,6 +369,7 @@ Clasificación opcional de productos.
 ### 3.13 Reglas de jerarquía y composición
 
 - El árbol físico es estricto: **Almacén → Zona → Rack → Sección → Ubicación → Caja**.
+- **Pasillo** (§3.3b) es una entidad organizativa opcional dentro de una zona: agrupa racks (`rack.pasillo_id`) pero no es un eslabón obligatorio de la cadena anterior ni participa de la "simplificación" del siguiente punto — un rack siempre pertenece a su zona, tenga o no pasillo asignado.
 - El sistema **permite simplificación**: una ubicación puede colgar de una sección, de un rack o de una zona (siempre bajo el mismo almacén). La regla invariante: **todo nodo físico tiene exactamente una única raíz de almacén**.
 - Toda ubicación con stock pertenece a exactamente un almacén por transitividad.
 - Las operaciones de inventario siempre resuelven el `almacen_id` de la ubicación origen/destino automáticamente.

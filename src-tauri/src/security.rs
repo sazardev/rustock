@@ -102,6 +102,7 @@ fn gerente(recurso: &str, accion: &str) -> bool {
         ("uom", "crear") | ("uom", "editar") | ("uom", "desactivar") => true,
         ("almacen", "crear") | ("almacen", "editar") | ("almacen", "desactivar") => true,
         ("zona", "crear") | ("zona", "editar") | ("zona", "desactivar") => true,
+        ("pasillo", "crear") | ("pasillo", "editar") | ("pasillo", "desactivar") => true,
         ("rack", "crear") | ("rack", "editar") | ("rack", "desactivar") => true,
         ("seccion", "crear") | ("seccion", "editar") | ("seccion", "desactivar") => true,
         ("ubicacion", "crear") | ("ubicacion", "editar") | ("ubicacion", "desactivar") => true,

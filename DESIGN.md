@@ -390,13 +390,21 @@ Al hacer scroll en el contenido, la barra adopta el efecto de cristal descrito e
 - **Operación**
   - Dashboard
   - Movimientos
+  - Captura rápida
   - Inventario físico
   - Alertas
 - **Catálogos**
   - Almacenes
+  - Zonas
+  - Pasillos
+  - Racks
+  - Secciones
   - Ubicaciones
+  - Cajas
   - Productos
   - Lotes
+  - Categorías
+  - Unidades de medida
   - Proveedores
   - Clientes
 - **Análisis**
