@@ -22,7 +22,8 @@
     "release:minor": "node scripts/release.mjs minor --tag",
     "release:major": "node scripts/release.mjs major --tag",
     "tauri": "tauri",
-    "tauri:web": "node scripts/web.mjs"
+    "tauri:web": "node scripts/web.mjs",
+    "dev:web": "bash scripts/dev.sh"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.3.0",

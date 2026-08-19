@@ -36,6 +36,7 @@ npm run format:check   # prettier --check
 npm run design         # scripts/design-guard.mjs — DESIGN.md compliance gate
 npm run tauri dev      # run the desktop app in dev mode (spawns vite on 6821)
 npm run tauri:web      # web mode sin ventana: vite (6821) + backend Rust sin GTK (API :1421)
+npm run dev:web        # arranque en un solo comando (scripts/dev.sh): limpia puertos, opciones --seed/--reset/--tmpdb/--stop
 npm run tauri build    # release: frontend build + cargo release + bundling
 cargo check            # Rust check only (from src-tauri/)
 ```
@@ -85,7 +86,8 @@ Custom gates that run in both hooks:
 - `dist/` and `src-tauri/target/` are build artifacts (gitignored). `src-tauri/gen/schemas/` is generated (gitignored); regenerate via a tauri build/dev if missing.
 - `typescript-eslint` is NOT used — it rejects TS 7.0.2 (peer `<6.1.0`). The linter is **oxlint + oxlint-tsgolint**, which supports TS 7. Don't re-add typescript-eslint.
 - lefthook glob matching defaults to `gobwas` which mishandles `{ts,tsx}`; `lefthook.yml` sets `glob_matcher: doublestar`. Keep that setting if you edit patterns.
-- **En entornos sin servidor X/Wayland funcional (WSL, SSH puro, CI) `npm run tauri dev` se cuelga** antes de `setup()`: GTK/WebKit no puede crear la ventana (el proceso queda en `unix_wait_for_peer` sin llegar a abrir el backend `:1421`). Usar **`npm run tauri:web`** (modo navegador sin ventana: `RUSTOCK_WEB_ONLY=1` en `main.rs` → `run_web()` en `lib.rs`, arranca solo SQLite + el servidor HTTP `:1421` sin tocar GTK; `scripts/web.mjs` lanza vite en `:6821` + `cargo run`). Misma base de datos y misma lógica de negocio que el modo escritorio.
+- **En entornos sin servidor X/Wayland funcional (WSL, SSH puro, CI) `npm run tauri dev` se cuelga** antes de `setup()`: GTK/WebKit no puede crear la ventana (el proceso queda en `unix_wait_for_peer` sin llegar a abrir el backend `:1421`). Usar **`npm run tauri:web`** (modo navegador sin ventana: `RUSTOCK_WEB_ONLY=1` en `main.rs` → `run_web()` en `lib.rs`, arranca solo SQLite + el servidor HTTP `:1421` sin tocar GTK; `scripts/web.mjs` lanza vite en `:6821` + `cargo run`). Misma base de datos y misma lógica de negocio que el modo escritorio. Para el arranque de un solo comando (limpia puertos + seed/reset/db temporal) usar **`npm run dev:web`** (`scripts/dev.sh`, Hito 26).
+- **`pkill -f 'tauri:web'` se auto-mata**: el patrón coincide con la propia línea de comando del `pkill`, así que mata el shell que lo ejecuta (cuelga el comando). Para detener instancias de Rustock matar **por puerto** (regex acotada a `:<puerto>\b` + extracción del pid con `ss`/`rg`), que es justo lo que hace `scripts/dev.sh --stop`. No repetir `pkill -f` con patrones que coincidan con el propio comando.
 
 ## opencode guardrails (project config)
 
