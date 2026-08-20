@@ -116,12 +116,27 @@ export function Table<T>({
   function renderFila(row: T) {
     const key = rowKey(row);
     const selected = selectedKeys.includes(key);
+    const clickable = Boolean(onRowClick);
     return (
       <tr
         key={key}
         className={cn(selected && "tr--selected")}
         onClick={onRowClick ? () => onRowClick(row) : undefined}
+        onKeyDown={
+          onRowClick
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onRowClick(row);
+                }
+              }
+            : undefined
+        }
         onMouseEnter={prefetch ? () => prefetch(row) : undefined}
+        onFocus={prefetch ? () => prefetch(row) : undefined}
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        aria-label={clickable ? "Abrir detalle" : undefined}
       >
         {selectable ? (
           <td className="table__select">
@@ -175,6 +190,33 @@ export function Table<T>({
             ) : null}
             {columns.map((column) => {
               const active = sort?.key === column.key;
+              if (column.sortable) {
+                return (
+                  <th
+                    key={column.key}
+                    scope="col"
+                    style={column.width ? { width: column.width } : undefined}
+                    className={cn(
+                      column.align === "right" && "text-right",
+                      column.align === "center" && "text-center",
+                      "th--sortable",
+                    )}
+                    aria-sort={
+                      active ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="th__sort-btn"
+                      onClick={() => handleSort(column)}
+                      aria-label={`Ordenar por ${typeof column.header === "string" ? column.header : column.key}`}
+                    >
+                      {column.header}
+                      {renderSortIcon(column)}
+                    </button>
+                  </th>
+                );
+              }
               return (
                 <th
                   key={column.key}
@@ -183,15 +225,9 @@ export function Table<T>({
                   className={cn(
                     column.align === "right" && "text-right",
                     column.align === "center" && "text-center",
-                    column.sortable && "th--sortable",
                   )}
-                  aria-sort={
-                    active ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
-                  }
-                  onClick={column.sortable ? () => handleSort(column) : undefined}
                 >
                   {column.header}
-                  {renderSortIcon(column)}
                 </th>
               );
             })}
@@ -230,6 +266,7 @@ export function Table<T>({
                   className="table__spacer"
                   style={{ height: itemsVirtuales[0].start }}
                   aria-hidden="true"
+                  role="presentation"
                 />
               ) : null}
               {itemsVirtuales.map((item) => renderFila(rows[item.index]))}
@@ -243,6 +280,7 @@ export function Table<T>({
                         itemsVirtuales[itemsVirtuales.length - 1].size),
                   }}
                   aria-hidden="true"
+                  role="presentation"
                 />
               ) : null}
             </>

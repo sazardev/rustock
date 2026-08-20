@@ -61,6 +61,14 @@ pub fn origen_de_salida(
     actor: &str,
 ) -> AppResult<Vec<OrigenLinea>> {
     puede(conn, Some(actor), "movimiento", "ver")?;
+    // Fecha de la salida para filtrar solo entradas anteriores (SPEC §13.4).
+    let fecha_salida: String = conn
+        .query_row(
+            "SELECT fecha_movimiento FROM movimientos WHERE id = ?1",
+            [movimiento_id],
+            |r| r.get(0),
+        )
+        .unwrap_or_else(|_| "9999-12-31".to_string());
     let mut stmt = conn.prepare(
         "SELECT ml.producto_id, ml.lote_id, m.id, m.numero, m.sub_tipo, m.fecha_movimiento, ml.cantidad
          FROM movimiento_lineas origen_ml
@@ -70,10 +78,12 @@ pub fn origen_de_salida(
          JOIN movimientos m ON m.id = ml.movimiento_id
          WHERE origen_ml.movimiento_id = ?1
            AND m.tipo = 'ENTRADA' AND m.estado = 'APROBADO'
-         ORDER BY m.fecha_movimiento ASC",
+           AND m.fecha_movimiento <= ?2
+         ORDER BY m.fecha_movimiento ASC
+         LIMIT 100",
     )?;
     let rows = stmt
-        .query_map([movimiento_id], |r| {
+        .query_map(rusqlite::params![movimiento_id, fecha_salida], |r| {
             Ok(OrigenLinea {
                 producto_id: r.get(0)?,
                 lote_id: r.get(1)?,

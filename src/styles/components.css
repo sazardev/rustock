@@ -258,9 +258,14 @@
   border-color: var(--color-gray-400);
 }
 
-.field__control:focus {
+.field__control:focus-visible {
   border-color: var(--color-blue-500);
   box-shadow: var(--shadow-focus-ring);
+  outline: none;
+}
+
+.field__control:focus:not(:focus-visible) {
+  box-shadow: none;
 }
 
 .field__control:disabled {
@@ -419,12 +424,29 @@
 }
 
 .table .th--sortable {
-  cursor: pointer;
   user-select: none;
 }
 
-.table .th--sortable:hover {
+.th__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.th__sort-btn:hover {
   color: var(--color-gray-700);
+}
+
+.th__sort-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  border-radius: var(--radius-sm);
 }
 
 .table td {
@@ -453,6 +475,12 @@
 
 .table--clickable tbody tr {
   cursor: pointer;
+}
+
+.table--clickable tbody tr:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  background-color: var(--color-blue-50);
 }
 
 .table .cell--code {
@@ -652,6 +680,13 @@
   }
   50% {
     opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    opacity: 0.85;
   }
 }
 
@@ -1340,7 +1375,7 @@
   min-height: 420px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: var(--color-gray-50, #faf9f7);
+  background-color: var(--color-gray-50);
   touch-action: none;
   cursor: grab;
 }
@@ -1380,7 +1415,7 @@
 .mapa-almacen-3d__editor:fullscreen {
   height: 100vh;
   padding: var(--space-4);
-  background-color: var(--color-gray-50, #faf9f7);
+  background-color: var(--color-gray-50);
 }
 
 .mapa-almacen-3d__toolbar {
@@ -1391,7 +1426,7 @@
   padding: var(--space-2);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: var(--color-gray-50, #faf9f7);
+  background-color: var(--color-gray-50);
 }
 
 .mapa-almacen-3d__area {
@@ -1428,7 +1463,7 @@
   gap: var(--space-1);
   padding: 1px var(--space-1);
   border-radius: var(--radius-sm);
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: var(--topbar-scroll-bg);
   font-size: 10px;
   font-weight: 600;
   color: var(--color-gray-800);
@@ -1448,7 +1483,7 @@
   height: 220px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: var(--color-gray-50, #faf9f7);
+  background-color: var(--color-gray-50);
 }
 
 .mapa-contexto__etiqueta {

@@ -10,6 +10,7 @@ import {
   type Ubicacion,
   type Zona,
 } from "../shared/types";
+import { crearComentario, listarComentarios } from "../shared/backend";
 import { mensajeError } from "../shared/format";
 import { almacenMapa, catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { ArbolAlmacen } from "./ArbolAlmacen";
@@ -30,6 +31,8 @@ import {
   Pagination,
   Search,
   Table,
+  Text,
+  Textarea,
   useToast,
 } from "../shared/ui";
 
@@ -268,7 +271,99 @@ export function CatalogDetailPage<T extends { id: string }>({
         </>
       ) : null}
       {slug === "productos" ? <ProductoUbicacionesCard row={row as unknown as Producto} /> : null}
+      <ComentariosCatalogo entidad={entidadComentario(slug)} entidadId={id} />
     </>
+  );
+}
+
+function entidadComentario(slug: string): string {
+  // Mapea slug plural del catálogo a entidad singular de comentarios (SPEC §12.1).
+  const map: Record<string, string> = {
+    almacenes: "almacen",
+    zonas: "zona",
+    pasillos: "pasillo",
+    racks: "rack",
+    secciones: "seccion",
+    ubicaciones: "ubicacion",
+    cajas: "caja",
+    productos: "producto",
+    lotes: "lote",
+    categorias: "categoria",
+    uoms: "uom",
+    proveedores: "proveedor",
+    clientes: "cliente",
+  };
+  return map[slug] ?? slug;
+}
+
+function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadId: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [texto, setTexto] = useState("");
+  const comentariosQuery = useQuery({
+    queryKey: ["comentarios", entidad, entidadId],
+    queryFn: () => listarComentarios(entidad, entidadId),
+  });
+  const comentarMut = useMutation({
+    mutationFn: () => crearComentario({ entidad, entidad_id: entidadId, texto }),
+    onSuccess: () => {
+      setTexto("");
+      queryClient.invalidateQueries({ queryKey: ["comentarios", entidad, entidadId] });
+    },
+    onError: (err) => toast(mensajeError(err), "error"),
+  });
+  return (
+    <Card title="Comentarios" className="mt-6">
+      <Card.Body>
+        {comentariosQuery.data && comentariosQuery.data.filter((c) => !c.oculto).length > 0 ? (
+          <ul className="list-none p-0 m-0 flex flex-col gap-3">
+            {comentariosQuery.data
+              .filter((c) => !c.oculto)
+              .map((c) => (
+                <li key={c.id} className="border-b border-gray-100 pb-3 last:border-0">
+                  <Text as="p" size="sm">
+                    {c.texto}
+                  </Text>
+                  <Text as="p" size="xs" color="muted">
+                    {c.created_at}
+                  </Text>
+                </li>
+              ))}
+          </ul>
+        ) : (
+          <Text as="p" size="sm" color="muted">
+            Sin comentarios todavía.
+          </Text>
+        )}
+        <form
+          className="mt-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (texto.trim()) {
+              comentarMut.mutate();
+            }
+          }}
+        >
+          <Textarea
+            aria-label="Nuevo comentario"
+            placeholder="Agregar un comentario…"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            rows={3}
+          />
+          <div className="mt-2">
+            <Button
+              type="submit"
+              variant="secondary"
+              size="sm"
+              disabled={!texto.trim() || comentarMut.isPending}
+            >
+              {comentarMut.isPending ? "Enviando…" : "Comentar"}
+            </Button>
+          </div>
+        </form>
+      </Card.Body>
+    </Card>
   );
 }
 

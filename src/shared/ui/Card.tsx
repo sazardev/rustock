@@ -22,7 +22,7 @@ export interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {
 function CardHeader({ title, actions, className, children, ...rest }: CardHeaderProps) {
   return (
     <header className={cn("card__header", className)} {...rest}>
-      {title ? <h3 className="card__title">{title}</h3> : null}
+      {title ? <h2 className="card__title">{title}</h2> : null}
       {children}
       {actions ? <div className="card__actions">{actions}</div> : null}
     </header>

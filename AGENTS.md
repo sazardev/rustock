@@ -17,8 +17,8 @@ Key DESIGN.md constraints (all enforced):
 - Soft corners: `border-radius` only via tokens `--radius-sm/md/lg/xl/full`; never `0` nor literal values.
 - **Zero modals** — no dialogs/drawers/popovers/confirmations. Every action (view/create/edit/delete/approve/cancel) is a separate page with its own deep link, e.g. `/recursos/:id/eliminar`.
 - **Zero emojis** anywhere in the UI.
-- Icons: only **Lucide** (`lucide-react`), fixed canonical mapping per action (§6.13).
-- Fonts: **Open Sans** (UI) + **JetBrains Mono** (codes/SKU/quantities). Only.
+- Icons: only **Lucide** (`lucide-react`), fixed canonical mapping per action (§6.13) + 7 iconos de chrome/mapa (`menu`, `cerrarPanel`, `subir`/`bajar`, `pantallaCompleta`/`salirPantallaCompleta`, `cuadricula`, `encuadrar`) documentados en DESIGN §6.13.
+- Fonts: **Geist Sans** (UI) + **Geist Mono** (datos/códigos) — pareja oficial de DESIGN §3.2 (`tokens.css:64`); fallbacks `Inter` / `JetBrains Mono` / `SFMono` incluidos en tokens. (AGENTS decía `Open Sans`; sincronizado con DESIGN).
 - Rust palette ("Rust & Iron"): warm neutrals + iron-dark navigation surfaces + single rust accent (oxide) from §3. No colors outside the declared palette.
 - UI copy is professional Spanish, never casual.
 - Brand: `LogoMark` (`src/shared/ui/LogoMark.tsx`), a flat warehouse box in rust tones without background — also the favicon (`public/rustock.svg`).
@@ -60,7 +60,7 @@ Hooks are installed via `lefthook.yml` (`npm run hooks` to re-install). `--no-ve
 - Full policy + version→phase map in `VERSIONING.md`. Do not jump ahead of the roadmap's current phase.
 
 Custom gates that run in both hooks:
-- **`scripts/design-guard.mjs`** — blocks code violating DESIGN.md: zero emojis, zero border-radius>0, zero box-shadow/gradients/blur, no `alert/confirm/prompt`, fonts only Open Sans/JetBrains Mono, icons only from `lucide-react`.
+- **`scripts/design-guard.mjs`** — blocks code violating DESIGN.md: zero emojis, zero border-radius>0, zero box-shadow/gradients/blur, zero colores literales fuera de tokens, no `alert/confirm/prompt`, fuentes solo Geist Sans/Mono (+ fallbacks declarados), iconos solo desde `lucide-react` vía `Icon.tsx`.
 - **oxlint** — configured in `.oxlintrc.json`; requires TS 7 (uses `oxlint-tsgolint`). Lint errors (`deny`) block; style warnings do not.
 - **Prettier** — `.prettierrc` (semi, double quotes, trailing comma all, printWidth 100). Markdown files are ignored via `.prettierignore`.
 

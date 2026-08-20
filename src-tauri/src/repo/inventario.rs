@@ -193,21 +193,43 @@ fn map_conteo(r: &rusqlite::Row<'_>) -> rusqlite::Result<Conteo> {
 }
 
 /// Diferencias entre lo contado y el saldo en sistema (SPEC §11.5).
+/// Agrupa por (ubicación, producto, lote) tomando solo el último conteo
+/// (`MAX(conteo_numero)`) — así dos conteos para el mismo grupo generan una
+/// sola diferencia, usando el valor más reciente, y se evita duplicar ajustes
+/// al cerrar con `exige_doble_conteo`.
 pub fn diferencias_sesion(
     conn: &Connection,
     sesion_id: &str,
 ) -> AppResult<Vec<DiferenciaInventario>> {
-    let conteos = listar_conteos(conn, sesion_id)?;
+    let mut stmt = conn.prepare(
+        "SELECT c.ubicacion_id, c.producto_id, c.lote_id, c.cantidad_contada
+         FROM conteos c
+         INNER JOIN (
+           SELECT ubicacion_id, producto_id, COALESCE(lote_id,'') AS lote_key2, MAX(conteo_numero) AS max_num
+           FROM conteos WHERE sesion_id = ?1
+           GROUP BY ubicacion_id, producto_id, lote_key2
+         ) m ON m.ubicacion_id = c.ubicacion_id
+              AND m.producto_id = c.producto_id
+              AND COALESCE(c.lote_id,'') = m.lote_key2
+              AND c.conteo_numero = m.max_num
+         WHERE c.sesion_id = ?1",
+    )?;
+    let filas: Vec<(String, String, Option<String>, i64)> = stmt
+        .query_map([sesion_id], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
     let mut result: Vec<DiferenciaInventario> = Vec::new();
-    for c in conteos {
-        let lote_key = c.lote_id.clone().unwrap_or_default();
+    for (ubicacion_id, producto_id, lote_id, cantidad_contada) in filas {
+        let lote_key = lote_id.clone().unwrap_or_default();
         let saldo: i64 = conn.query_row(
             "SELECT COALESCE(SUM(cantidad), 0) FROM saldos
              WHERE ubicacion_id = ?1 AND producto_id = ?2 AND lote_key = ?3",
-            rusqlite::params![c.ubicacion_id, c.producto_id, lote_key],
+            rusqlite::params![ubicacion_id, producto_id, lote_key],
             |r| r.get(0),
         )?;
-        let diferencia = c.cantidad_contada - saldo;
+        let diferencia = cantidad_contada - saldo;
         let tipo = if diferencia == 0 {
             "conciliado".to_string()
         } else if diferencia > 0 {
@@ -216,11 +238,11 @@ pub fn diferencias_sesion(
             "faltante".to_string()
         };
         result.push(DiferenciaInventario {
-            ubicacion_id: c.ubicacion_id,
-            producto_id: c.producto_id,
-            lote_id: c.lote_id,
+            ubicacion_id,
+            producto_id,
+            lote_id,
             saldo_sistema: saldo,
-            cantidad_contada: c.cantidad_contada,
+            cantidad_contada,
             diferencia,
             tipo,
         });
@@ -229,14 +251,22 @@ pub fn diferencias_sesion(
 }
 
 /// Precisión de una sesión (SPEC §11.6, §16.3): usa el último conteo
-/// (`conteo_numero` más alto) por (ubicación, producto, lote) — SQLite
-/// garantiza que las columnas planas acompañando a un único `MAX()` agrupado
-/// vienen de la misma fila que el máximo.
+/// (`conteo_numero` más alto) por (ubicación, producto, lote) vía subquery
+/// con ventana, para no depender de la extensión no estándar de SQLite
+/// (`MAX()` + columnas planas arbitrarias).
 pub fn precision_sesion(conn: &Connection, sesion_id: &str) -> AppResult<PrecisionSesion> {
     let mut stmt = conn.prepare(
-        "SELECT ubicacion_id, producto_id, lote_id, cantidad_contada, MAX(conteo_numero)
-         FROM conteos WHERE sesion_id = ?1
-         GROUP BY ubicacion_id, producto_id, lote_id",
+        "SELECT c.ubicacion_id, c.producto_id, c.lote_id, c.cantidad_contada
+         FROM conteos c
+         INNER JOIN (
+           SELECT ubicacion_id, producto_id, COALESCE(lote_id,'') AS lote_key2, MAX(conteo_numero) AS max_num
+           FROM conteos WHERE sesion_id = ?1
+           GROUP BY ubicacion_id, producto_id, lote_key2
+         ) m ON m.ubicacion_id = c.ubicacion_id
+              AND m.producto_id = c.producto_id
+              AND COALESCE(c.lote_id,'') = m.lote_key2
+              AND c.conteo_numero = m.max_num
+         WHERE c.sesion_id = ?1",
     )?;
     let filas: Vec<(String, String, Option<String>, i64)> = stmt
         .query_map([sesion_id], |r| {
@@ -301,7 +331,7 @@ pub fn precision_sesion(conn: &Connection, sesion_id: &str) -> AppResult<Precisi
 /// Cierra la sesión (SPEC §11.5): solo con permiso; genera ajustes de diferencias.
 pub fn cerrar_sesion(conn: &Connection, sesion_id: &str, by: &str) -> AppResult<Vec<String>> {
     puede(conn, Some(by), "inventario", "cerrar")?;
-    let tx = conn.unchecked_transaction()?;
+    let tx = rusqlite::Transaction::new_unchecked(conn, rusqlite::TransactionBehavior::Immediate)?;
 
     let estado: String = tx.query_row(
         "SELECT estado FROM sesiones_inventario WHERE id = ?1",
@@ -328,17 +358,28 @@ pub fn cerrar_sesion(conn: &Connection, sesion_id: &str, by: &str) -> AppResult<
             continue;
         }
         if exige_doble {
-            // El segundo conteo debe confirmar la cantidad (SPEC §11.3).
-            let confirm: i64 = tx.query_row(
-                "SELECT COUNT(*) FROM conteos
-                 WHERE sesion_id = ?1 AND ubicacion_id = ?2 AND producto_id = ?3 AND conteo_numero >= 2
-                   AND (?4 IS NULL OR lote_id = ?4)",
-                rusqlite::params![sesion_id, d.ubicacion_id, d.producto_id, d.lote_id],
-                |r| r.get(0),
-            )?;
-            if confirm == 0 {
+            // El segundo conteo debe confirmar la cantidad (SPEC §11.3): exige
+            // al menos dos conteos y que los dos últimos coincidan en cantidad.
+            let conteos_grupo: Vec<(i64, i64)> = tx
+                .prepare(
+                    "SELECT conteo_numero, cantidad_contada FROM conteos
+                     WHERE sesion_id = ?1 AND ubicacion_id = ?2 AND producto_id = ?3
+                       AND (?4 IS NULL AND lote_id IS NULL OR lote_id = ?4)
+                     ORDER BY conteo_numero DESC LIMIT 2",
+                )?
+                .query_map(
+                    rusqlite::params![sesion_id, d.ubicacion_id, d.producto_id, d.lote_id],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )?
+                .collect::<Result<Vec<_>, _>>()?;
+            if conteos_grupo.len() < 2 {
                 return Err(AppError::CampoRequerido(
                     "doble conteo requerido para conciliar la diferencia".into(),
+                ));
+            }
+            if conteos_grupo[0].1 != conteos_grupo[1].1 {
+                return Err(AppError::CampoRequerido(
+                    "el segundo conteo no confirma la cantidad del primero".into(),
                 ));
             }
         }
@@ -417,13 +458,28 @@ fn generar_ajuste_diferencia(
     // Aplicar al saldo (valor neto; ON CONFLICT suma).
     let lote_key = d.lote_id.clone().unwrap_or_default();
     if let Some(o) = &origen {
-        tx.execute(
-            "INSERT INTO saldos (ubicacion_id, producto_id, lote_id, lote_key, cantidad, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-             ON CONFLICT(ubicacion_id, producto_id, lote_key) DO UPDATE SET
-               cantidad = cantidad + excluded.cantidad, updated_at = excluded.updated_at",
-            rusqlite::params![o, d.producto_id, d.lote_id, lote_key, -d.diferencia.abs(), ts],
+        let cambios = tx.execute(
+            "UPDATE saldos SET cantidad = cantidad - ?1, updated_at = ?2
+             WHERE ubicacion_id = ?3 AND producto_id = ?4 AND lote_key = ?5",
+            rusqlite::params![d.diferencia.abs(), ts, o, d.producto_id, lote_key],
         )?;
+        if cambios == 0 {
+            return Err(AppError::SaldoNegativo {
+                ubicacion: crate::repo::movimiento::codigo_ubicacion_pub(tx, o)?,
+                producto: d.producto_id.clone(),
+            });
+        }
+        let nuevo: i64 = tx.query_row(
+            "SELECT cantidad FROM saldos WHERE ubicacion_id=?1 AND producto_id=?2 AND lote_key=?3",
+            rusqlite::params![o, d.producto_id, lote_key],
+            |r| r.get(0),
+        )?;
+        if nuevo < 0 {
+            return Err(AppError::SaldoNegativo {
+                ubicacion: crate::repo::movimiento::codigo_ubicacion_pub(tx, o)?,
+                producto: d.producto_id.clone(),
+            });
+        }
     }
     if let Some(dest) = &destino {
         tx.execute(

@@ -14,5 +14,13 @@ const VARIANT_CLASS: Record<SkeletonVariant, string> = {
 };
 
 export function Skeleton({ variant = "text", className, ...rest }: SkeletonProps) {
-  return <div className={cn("skeleton", VARIANT_CLASS[variant], className)} {...rest} />;
+  return (
+    <div
+      className={cn("skeleton", VARIANT_CLASS[variant], className)}
+      role="status"
+      aria-label="Cargando"
+      aria-busy="true"
+      {...rest}
+    />
+  );
 }

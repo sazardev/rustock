@@ -22,6 +22,7 @@ import { usePalette } from "../shared/palette/palette-store";
 import { CommandPalette } from "../shared/palette/CommandPalette";
 import { construirNav, DESIGN_HREF } from "./nav";
 import { PATH } from "./route-paths";
+import { SeoManager } from "../shared/seo";
 import { SmartBreadcrumbs } from "./SmartBreadcrumbs";
 import { useTrackVista } from "../shared/actividad";
 import { useAtajosGlobales } from "../shared/atajos";
@@ -164,6 +165,7 @@ export function AppLayout() {
 
   return (
     <>
+      <SeoManager />
       <SkipLink />
       <AppShell
         navOpen={navOpen}

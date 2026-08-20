@@ -360,6 +360,18 @@ impl DbState {
             CREATE INDEX IF NOT EXISTS idx_movimientos_estado ON movimientos(estado);
             CREATE INDEX IF NOT EXISTS idx_movimientos_ubicacion_origen ON movimientos(origen_ubicacion_id);
             CREATE INDEX IF NOT EXISTS idx_movimientos_ubicacion_destino ON movimientos(destino_ubicacion_id);
+            CREATE INDEX IF NOT EXISTS idx_movimientos_created_by ON movimientos(created_by);
+            CREATE INDEX IF NOT EXISTS idx_movimientos_proveedor ON movimientos(proveedor_id);
+            CREATE INDEX IF NOT EXISTS idx_movimientos_cliente ON movimientos(cliente_id);
+            CREATE INDEX IF NOT EXISTS idx_movimientos_documento ON movimientos(documento_referencia);
+            CREATE INDEX IF NOT EXISTS idx_movimientos_motivo ON movimientos(motivo);
+            CREATE INDEX IF NOT EXISTS idx_movimientos_sesion ON movimientos(sesion_inventario_id);
+            CREATE INDEX IF NOT EXISTS idx_ubicaciones_tipo ON ubicaciones(tipo);
+            CREATE INDEX IF NOT EXISTS idx_zonas_almacen ON zonas(almacen_id);
+            CREATE INDEX IF NOT EXISTS idx_racks_zona ON racks(zona_id);
+            CREATE INDEX IF NOT EXISTS idx_secciones_rack ON secciones(rack_id);
+            -- Unicidad por almacén cuando activo=1 (SPEC §3.1): permite reciclar código tras desactivar.
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_almacenes_codigo_activo ON almacenes(codigo) WHERE activo = 1;
 
             -- Correlativos de número de movimiento (SPEC §6.1). El incremento es
             -- atómico dentro de la transacción IMMEDIATE del creador, así dos
@@ -392,7 +404,7 @@ impl DbState {
                 producto_id TEXT NOT NULL REFERENCES productos(id),
                 lote_id TEXT REFERENCES lotes(id),
                 lote_key TEXT NOT NULL DEFAULT '',
-                cantidad INTEGER NOT NULL DEFAULT 0,
+                cantidad INTEGER NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (ubicacion_id, producto_id, lote_key)
             );
@@ -665,6 +677,7 @@ impl DbState {
         // Pasillo (Hito Pasillo): etiqueta opcional de agrupación dentro de la
         // zona del rack. Aditivo — no toca la FK obligatoria rack.zona_id.
         asegurar_columna(&tx, "racks", "pasillo_id", "TEXT REFERENCES pasillos(id)")?;
+        tx.execute_batch("CREATE INDEX IF NOT EXISTS idx_racks_pasillo ON racks(pasillo_id);")?;
 
         // Recupera el correlativo máximo ya usado por año (para dbs existentes)
         // y lo deja como valor de arranque; en dbs nuevas no hay filas y es 0.

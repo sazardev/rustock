@@ -174,11 +174,11 @@ export function SesionInventarioConteosPage() {
             </ErrorPanel>
           ) : null}
           <FormGrid columns={2}>
-            <Field label="Ubicación" required>
+            <Field label="Ubicación" htmlFor="conteo-ubicacion" required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
-                    aria-label="Ubicación"
+                    id="conteo-ubicacion"
                     placeholder="Selecciona"
                     value={form.ubicacion_id}
                     onChange={(e) => setForm({ ...form, ubicacion_id: e.target.value })}
@@ -195,11 +195,11 @@ export function SesionInventarioConteosPage() {
                 </CrearRapido>
               </div>
             </Field>
-            <Field label="Producto" required>
+            <Field label="Producto" htmlFor="conteo-producto" required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
-                    aria-label="Producto"
+                    id="conteo-producto"
                     placeholder="Selecciona"
                     value={form.producto_id}
                     onChange={(e) => setForm({ ...form, producto_id: e.target.value, lote_id: "" })}
@@ -217,11 +217,11 @@ export function SesionInventarioConteosPage() {
               </div>
             </Field>
             {productoSeleccionado?.controla_lote ? (
-              <Field label="Lote" required>
+              <Field label="Lote" htmlFor="conteo-lote" required>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
-                      aria-label="Lote"
+                      id="conteo-lote"
                       placeholder="Selecciona"
                       value={form.lote_id}
                       onChange={(e) => setForm({ ...form, lote_id: e.target.value })}
@@ -239,8 +239,14 @@ export function SesionInventarioConteosPage() {
                 </div>
               </Field>
             ) : null}
-            <Field label="Cantidad contada" required help="0 = producto ausente en esta ubicación.">
+            <Field
+              label="Cantidad contada"
+              htmlFor="conteo-cantidad"
+              required
+              help="0 = producto ausente en esta ubicación."
+            >
               <Input
+                id="conteo-cantidad"
                 type="number"
                 min="0"
                 step="1"
@@ -249,8 +255,9 @@ export function SesionInventarioConteosPage() {
                 onChange={(e) => setForm({ ...form, cantidad_contada: e.target.value })}
               />
             </Field>
-            <Field label="N.º de conteo" required>
+            <Field label="N.º de conteo" htmlFor="conteo-numero" required>
               <Input
+                id="conteo-numero"
                 type="number"
                 min="1"
                 step="1"
@@ -259,8 +266,9 @@ export function SesionInventarioConteosPage() {
                 onChange={(e) => setForm({ ...form, conteo_numero: e.target.value })}
               />
             </Field>
-            <Field label="Nota">
+            <Field label="Nota" htmlFor="conteo-nota">
               <Input
+                id="conteo-nota"
                 placeholder="Ej. caja dañada"
                 value={form.nota}
                 onChange={(e) => setForm({ ...form, nota: e.target.value })}

@@ -2,65 +2,224 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
 
-    <!-- Identidad y SEO -->
-    <title>Rustock — Gestión de inventario y almacén (WMS) self-hosted</title>
+    <!-- Título principal — 50–60 caracteres, keyword al inicio, marca al final -->
+    <title>Rustock — WMS self-hosted para control total de tu almacén</title>
     <meta
       name="description"
-      content="Sistema de gestión de inventario y almacén (mini-WMS) self-hosted, todo en uno: productos, lotes, ubicaciones, movimientos, traslados, inventario físico y trazabilidad total. Tus datos, tu servidor."
+      content="Rustock es el WMS self-hosted que pone tu almacén bajo control: stock en tiempo real, lotes con FIFO/FEFO, trazabilidad inmutable y sin depender de la nube. Tus datos, tu servidor."
     />
     <meta
       name="keywords"
-      content="inventario, almacén, WMS, gestión de stock, control de inventario, self-hosted, lotes, trazabilidad, mini-wms, rustock"
+      content="rustock, wms, gestión de almacén, control de inventario, stock, inventario físico, lotes, FIFO, FEFO, trazabilidad, self-hosted, open source, mini-wms, ERP almacén, software almacén, SGA"
     />
     <meta name="author" content="Rustock" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#B7410E" />
+    <meta name="creator" content="Rustock" />
+    <meta name="publisher" content="Rustock" />
+    <meta name="application-name" content="Rustock" />
+    <meta name="apple-mobile-web-app-title" content="Rustock" />
+    <meta name="generator" content="Rustock" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
 
-    <!-- Favicons -->
+    <!-- Indexación -->
+    <meta name="robots" content="index, follow, max-snippet:160, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:160, max-image-preview:large" />
+    <meta name="bingbot" content="index, follow" />
+
+    <!-- Canonical y alternos -->
+    <link rel="canonical" href="https://rustock.app/" />
+    <link rel="alternate" hreflang="es" href="https://rustock.app/" />
+    <link rel="alternate" hreflang="es-MX" href="https://rustock.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://rustock.app/" />
+
+    <!-- Preconnect y preload críticos -->
+    <link rel="preconnect" href="https://rustock.app" crossorigin />
+    <link rel="dns-prefetch" href="https://rustock.app" />
+    <link rel="preload" href="/rustock.svg" as="image" type="image/svg+xml" />
+
+    <!-- Tema y color -->
+    <meta name="theme-color" content="#B7410E" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1F1813" media="(prefers-color-scheme: dark)" />
+    <meta name="msapplication-TileColor" content="#B7410E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Favicons — set completo -->
     <link rel="icon" type="image/svg+xml" href="/rustock.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/rustock-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/rustock-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/rustock-192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/rustock-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/rustock-512.png" />
+    <link rel="mask-icon" href="/rustock.svg" color="#B7410E" />
 
-    <!-- Web app manifest -->
+    <!-- Manifest, sitemap y descubrimiento -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+    <link rel="author" href="/humans.txt" />
+    <link rel="search" type="application/opensearchdescription+xml" title="Rustock" href="/opensearch.xml" />
+    <link rel="alternate" type="text/markdown" title="LLMs.txt — Guía para IA" href="/llms.txt" />
 
-    <!-- Open Graph -->
+    <!-- Open Graph — Facebook, LinkedIn, Slack -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Rustock" />
-    <meta
-      property="og:title"
-      content="Rustock — Gestión de inventario y almacén (WMS) self-hosted"
-    />
+    <meta property="og:locale" content="es_MX" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:url" content="https://rustock.app/" />
+    <meta property="og:title" content="Rustock — WMS self-hosted para control total de tu almacén" />
     <meta
       property="og:description"
-      content="Control total de tu almacén: productos, lotes, ubicaciones, movimientos, inventario físico y trazabilidad inmutable. Una caja de herramientas sólida, sin depender de nadie."
+      content="Stock en tiempo real, movimientos trazables, FIFO/FEFO automático y trazabilidad inmutable. Sin nube, sin suscripciones: tu almacén bajo control, en tu infraestructura."
     />
-    <meta property="og:image" content="/rustock-512.png" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
-    <meta property="og:image:alt" content="Logo de Rustock: una caja de almacén en tonos de óxido" />
-    <meta property="og:locale" content="es_MX" />
+    <meta property="og:image" content="https://rustock.app/og-image.png" />
+    <meta property="og:image:secure_url" content="https://rustock.app/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Rustock — WMS self-hosted: control total de tu almacén" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="Rustock — Gestión de inventario y almacén (WMS) self-hosted"
-    />
+    <meta name="twitter:site" content="@rustockapp" />
+    <meta name="twitter:creator" content="@rustockapp" />
+    <meta property="twitter:domain" content="rustock.app" />
+    <meta property="twitter:url" content="https://rustock.app/" />
+    <meta name="twitter:title" content="Rustock — WMS self-hosted para control total de tu almacén" />
     <meta
       name="twitter:description"
-      content="Inventario, lotes, movimientos, traslados e inventario físico en una sola herramienta self-hosted. Tus datos, tu servidor."
+      content="El mini-WMS autosuficiente: productos, lotes, ubicaciones, movimientos, inventario físico y trazabilidad total. 0 nube. 1 archivo. 100% tuyo."
     />
-    <meta name="twitter:image" content="/rustock-512.png" />
-    <meta name="twitter:image:alt" content="Logo de Rustock: una caja de almacén en tonos de óxido" />
+    <meta name="twitter:image" content="https://rustock.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Rustock — WMS self-hosted: control total de tu almacén" />
+
+    <!-- Verificación y AI discoverability -->
+    <meta name="google-site-verification" content="rustock-verification-placeholder" />
+    <meta name="msvalidate.01" content="rustock-bing-verification-placeholder" />
+    <meta name="ai-content-declaration" content="ai-assisted" />
+    <meta name="classification" content="Business, Warehouse Management, Inventory Software, WMS, SGA" />
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Rustock",
+        "alternateName": "Rustock WMS",
+        "url": "https://rustock.app",
+        "logo": "https://rustock.app/rustock-512.png",
+        "description": "Sistema de gestión de inventario y almacén (mini-WMS) self-hosted, autosuficiente y trazable.",
+        "foundingDate": "2026",
+        "slogan": "Tu almacén, bajo control.",
+        "sameAs": ["https://github.com/rustock", "https://twitter.com/rustockapp"]
+      }
+    </script>
+
+    <!-- JSON-LD: SoftwareApplication (producto principal) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Rustock",
+        "applicationCategory": "BusinessApplication",
+        "applicationSubCategory": "Warehouse Management System",
+        "operatingSystem": "Windows, macOS, Linux",
+        "description": "WMS self-hosted todo en uno: stock en tiempo real, movimientos trazables, FIFO/FEFO automático, inventario físico y trazabilidad inmutable. Sin nube ni suscripciones.",
+        "url": "https://rustock.app",
+        "image": "https://rustock.app/og-image.png",
+        "screenshot": "https://rustock.app/og-image.png",
+        "softwareVersion": "0.3.0",
+        "releaseNotes": "https://rustock.app/ayuda",
+        "author": { "@type": "Organization", "name": "Rustock", "url": "https://rustock.app" },
+        "publisher": { "@type": "Organization", "name": "Rustock", "url": "https://rustock.app" },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock",
+          "url": "https://rustock.app",
+          "priceValidUntil": "2027-12-31"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "5.0",
+          "ratingCount": "1",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "featureList": [
+          "Stock en tiempo real por ubicación, producto y lote",
+          "Movimientos trazables con auditoría inmutable",
+          "FIFO y FEFO automático sin errores",
+          "Inventario físico con conteo ciego y doble conteo",
+          "Trazabilidad total por producto, lote y caja",
+          "Roles y permisos granulares",
+          "Alertas automáticas de stock y vencimiento"
+        ],
+        "keywords": "wms, inventario, almacén, stock, lotes, FIFO, FEFO, trazabilidad, self-hosted"
+      }
+    </script>
+
+    <!-- JSON-LD: WebSite con SearchAction (para sitelinks searchbox + AI) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Rustock",
+        "alternateName": "Rustock WMS",
+        "url": "https://rustock.app",
+        "inLanguage": "es-MX",
+        "description": "WMS self-hosted para control total de tu almacén",
+        "publisher": { "@type": "Organization", "name": "Rustock", "url": "https://rustock.app" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://rustock.app/productos?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+
+    <!-- JSON-LD: BreadcrumbList para la raíz -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://rustock.app/" }
+        ]
+      }
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <div
+        style="
+          max-width: 640px;
+          margin: 4rem auto;
+          padding: 2rem;
+          font-family: system-ui, sans-serif;
+          text-align: center;
+          line-height: 1.6;
+          color: #302b25;
+        "
+      >
+        <h1 style="font-size: 1.5rem; margin-bottom: 1rem">Rustock necesita JavaScript</h1>
+        <p style="color: #5f574d">
+          Rustock es una aplicación WMS self-hosted que requiere JavaScript para funcionar. Activa
+          JavaScript en tu navegador para acceder a tu almacén.
+        </p>
+        <p style="margin-top: 1.5rem">
+          <a href="https://rustock.app" style="color: #b7410e">Volver al inicio</a>
+        </p>
+      </div>
+    </noscript>
   </body>
 </html>

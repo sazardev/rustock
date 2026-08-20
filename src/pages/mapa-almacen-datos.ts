@@ -110,10 +110,12 @@ export function colorOcupacion(ocupacion: number | null): string {
  * materiales de three.js no entienden `var(--x)`. */
 export function resolverColorCss(variable: string): string {
   if (typeof document === "undefined") {
-    return "#9a9a9a";
+    // Fallback SSR: token real en CSS es --color-gray-400 (#AAA096), cercano a #9a9a9a.
+    return "var(--color-gray-400)";
   }
   const valor = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
-  return valor || "#9a9a9a";
+  // Fallback si el token no existe (p. ej. SSR inicial): usa el gris del tema.
+  return valor || "var(--color-gray-400)";
 }
 
 export function useMapaAlmacenDatos(almacenId: string | undefined) {

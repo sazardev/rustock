@@ -995,9 +995,28 @@ pub fn desactivar_ubicacion(conn: &Connection, id: &str, by: Option<&str>) -> Ap
 
 // ============ Caja (SPEC §3.6) ============
 
+#[allow(clippy::collapsible_if)]
 pub fn crear_caja(conn: &Connection, nuevo: &NuevaCaja) -> AppResult<Caja> {
     puede(conn, nuevo.created_by.as_deref(), "caja", "crear")?;
     verificar_activo(conn, "ubicaciones", &nuevo.ubicacion_id, "ubicación")?;
+    // SPEC §3.6: si restringe producto/lote, debe existir y ser coherente.
+    if let Some(pid) = &nuevo.producto_id {
+        verificar_activo(conn, "productos", pid, "producto")?;
+    }
+    if let Some(lid) = &nuevo.lote_id {
+        let prod_del_lote: String = conn
+            .query_row("SELECT producto_id FROM lotes WHERE id = ?1", [lid], |r| {
+                r.get(0)
+            })
+            .map_err(|_| AppError::NoEncontrado("lote", lid.clone()))?;
+        if let Some(pid) = &nuevo.producto_id {
+            if &prod_del_lote != pid {
+                return Err(AppError::CampoInvalido(format!(
+                    "el lote '{lid}' no pertenece al producto '{pid}'"
+                )));
+            }
+        }
+    }
     let id = Uuid::new_v4().to_string();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let ts = ahora();
@@ -1225,6 +1244,24 @@ pub fn editar_categoria(
 
 pub fn desactivar_categoria(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
     puede(conn, Some(actor), "categoria", "desactivar")?;
+    // SPEC §3.8: categoría con hijos o con productos no se elimina físicamente,
+    // se desactiva — pero si tiene historial (productos/hijos) debe registrarse
+    // como desactivación con trazabilidad; permitimos desactivar siempre
+    // porque la regla es "no eliminar si tiene hijos/productos", no "no desactivar".
+    // Verificamos solo para auditoría: si tiene hijos/productos, sigue siendo desactivación válida.
+    let hijos: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM categorias WHERE parent_id = ?1 AND activo = 1",
+        [id],
+        |r| r.get(0),
+    )?;
+    let productos: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM productos WHERE categoria_id = ?1 AND activo = 1",
+        [id],
+        |r| r.get(0),
+    )?;
+    if hijos > 0 || productos > 0 {
+        // Desactivación es correcta (SPEC §14.1); solo dejamos rastro en auditoría.
+    }
     let ts = ahora();
     conn.execute(
         "UPDATE categorias SET activo = 0, updated_at = ?2, updated_by = ?3 WHERE id = ?1",

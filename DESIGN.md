@@ -762,6 +762,14 @@ Todo encabezado de página sigue la misma estructura:
 | Configuración | `Settings` |
 | Reportes / análisis | `BarChart3` |
 | Cerrar sesión | `LogOut` |
+| Menú (navegación) | `Menu` |
+| Cerrar panel / dismiss | `X` |
+| Subir (reordenar) | `ChevronUp` |
+| Bajar (reordenar) | `ChevronDown` |
+| Pantalla completa | `Maximize2` |
+| Salir de pantalla completa | `Minimize2` |
+| Cuadrícula (mapa) | `Grid3x3` |
+| Encuadrar (mapa) | `Scan` |
 
 > Regla de mantenimiento: si una acción necesita un icono nuevo, primero se busca en Lucide; si no existe equivalente, **no se añade** un icono custom salvo aprobación explícita del diseño, y queda documentado aquí.
 

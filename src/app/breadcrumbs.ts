@@ -39,6 +39,8 @@ const ACTION_LABELS: Record<string, string> = {
   anular: "Anular",
   cerrar: "Cerrar",
   conteos: "Registrar conteos",
+  mapa: "Mapa",
+  "mapa-3d": "Mapa 3D",
 };
 
 /**

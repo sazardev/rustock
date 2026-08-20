@@ -38,11 +38,11 @@ export function AppShell({
       <header className={cn("app-shell__topbar", scrolled && "app-shell__topbar--scrolled")}>
         {topbar}
       </header>
-      <div
+      <button
+        type="button"
         className="app-shell__nav-backdrop"
         onClick={onCloseNav}
-        aria-hidden="true"
-        role="presentation"
+        aria-label="Cerrar navegación"
       />
       <aside className="app-shell__sidebar">{sidebar}</aside>
       <main id="contenido" className="app-shell__content" onScroll={handleContentScroll}>

@@ -461,7 +461,11 @@ export function HistorialPage() {
         <Card title="Actividad por día">
           <Card.Body>
             {metricas && metricas.por_dia.length > 0 ? (
-              <div className="chart" role="img" aria-label="Eventos por día">
+              <div
+                className="chart"
+                role="img"
+                aria-label={`Eventos por día: ${metricas.por_dia.map((d) => `${d.dia}: ${d.vistas + d.operaciones}`).join(", ")}`}
+              >
                 {metricas.por_dia.map((d) => {
                   const n = d.vistas + d.operaciones;
                   return (
@@ -470,6 +474,8 @@ export function HistorialPage() {
                       <div
                         className="chart__bar"
                         style={{ height: `${maxDia > 0 ? Math.max(2, (n / maxDia) * 100) : 0}%` }}
+                        role="presentation"
+                        aria-hidden="true"
                       />
                     </div>
                   );
@@ -483,7 +489,11 @@ export function HistorialPage() {
         <Card title="Actividad por hora del día">
           <Card.Body>
             {metricas && metricas.por_hora.length > 0 ? (
-              <div className="chart" role="img" aria-label="Eventos por hora">
+              <div
+                className="chart"
+                role="img"
+                aria-label={`Eventos por hora: ${metricas.por_hora.map((h) => `${String(h.hora).padStart(2, "0")}:00 ${h.vistas + h.operaciones}`).join(", ")}`}
+              >
                 {metricas.por_hora.map((h) => {
                   const n = h.vistas + h.operaciones;
                   return (
@@ -500,6 +510,8 @@ export function HistorialPage() {
                       <div
                         className="chart__bar"
                         style={{ height: `${maxHora > 0 ? Math.max(2, (n / maxHora) * 100) : 0}%` }}
+                        role="presentation"
+                        aria-hidden="true"
                       />
                     </div>
                   );
@@ -513,7 +525,11 @@ export function HistorialPage() {
         <Card title="Actividad por día de la semana">
           <Card.Body>
             {metricas && metricas.por_dia_semana.length > 0 ? (
-              <div className="chart" role="img" aria-label="Eventos por día de la semana">
+              <div
+                className="chart"
+                role="img"
+                aria-label={`Eventos por día de la semana: ${metricas.por_dia_semana.map((d) => `${DIAS_SEMANA[d.dia_semana] ?? d.dia_semana}: ${d.vistas + d.operaciones}`).join(", ")}`}
+              >
                 {metricas.por_dia_semana.map((d) => {
                   const n = d.vistas + d.operaciones;
                   return (
@@ -530,6 +546,8 @@ export function HistorialPage() {
                         style={{
                           height: `${maxDiaSemana > 0 ? Math.max(2, (n / maxDiaSemana) * 100) : 0}%`,
                         }}
+                        role="presentation"
+                        aria-hidden="true"
                       />
                     </div>
                   );

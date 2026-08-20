@@ -4437,7 +4437,31 @@ fn traslado_inter_almacen_fallido_no_deja_movimientos_huérfanos() {
     let conn = db.conn();
     let (_almacen1, ubi_origen) = crear_arbol_en_almacen(&conn, "ALM-O1");
     let (_almacen2, ubi_destino) = crear_arbol_en_almacen(&conn, "ALM-D1");
-    let (_uom, prod) = crear_uom_y_producto(&conn);
+    let (_uom, _prod_sin_lote) = crear_uom_y_producto(&conn);
+    let prod_con_lote = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            costo_unitario: None,
+            sku: "REF-LOTE".into(),
+            nombre: "Producto con lote".into(),
+            descripcion: None,
+            categoria_id: None,
+            uom_base_id: _uom.clone(),
+            uom_venta_id: None,
+            uom_compra_id: None,
+            codigo_barras: None,
+            peso_unitario: None,
+            volumen_unitario: None,
+            stock_minimo: None,
+            stock_maximo: None,
+            controla_lote: true,
+            controla_vencimiento: false,
+            perecedero: false,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("prod con lote");
+    let prod = prod_con_lote.id.clone();
 
     // Un lote de OTRO producto: la validación de `insertar_movimiento`
     // (lote debe pertenecer al producto) falla. Como las dos piernas se crean

@@ -255,7 +255,7 @@ function MiniMapa({ hermanos, actualId }: { hermanos: NodoSimple[]; actualId: st
             width={50}
             height={30}
             rx={6}
-            fill={h.id === actualId ? "var(--color-blue-100, #dbeafe)" : "var(--color-gray-100)"}
+            fill={h.id === actualId ? "var(--color-blue-100)" : "var(--color-gray-100)"}
             stroke={h.id === actualId ? "var(--color-blue-500)" : "var(--border-color-strong)"}
             strokeWidth={h.id === actualId ? 2.5 : 1}
           />

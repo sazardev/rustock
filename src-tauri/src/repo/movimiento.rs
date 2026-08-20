@@ -70,6 +70,10 @@ fn reglas_producto(conn: &Connection, id: &str) -> AppResult<ReglasProducto> {
 
 /// Código de una ubicación para mensajes claros (SPEC §14.2).
 fn codigo_ubicacion(conn: &Connection, id: &str) -> AppResult<String> {
+    codigo_ubicacion_pub(conn, id)
+}
+
+pub(crate) fn codigo_ubicacion_pub(conn: &Connection, id: &str) -> AppResult<String> {
     conn.query_row("SELECT codigo FROM ubicaciones WHERE id = ?1", [id], |r| {
         r.get(0)
     })
@@ -308,6 +312,13 @@ fn insertar_movimiento(tx: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Mo
         // SPEC §3.7: si controla_lote, toda línea debe indicar lote.
         if reglas.controla_lote && linea.lote_id.is_none() {
             return Err(AppError::LoteRequerido(reglas.sku));
+        }
+        // SPEC §5.2: si el producto NO controla lote, no debe llegar lote.
+        if !reglas.controla_lote && linea.lote_id.is_some() {
+            return Err(AppError::CampoInvalido(format!(
+                "el producto '{}' no controla lote: no debe indicarse lote",
+                reglas.sku
+            )));
         }
         // Validar que el lote pertenezca al producto (integridad §14.1).
         if let Some(lote_id) = &linea.lote_id {
@@ -549,9 +560,11 @@ pub fn enviar_a_aprobacion(conn: &Connection, id: &str, by: &str) -> AppResult<M
 }
 
 /// Aprobar = ejecutar las líneas atómicamente (SPEC §6.2). Único estado que altera saldos.
+/// Usa transacción `Immediate` (no `DEFERRED`) para serializar lecturas de
+/// saldo concurrentes y evitar saldo negativo por carrera (SPEC §14.2, §14.6).
 pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Movimiento> {
     puede(conn, Some(by), "movimiento", "aprobar")?;
-    let tx = conn.unchecked_transaction()?;
+    let tx = rusqlite::Transaction::new_unchecked(conn, rusqlite::TransactionBehavior::Immediate)?;
 
     let (estado, tipo, sub_tipo) = estado_tipo(&tx, id)?;
     if estado != EstadoMovimiento::Borrador && estado != EstadoMovimiento::PendienteAprobacion {
@@ -843,16 +856,37 @@ fn aplicar_linea(
     destino: Option<&str>,
 ) -> AppResult<()> {
     let lote_key = linea.lote_id.clone().unwrap_or_default();
-    // Salida de origen: valor neto negativo; ON CONFLICT suma (resta).
+    // Salida de origen: decrementa el saldo existente (nunca crea fila negativa).
+    // Se valida antes que `disponible >= cantidad`, así que el UPDATE debe
+    // afectar exactamente 1 fila; si no, es un estado inconsistente.
     if let Some(o) = origen {
-        tx.execute(
-            "INSERT INTO saldos (ubicacion_id, producto_id, lote_id, lote_key, cantidad, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-             ON CONFLICT(ubicacion_id, producto_id, lote_key) DO UPDATE SET
-               cantidad = cantidad + excluded.cantidad,
-               updated_at = excluded.updated_at",
-            rusqlite::params![o, linea.producto_id, linea.lote_id, lote_key, -linea.cantidad, ahora()],
+        let ts = ahora();
+        let cambios = tx.execute(
+            "UPDATE saldos SET cantidad = cantidad - ?1, updated_at = ?2
+             WHERE ubicacion_id = ?3 AND producto_id = ?4 AND lote_key = ?5",
+            rusqlite::params![linea.cantidad, ts, o, linea.producto_id, lote_key],
         )?;
+        if cambios == 0 {
+            // No existía fila pero la validación dijo que había saldo: inconsistencia.
+            // Para cumplir el CHECK sin crear fila negativa, insertamos el delta
+            // negativo solo si no existe — pero esto solo ocurre en un bug.
+            return Err(AppError::SaldoNegativo {
+                ubicacion: codigo_ubicacion(tx, o)?,
+                producto: linea.producto_id.clone(),
+            });
+        }
+        // Guard contra saldo negativo por carrera (el CHECK también lo protege).
+        let nuevo: i64 = tx.query_row(
+            "SELECT cantidad FROM saldos WHERE ubicacion_id=?1 AND producto_id=?2 AND lote_key=?3",
+            rusqlite::params![o, linea.producto_id, lote_key],
+            |r| r.get(0),
+        )?;
+        if nuevo < 0 {
+            return Err(AppError::SaldoNegativo {
+                ubicacion: codigo_ubicacion(tx, o)?,
+                producto: linea.producto_id.clone(),
+            });
+        }
     }
     // Entrada en destino: valor neto positivo; ON CONFLICT suma.
     if let Some(d) = destino {
@@ -886,13 +920,29 @@ fn aplicar_linea_inversa(
     )?;
     let lote_key = lote.unwrap_or_default();
     if let Some(o) = origen {
-        tx.execute(
-            "INSERT INTO saldos (ubicacion_id, producto_id, lote_id, lote_key, cantidad, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-             ON CONFLICT(ubicacion_id, producto_id, lote_key) DO UPDATE SET
-               cantidad = cantidad + excluded.cantidad, updated_at = excluded.updated_at",
-            rusqlite::params![o, producto, lote, lote_key, -cantidad, ahora()],
+        let ts = ahora();
+        let cambios = tx.execute(
+            "UPDATE saldos SET cantidad = cantidad - ?1, updated_at = ?2
+             WHERE ubicacion_id = ?3 AND producto_id = ?4 AND lote_key = ?5",
+            rusqlite::params![cantidad, ts, o, producto, lote_key],
         )?;
+        if cambios == 0 {
+            return Err(AppError::SaldoNegativo {
+                ubicacion: codigo_ubicacion(tx, o)?,
+                producto: producto.to_string(),
+            });
+        }
+        let nuevo: i64 = tx.query_row(
+            "SELECT cantidad FROM saldos WHERE ubicacion_id=?1 AND producto_id=?2 AND lote_key=?3",
+            rusqlite::params![o, producto, lote_key],
+            |r| r.get(0),
+        )?;
+        if nuevo < 0 {
+            return Err(AppError::SaldoNegativo {
+                ubicacion: codigo_ubicacion(tx, o)?,
+                producto: producto.to_string(),
+            });
+        }
     }
     if let Some(d) = destino {
         tx.execute(
@@ -1214,6 +1264,9 @@ pub fn sugerir_lineas_salida(
     } else if reglas.controla_lote {
         sql.push_str(" ORDER BY (l.fecha_fabricacion IS NULL), l.fecha_fabricacion ASC");
     } else {
+        // SPEC §8.6: FIFO por entrada más antigua (usamos updated_at como proxy de
+        // última entrada; ideal sería MIN(movimiento.fecha_movimiento), pero el
+        // saldo materializado no guarda su fecha de origen. Fallback a updated_at.
         sql.push_str(" ORDER BY s.updated_at ASC");
     }
 

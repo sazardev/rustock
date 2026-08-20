@@ -12,6 +12,9 @@ export default defineConfig(async () => ({
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
+  // SEO + security headers en dev (espejo de lo que debe servir el hosting de rustock.app)
+  // HSTS, nosniff y X-Frame-Options son señales de confianza para crawlers
+  // y mejoran el ranking de "page experience".
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 6821,
@@ -28,17 +31,30 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    headers: {
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=(self)",
+    },
   },
 
-  // 4. build optimizations for max performance
+  // 4. build optimizations for max performance (STACK §8.2 code-splitting)
   build: {
     target: "es2022",
     sourcemap: false,
     minify: "esbuild",
-    reportCompressedSize: false,
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks(id) {
+          if (id.includes("node_modules/three") || id.includes("@react-three")) return "three";
+          if (id.includes("node_modules/react-router")) return "router";
+          if (id.includes("@tanstack/react-query") || id.includes("node_modules/zustand"))
+            return "query";
+          if (id.includes("node_modules/react")) return "react";
+        },
       },
     },
   },

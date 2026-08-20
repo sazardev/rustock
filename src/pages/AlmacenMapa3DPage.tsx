@@ -403,10 +403,18 @@ function Escena3D({
       <OrbitControls ref={controlsRef} enabled={!arrastrando} makeDefault />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[30, -0.01, 30]}>
         <planeGeometry args={[80, 80]} />
-        <meshStandardMaterial color="#e8e4dd" />
+        <meshStandardMaterial color={resolverColorCss("--color-gray-200")} />
       </mesh>
       {mostrarGrilla ? (
-        <gridHelper args={[80, 40, "#c9c2b8", "#e2ddd3"]} position={[30, 0.001, 30]} />
+        <gridHelper
+          args={[
+            80,
+            40,
+            resolverColorCss("--color-gray-300"),
+            resolverColorCss("--color-gray-200"),
+          ]}
+          position={[30, 0.001, 30]}
+        />
       ) : null}
       {nodos.map((n) => {
         const pos = posicionDe(n.id);
@@ -426,7 +434,7 @@ function Escena3D({
             <boxGeometry args={[ancho, altura, profundidad]} />
             <meshStandardMaterial
               color={resolverColorCss(colorOcupacion(n.ocupacion))}
-              emissive={resaltado ? "#B7410E" : "#000000"}
+              emissive={resaltado ? resolverColorCss("--color-blue-500") : "#000000"}
               emissiveIntensity={resaltado ? 0.5 : 0}
             />
             <Html position={[0, altura / 2 + 0.12, 0]} center distanceFactor={18} sprite>
