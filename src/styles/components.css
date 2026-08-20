@@ -124,8 +124,11 @@
 
 .btn--icon {
   width: var(--size-md);
+  min-width: var(--size-md);
+  min-height: var(--size-md);
   padding: 0;
   border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
 
 .btn--icon.btn--sm {
@@ -628,7 +631,7 @@
 .empty__icon {
   width: var(--space-8);
   height: var(--space-8);
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
   margin-bottom: var(--space-2);
   border-radius: var(--radius-xl);
 }

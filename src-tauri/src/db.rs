@@ -679,6 +679,50 @@ impl DbState {
         asegurar_columna(&tx, "racks", "pasillo_id", "TEXT REFERENCES pasillos(id)")?;
         tx.execute_batch("CREATE INDEX IF NOT EXISTS idx_racks_pasillo ON racks(pasillo_id);")?;
 
+        // Unicidad por almacén (SPEC §3.2-3.5): denormaliza almacen_id en las
+        // 5 entidades del árbol para poder hacer UNIQUE(almacen_id, codigo)
+        // a nivel DB (antes solo code-level con SELECT COUNT). Migrado para
+        // dbs existentes (ALTER + backfill), y en dbs nuevas queda listo.
+        for (tabla, sql) in [
+            ("pasillos", "TEXT REFERENCES almacenes(id)"),
+            ("racks", "TEXT REFERENCES almacenes(id)"),
+            ("secciones", "TEXT REFERENCES almacenes(id)"),
+            ("ubicaciones", "TEXT REFERENCES almacenes(id)"),
+            ("cajas", "TEXT REFERENCES almacenes(id)"),
+        ] {
+            asegurar_columna(&tx, tabla, "almacen_id", sql)?;
+        }
+        // Backfill: resolver almacen_id por transitividad para filas existentes.
+        tx.execute_batch(
+            "
+            UPDATE pasillos SET almacen_id = (SELECT almacen_id FROM zonas WHERE zonas.id = pasillos.zona_id) WHERE almacen_id IS NULL;
+            UPDATE racks SET almacen_id = (SELECT almacen_id FROM zonas WHERE zonas.id = racks.zona_id) WHERE almacen_id IS NULL;
+            UPDATE secciones SET almacen_id = (SELECT almacen_id FROM zonas WHERE zonas.id = (SELECT zona_id FROM racks WHERE racks.id = secciones.rack_id)) WHERE almacen_id IS NULL;
+            UPDATE ubicaciones SET almacen_id = COALESCE(
+                (SELECT almacen_id FROM zonas WHERE zonas.id = (SELECT zona_id FROM racks WHERE racks.id = (SELECT rack_id FROM secciones WHERE secciones.id = ubicaciones.seccion_id)) ),
+                (SELECT almacen_id FROM zonas WHERE zonas.id = (SELECT zona_id FROM racks WHERE racks.id = ubicaciones.rack_id)),
+                (SELECT almacen_id FROM zonas WHERE zonas.id = ubicaciones.zona_id)
+            ) WHERE almacen_id IS NULL;
+            UPDATE cajas SET almacen_id = (SELECT almacen_id FROM ubicaciones WHERE ubicaciones.id = cajas.ubicacion_id) WHERE almacen_id IS NULL;
+            ",
+        )?;
+        // Índices únicos por almacén (solo filas activas, para permitir reciclaje).
+        // Se crean después del backfill para que no fallen por NULLs antiguos.
+        tx.execute_batch(
+            "
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_pasillos_codigo_almacen ON pasillos(almacen_id, codigo) WHERE activo = 1;
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_racks_codigo_almacen ON racks(almacen_id, codigo) WHERE activo = 1;
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_secciones_codigo_almacen ON secciones(almacen_id, codigo) WHERE activo = 1;
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ubicaciones_codigo_almacen ON ubicaciones(almacen_id, codigo) WHERE activo = 1;
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_cajas_codigo_almacen ON cajas(almacen_id, codigo) WHERE activo = 1;
+            CREATE INDEX IF NOT EXISTS idx_pasillos_almacen ON pasillos(almacen_id);
+            CREATE INDEX IF NOT EXISTS idx_racks_almacen ON racks(almacen_id);
+            CREATE INDEX IF NOT EXISTS idx_secciones_almacen ON secciones(almacen_id);
+            CREATE INDEX IF NOT EXISTS idx_ubicaciones_almacen ON ubicaciones(almacen_id);
+            CREATE INDEX IF NOT EXISTS idx_cajas_almacen ON cajas(almacen_id);
+            ",
+        )?;
+
         // Recupera el correlativo máximo ya usado por año (para dbs existentes)
         // y lo deja como valor de arranque; en dbs nuevas no hay filas y es 0.
         tx.execute_batch(

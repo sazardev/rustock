@@ -271,6 +271,7 @@ export function CatalogDetailPage<T extends { id: string }>({
         </>
       ) : null}
       {slug === "productos" ? <ProductoUbicacionesCard row={row as unknown as Producto} /> : null}
+      {slug === "cajas" ? <HistorialCajaCard cajaId={id} /> : null}
       <ComentariosCatalogo entidad={entidadComentario(slug)} entidadId={id} />
     </>
   );
@@ -294,6 +295,45 @@ function entidadComentario(slug: string): string {
     clientes: "cliente",
   };
   return map[slug] ?? slug;
+}
+
+function HistorialCajaCard({ cajaId }: { cajaId: string }) {
+  const q = useQuery({
+    queryKey: ["historial-caja", cajaId],
+    queryFn: () => import("../shared/backend").then((m) => m.historialCaja(cajaId)),
+  });
+  const filas = q.data ?? [];
+  return (
+    <Card title="Historial de la caja (trazabilidad §13.4)" className="mt-6">
+      <Card.Body>
+        {q.isLoading ? (
+          <Text as="p" size="sm" color="muted">
+            Cargando historial…
+          </Text>
+        ) : filas.length === 0 ? (
+          <Text as="p" size="sm" color="muted">
+            Esta caja aún no ha participado en ningún movimiento.
+          </Text>
+        ) : (
+          <Table
+            columns={[
+              { key: "numero", header: "Movimiento", code: true, render: (r: any) => r.numero },
+              { key: "tipo", header: "Tipo", render: (r: any) => r.tipo },
+              {
+                key: "fecha",
+                header: "Fecha",
+                render: (r: any) => r.fecha_movimiento.slice(0, 10),
+              },
+              { key: "rol", header: "Rol", render: (r: any) => r.rol },
+              { key: "cantidad", header: "Cantidad", num: true, render: (r: any) => r.cantidad },
+            ]}
+            rows={filas}
+            rowKey={(r: any) => r.movimiento_id + r.rol}
+          />
+        )}
+      </Card.Body>
+    </Card>
+  );
 }
 
 function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadId: string }) {

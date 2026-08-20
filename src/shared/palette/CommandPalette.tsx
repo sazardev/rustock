@@ -1,3 +1,4 @@
+// oxlint-disable eslint/max-statements
 /**
  * Command palette global de Rustock (DESIGN §6.10, §8.2): búsqueda en todo —
  * páginas, acciones, ayuda/glosario y datos de negocio en vivo.

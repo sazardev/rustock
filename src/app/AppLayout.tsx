@@ -70,7 +70,9 @@ function PaletteTrigger() {
     >
       <Icon name="buscar" size={16} className="palette-trigger__icono" aria-hidden="true" />
       <span className="palette-trigger__texto">Buscar en todo Rustock</span>
-      <Kbd className="palette-trigger__kbd">Ctrl K</Kbd>
+      <Kbd className="palette-trigger__kbd" aria-hidden="true">
+        Ctrl K
+      </Kbd>
     </button>
   );
 }
@@ -183,7 +185,7 @@ export function AppLayout() {
             search={<PaletteTrigger />}
             alerts={<AlertsIndicator count={alertasAbiertas?.length ?? 0} href={PATH.alertas} />}
             user={
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>
                 <TopbarUser
                   name={usuario.nombre_completo}
                   role={rolCodigo ? (ROL_LABEL[rolCodigo] ?? rolCodigo) : undefined}

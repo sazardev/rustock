@@ -1,3 +1,4 @@
+// oxlint-disable eslint/max-lines
 /**
  * Contenido de la sección Ayuda de Rustock.
  *

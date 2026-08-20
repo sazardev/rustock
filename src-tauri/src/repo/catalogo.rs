@@ -366,10 +366,11 @@ pub fn crear_pasillo(conn: &Connection, nuevo: &NuevoPasillo) -> AppResult<Pasil
     if existe > 0 {
         return Err(AppError::CodigoDuplicado(codigo));
     }
+    let almacen_id = almacen_de_zona(conn, &nuevo.zona_id)?;
     conn.execute(
-        "INSERT INTO pasillos (id, codigo, nombre, zona_id, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, 1, ?5, ?6, ?7, ?7)",
-        rusqlite::params![id, codigo, nuevo.nombre, nuevo.zona_id, ts, ts, nuevo.created_by],
+        "INSERT INTO pasillos (id, codigo, nombre, zona_id, almacen_id, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, ?8, ?8)",
+        rusqlite::params![id, codigo, nuevo.nombre, nuevo.zona_id, almacen_id, ts, ts, nuevo.created_by],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
@@ -528,11 +529,12 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
     if existe > 0 {
         return Err(AppError::CodigoDuplicado(codigo));
     }
+    let almacen_id = almacen_de_zona(conn, &nuevo.zona_id)?;
     conn.execute(
-        "INSERT INTO racks (id, codigo, nombre, tipo, zona_id, pasillo_id, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8, ?9, ?9)",
+        "INSERT INTO racks (id, codigo, nombre, tipo, zona_id, pasillo_id, almacen_id, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8, ?9, ?10, ?10)",
         rusqlite::params![
-            id, codigo, nuevo.nombre, nuevo.tipo, nuevo.zona_id, nuevo.pasillo_id, ts, ts,
+            id, codigo, nuevo.nombre, nuevo.tipo, nuevo.zona_id, nuevo.pasillo_id, almacen_id, ts, ts,
             nuevo.created_by
         ],
     )?;
@@ -682,11 +684,12 @@ pub fn crear_seccion(conn: &Connection, nuevo: &NuevaSeccion) -> AppResult<Secci
     if existe > 0 {
         return Err(AppError::CodigoDuplicado(codigo));
     }
+    let almacen_id = almacen_de_rack(conn, &nuevo.rack_id)?;
     conn.execute(
-        "INSERT INTO secciones (id, codigo, nombre, nivel, rack_id, descripcion, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8, ?9, ?9)",
+        "INSERT INTO secciones (id, codigo, nombre, nivel, rack_id, almacen_id, descripcion, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8, ?9, ?10, ?10)",
         rusqlite::params![
-            id, codigo, nuevo.nombre, nuevo.nivel, nuevo.rack_id, nuevo.descripcion, ts, ts, nuevo.created_by
+            id, codigo, nuevo.nombre, nuevo.nivel, nuevo.rack_id, almacen_id, nuevo.descripcion, ts, ts, nuevo.created_by
         ],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
@@ -828,10 +831,10 @@ pub fn crear_ubicacion(conn: &Connection, nuevo: &NuevaUbicacion) -> AppResult<U
         return Err(AppError::CodigoDuplicado(codigo));
     }
     conn.execute(
-        "INSERT INTO ubicaciones (id, codigo, nombre, seccion_id, rack_id, zona_id, tipo, capacidad_maxima, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, ?10, ?11, ?11)",
+        "INSERT INTO ubicaciones (id, codigo, nombre, seccion_id, rack_id, zona_id, almacen_id, tipo, capacidad_maxima, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11, ?12, ?12)",
         rusqlite::params![
-            id, codigo, nuevo.nombre, nuevo.seccion_id, nuevo.rack_id, nuevo.zona_id, tipo,
+            id, codigo, nuevo.nombre, nuevo.seccion_id, nuevo.rack_id, nuevo.zona_id, almacen_id, tipo,
             nuevo.capacidad_maxima, ts, ts, nuevo.created_by
         ],
     )?;
@@ -1020,19 +1023,20 @@ pub fn crear_caja(conn: &Connection, nuevo: &NuevaCaja) -> AppResult<Caja> {
     let id = Uuid::new_v4().to_string();
     let codigo = crate::domain::normalizar_codigo(&nuevo.codigo);
     let ts = ahora();
+    let almacen_id = resolver_almacen_id_de_ubicacion(conn, &nuevo.ubicacion_id)?;
     let existe: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM cajas WHERE ubicacion_id = ?1 AND codigo = ?2",
-        rusqlite::params![nuevo.ubicacion_id, codigo],
+        "SELECT COUNT(*) FROM cajas WHERE almacen_id = ?1 AND codigo = ?2 AND activo = 1",
+        rusqlite::params![almacen_id, codigo],
         |r| r.get(0),
     )?;
     if existe > 0 {
         return Err(AppError::CodigoDuplicado(codigo));
     }
     conn.execute(
-        "INSERT INTO cajas (id, codigo, nombre, ubicacion_id, producto_id, lote_id, etiqueta, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8, ?9, ?10, ?10)",
+        "INSERT INTO cajas (id, codigo, nombre, ubicacion_id, almacen_id, producto_id, lote_id, etiqueta, activo, created_at, updated_at, created_by, updated_by)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, ?10, ?11, ?11)",
         rusqlite::params![
-            id, codigo, nuevo.nombre, nuevo.ubicacion_id, nuevo.producto_id, nuevo.lote_id, nuevo.etiqueta, ts, ts, nuevo.created_by
+            id, codigo, nuevo.nombre, nuevo.ubicacion_id, almacen_id, nuevo.producto_id, nuevo.lote_id, nuevo.etiqueta, ts, ts, nuevo.created_by
         ],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
@@ -1745,6 +1749,53 @@ pub fn editar_producto(
             "controla_lote (controla_vencimiento lo implica)".into(),
         ));
     }
+    // SPEC §3.7: si se cambia controla_lote de false→true y ya existen movimientos
+    // sin lote para este producto, se crean huérfanos (saldos fragmentados).
+    // Si se cambia de true→false y hay movimientos con lote, se pierde trazabilidad.
+    // Exigir que no haya movimientos previos si cambia el flag.
+    if controla_lote != actual.controla_lote {
+        let mov_con_sin_lote: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM movimiento_lineas WHERE producto_id = ?1 AND lote_id IS NULL",
+            [id],
+            |r| r.get(0),
+        )?;
+        let mov_con_lote: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM movimiento_lineas WHERE producto_id = ?1 AND lote_id IS NOT NULL",
+            [id],
+            |r| r.get(0),
+        )?;
+        if controla_lote && mov_con_sin_lote > 0 {
+            return Err(AppError::CampoInvalido(
+                "no se puede activar controla_lote: ya existen movimientos sin lote para este producto. Regulariza el historial o crea un producto nuevo".into(),
+            ));
+        }
+        if !controla_lote && mov_con_lote > 0 {
+            return Err(AppError::CampoInvalido(
+                "no se puede desactivar controla_lote: ya existen movimientos con lote para este producto".into(),
+            ));
+        }
+        // También validar saldos materializados: si hay saldo sin lote y activamos lote, fragmentación.
+        let saldo_sin_lote: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(cantidad),0) FROM saldos WHERE producto_id=?1 AND lote_key=''",
+            [id],
+            |r| r.get(0),
+        )?;
+        let saldo_con_lote: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(cantidad),0) FROM saldos WHERE producto_id=?1 AND lote_key!=''",
+            [id],
+            |r| r.get(0),
+        )?;
+        if controla_lote && saldo_sin_lote > 0 {
+            return Err(AppError::CampoInvalido(
+                "no se puede activar controla_lote: hay stock sin lote (regulariza antes)".into(),
+            ));
+        }
+        if !controla_lote && saldo_con_lote > 0 {
+            return Err(AppError::CampoInvalido(
+                "no se puede desactivar controla_lote: hay stock con lote".into(),
+            ));
+        }
+    }
     let ts = ahora();
     conn.execute(
         "UPDATE productos SET nombre = ?2, descripcion = ?3, categoria_id = ?4, uom_venta_id = ?5,
@@ -1913,6 +1964,15 @@ pub fn crear_lote(conn: &Connection, nuevo: &NuevoLote) -> AppResult<Lote> {
     if producto.controla_vencimiento && nuevo.fecha_vencimiento.is_none() {
         return Err(AppError::CampoRequerido("fecha_vencimiento".into()));
     }
+    // Normalizar fechas a YYYY-MM-DD (primeros 10 chars) para comparación lexicográfica §8.6.
+    let fecha_fabricacion = nuevo
+        .fecha_fabricacion
+        .as_deref()
+        .map(|s| s[..10.min(s.len())].to_string());
+    let fecha_vencimiento = nuevo
+        .fecha_vencimiento
+        .as_deref()
+        .map(|s| s[..10.min(s.len())].to_string());
     let id = Uuid::new_v4().to_string();
     let ts = ahora();
     let numero = nuevo.numero.trim();
@@ -1920,7 +1980,7 @@ pub fn crear_lote(conn: &Connection, nuevo: &NuevoLote) -> AppResult<Lote> {
         "INSERT INTO lotes (id, numero, producto_id, fecha_fabricacion, fecha_vencimiento, origen, notas, created_at, updated_at, created_by, updated_by)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
         rusqlite::params![
-            id, numero, nuevo.producto_id, nuevo.fecha_fabricacion, nuevo.fecha_vencimiento,
+            id, numero, nuevo.producto_id, fecha_fabricacion, fecha_vencimiento,
             nuevo.origen, nuevo.notas, ts, ts, nuevo.created_by
         ],
     )
@@ -1976,17 +2036,19 @@ pub fn editar_lote(
         obtener_lote(conn, id)?.ok_or_else(|| AppError::NoEncontrado("lote", id.to_string()))?;
     let producto = obtener_producto(conn, &actual.producto_id)?
         .ok_or_else(|| AppError::NoEncontrado("producto", actual.producto_id.clone()))?;
-    let fecha_fabricacion = cambios
+    let mut fecha_fabricacion = cambios
         .fecha_fabricacion
         .clone()
         .or(actual.fecha_fabricacion);
-    let fecha_vencimiento = cambios
+    let mut fecha_vencimiento = cambios
         .fecha_vencimiento
         .clone()
         .or(actual.fecha_vencimiento);
     if producto.controla_vencimiento && fecha_vencimiento.is_none() {
         return Err(AppError::CampoRequerido("fecha_vencimiento".into()));
     }
+    fecha_fabricacion = fecha_fabricacion.map(|s| s[..10.min(s.len())].to_string());
+    fecha_vencimiento = fecha_vencimiento.map(|s| s[..10.min(s.len())].to_string());
     let origen = cambios.origen.clone().or(actual.origen);
     let notas = cambios.notas.clone().or(actual.notas);
     let ts = ahora();

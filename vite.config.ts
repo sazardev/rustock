@@ -45,7 +45,7 @@ export default defineConfig(async () => ({
     sourcemap: false,
     minify: "esbuild",
     reportCompressedSize: true,
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {

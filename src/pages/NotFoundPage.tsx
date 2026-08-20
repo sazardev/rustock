@@ -11,11 +11,9 @@ export function NotFoundPage() {
             title="Página no encontrada"
             description="La página que busca no existe o fue movida."
             action={
-              <>
-                <ButtonLink variant="primary" href={PATH.dashboard}>
-                  Ir al dashboard
-                </ButtonLink>
-              </>
+              <ButtonLink variant="primary" href={PATH.dashboard}>
+                Ir al dashboard
+              </ButtonLink>
             }
           />
         </Card.Body>

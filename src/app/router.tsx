@@ -87,6 +87,10 @@ const SesionInventarioCerrarPage = lazyPage(
   () => import("../pages/SesionInventarioCerrarPage"),
   "SesionInventarioCerrarPage",
 );
+const SesionInventarioEliminarPage = lazyPage(
+  () => import("../pages/SesionInventarioEliminarPage"),
+  "SesionInventarioEliminarPage",
+);
 const AlertasPage = lazyPage(() => import("../pages/AlertasPage"), "AlertasPage");
 const ReportesPage = lazyPage(() => import("../pages/ReportesPage"), "ReportesPage");
 const ReporteStockPage = lazyPage(() => import("../pages/ReporteStockPage"), "ReporteStockPage");
@@ -192,6 +196,7 @@ export const router = createBrowserRouter([
           { path: "inventario/:id", element: <SesionInventarioDetallePage /> },
           { path: "inventario/:id/conteos", element: <SesionInventarioConteosPage /> },
           { path: "inventario/:id/cerrar", element: <SesionInventarioCerrarPage /> },
+          { path: "inventario/:id/eliminar", element: <SesionInventarioEliminarPage /> },
           { path: "alertas", element: <AlertasPage /> },
           { path: "reportes", element: <ReportesPage /> },
           { path: "reportes/stock", element: <ReporteStockPage /> },
