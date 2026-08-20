@@ -22,6 +22,92 @@ pub const PAGE_SIZE_MAX: i64 = 200;
 /// Tope de seguridad para `page_size: -1` o `export: true` (SPEC §15.2, §15.8).
 pub const EXPORT_MAX: i64 = 5000;
 
+fn deserialize_fields<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct FieldsVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for FieldsVisitor {
+        type Value = Option<Vec<String>>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("una lista de campos o string CSV")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(FieldsInnerVisitor).map(Some)
+        }
+    }
+
+    struct FieldsInnerVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for FieldsInnerVisitor {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string CSV o array de strings")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect())
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v.split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect())
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut out = Vec::new();
+            while let Some(val) = seq.next_element::<String>()? {
+                // Cada elemento del array puede ser a su vez CSV (por si el
+                // frontend serializa ["a,b"] en vez de ["a","b"]).
+                for part in val.split(',') {
+                    let p = part.trim().to_string();
+                    if !p.is_empty() {
+                        out.push(p);
+                    }
+                }
+            }
+            Ok(out)
+        }
+    }
+
+    deserializer.deserialize_option(FieldsVisitor)
+}
+
 /// Parámetros de consulta universal recibidos por IPC (SPEC §15.9). Un único
 /// struct nombrado: Tauri IPC pasa argumentos con nombre, no un query string.
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -38,6 +124,7 @@ pub struct ListParams {
     /// `"AND"` (defecto) o `"OR"` entre los filtros de `filters`.
     pub filter_logic: Option<String>,
     /// Proyección de campos (SPEC §15.6). Si se omite, se devuelven todos.
+    #[serde(default, deserialize_with = "deserialize_fields")]
     pub fields: Option<Vec<String>>,
     /// Campo de agrupación (SPEC §15.7). Si está presente, la respuesta es de grupos.
     pub group_by: Option<String>,

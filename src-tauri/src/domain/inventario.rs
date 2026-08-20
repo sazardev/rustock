@@ -56,6 +56,10 @@ pub struct Conteo {
     pub nota: Option<String>,
 }
 
+fn default_conteo_numero() -> i64 {
+    1
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct NuevoConteo {
     pub sesion_id: String,
@@ -64,6 +68,7 @@ pub struct NuevoConteo {
     #[serde(default)]
     pub lote_id: Option<String>,
     pub cantidad_contada: i64,
+    #[serde(default = "default_conteo_numero")]
     pub conteo_numero: i64,
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]

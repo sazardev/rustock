@@ -365,12 +365,19 @@ fn generar_ajuste_diferencia(
     let id = Uuid::new_v4().to_string();
     let ts = ahora();
     let anio = &ts[..4];
-    let count: i64 = tx.query_row(
-        "SELECT COUNT(*) FROM movimientos WHERE numero LIKE ?1",
-        [format!("MOV-{anio}-%")],
+    // Usar la misma tabla de correlativos que `crear_movimiento` para no
+    // desincronizar el contador (bug reviewer B1: COUNT desfasaba el valor).
+    let clave = format!("MOV-{anio}");
+    tx.execute(
+        "INSERT OR IGNORE INTO correlativos (clave, valor) VALUES (?1, 0)",
+        [&clave],
+    )?;
+    let valor: i64 = tx.query_row(
+        "UPDATE correlativos SET valor = valor + 1 WHERE clave = ?1 RETURNING valor",
+        [&clave],
         |r| r.get(0),
     )?;
-    let numero = format!("MOV-{anio}-{:06}", count + 1);
+    let numero = format!("MOV-{anio}-{:06}", valor);
 
     let (tipo, sub, origen, destino) = if d.diferencia > 0 {
         (

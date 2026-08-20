@@ -258,9 +258,39 @@ pub fn crear_movimiento(conn: &Connection, nuevo: &NuevoMovimiento) -> AppResult
 /// solo hecho atómico (SPEC §9.3) — si la segunda falla, la primera se
 /// revierte y no queda ningún movimiento huérfano. Valida las reglas de
 /// creación (permiso `movimiento:crear`, líneas) para ambos callers.
+fn validar_proveedor_activo(tx: &Connection, id: &str) -> AppResult<()> {
+    let activo: i64 = tx
+        .query_row("SELECT activo FROM proveedores WHERE id = ?1", [id], |r| {
+            r.get(0)
+        })
+        .map_err(|_| AppError::NoEncontrado("proveedor", id.to_string()))?;
+    if activo == 0 {
+        return Err(AppError::EntidadInactiva("proveedor"));
+    }
+    Ok(())
+}
+
+fn validar_cliente_activo(tx: &Connection, id: &str) -> AppResult<()> {
+    let activo: i64 = tx
+        .query_row("SELECT activo FROM clientes WHERE id = ?1", [id], |r| {
+            r.get(0)
+        })
+        .map_err(|_| AppError::NoEncontrado("cliente", id.to_string()))?;
+    if activo == 0 {
+        return Err(AppError::EntidadInactiva("cliente"));
+    }
+    Ok(())
+}
+
 fn insertar_movimiento(tx: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Movimiento> {
     nuevo.validar()?;
     puede(tx, Some(&nuevo.created_by), "movimiento", "crear")?;
+    if let Some(pid) = &nuevo.proveedor_id {
+        validar_proveedor_activo(tx, pid)?;
+    }
+    if let Some(cid) = &nuevo.cliente_id {
+        validar_cliente_activo(tx, cid)?;
+    }
     let tipo = nuevo.tipo()?.as_str();
     let sub_tipo = nuevo.sub_tipo()?.as_str();
     let id = Uuid::new_v4().to_string();
@@ -532,6 +562,20 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
     }
     let tipo_mov = tipo.as_str();
     let sub = sub_tipo.as_str();
+
+    // Validar proveedor/cliente activos también en aprobar (por si se
+    // desactivó entre crear y aprobar).
+    let (proveedor_id, cliente_id): (Option<String>, Option<String>) = tx.query_row(
+        "SELECT proveedor_id, cliente_id FROM movimientos WHERE id = ?1",
+        [id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    if let Some(pid) = proveedor_id {
+        validar_proveedor_activo(&tx, &pid)?;
+    }
+    if let Some(cid) = cliente_id {
+        validar_cliente_activo(&tx, &cid)?;
+    }
 
     // Cargar líneas.
     let mut stmt = tx.prepare(
