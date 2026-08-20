@@ -1,0 +1,5 @@
+Contact: mailto:security@rustock.app
+Expires: 2027-08-20T00:00:00.000Z
+Acknowledgments: https://rustock.app/humans.txt
+Preferred-Languages: es, en
+Canonical: https://rustock.app/.well-known/security.txt

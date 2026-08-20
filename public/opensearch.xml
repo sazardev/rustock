@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Rustock</ShortName>
+  <Description>Busca en Rustock: productos, ubicaciones, movimientos y ayuda.</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image height="16" width="16" type="image/png">https://rustock.app/rustock-16.png</Image>
+  <Image height="32" width="32" type="image/png">https://rustock.app/rustock-32.png</Image>
+  <Url type="text/html" template="https://rustock.app/productos?q={searchTerms}" />
+  <Url type="application/opensearchdescription+xml" rel="self" template="https://rustock.app/opensearch.xml" />
+  <Language>es-MX</Language>
+  <OutputEncoding>UTF-8</OutputEncoding>
+  <AdultContent>false</AdultContent>
+</OpenSearchDescription>

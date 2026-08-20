@@ -61,7 +61,8 @@
   --color-danger-text: #9f1239;
   --color-info-text: #7c2c0a;
 
-  --font-sans: "Geist Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-sans:
+    "Geist Sans", "Geist Fallback", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 
   --text-xs: 0.75rem;

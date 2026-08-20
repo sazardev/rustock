@@ -6,7 +6,27 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "rustock-font-preload",
+      transformIndexHtml(html, ctx) {
+        const bundle = ctx?.bundle as Record<string, unknown> | undefined;
+        if (!bundle) return html;
+        const critical = Object.keys(bundle).filter(
+          (n) =>
+            n.endsWith(".woff2") &&
+            (n.includes("geist-sans-latin-600") || n.includes("geist-sans-latin-700")),
+        );
+        if (critical.length === 0) return html;
+        const links = critical
+          .slice(0, 2)
+          .map((f) => `<link rel="preload" href="/${f}" as="font" type="font/woff2" crossorigin>`)
+          .join("\n    ");
+        return html.replace("</head>", `    ${links}\n  </head>`);
+      },
+    },
+  ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

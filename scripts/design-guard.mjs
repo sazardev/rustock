@@ -61,6 +61,7 @@ const ALLOWED_SHADOWS = [
 const ALLOWED_FONTS = [
   "Geist Sans",
   "Geist Mono",
+  "Geist Fallback",
   "Inter",
   "JetBrains Mono",
   "system-ui",

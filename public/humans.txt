@@ -1,0 +1,17 @@
+/* TEAM */
+  Rustock — equipo detrás del WMS self-hosted más sólido.
+  Sitio: https://rustock.app
+  Contacto: hola@rustock.app
+  Ubicación: 自-hosted, en tu infraestructura
+
+/* THANKS */
+  A quienes mantienen Rust, Tauri, React, Vite y SQLite.
+  A cada bodega que deja Excel para controlar su stock de verdad.
+
+/* SITE */
+  Última actualización: 2026-08-20
+  Estándares: HTML5, CSS puro, Rust, TypeScript 7
+  Componentes: src/shared/ui — sistema de diseño "Rust & Iron"
+  Tipografía: Geist Sans + Geist Mono
+  Paleta: Óxido #B7410E sobre hierro oscuro #1F1813
+  Idioma: es-MX

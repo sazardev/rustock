@@ -137,6 +137,9 @@
   letter-spacing: -0.03em;
   font-weight: var(--fw-bold);
   color: var(--color-gray-900);
+  text-wrap: balance;
+  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "ss01" 1;
 }
 
 .landing__hero-accent {
@@ -368,11 +371,14 @@
   color: var(--color-blue-500);
 }
 
-/* Secciones */
+/* Secciones — content-visibility para pintar solo lo visible (perf) */
 .landing__section {
   padding-top: var(--space-16);
   padding-bottom: var(--space-16);
   scroll-margin-top: calc(var(--topbar-height) + var(--space-4));
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+  contain: layout paint style;
 }
 
 .landing__section--tinted {
@@ -413,6 +419,7 @@
   font-weight: var(--fw-bold);
   color: var(--color-gray-800);
   text-align: center;
+  text-wrap: balance;
 }
 
 .landing__section-desc {
@@ -448,12 +455,18 @@
 
 .landing__feature {
   transition: var(--transition-elevate);
+  will-change: transform, box-shadow;
 }
 
 .landing__feature:hover {
   border-color: var(--color-gray-300);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+}
+
+.landing__feature:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
 }
 
 .landing__feature-icon {

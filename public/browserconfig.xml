@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+  <msapplication>
+    <tile>
+      <square150x150logo src="/rustock-192.png" />
+      <square310x310logo src="/rustock-512.png" />
+      <TileColor>#B7410E</TileColor>
+    </tile>
+  </msapplication>
+</browserconfig>

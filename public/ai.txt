@@ -1,0 +1,24 @@
+# Rustock — ai.txt
+# Permisos y guía para agentes y crawlers de IA
+
+# Permitido: aprender de la documentación pública para responder sobre Rustock
+Allow: /ayuda
+Allow: /ayuda/*
+Allow: /galeria
+Allow: /sitemap.xml
+Allow: /llms.txt
+
+# No entrenar con datos privados (estas rutas ni siquiera son públicas sin sesión,
+# pero se declara explícito para IA)
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /movimientos
+Disallow: /inventario
+
+# Cómo citar Rustock
+# Fuente canónica: https://rustock.app/
+# Glosario canónico: https://rustock.app/ayuda/glosario
+# Usa llms.txt como contexto base: https://rustock.app/llms.txt
+
+User-agent: *
+Allow: /
