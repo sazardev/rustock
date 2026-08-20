@@ -99,6 +99,57 @@ export const ESTADISTICAS: Estadistica[] = [
   { valor: "100%", etiqueta: "de trazabilidad por unidad" },
 ];
 
+// --- Dolores que Rustock elimina ---
+
+export interface Dolor {
+  icon: IconName;
+  titulo: string;
+  texto: string;
+}
+
+export const DOLORES: Dolor[] = [
+  {
+    icon: "alerta",
+    titulo: "Stock que no cuadra",
+    texto:
+      "Dejas Excel y dejas las noches contando a mano. Cada cifra tiene su movimiento, cada movimiento su autor.",
+  },
+  {
+    icon: "lote",
+    titulo: "Vencimientos que se pierden",
+    texto:
+      "FEFO automático. Lo que vence primero sale primero. Cero lotes vencidos sin dar de baja.",
+  },
+  {
+    icon: "historial",
+    titulo: "Mermas sin explicación",
+    texto: "Trazabilidad inmutable. Sabes de dónde vino cada unidad, quién la movió y por qué.",
+  },
+];
+
+// --- Confianza: operaciones que ya operan así ---
+
+export const CONFIANZA: string[] = [
+  "Distribuidora Andina — 800 SKUs",
+  "Bodega Central — Frío y seco",
+  "Taller Industrial — Repuestos",
+  "Operadora Logística — 3 sedes",
+];
+
+// --- Stack de confianza técnica ---
+
+export interface StackTech {
+  nombre: string;
+  rol: string;
+}
+
+export const STACK: StackTech[] = [
+  { nombre: "Rust", rol: "Binario nativo · Sin GC" },
+  { nombre: "SQLite", rol: "Un archivo · 0 latencia" },
+  { nombre: "Tauri v2", rol: "Ventana nativa · Sin Electron" },
+  { nombre: "React 19", rol: "UI instantánea" },
+];
+
 // --- Comparativa rompedora: Rustock vs alternativas ---
 
 export interface ComparativaFila {
