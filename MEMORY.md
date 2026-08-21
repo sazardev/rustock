@@ -1979,6 +1979,19 @@ duplicados acumulados de la db existente.
   (`npm install-scripts approve <pkg>`).
 - **Config de opencode no se recarga en caliente** — reiniciar opencode tras
   editar `opencode.json` o `.opencode/`.
+- **MCP `chrome-devtools` instalado (agosto 2026)**: opencode carga el MCP
+  oficial de Google (`chrome-devtools-mcp`, vía npx `@latest`) desde el
+  lanzador `~/.local/bin/opencode-chrome-devtools-mcp`, registrado igual en
+  la config del repo y en la global (`~/.config/opencode/opencode.jsonc`).
+  El lanzador resuelve el ejecutable del navegador (`google-chrome-stable`
+  → … → `chromium`; en esta máquina Arch/WSL es `/usr/sbin/chromium`) porque
+  el MCP solo autodetecta Google Chrome estable en `/opt/google/chrome` y sin
+  la ruta explícita falla con "Could not find Google Chrome executable". El
+  navegador abre **con ventana** por WSLg (DISPLAY=:0) usando el perfil
+  persistente `~/.cache/chrome-devtools-mcp/chrome-profile` (los logins
+  sobreviven entre pruebas); para corridas aisladas usar `--isolated`, sin UI
+  `--headless`. Verificado end-to-end: initialize + 29 tools + navigate +
+  evaluate sobre Chromium 150.
 - Los commits deben ser **Conventional Commits** (el hook commit-msg rechaza
   formatos inválidos con el ejemplo correcto).
 - **El puerto de dev de Vite es 6821** (`vite.config.ts` `strictPort` +

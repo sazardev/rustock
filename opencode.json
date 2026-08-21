@@ -3,5 +3,12 @@
   "default_agent": "rustock",
   "small_model": "anthropic/claude-3-5-haiku-20241022",
   "instructions": ["AGENTS.md", "SPEC.md", "DESIGN.md", "STACK.md", "MEMORY.md"],
-  "permission": "allow"
+  "permission": "allow",
+  "mcp": {
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["/home/omar/.local/bin/opencode-chrome-devtools-mcp"],
+      "enabled": true
+    }
+  }
 }
