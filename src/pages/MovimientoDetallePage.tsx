@@ -1,18 +1,8 @@
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import {
-  crearComentario,
-  enviarAAprobacion,
-  listarComentarios,
-  listarLineasMovimiento,
-  obtenerLote,
-  obtenerMovimiento,
-  obtenerProducto,
-  obtenerUbicacion,
-} from "../shared/backend";
+import { enviarAAprobacion, listarLineasMovimiento, obtenerMovimiento } from "../shared/backend";
 import { esPaginado, type LineaMovimiento } from "../shared/types";
-import { MovimientoRef } from "../shared/refs";
+import { LoteRef, MovimientoRef, ProductoRef, UbicacionRef, UsuarioNombre } from "../shared/refs";
 import {
   Badge,
   Button,
@@ -24,50 +14,26 @@ import {
   PageHeader,
   Table,
   Text,
-  Textarea,
   useToast,
   type TableColumn,
 } from "../shared/ui";
-import {
-  catalogoDetalle,
-  movimientoAnular,
-  movimientoAprobar,
-  movimientoEditar,
-  PATH,
-} from "../app/route-paths";
+import { MovimientoComentarios } from "./MovimientoComentarios";
+import { movimientoAnular, movimientoAprobar, movimientoEditar, PATH } from "../app/route-paths";
 import {
   ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
+  SUB_TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
   mensajeError,
 } from "../shared/format";
 
-function ProductoRef({ id }: { id: string }) {
-  const query = useQuery({ queryKey: ["producto", id], queryFn: () => obtenerProducto(id) });
-  if (!query.data) return <span>{query.isLoading ? "…" : id}</span>;
-  return <Link href={catalogoDetalle("productos", id)}>{query.data.sku}</Link>;
-}
-
-function UbicacionRef({ id }: { id: string }) {
-  const query = useQuery({ queryKey: ["ubicacion", id], queryFn: () => obtenerUbicacion(id) });
-  if (!query.data) return <span>{query.isLoading ? "…" : id}</span>;
-  return <Link href={catalogoDetalle("ubicaciones", id)}>{query.data.codigo}</Link>;
-}
-
-function LoteRef({ id }: { id: string }) {
-  const query = useQuery({ queryKey: ["lote", id], queryFn: () => obtenerLote(id) });
-  if (!query.data) return <span>{query.isLoading ? "…" : id}</span>;
-  return <Link href={catalogoDetalle("lotes", id)}>{query.data.numero}</Link>;
-}
-
 export function MovimientoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const movimientoId = id as string;
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [textoComentario, setTextoComentario] = useState("");
 
   const movimientoQuery = useQuery({
     queryKey: ["movimiento", movimientoId],
@@ -77,26 +43,12 @@ export function MovimientoDetallePage() {
     queryKey: ["movimiento-lineas", movimientoId],
     queryFn: () => listarLineasMovimiento(movimientoId, { page_size: -1 }),
   });
-  const comentariosQuery = useQuery({
-    queryKey: ["comentarios", "movimiento", movimientoId],
-    queryFn: () => listarComentarios("movimiento", movimientoId),
-  });
 
   const enviarMut = useMutation({
     mutationFn: () => enviarAAprobacion(movimientoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movimiento", movimientoId] });
       toast("Movimiento enviado a aprobación.", "success");
-    },
-    onError: (err) => toast(mensajeError(err), "error"),
-  });
-
-  const comentarMut = useMutation({
-    mutationFn: () =>
-      crearComentario({ entidad: "movimiento", entidad_id: movimientoId, texto: textoComentario }),
-    onSuccess: () => {
-      setTextoComentario("");
-      queryClient.invalidateQueries({ queryKey: ["comentarios", "movimiento", movimientoId] });
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
@@ -139,16 +91,22 @@ export function MovimientoDetallePage() {
 
   const datosGenerales = [
     { label: "Tipo", value: TIPO_MOVIMIENTO_LABEL[movimiento.tipo] },
-    { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
+    { label: "Sub-tipo", value: SUB_TIPO_MOVIMIENTO_LABEL[movimiento.sub_tipo], code: true },
     { label: "Fecha del movimiento", value: formatearFecha(movimiento.fecha_movimiento) },
     { label: "Documento de referencia", value: movimiento.documento_referencia ?? "—", code: true },
     { label: "Motivo", value: movimiento.motivo ?? "—" },
     { label: "Notas", value: movimiento.notas ?? "—" },
-    { label: "Creado por", value: movimiento.created_by, code: true },
+    { label: "Creado por", value: <UsuarioNombre id={movimiento.created_by} /> },
     { label: "Creado", value: formatearFecha(movimiento.created_at) },
-    { label: "Aprobado por", value: movimiento.approved_by ?? "—", code: true },
+    {
+      label: "Aprobado por",
+      value: movimiento.approved_by ? <UsuarioNombre id={movimiento.approved_by} /> : "—",
+    },
     { label: "Aprobado", value: formatearFecha(movimiento.approved_at) },
-    { label: "Anulado por", value: movimiento.anulado_by ?? "—", code: true },
+    {
+      label: "Anulado por",
+      value: movimiento.anulado_by ? <UsuarioNombre id={movimiento.anulado_by} /> : "—",
+    },
     { label: "Anulado", value: formatearFecha(movimiento.anulado_at) },
   ];
 
@@ -204,11 +162,23 @@ export function MovimientoDetallePage() {
         }
       />
 
-      {movimiento.movimiento_inverso_id ? (
+      {movimiento.estado === "ANULADO" && movimiento.movimiento_inverso_id ? (
         <ErrorPanel title="Movimiento anulado">
           Este movimiento fue anulado. Se generó el movimiento inverso{" "}
           <MovimientoRef id={movimiento.movimiento_inverso_id} />.
         </ErrorPanel>
+      ) : null}
+      {movimiento.estado !== "ANULADO" && movimiento.movimiento_inverso_id ? (
+        // Referencia mutua del backend: este movimiento APROBADO ES el inverso del original.
+        <Card muted>
+          <Card.Body>
+            <Text as="p" size="sm">
+              Este movimiento es el <strong>inverso</strong> de{" "}
+              <MovimientoRef id={movimiento.movimiento_inverso_id} />, generado automáticamente al
+              anular el movimiento original. Su efecto sobre el stock revierte la operación anulada.
+            </Text>
+          </Card.Body>
+        </Card>
       ) : null}
 
       <Card title="Datos generales">
@@ -229,68 +199,7 @@ export function MovimientoDetallePage() {
         </Card>
       </div>
 
-      <div className="mt-6">
-        <Card title="Comentarios">
-          <Card.Body>
-            {comentariosQuery.data && comentariosQuery.data.length > 0 ? (
-              <ul className="list-none p-0">
-                {comentariosQuery.data
-                  .filter((c) => !c.oculto)
-                  .map((c) => (
-                    <li key={c.id} className="border-b border-gray-100 py-2">
-                      <div className="flex items-center gap-2">
-                        <Text size="sm" weight="medium">
-                          {c.usuario_id}
-                        </Text>
-                        <Text size="xs" color="muted">
-                          {formatearFecha(c.created_at)}
-                        </Text>
-                        {c.editado ? (
-                          <Badge tone="neutral" className="text-xs">
-                            Editado
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <Text as="p" size="sm">
-                        {c.texto}
-                      </Text>
-                    </li>
-                  ))}
-              </ul>
-            ) : (
-              <Text as="p" size="sm" color="muted">
-                Sin comentarios todavía.
-              </Text>
-            )}
-
-            <form
-              className="mt-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (textoComentario.trim()) comentarMut.mutate();
-              }}
-            >
-              <Textarea
-                aria-label="Nuevo comentario"
-                placeholder="Agregar un comentario…"
-                value={textoComentario}
-                onChange={(e) => setTextoComentario(e.target.value)}
-                rows={3}
-              />
-              <div className="mt-2">
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  size="sm"
-                  disabled={comentarMut.isPending || !textoComentario.trim()}
-                >
-                  Comentar
-                </Button>
-              </div>
-            </form>
-          </Card.Body>
-        </Card>
-      </div>
+      <MovimientoComentarios movimientoId={movimientoId} />
     </>
   );
 }

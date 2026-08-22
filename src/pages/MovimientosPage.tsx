@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { listarMovimientos, obtenerMovimiento } from "../shared/backend";
 import {
   esPaginado,
@@ -27,6 +26,7 @@ import { FavoritosFiltros } from "../shared/favoritos";
 import {
   ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
+  SUB_TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_ICON,
   TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_TONE,
@@ -41,9 +41,25 @@ const PAGE_SIZE = 20;
 export function MovimientosPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [tipo, setTipo] = useState<TipoMovimiento | "">("");
-  const [estado, setEstado] = useState<EstadoMovimiento | "">("");
+
+  // Los filtros viven en la URL (DESIGN §6.10): Deep-link, recarga segura y
+  // Compartible. `tipo`/`estado`/`page` son la única fuente de verdad.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get("page")) || 1;
+  const tipo = (searchParams.get("tipo") as TipoMovimiento | null) ?? "";
+  const estado = (searchParams.get("estado") as EstadoMovimiento | null) ?? "";
+
+  function actualizarFiltros(cambios: { tipo?: string; estado?: string; page?: number }) {
+    const next = new URLSearchParams(searchParams);
+    const setear = (clave: string, valor: string | number | undefined) => {
+      if (valor === undefined || valor === "" || valor === 1) next.delete(clave);
+      else next.set(clave, String(valor));
+    };
+    if (cambios.tipo !== undefined) setear("tipo", cambios.tipo);
+    if (cambios.estado !== undefined) setear("estado", cambios.estado);
+    if (cambios.page !== undefined) setear("page", cambios.page);
+    setSearchParams(next);
+  }
 
   const filters: string[] = [];
   if (tipo) filters.push(`tipo:eq:${tipo}`);
@@ -83,7 +99,12 @@ export function MovimientosPage() {
         </Badge>
       ),
     },
-    { key: "sub_tipo", header: "Sub-tipo", code: true, render: (m) => m.sub_tipo },
+    {
+      key: "sub_tipo",
+      header: "Sub-tipo",
+      code: true,
+      render: (m) => SUB_TIPO_MOVIMIENTO_LABEL[m.sub_tipo],
+    },
     {
       key: "estado",
       header: "Estado",
@@ -127,10 +148,7 @@ export function MovimientosPage() {
           <Select
             aria-label="Filtrar por tipo"
             value={tipo}
-            onChange={(e) => {
-              setTipo(e.target.value as TipoMovimiento | "");
-              setPage(1);
-            }}
+            onChange={(e) => actualizarFiltros({ tipo: e.target.value, page: 1 })}
           >
             <option value="">Todos los tipos</option>
             {TIPOS.map((t) => (
@@ -144,10 +162,7 @@ export function MovimientosPage() {
           <Select
             aria-label="Filtrar por estado"
             value={estado}
-            onChange={(e) => {
-              setEstado(e.target.value as EstadoMovimiento | "");
-              setPage(1);
-            }}
+            onChange={(e) => actualizarFiltros({ estado: e.target.value, page: 1 })}
           >
             <option value="">Todos los estados</option>
             {ESTADOS.map((e) => (
@@ -163,9 +178,11 @@ export function MovimientosPage() {
         clave="movimientos"
         estadoActual={() => ({ tipo, estado })}
         onAplicar={(estadoGuardado) => {
-          setTipo((estadoGuardado.tipo as TipoMovimiento) || "");
-          setEstado((estadoGuardado.estado as EstadoMovimiento) || "");
-          setPage(1);
+          actualizarFiltros({
+            tipo: (estadoGuardado.tipo as string) || "",
+            estado: (estadoGuardado.estado as string) || "",
+            page: 1,
+          });
         }}
       />
 
@@ -192,7 +209,7 @@ export function MovimientosPage() {
             total={listado.meta.total}
             from={(listado.meta.page - 1) * listado.meta.page_size + 1}
             to={Math.min(listado.meta.page * listado.meta.page_size, listado.meta.total)}
-            onPageChange={setPage}
+            onPageChange={(p) => actualizarFiltros({ page: p })}
           />
         ) : null}
       </Card>

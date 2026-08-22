@@ -906,8 +906,11 @@ fn despachar(
         }),
         "obtener_tema" => con_auditoria!(db, sesion, "obtener_tema", {
             sesion.usuario_id()?;
-            let tema_id = str_req(args, "tema_id")?;
-            let modo_oscuro = bool_opt(args, "modo_oscuro").unwrap_or(false);
+            // Convención del dispatcher HTTP: claves camelCase tal como las
+            // envía `invoke` (backend.ts). En modo Tauri el puente IPC traduce
+            // `temaId` → `tema_id`; aquí la clave viaja literal.
+            let tema_id = str_req(args, "temaId")?;
+            let modo_oscuro = bool_opt(args, "modoOscuro").unwrap_or(false);
             let modo = if modo_oscuro {
                 crate::domain::tema::ModoColor::Oscuro
             } else {
@@ -1481,12 +1484,13 @@ mod tests {
         let temas = r.as_array().expect("array de temas");
         assert_eq!(temas.len(), 6);
 
-        // obtener_tema: variables del modo pedido.
+        // obtener_tema: variables del modo pedido (claves camelCase, tal como
+        // las envía `invoke` desde el navegador).
         let r = despachar(
             &db,
             &sesion,
             "obtener_tema",
-            &json!({ "tema_id": "bosque", "modo_oscuro": true }),
+            &json!({ "temaId": "bosque", "modoOscuro": true }),
         )
         .expect("obtener_tema");
         assert_eq!(r["id"], "bosque");
@@ -1508,7 +1512,7 @@ mod tests {
             &db,
             &sesion,
             "obtener_tema",
-            &json!({ "tema_id": "neon", "modo_oscuro": false }),
+            &json!({ "temaId": "neon", "modoOscuro": false }),
         );
         assert!(r.is_err(), "tema inexistente debe fallar");
     }

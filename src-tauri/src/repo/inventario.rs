@@ -192,17 +192,54 @@ fn map_conteo(r: &rusqlite::Row<'_>) -> rusqlite::Result<Conteo> {
     })
 }
 
-/// Diferencias entre lo contado y el saldo en sistema (SPEC §11.5).
+/// Fila de conteo con su saldo de referencia:
+/// `(ubicacion_id, producto_id, lote_id, cantidad_contada, saldo_sistema)`.
+type FilaConteo = (String, String, Option<String>, i64, i64);
+
+/// Filas de conteo de una sesión con su saldo del sistema de referencia.
 /// Agrupa por (ubicación, producto, lote) tomando solo el último conteo
-/// (`MAX(conteo_numero)`) — así dos conteos para el mismo grupo generan una
-/// sola diferencia, usando el valor más reciente, y se evita duplicar ajustes
-/// al cerrar con `exige_doble_conteo`.
-pub fn diferencias_sesion(
-    conn: &Connection,
-    sesion_id: &str,
-) -> AppResult<Vec<DiferenciaInventario>> {
+/// (`MAX(conteo_numero)`). Fuente del dato:
+/// - Sesión **CERRADA** → la instantánea `sesion_diferencias` persistida al
+///   cerrar. Los ajustes ya alteraron los saldos; recalcular en vivo
+///   borraría el histórico (todo aparecería "conciliado").
+/// - Otro estado (PLANEADA/EN_CURSO/ANULADA) → cálculo en vivo contra los
+///   saldos actuales.
+fn filas_de_conteo(conn: &Connection, sesion_id: &str) -> AppResult<Vec<FilaConteo>> {
+    let estado: String = conn.query_row(
+        "SELECT estado FROM sesiones_inventario WHERE id = ?1",
+        [sesion_id],
+        |r| r.get(0),
+    )?;
+
+    if estado == "CERRADA" {
+        let mut stmt = conn.prepare(
+            "SELECT ubicacion_id, producto_id, lote_id, cantidad_contada, saldo_sistema
+             FROM sesion_diferencias WHERE sesion_id = ?1",
+        )?;
+        let filas = stmt
+            .query_map([sesion_id], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                    r.get::<_, i64>(3)?,
+                    r.get::<_, i64>(4)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        if !filas.is_empty() {
+            return Ok(filas);
+        }
+        // Sesión cerrada con una base anterior a la instantánea: no hay
+        // histórico fiable del saldo al momento del conteo; se calcula en
+        // vivo (mismo comportamiento que antes de la instantánea).
+    }
+
     let mut stmt = conn.prepare(
-        "SELECT c.ubicacion_id, c.producto_id, c.lote_id, c.cantidad_contada
+        "SELECT c.ubicacion_id, c.producto_id, c.lote_id, c.cantidad_contada,
+                COALESCE((SELECT SUM(s.cantidad) FROM saldos s
+                          WHERE s.ubicacion_id = c.ubicacion_id AND s.producto_id = c.producto_id
+                            AND s.lote_key = COALESCE(c.lote_id,'')), 0)
          FROM conteos c
          INNER JOIN (
            SELECT ubicacion_id, producto_id, COALESCE(lote_id,'') AS lote_key2, MAX(conteo_numero) AS max_num
@@ -214,21 +251,30 @@ pub fn diferencias_sesion(
               AND c.conteo_numero = m.max_num
          WHERE c.sesion_id = ?1",
     )?;
-    let filas: Vec<(String, String, Option<String>, i64)> = stmt
+    let filas = stmt
         .query_map([sesion_id], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, Option<String>>(2)?,
+                r.get::<_, i64>(3)?,
+                r.get::<_, i64>(4)?,
+            ))
         })?
-        .collect::<Result<_, _>>()?;
-    drop(stmt);
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(filas)
+}
+
+/// Diferencias entre lo contado y el saldo en sistema (SPEC §11.5).
+/// Para sesiones cerradas devuelve la instantánea persistida al cierre;
+/// para sesiones activas se calcula contra los saldos actuales.
+pub fn diferencias_sesion(
+    conn: &Connection,
+    sesion_id: &str,
+) -> AppResult<Vec<DiferenciaInventario>> {
+    let filas = filas_de_conteo(conn, sesion_id)?;
     let mut result: Vec<DiferenciaInventario> = Vec::new();
-    for (ubicacion_id, producto_id, lote_id, cantidad_contada) in filas {
-        let lote_key = lote_id.clone().unwrap_or_default();
-        let saldo: i64 = conn.query_row(
-            "SELECT COALESCE(SUM(cantidad), 0) FROM saldos
-             WHERE ubicacion_id = ?1 AND producto_id = ?2 AND lote_key = ?3",
-            rusqlite::params![ubicacion_id, producto_id, lote_key],
-            |r| r.get(0),
-        )?;
+    for (ubicacion_id, producto_id, lote_id, cantidad_contada, saldo) in filas {
         let diferencia = cantidad_contada - saldo;
         let tipo = if diferencia == 0 {
             "conciliado".to_string()
@@ -250,29 +296,11 @@ pub fn diferencias_sesion(
     Ok(result)
 }
 
-/// Precisión de una sesión (SPEC §11.6, §16.3): usa el último conteo
-/// (`conteo_numero` más alto) por (ubicación, producto, lote) vía subquery
-/// con ventana, para no depender de la extensión no estándar de SQLite
-/// (`MAX()` + columnas planas arbitrarias).
+/// Precisión de una sesión (SPEC §11.6, §16.3): usa el último conteo por
+/// (ubicación, producto, lote); para sesiones cerradas compara contra la
+/// instantánea del cierre (no contra saldos ya ajustados).
 pub fn precision_sesion(conn: &Connection, sesion_id: &str) -> AppResult<PrecisionSesion> {
-    let mut stmt = conn.prepare(
-        "SELECT c.ubicacion_id, c.producto_id, c.lote_id, c.cantidad_contada
-         FROM conteos c
-         INNER JOIN (
-           SELECT ubicacion_id, producto_id, COALESCE(lote_id,'') AS lote_key2, MAX(conteo_numero) AS max_num
-           FROM conteos WHERE sesion_id = ?1
-           GROUP BY ubicacion_id, producto_id, lote_key2
-         ) m ON m.ubicacion_id = c.ubicacion_id
-              AND m.producto_id = c.producto_id
-              AND COALESCE(c.lote_id,'') = m.lote_key2
-              AND c.conteo_numero = m.max_num
-         WHERE c.sesion_id = ?1",
-    )?;
-    let filas: Vec<(String, String, Option<String>, i64)> = stmt
-        .query_map([sesion_id], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
-        })?
-        .collect::<Result<_, _>>()?;
+    let filas = filas_de_conteo(conn, sesion_id)?;
 
     let mut unidades_contadas = 0i64;
     let mut suma_abs_diferencia = 0i64;
@@ -280,13 +308,7 @@ pub fn precision_sesion(conn: &Connection, sesion_id: &str) -> AppResult<Precisi
     let mut por_ubicacion: std::collections::HashMap<String, bool> =
         std::collections::HashMap::new();
 
-    for (ubicacion_id, producto_id, lote_id, cantidad_contada) in &filas {
-        let lote_key = lote_id.clone().unwrap_or_default();
-        let saldo: i64 = conn.query_row(
-            "SELECT COALESCE(SUM(cantidad), 0) FROM saldos WHERE ubicacion_id = ?1 AND producto_id = ?2 AND lote_key = ?3",
-            rusqlite::params![ubicacion_id, producto_id, lote_key],
-            |r| r.get(0),
-        )?;
+    for (ubicacion_id, producto_id, _lote_id, cantidad_contada, saldo) in &filas {
         let diferencia = cantidad_contada - saldo;
         let exacto = diferencia == 0;
         unidades_contadas += cantidad_contada;
@@ -352,6 +374,32 @@ pub fn cerrar_sesion(conn: &Connection, sesion_id: &str, by: &str) -> AppResult<
     )? != 0;
 
     let difs = diferencias_sesion(&tx, sesion_id)?;
+    // Persistir la instantánea ANTES de generar los ajustes (SPEC §11.5/§11.6):
+    // una vez aplicados, los saldos ya cambiaron y recalcular en vivo
+    // mostraría todo "conciliado" con precisión 100% falsa. Se guardan TODAS
+    // las filas de conteo (también las conciliadas) con su saldo al momento
+    // del cierre.
+    tx.execute(
+        "DELETE FROM sesion_diferencias WHERE sesion_id = ?1",
+        [sesion_id],
+    )?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO sesion_diferencias
+                 (sesion_id, ubicacion_id, producto_id, lote_id, saldo_sistema, cantidad_contada)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        )?;
+        for d in &difs {
+            stmt.execute(rusqlite::params![
+                sesion_id,
+                d.ubicacion_id,
+                d.producto_id,
+                d.lote_id,
+                d.saldo_sistema,
+                d.cantidad_contada
+            ])?;
+        }
+    }
     let mut ajustes = Vec::new();
     for d in difs {
         if d.diferencia == 0 {

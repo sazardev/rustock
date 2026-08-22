@@ -1946,6 +1946,61 @@ duplicados acumulados de la db existente.
 
 ---
 
+### Hito 27 — Auditoría E2E en Chrome + 7 fixes (backend y frontend) (completo, sin commit)
+
+Pedido del usuario: "levanta rustock en modo web con back y frontend y pruébalo
+todo con chrome mcp al máximo de todas las fugas o errores". Se barrió toda la
+app (~35 páginas) con `chrome-devtools` MCP contra backend real (`dev.sh --seed`,
+`:6821`+`:1421`): landing, login, dashboard, 11 catálogos, movimientos
+(crear/aprobar/anular/inverso), inventario (conteo ciego → cierre con ajuste),
+alertas (archivar), 10 reportes+kardex, centro de actividad,
+usuarios/sucursales/config/perfil, temas (6 paletas + oscuro), command palette
+(Ctrl+K) y ayuda/glosario. **Bugs encontrados y corregidos:**
+
+1. **Vista previa de tema rota en modo web** (fallaba en silencio):
+   `server.rs` leía `tema_id`/`modo_oscuro` pero `invoke` envía
+   `temaId`/`modoOscuro` — único outlier camelCase del dispatcher; tests HTTP
+   viejos pasaban porque usaban las claves snake del bug. Fix + test actualizado.
+2. **Captura rápida saltaba el paso Lote** para productos con
+   `controla_lote=true`: stale closure — `avanzarDeProducto()` leía
+   `productoActual` derivado de `linea` antes de que el `setLinea` aterrizara.
+   Fix de raíz: `EscaneoResuelto` ahora lleva `controla_lote` desde Rust
+   (repo/catalogo.rs) y la captura ya no depende del listado del cliente (se
+   eliminó una query de 200 filas que quedó muerta). El botón "Guardar entrada"
+   ahora incluye la línea en curso válida y pluraliza "línea/líneas".
+3. **Precisión de inventario siempre ~100%** (bug serio): `precision_sesion`
+   y `diferencias_sesion` se calculaban en vivo contra saldos POST-ajuste — al
+   cerrar una sesión con diferencias, el histórico mostraba todo "conciliado".
+   Fix: nueva tabla `sesion_diferencias` (snapshot persistido al cerrar, dentro
+   de la misma transacción); sesiones CERRADAS leen la instantánea, activas
+   calculan en vivo, dbs antiguas sin snapshot hacen fallback live. Test nuevo:
+   `cierre_inventario_congela_precision_y_diferencias_historicas`. Verificado en
+   vivo: sesión con conteo 10900 vs saldo 11000 → tras cerrar muestra Faltante
+   -100, precisión SKU 0.0% y por cantidad 99.1% (10800/10900).
+4. **Banner "fue anulado" en el movimiento INVERSO**: el backend deja
+   referencia mutua (`movimiento_inverso_id` en ambos), y la UI mostraba
+   "Movimiento anulado" también en el inverso APROBADO. Ahora distingue por
+   estado ("Este movimiento es el inverso de X...").
+5. **Filtros de movimientos sin deep-link** (DESIGN §6.10): `MovimientosPage`
+   migrada a `useSearchParams` — tipo/estado/página viven en la URL (lectura y
+   escritura); favoritos de filtro pasan por el mismo camino.
+6. **UUIDs crudos como personas** en auditoría visible: nuevo `UsuarioNombre`
+   (refs.tsx) usado en Creado por/Aprobado por/Anulado por del detalle de
+   movimiento y autor de comentarios.
+7. **Ancla del glosario no hacía scroll** (`/ayuda/glosario#termino`): React
+   Router no scrollea hashes en SPA; `useEffect` con `scrollIntoView`.
+
+Además: sub-tipo de movimiento ya usa `SUB_TIPO_MOVIMIENTO_LABEL` (español) en
+listado y detalle; `MovimientoDetallePage` reutiliza los refs compartidos
+(eliminados los locales duplicados) y extrajo `MovimientoComentarios.tsx`
+(max-lines ≤300). **Verificación:** pipeline completo verde (tsc, oxlint sin
+errores nuevos, DesignGuard 151 archivos, RouteGuard 46 rutas, vite build;
+cargo fmt/clippy -D warnings/117 tests). Re-verificado en vivo cada fix en
+Chrome tras reiniciar `dev.sh`. Notas menores observadas sin arreglo (por
+alcance): llamada inicial duplicada de `quien_soy`/preferencias/tema_activo
+(x2/x3/x3 — inofensiva, caché de react-query); warning de meta
+`apple-mobile-web-app-capable` deprecated; preload warning de rustock.svg.
+
 ## 3. Decisiones de diseño del stack (recordatorio)
 
 | Decisión | Por qué (referencia) |

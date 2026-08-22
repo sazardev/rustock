@@ -2906,6 +2906,89 @@ fn reporte_precision_sesion_calcula_metricas() {
     assert_eq!(precision.ubicaciones_exactas, 0);
 }
 
+/// Al cerrar, la precisión y las diferencias quedan congeladas en la
+/// instantánea del cierre (SPEC §11.5/§11.6): los ajustes generados alteran
+/// los saldos, pero el histórico debe seguir mostrando la diferencia real
+/// contra el saldo que había AL MOMENTO DEL CONTEO — no un "conciliado"
+/// falso contra el saldo ya ajustado.
+#[test]
+fn cierre_inventario_congela_precision_y_diferencias_historicas() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    let sesion = repo::inventario::crear_sesion(
+        &conn,
+        &NuevaSesionInventario {
+            tipo: "CICLICO".into(),
+            almacen_id,
+            alcance: None,
+            fecha_inicio: Some(crate::domain::ahora()),
+            fecha_fin: None,
+            responsable_id: Some("admin".into()),
+            conteo_ciego: false,
+            exige_doble_conteo: false,
+            created_by: "admin".into(),
+        },
+    )
+    .expect("sesion");
+    repo::inventario::registrar_conteo(
+        &conn,
+        &NuevoConteo {
+            sesion_id: sesion.id.clone(),
+            ubicacion_id: ubi1.clone(),
+            producto_id: prod.clone(),
+            lote_id: None,
+            cantidad_contada: 7,
+            conteo_numero: 1,
+            usuario_contador_id: "admin".into(),
+            nota: None,
+        },
+    )
+    .expect("conteo");
+
+    // Antes de cerrar: cálculo en vivo contra el saldo actual (10).
+    let pre = repo::inventario::diferencias_sesion(&conn, &sesion.id).expect("difs pre");
+    assert_eq!(pre.len(), 1);
+    assert_eq!(pre[0].saldo_sistema, 10);
+    assert_eq!(pre[0].diferencia, -3);
+    assert_eq!(pre[0].tipo, "faltante");
+
+    // Cerrar: genera el AJUSTE_NEGATIVO de 3 → el saldo pasa a 7.
+    let ajustes = repo::inventario::cerrar_sesion(&conn, &sesion.id, "admin").expect("cerrar");
+    assert_eq!(ajustes.len(), 1);
+
+    let saldo_post: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(cantidad),0) FROM saldos WHERE ubicacion_id=?1 AND producto_id=?2",
+            rusqlite::params![ubi1, prod],
+            |r| r.get(0),
+        )
+        .expect("saldo");
+    assert_eq!(saldo_post, 7, "el ajuste del cierre sí aplicó");
+
+    // Tras cerrar: la diferencia histórica se conserva (contra 10, no contra 7).
+    let post = repo::inventario::diferencias_sesion(&conn, &sesion.id).expect("difs post");
+    assert_eq!(post.len(), 1);
+    assert_eq!(
+        post[0].saldo_sistema, 10,
+        "saldo congelado al momento del conteo"
+    );
+    assert_eq!(post[0].diferencia, -3);
+    assert_eq!(post[0].tipo, "faltante", "no debe aparecer como conciliado");
+
+    let precision = repo::inventario::precision_sesion(&conn, &sesion.id).expect("precision");
+    assert_eq!(precision.unidades_contadas, 7);
+    assert_eq!(
+        precision.unidades_correctas, 4,
+        "precisión histórica, no 7/7"
+    );
+    assert!((precision.precision_cantidad - (4.0 / 7.0 * 100.0)).abs() < 0.001);
+    assert_eq!(precision.skus_exactos, 0);
+}
+
 // ============ Endurecimiento final (SPEC §14.6) ============
 
 #[test]
@@ -5048,12 +5131,17 @@ fn resolver_escaneo_resuelve_producto_ubicacion_y_lote() {
     assert_eq!(r.tipo, "PRODUCTO");
     assert_eq!(r.id, prod);
 
+    // El producto resuelto lleva `controla_lote` (la captura rápida decide el
+    // paso siguiente con este dato, sin depender del listado del cliente).
+    assert!(!r.controla_lote, "producto sin lote: controla_lote falso");
+
     // Código de ubicación → UBICACION.
     let r = repo::catalogo::resolver_escaneo(&conn, "P1")
         .expect("resolver ubicacion")
         .expect("match ubicacion");
     assert_eq!(r.tipo, "UBICACION");
     assert_eq!(r.id, ubi1);
+    assert!(!r.controla_lote, "ubicación no lleva controla_lote");
 
     // Número de lote → LOTE.
     let r = repo::catalogo::resolver_escaneo(&conn, "LOTE-7")
@@ -5061,6 +5149,14 @@ fn resolver_escaneo_resuelve_producto_ubicacion_y_lote() {
         .expect("match lote");
     assert_eq!(r.tipo, "LOTE");
     assert_eq!(r.id, lote.id);
+
+    // Producto que controla lote → controla_lote verdadero.
+    let r = repo::catalogo::resolver_escaneo(&conn, "LOT")
+        .expect("resolver producto con lote")
+        .expect("match producto con lote");
+    assert_eq!(r.tipo, "PRODUCTO");
+    assert_eq!(r.id, prod_lote.id);
+    assert!(r.controla_lote, "producto con controla_lote=true");
 
     // Desconocido → None.
     let r = repo::catalogo::resolver_escaneo(&conn, "NO-EXISTE").expect("resolver desconocido");

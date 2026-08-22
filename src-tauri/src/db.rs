@@ -447,6 +447,22 @@ impl DbState {
             CREATE INDEX IF NOT EXISTS idx_conteos_sesion ON conteos(sesion_id);
             CREATE INDEX IF NOT EXISTS idx_conteos_ubicacion ON conteos(sesion_id, ubicacion_id);
 
+            -- Instantánea de diferencias al CERRAR la sesión (SPEC §11.5/§11.6):
+            -- una vez aplicados los ajustes del cierre, los saldos ya cambiaron;
+            -- sin esta tabla, diferencias_sesion y precision_sesion recalcularían
+            -- contra saldos post-ajuste y el histórico mostraría todo conciliado
+            -- con precisión 100% falsa. Se persiste TODA fila de conteo (también
+            -- las conciliadas) con su saldo del sistema AL MOMENTO DEL CIERRE.
+            CREATE TABLE IF NOT EXISTS sesion_diferencias (
+                sesion_id TEXT NOT NULL REFERENCES sesiones_inventario(id),
+                ubicacion_id TEXT NOT NULL,
+                producto_id TEXT NOT NULL,
+                lote_id TEXT,
+                saldo_sistema INTEGER NOT NULL,
+                cantidad_contada INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_sesion_diferencias_sesion ON sesion_diferencias(sesion_id);
+
             -- ============ COMENTARIOS (SPEC §12) ============
             CREATE TABLE IF NOT EXISTS comentarios (
                 id TEXT PRIMARY KEY,

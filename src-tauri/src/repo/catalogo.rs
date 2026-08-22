@@ -1865,12 +1865,26 @@ pub fn buscar_producto_por_codigo_barras(
 
 /// Resultado de resolver un código escaneado (modo captura): qué entidad es y
 /// su id para alimentar el formulario. `tipo` ∈ PRODUCTO | UBICACION | LOTE |
-/// CAJA. Solo lectura — el escaneo nunca crea datos.
+/// CAJA. Solo lectura — el escaneo nunca crea datos. Para PRODUCTO lleva
+/// `controla_lote` del producto resuelto: la captura rápida decide el siguiente
+/// paso (lote o cantidad) con este dato, sin depender de la lista de productos
+/// en el cliente (que puede no haber cargado aún).
 #[derive(Debug, Clone, Serialize)]
 pub struct EscaneoResuelto {
     pub tipo: String,
     pub id: String,
     pub etiqueta: String,
+    #[serde(default)]
+    pub controla_lote: bool,
+}
+
+fn escaneo(tipo: &str, id: String, etiqueta: String) -> EscaneoResuelto {
+    EscaneoResuelto {
+        tipo: tipo.into(),
+        id,
+        etiqueta,
+        controla_lote: false,
+    }
 }
 
 /// Resuelve un código escaneado (tipo teclado) a una entidad del dominio:
@@ -1885,29 +1899,39 @@ pub fn resolver_escaneo(conn: &Connection, codigo: &str) -> AppResult<Option<Esc
 
     // Producto por código de barras exacto (tiene prioridad: es la lectura
     // directa del escáner, SPEC §14.3).
-    if let Ok(fila) = conn.query_row(
-        "SELECT id, sku FROM productos WHERE codigo_barras = ?1",
+    if let Ok((id, sku, controla)) = conn.query_row(
+        "SELECT id, sku, controla_lote FROM productos WHERE codigo_barras = ?1",
         [c],
-        |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+        |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        },
     ) {
         return Ok(Some(EscaneoResuelto {
-            tipo: "PRODUCTO".into(),
-            id: fila.0,
-            etiqueta: fila.1,
+            controla_lote: controla,
+            ..escaneo("PRODUCTO", id, sku)
         }));
     }
 
     // Producto por SKU normalizado.
     let sku = normalizar_codigo(c);
-    if let Ok(fila) = conn.query_row(
-        "SELECT id, sku FROM productos WHERE sku = ?1",
+    if let Ok((id, nombre_sku, controla)) = conn.query_row(
+        "SELECT id, sku, controla_lote FROM productos WHERE sku = ?1",
         [&sku],
-        |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+        |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        },
     ) {
         return Ok(Some(EscaneoResuelto {
-            tipo: "PRODUCTO".into(),
-            id: fila.0,
-            etiqueta: fila.1,
+            controla_lote: controla,
+            ..escaneo("PRODUCTO", id, nombre_sku)
         }));
     }
 
@@ -1917,33 +1941,21 @@ pub fn resolver_escaneo(conn: &Connection, codigo: &str) -> AppResult<Option<Esc
         [c],
         |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
     ) {
-        return Ok(Some(EscaneoResuelto {
-            tipo: "UBICACION".into(),
-            id: fila.0,
-            etiqueta: fila.1,
-        }));
+        return Ok(Some(escaneo("UBICACION", fila.0, fila.1)));
     }
 
     // Lote por número.
     if let Ok(fila) = conn.query_row("SELECT id, numero FROM lotes WHERE numero = ?1", [c], |r| {
         Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
     }) {
-        return Ok(Some(EscaneoResuelto {
-            tipo: "LOTE".into(),
-            id: fila.0,
-            etiqueta: fila.1,
-        }));
+        return Ok(Some(escaneo("LOTE", fila.0, fila.1)));
     }
 
     // Caja por código.
     if let Ok(fila) = conn.query_row("SELECT id, codigo FROM cajas WHERE codigo = ?1", [c], |r| {
         Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
     }) {
-        return Ok(Some(EscaneoResuelto {
-            tipo: "CAJA".into(),
-            id: fila.0,
-            etiqueta: fila.1,
-        }));
+        return Ok(Some(escaneo("CAJA", fila.0, fila.1)));
     }
 
     Ok(None)

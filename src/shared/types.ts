@@ -613,6 +613,8 @@ export interface EscaneoResuelto {
   tipo: "PRODUCTO" | "UBICACION" | "LOTE" | "CAJA";
   id: string;
   etiqueta: string;
+  /** Solo PRODUCTO: si el producto exige lote (decide el paso siguiente). */
+  controla_lote?: boolean;
 }
 
 /** Resultado de una fila importada (importación masiva). */

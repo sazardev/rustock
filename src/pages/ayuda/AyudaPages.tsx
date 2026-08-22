@@ -12,7 +12,7 @@
  *
  * El contenido se mantiene en `ayuda-data.ts`; aquí solo se renderiza.
  */
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   AYUDA_GRUPOS,
   GLOSARIO,
@@ -22,6 +22,7 @@ import {
   type AyudaSeccion,
 } from "./ayuda-data";
 import { ayudaModulo, PATH } from "../../app/route-paths";
+import { useLocation } from "react-router";
 import {
   Badge,
   ButtonLink,
@@ -498,6 +499,19 @@ export function AyudaModulePage({ id }: { id: string }) {
 }
 
 export function AyudaGlosarioPage() {
+  const location = useLocation();
+
+  // Deep-link a un término (/ayuda/glosario#saldo): React Router no hace
+  // scroll a anclas en navegación SPA — hay que hacerlo tras el render.
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = decodeURIComponent(location.hash.slice(1));
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ block: "start" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [location.hash]);
+
   const porLetra = useMemo(() => {
     const mapa = new Map<string, typeof GLOSARIO>();
     for (const termino of GLOSARIO) {

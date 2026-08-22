@@ -19,6 +19,7 @@ import {
   obtenerSesionInventario,
   obtenerUbicacion,
   obtenerUom,
+  obtenerUsuario,
   obtenerZona,
 } from "./backend";
 import { catalogoDetalle, movimientoDetalle, sesionInventarioDetalle } from "../app/route-paths";
@@ -122,4 +123,12 @@ export function SesionInventarioRef({ id }: { id: string }) {
   });
   if (!query.data) return query.isLoading ? <Ref id="…" /> : <Ref id={id} />;
   return <Link href={sesionInventarioDetalle(id)}>{query.data.numero}</Link>;
+}
+
+/** Nombre legible de un usuario (auditoría: "quién hizo qué", SPEC §4.5).
+ * Devuelve el nombre completo; sin enlace si no se pudo resolver. */
+export function UsuarioNombre({ id }: { id: string }) {
+  const query = useQuery({ queryKey: ["usuario", id], queryFn: () => obtenerUsuario(id) });
+  if (query.data?.nombre_completo) return <span>{query.data.nombre_completo}</span>;
+  return <Ref id={id} />;
 }

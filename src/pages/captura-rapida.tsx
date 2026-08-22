@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { crearMovimiento, listarProductos, resolverEscaneo } from "../shared/backend";
-import { esPaginado, type EscaneoResuelto, type NuevaLinea, type Producto } from "../shared/types";
+import { crearMovimiento, resolverEscaneo } from "../shared/backend";
+import type { EscaneoResuelto, NuevaLinea } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { movimientoDetalle, PATH } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
@@ -86,22 +86,21 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
   const [etapa, setEtapa] = useState<Etapa>("producto");
   const [escaneo, setEscaneo] = useState("");
   const [busy, setBusy] = useState(false);
+  /** `controla_lote` del producto resuelto en la línea actual (llega con el
+   * escaneo, no depende de que la lista de productos haya cargado). */
+  const [controlaLoteActual, setControlaLoteActual] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
-
-  const productosQuery = useQuery({
-    queryKey: ["productos", "selector-captura"],
-    queryFn: () => listarProductos({ page_size: 200, sort: "sku" }),
-  });
-  const productos =
-    productosQuery.data && esPaginado(productosQuery.data) ? productosQuery.data.data : [];
-  const productoActual: Producto | undefined = productos.find((p) => p.id === linea.producto_id);
 
   function fijar(l: Partial<LineaCaptura>) {
     setLinea((prev) => ({ ...prev, ...l }));
   }
 
-  function avanzarDeProducto() {
-    if (productoActual?.controla_lote) {
+  // El paso siguiente depende del producto RESUELTO (res.controla_lote, que
+  // Llega del backend con el escaneo): Leerlo de la lista del cliente sería
+  // Una carrera — si el listado aún no cargó, se saltaría el paso de lote.
+  function avanzarDeProducto(resuelto: EscaneoResuelto) {
+    setControlaLoteActual(Boolean(resuelto.controla_lote));
+    if (resuelto.controla_lote) {
       setEtapa("lote");
     } else {
       setEtapa("cantidad");
@@ -111,7 +110,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
   function aplicarResuelto(res: EscaneoResuelto) {
     if (res.tipo === "PRODUCTO") {
       // Si ya había un producto en esta línea y se escanea otro, se cierra la
-      // línea actual (si es válida) y se empieza una nueva.
+      // Línea actual (si es válida) y se empieza una nueva.
       if (linea.producto_id && linea.producto_id !== res.id) {
         if (lineaValida(linea)) {
           setLineas((prev) => [...prev, linea]);
@@ -126,11 +125,11 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
         fijar({ producto_id: res.id, producto_etiqueta: res.etiqueta });
       }
       setError(null);
-      avanzarDeProducto();
+      avanzarDeProducto(res);
       return;
     }
     if (res.tipo === "LOTE") {
-      if (!productoActual?.controla_lote) {
+      if (!controlaLoteActual) {
         setError("Este producto no controla lote: el lote no aplica.");
         return;
       }
@@ -377,12 +376,14 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
         <Button
           type="button"
           variant="primary"
-          disabled={lineas.length === 0 || guardarMut.isPending}
-          onClick={() => guardarMut.mutate(lineas)}
+          disabled={(!lineaValida(linea) && lineas.length === 0) || guardarMut.isPending}
+          onClick={() => guardarMut.mutate(lineaValida(linea) ? [...lineas, linea] : lineas)}
         >
           {guardarMut.isPending
             ? "Guardando…"
-            : `Guardar ${esRecepcion ? "entrada" : "salida"} (${lineas.length} líneas)`}
+            : `Guardar ${esRecepcion ? "entrada" : "salida"} (${totalLineas} ${
+                totalLineas === 1 ? "línea" : "líneas"
+              })`}
         </Button>
         <Link href={PATH.movimientos}>Cancelar</Link>
       </div>
