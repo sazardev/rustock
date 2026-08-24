@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { listarLineasMovimiento, obtenerMovimiento } from "../shared/backend";
@@ -14,11 +14,19 @@ export function MovimientoNuevoPage() {
   // El tipo vive en la URL (?tipo=...) para que el flujo de creación rápida
   // (volver con un registro recién creado) conserve el contexto del movimiento.
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tipo, setTipo] = useState<TipoMovimiento>(
-    () => tipoValido(searchParams.get("tipo")) ?? "ENTRADA",
-  );
-  // Duplicar (?duplicarDe=<id>): precarga los datos de un movimiento origen
-  // para crear uno nuevo a partir de él.
+  const tipoEnUrl = tipoValido(searchParams.get("tipo"));
+  const [tipo, setTipo] = useState<TipoMovimiento>(tipoEnUrl ?? "ENTRADA");
+
+  // Sincronizar con cambios externos de la URL (atrás/adelante del navegador,
+  // Deep-link): El formulario se re-monta limpio (key={tipo}) para no arrastrar
+  // Datos de un tipo a otro.
+  useEffect(() => {
+    if (tipoEnUrl && tipoEnUrl !== tipo) setTipo(tipoEnUrl);
+    // `tipo` deliberadamente fuera: solo reacciona a la URL, nunca a sí mismo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoEnUrl]);
+  // Duplicar (?duplicarDe=<id>): Precarga los datos de un movimiento origen
+  // Para crear uno nuevo a partir de él.
   const duplicarDe = searchParams.get("duplicarDe");
   const origenMovQuery = useQuery({
     queryKey: ["movimiento", duplicarDe],

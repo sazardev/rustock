@@ -292,8 +292,8 @@ function MapaCanvas({
       onWheel={onWheel}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      role="img"
-      aria-label="Mapa físico del almacén"
+      role="group"
+      aria-label="Mapa físico del almacén: nodos navegables con Tab y activables con Enter"
     >
       <rect
         x={viewBox.x - 2000}
@@ -308,14 +308,33 @@ function MapaCanvas({
         const ancho = ANCHO_NODO[n.tipo];
         const alto = ALTO_NODO[n.tipo];
         const resumen = resumenPorNodo.get(n.id);
+        const etiquetaTipo =
+          n.tipo === "zona"
+            ? "Zona"
+            : n.tipo === "pasillo"
+              ? "Pasillo"
+              : n.tipo === "rack"
+                ? "Rack"
+                : "Ubicación";
+        const ocupacionTxt =
+          n.ocupacion !== null ? `, ${Math.round(n.ocupacion * 100)}% de ocupación` : "";
         return (
           <g
             key={n.id}
             transform={`translate(${pos.x}, ${pos.y})`}
             onPointerDown={(e) => onNodoPointerDown(e, n)}
+            onKeyDown={(e) => {
+              // Activa el detalle con teclado (WCAG 2.1.1): Los <g> role=button
+              // No disparan click nativo.
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClickNodo(n.tipo, n.id);
+              }
+            }}
             className="mapa-almacen__nodo"
             role="button"
             tabIndex={0}
+            aria-label={`${etiquetaTipo} ${n.codigo}${ocupacionTxt}`}
           >
             <rect
               width={ancho}

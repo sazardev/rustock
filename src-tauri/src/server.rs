@@ -162,8 +162,24 @@ fn params_de(v: &Value) -> AppResult<ListParams> {
     match v.get("params") {
         Some(p) => serde_json::from_value(p.clone())
             .map_err(|e| AppError::CampoRequerido(format!("params: {e}"))),
-        None => serde_json::from_value(json!({}))
-            .map_err(|e| AppError::CampoRequerido(format!("params: {e}"))),
+        None => {
+            // Sin envoltorio `params`: se tolera Null/objeto vacío (comandos
+            // que no llevan parámetros), pero claves sueltas en la raíz son
+            // casi seguro un error del cliente — si se ignoraran, la consulta
+            // devolvería TODO sin filtros ni orden aparentando éxito.
+            let extrañas: Vec<String> = v
+                .as_object()
+                .map(|obj| obj.keys().cloned().collect())
+                .unwrap_or_default();
+            if !extrañas.is_empty() {
+                return Err(AppError::CampoInvalido(format!(
+                    "parámetros inesperados en la raíz: {}; deben ir dentro de \"params\"",
+                    extrañas.join(", ")
+                )));
+            }
+            serde_json::from_value(json!({}))
+                .map_err(|e| AppError::CampoRequerido(format!("params: {e}")))
+        }
     }
 }
 

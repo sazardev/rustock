@@ -12,6 +12,7 @@ import { PosicionFormCard, type PosicionValores } from "../shared/posicion-form-
 import { ContenidoInventarioCard } from "./ContenidoInventarioCard";
 import { catalogoDetalle } from "../app/route-paths";
 import { formatearFecha } from "../shared/format";
+import { UsuarioNombre } from "../shared/refs";
 import { SLUG_POR_TIPO, type NodoMapa, type TipoNodo } from "./mapa-almacen-datos";
 
 const ETIQUETA_TIPO: Record<TipoNodo, string> = {
@@ -148,8 +149,14 @@ function ContenidoDeNodo(
             items={[
               { label: "Creado", value: formatearFecha(entidad.created_at) },
               { label: "Actualizado", value: formatearFecha(entidad.updated_at) },
-              { label: "Creado por", value: entidad.created_by ?? "—" },
-              { label: "Actualizado por", value: entidad.updated_by ?? "—" },
+              {
+                label: "Creado por",
+                value: entidad.created_by ? <UsuarioNombre id={entidad.created_by} /> : "—",
+              },
+              {
+                label: "Actualizado por",
+                value: entidad.updated_by ? <UsuarioNombre id={entidad.updated_by} /> : "—",
+              },
             ]}
           />
         </Card.Body>

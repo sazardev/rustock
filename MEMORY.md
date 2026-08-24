@@ -2001,7 +2001,87 @@ alcance): llamada inicial duplicada de `quien_soy`/preferencias/tema_activo
 (x2/x3/x3 — inofensiva, caché de react-query); warning de meta
 `apple-mobile-web-app-capable` deprecated; preload warning de rustock.svg.
 
+### Hito 28 — Auditoría del mapa del almacén (2D/3D) + 2 fixes (completo, sin commit)
+
+Pedido del usuario: revisar a detalle "el mapa 3d, 2d, posición, ubicación,
+unión, mapa, conexiones, búsqueda, filtros". Se auditó el feature de mapa
+completo (`AlmacenMapaPage` SVG, `AlmacenMapa3DPage` three.js,
+`mapa-almacen-datos.ts` capa compartida, `MapaContextoCard`,
+`NodoSeleccionadoPanel`, `ContenidoInventarioCard`) contra backend real.
+
+**Verificado en vivo (mapa 2D):**
+- Nodos renderizan con % de ocupación, conteo SKU y posiciones guardadas.
+- Drag guarda posición vía `mover_ubicacion` (una sola llamada HTTP; la
+  posición persiste en BD — confirmado por API y tras recarga: 724,389).
+- Clic sin arrastre (<4px) navega al detalle del nodo; zoom de rueda con
+  clamps 300–3000 preservando el centro; pan por el fondo.
+- Deep-link `?resaltar=<id>` centra el viewBox con precisión exacta
+  ((724−550, 389−310)) y resalta el nodo con stroke óxido 2.5px.
+- Enlaces cruzados: detalle de almacén → "Ver mapa"; producto →
+  "Ver en el mapa →" (`?resaltar=<ubicacion>`); 2D ↔ 3D.
+
+**Fixes de esta ronda:**
+1. **Mapa 3D sin WebGL fallaba en silencio**: en entornos sin GPU/driver
+   (WSL/Mesa aquí) R3F no crea contexto, queda un lienzo vacío + `Uncaught
+   (in promise)` sin ningún aviso. Fix: detección previa con
+   `tieneWebGL()` (webgl2/webgl) antes de montar el `<Canvas>` → ErrorPanel
+   claro "El mapa 3D requiere WebGL" con enlace al mapa 2D (verificado en
+   vivo). En equipos CON WebGL la escena renderiza igual que siempre.
+2. **UUIDs crudos en la Metadata del panel del nodo** (Creado por /
+   Actualizado por) → ahora `UsuarioNombre`.
+
+**Verificado por código+API (la escena 3D no renderiza en este entorno por
+falta de WebGL):** toolbar null-safe (`controlsRef` guard), atajos de teclado
+ignoran inputs, drag 3D usa rayo/plano horizontal a la altura `pos_z`
+(preserva pos_z/altura al guardar), encuadrar calcula bounding box;
+`MapaContextoCard`: hermanos excluye nodos sin posición, apilado vertical usa
+tolerancia 15 unidades sobre pos_x/pos_y y ordena por pos_z.
+
+**Nota de entorno:** a mitad de auditoría el navegador del MCP chrome-devtools
+murió y su wrapper quedó pegado; tras limpiar SingletonLocks el wrapper murió
+sin respawn (opencode solo lanza MCPs al inicio) — el resto se verificó por
+código + API directa (curl).
+
+**Ampliación (misma sesión) — revisión exagerada con CDP propio:** como el MCP
+quedó muerto, se lanzó Chromium headless con `--remote-debugging-port=9222 +
+--use-angle=swiftshader` (WebGL por software) y un driver CDP en Node
+(`/tmp/opencode/cdp.mjs`: navigate/eval/shot/mouse/key reales). Esto permitió
+**verificar la escena 3D en vivo por primera vez en este entorno**: piso+grilla,
+prismas por tipo con altura default, etiquetas Html con SKU, selección por clic
+real (Input.dispatchMouseEvent) → `NodoSeleccionadoPanel` con contenido real
+(SKU-1001 10,900 exacto), metadata con `UsuarioNombre`, formulario de posición
+guarda (200,310→250,260 por API), flechas de teclado mueven +5 y persisten,
+Escape deselecciona, toggles de tipos ocultan nodos. Hallazgos y fixes:
+
+1. **[Backend] `params_de` ignoraba silenciosamente args sin envolver**:
+   llamar a un `listar_*` HTTP con filtros en la raíz (sin `{"params":...}`)
+   devolvía TODO sin filtrar como si fuera éxito. Ahora: error claro
+   "parámetros inesperados en la raíz: ...; deben ir dentro de params"
+   (verificado en vivo; 117 tests siguen en verde).
+2. **[A11y] Nodos del mapa 2D sin teclado**: `role=button tabIndex=0` sin
+   `onKeyDown` (Enter/Espacio no hacían nada) y sin estilo de foco. Fix:
+   Enter/Espacio navegan al detalle (verificado en vivo), CSS
+   `:focus-visible` con stroke óxido (tokens), `aria-label` descriptivo por
+   nodo ("Zona Z-01", "Ubicación X, 24% de ocupación") y SVG `role=img`→
+   `role=group` para no ocultar los botones del árbol de accesibilidad.
+3. **[Trazabilidad] `sesion_inventario_id` invisible**: los ajustes
+   generados al cerrar inventario llevan la sesión de origen pero el detalle
+   no la mostraba. Fix: fila condicional "Sesión de inventario" con
+   `SesionInventarioRef` (verificado en vivo: MOV-2026-000012 → INV-2026-0003
+   enlazado).
+
+Verificado también: `resolver_alerta` sin UI es intencional (Hito 19, único
+comando de 146 sin uso en frontend); `ultimo_acceso_at` sí expuesto en
+usuarios; favoritos de filtro persisten tras recarga y aplican filtro+URL;
+`MapaContextoCard` correcto (mini-mapa de RECEPCION-01 con 1 nodo es el
+comportamiento correcto: los RACK-A1-* cuelgan de sección con `zona_id` NULL,
+no son hermanos por zona). Nota: el filtro HTTP `zona_id:eq:X` sobre
+ubicaciones con `zona_id` NULL no las matchea (comportamiento SQL estándar,
+correcto).
+
+
 ## 3. Decisiones de diseño del stack (recordatorio)
+
 
 | Decisión | Por qué (referencia) |
 |---|---|

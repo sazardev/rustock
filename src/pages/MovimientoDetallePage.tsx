@@ -2,7 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { enviarAAprobacion, listarLineasMovimiento, obtenerMovimiento } from "../shared/backend";
 import { esPaginado, type LineaMovimiento } from "../shared/types";
-import { LoteRef, MovimientoRef, ProductoRef, UbicacionRef, UsuarioNombre } from "../shared/refs";
+import {
+  ClienteRef,
+  LoteRef,
+  MovimientoRef,
+  ProductoRef,
+  ProveedorRef,
+  SesionInventarioRef,
+  UbicacionRef,
+  UsuarioNombre,
+} from "../shared/refs";
 import {
   Badge,
   Button,
@@ -94,6 +103,23 @@ export function MovimientoDetallePage() {
     { label: "Sub-tipo", value: SUB_TIPO_MOVIMIENTO_LABEL[movimiento.sub_tipo], code: true },
     { label: "Fecha del movimiento", value: formatearFecha(movimiento.fecha_movimiento) },
     { label: "Documento de referencia", value: movimiento.documento_referencia ?? "—", code: true },
+    // Trazabilidad de contraparte (SPEC §6.4): de quién vino / a quién fue.
+    ...(movimiento.proveedor_id
+      ? [{ label: "Proveedor", value: <ProveedorRef id={movimiento.proveedor_id} /> }]
+      : []),
+    ...(movimiento.cliente_id
+      ? [{ label: "Cliente", value: <ClienteRef id={movimiento.cliente_id} /> }]
+      : []),
+    // Origen del ajuste (SPEC §11.5/§13.3): movimientos generados al cerrar
+    // una sesión de inventario enlazan a esa sesión.
+    ...(movimiento.sesion_inventario_id
+      ? [
+          {
+            label: "Sesión de inventario",
+            value: <SesionInventarioRef id={movimiento.sesion_inventario_id} />,
+          },
+        ]
+      : []),
     { label: "Motivo", value: movimiento.motivo ?? "—" },
     { label: "Notas", value: movimiento.notas ?? "—" },
     { label: "Creado por", value: <UsuarioNombre id={movimiento.created_by} /> },

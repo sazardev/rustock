@@ -1387,6 +1387,17 @@
   cursor: pointer;
 }
 
+/* Foco visible en nodos del mapa (DESIGN §10): el anillo estándar no aplica
+   bien sobre SVG, se usa el stroke del rect con el acento. */
+.mapa-almacen__nodo:focus {
+  outline: none;
+}
+
+.mapa-almacen__nodo:focus-visible rect {
+  stroke: var(--color-blue-500);
+  stroke-width: var(--border-width-2);
+}
+
 .mapa-almacen__etiqueta {
   display: flex;
   align-items: center;

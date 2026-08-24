@@ -3,7 +3,7 @@ import { Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
 import { Plane, Vector2, Vector3 } from "three";
 import { useParams, useSearchParams } from "react-router";
-import { Button, ButtonLink, PageHeader, Text } from "../shared/ui";
+import { Button, ButtonLink, ErrorPanel, Link, PageHeader, Text } from "../shared/ui";
 import { almacenMapa } from "../app/route-paths";
 import {
   ALTO_NODO,
@@ -45,10 +45,25 @@ function esCampoDeTexto(el: EventTarget | null): boolean {
   return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
 }
 
+/** Detecta soporte WebGL ANTES de montar el `<Canvas>`: sin GPU/driver (VMs,
+ * servidores, navegadores viejos) three.js no puede crear contexto y R3F
+ * falla en silencio dejando un lienzo vacío — se avisa con error claro
+ * (DESIGN §8.4) en vez de una página que parece rota. */
+function tieneWebGL(): boolean {
+  try {
+    const prueba = document.createElement("canvas");
+    return Boolean(prueba.getContext("webgl2") ?? prueba.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
 export function AlmacenMapa3DPage() {
   const { id: almacenId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const resaltarId = searchParams.get("resaltar");
+  // Una sola detección por montaje: la capacidad WebGL no cambia en caliente.
+  const [webglDisponible] = useState(tieneWebGL);
   const { nodos, cargando, resumenPorNodo } = useMapaAlmacenDatos(almacenId);
   const moverMut = useMoverNodoMapa();
 
@@ -192,6 +207,12 @@ export function AlmacenMapa3DPage() {
         <Text as="p" size="sm" color="muted">
           Este almacén aún no tiene zonas, racks o ubicaciones para mostrar en el mapa.
         </Text>
+      ) : !webglDisponible ? (
+        <ErrorPanel title="El mapa 3D requiere WebGL">
+          Este equipo o navegador no pudo crear un contexto WebGL (sin aceleración gráfica o driver
+          sin soporte). El mapa 2D ofrece las mismas posiciones y ediciones:{" "}
+          <Link href={almacenMapa(almacenId)}>abrir el mapa 2D</Link>.
+        </ErrorPanel>
       ) : (
         <div ref={editorRef} className="mapa-almacen-3d__editor">
           <div className="mapa-almacen-3d__toolbar">
