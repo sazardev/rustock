@@ -690,6 +690,19 @@ impl DbState {
             asegurar_columna(&tx, tabla, "altura", "REAL")?;
         }
 
+        // Modo construcción (SPEC §14, layout físico): tamaño real del
+        // rectángulo que ocupa cada elemento redimensionable en el plano.
+        // Los defaults replican las constantes visuales que el mapa usaba
+        // antes de haber tamaños en BD (ningún mapa existente salta). Las
+        // ubicaciones quedan de tamaño fijo (bins uniformes) y no llevan
+        // columnas. El motor de colisión vive en `mapa.rs`.
+        asegurar_columna(&tx, "zonas", "ancho", "REAL NOT NULL DEFAULT 150")?;
+        asegurar_columna(&tx, "zonas", "profundidad", "REAL NOT NULL DEFAULT 70")?;
+        asegurar_columna(&tx, "pasillos", "ancho", "REAL NOT NULL DEFAULT 130")?;
+        asegurar_columna(&tx, "pasillos", "profundidad", "REAL NOT NULL DEFAULT 56")?;
+        asegurar_columna(&tx, "racks", "ancho", "REAL NOT NULL DEFAULT 110")?;
+        asegurar_columna(&tx, "racks", "profundidad", "REAL NOT NULL DEFAULT 56")?;
+
         // Pasillo (Hito Pasillo): etiqueta opcional de agrupación dentro de la
         // zona del rack. Aditivo — no toca la FK obligatoria rack.zona_id.
         asegurar_columna(&tx, "racks", "pasillo_id", "TEXT REFERENCES pasillos(id)")?;

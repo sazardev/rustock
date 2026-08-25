@@ -519,6 +519,19 @@ fn despachar(
             let conn = db.conn();
             ok(repo::catalogo::mover_ubicacion(&conn, &id, &pos, &actor)?)
         }),
+        // Modo construcción del mapa (SPEC §14, layout físico).
+        "crear_en_mapa" => con_auditoria!(db, sesion, "crear_en_mapa", {
+            let pedido: crate::mapa::CreacionEnMapa = de_req(args, "pedido")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(crate::mapa::crear_en_mapa(&conn, &pedido, &actor)?)
+        }),
+        "generar_layout_base" => con_auditoria!(db, sesion, "generar_layout_base", {
+            let pedido: crate::mapa::LayoutBasePedido = de_req(args, "pedido")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(crate::mapa::generar_layout_base(&conn, &pedido, &actor)?)
+        }),
         "desactivar_ubicacion" => con_auditoria!(db, sesion, "desactivar_ubicacion", {
             let id = str_req(args, "id")?;
             let actor = sesion.usuario_id()?;

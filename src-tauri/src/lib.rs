@@ -4,6 +4,7 @@ mod db;
 mod domain;
 mod error;
 mod importar;
+mod mapa;
 mod query;
 mod repo;
 mod security;

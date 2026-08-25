@@ -128,6 +128,21 @@ export interface PosicionMapa {
   altura: number | null;
 }
 
+/** Tamaño real del rectángulo en el plano (modo construcción). Solo zonas,
+ * pasillos y racks son redimensionables; las ubicaciones son bins de tamaño
+ * fijo y el almacén no aparece en el lienzo. */
+export interface TamanioMapa {
+  ancho: number;
+  profundidad: number;
+}
+
+/** Payload de `mover_*`: posición tal cual (None borra) + tamaño opcional
+ * (`null`/ausente = mantener el actual). Espejo de `PosicionMapa` en Rust. */
+export interface PosicionMapaEditable extends PosicionMapa {
+  ancho?: number | null;
+  profundidad?: number | null;
+}
+
 // ============ Almacén (SPEC §3.1) ============
 
 export interface Almacen extends Auditoria, PosicionMapa {
@@ -154,7 +169,7 @@ export interface EditarAlmacen {
 
 // ============ Zona (SPEC §3.2) ============
 
-export interface Zona extends Auditoria, PosicionMapa {
+export interface Zona extends Auditoria, PosicionMapa, TamanioMapa {
   id: string;
   codigo: string;
   nombre: string;
@@ -177,7 +192,7 @@ export interface EditarZona {
 
 // ============ Pasillo (SPEC §3.3b) ============
 
-export interface Pasillo extends Auditoria, PosicionMapa {
+export interface Pasillo extends Auditoria, PosicionMapa, TamanioMapa {
   id: string;
   codigo: string;
   nombre: string | null;
@@ -197,7 +212,7 @@ export interface EditarPasillo {
 
 // ============ Rack (SPEC §3.3) ============
 
-export interface Rack extends Auditoria, PosicionMapa {
+export interface Rack extends Auditoria, PosicionMapa, TamanioMapa {
   id: string;
   codigo: string;
   nombre: string | null;

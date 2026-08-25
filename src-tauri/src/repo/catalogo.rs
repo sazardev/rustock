@@ -244,7 +244,7 @@ pub fn crear_zona(conn: &Connection, nuevo: &NuevaZona) -> AppResult<Zona> {
 pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, descripcion, almacen_id, activo,
-                pos_x, pos_y, pos_z, altura,
+                pos_x, pos_y, pos_z, altura, ancho, profundidad,
                 created_by, created_at, updated_by, updated_at
          FROM zonas WHERE id = ?1",
     )?;
@@ -260,11 +260,13 @@ pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
             pos_y: r.get(7)?,
             pos_z: r.get(8)?,
             altura: r.get(9)?,
+            ancho: r.get(10)?,
+            profundidad: r.get(11)?,
             auditoria: crate::domain::Auditoria {
-                created_by: r.get(10)?,
-                created_at: r.get(11)?,
-                updated_by: r.get(12)?,
-                updated_at: r.get(13)?,
+                created_by: r.get(12)?,
+                created_at: r.get(13)?,
+                updated_by: r.get(14)?,
+                updated_at: r.get(15)?,
             },
         })
     })?;
@@ -272,13 +274,38 @@ pub fn obtener_zona(conn: &Connection, id: &str) -> AppResult<Option<Zona>> {
 }
 
 /// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_zona`.
+/// Valida dimensiones y solapes del rectángulo candidato antes de escribir
+/// (SPEC §14, motor en `mapa.rs`); `ancho`/`profundidad` `None` = sin cambio.
 pub fn mover_zona(conn: &Connection, id: &str, pos: &PosicionMapa, actor: &str) -> AppResult<Zona> {
     puede(conn, Some(actor), "zona", "editar")?;
     verificar_activo(conn, "zonas", id, "zona")?;
+    let actual =
+        obtener_zona(conn, id)?.ok_or_else(|| AppError::NoEncontrado("zona", id.to_string()))?;
+    let ancho = pos.ancho.unwrap_or(actual.ancho);
+    let profundidad = pos.profundidad.unwrap_or(actual.profundidad);
+    let x = pos.pos_x.or(actual.pos_x);
+    let y = pos.pos_y.or(actual.pos_y);
+    if let (Some(x), Some(y)) = (x, y) {
+        let rect = crate::mapa::Rect {
+            x,
+            y,
+            ancho,
+            profundo: profundidad,
+        };
+        crate::mapa::validar_dimensiones(crate::mapa::TipoNodo::Zona, &rect)?;
+        crate::mapa::validar_colisiones(
+            conn,
+            &actual.almacen_id,
+            crate::mapa::TipoNodo::Zona,
+            id,
+            &actual.codigo,
+            &rect,
+        )?;
+    }
     let ts = ahora();
     conn.execute(
-        "UPDATE zonas SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
-        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+        "UPDATE zonas SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, ancho = ?6, profundidad = ?7, updated_at = ?8, updated_by = ?9 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ancho, profundidad, ts, actor],
     )?;
     Ok(obtener_zona(conn, id)?.expect("existe"))
 }
@@ -388,7 +415,7 @@ pub fn crear_pasillo(conn: &Connection, nuevo: &NuevoPasillo) -> AppResult<Pasil
 pub fn obtener_pasillo(conn: &Connection, id: &str) -> AppResult<Option<Pasillo>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, zona_id, activo,
-                pos_x, pos_y, pos_z, altura,
+                pos_x, pos_y, pos_z, altura, ancho, profundidad,
                 created_by, created_at, updated_by, updated_at
          FROM pasillos WHERE id = ?1",
     )?;
@@ -403,18 +430,21 @@ pub fn obtener_pasillo(conn: &Connection, id: &str) -> AppResult<Option<Pasillo>
             pos_y: r.get(6)?,
             pos_z: r.get(7)?,
             altura: r.get(8)?,
+            ancho: r.get(9)?,
+            profundidad: r.get(10)?,
             auditoria: crate::domain::Auditoria {
-                created_by: r.get(9)?,
-                created_at: r.get(10)?,
-                updated_by: r.get(11)?,
-                updated_at: r.get(12)?,
+                created_by: r.get(11)?,
+                created_at: r.get(12)?,
+                updated_by: r.get(13)?,
+                updated_at: r.get(14)?,
             },
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
 }
 
-/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_pasillo`.
+/// Ver nota de `mover_almacen` y de `mover_zona`: valida solapes antes de
+/// escribir; el almacén del pasillo se resuelve por su zona (SPEC §3.3b).
 pub fn mover_pasillo(
     conn: &Connection,
     id: &str,
@@ -423,10 +453,33 @@ pub fn mover_pasillo(
 ) -> AppResult<Pasillo> {
     puede(conn, Some(actor), "pasillo", "editar")?;
     verificar_activo(conn, "pasillos", id, "pasillo")?;
+    let actual = obtener_pasillo(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("pasillo", id.to_string()))?;
+    let ancho = pos.ancho.unwrap_or(actual.ancho);
+    let profundidad = pos.profundidad.unwrap_or(actual.profundidad);
+    let x = pos.pos_x.or(actual.pos_x);
+    let y = pos.pos_y.or(actual.pos_y);
+    if let (Some(x), Some(y)) = (x, y) {
+        let rect = crate::mapa::Rect {
+            x,
+            y,
+            ancho,
+            profundo: profundidad,
+        };
+        crate::mapa::validar_dimensiones(crate::mapa::TipoNodo::Pasillo, &rect)?;
+        crate::mapa::validar_colisiones(
+            conn,
+            &almacen_de_zona(conn, &actual.zona_id)?,
+            crate::mapa::TipoNodo::Pasillo,
+            id,
+            &actual.codigo,
+            &rect,
+        )?;
+    }
     let ts = ahora();
     conn.execute(
-        "UPDATE pasillos SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
-        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+        "UPDATE pasillos SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, ancho = ?6, profundidad = ?7, updated_at = ?8, updated_by = ?9 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ancho, profundidad, ts, actor],
     )?;
     Ok(obtener_pasillo(conn, id)?.expect("existe"))
 }
@@ -554,7 +607,7 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
 pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, tipo, zona_id, pasillo_id, activo,
-                pos_x, pos_y, pos_z, altura,
+                pos_x, pos_y, pos_z, altura, ancho, profundidad,
                 created_by, created_at, updated_by, updated_at
          FROM racks WHERE id = ?1",
     )?;
@@ -571,25 +624,51 @@ pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
             pos_y: r.get(8)?,
             pos_z: r.get(9)?,
             altura: r.get(10)?,
+            ancho: r.get(11)?,
+            profundidad: r.get(12)?,
             auditoria: crate::domain::Auditoria {
-                created_by: r.get(11)?,
-                created_at: r.get(12)?,
-                updated_by: r.get(13)?,
-                updated_at: r.get(14)?,
+                created_by: r.get(13)?,
+                created_at: r.get(14)?,
+                updated_by: r.get(15)?,
+                updated_at: r.get(16)?,
             },
         })
     })?;
     rows.next().transpose().map_err(AppError::from)
 }
 
-/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_rack`.
+/// Ver nota de `mover_almacen` y de `mover_zona`: valida solapes antes de
+/// escribir; el almacén del rack se resuelve por su zona (SPEC §3.3).
 pub fn mover_rack(conn: &Connection, id: &str, pos: &PosicionMapa, actor: &str) -> AppResult<Rack> {
     puede(conn, Some(actor), "rack", "editar")?;
     verificar_activo(conn, "racks", id, "rack")?;
+    let actual =
+        obtener_rack(conn, id)?.ok_or_else(|| AppError::NoEncontrado("rack", id.to_string()))?;
+    let ancho = pos.ancho.unwrap_or(actual.ancho);
+    let profundidad = pos.profundidad.unwrap_or(actual.profundidad);
+    let x = pos.pos_x.or(actual.pos_x);
+    let y = pos.pos_y.or(actual.pos_y);
+    if let (Some(x), Some(y)) = (x, y) {
+        let rect = crate::mapa::Rect {
+            x,
+            y,
+            ancho,
+            profundo: profundidad,
+        };
+        crate::mapa::validar_dimensiones(crate::mapa::TipoNodo::Rack, &rect)?;
+        crate::mapa::validar_colisiones(
+            conn,
+            &almacen_de_zona(conn, &actual.zona_id)?,
+            crate::mapa::TipoNodo::Rack,
+            id,
+            &actual.codigo,
+            &rect,
+        )?;
+    }
     let ts = ahora();
     conn.execute(
-        "UPDATE racks SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
-        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ts, actor],
+        "UPDATE racks SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, ancho = ?6, profundidad = ?7, updated_at = ?8, updated_by = ?9 WHERE id = ?1",
+        rusqlite::params![id, pos.pos_x, pos.pos_y, pos.pos_z, pos.altura, ancho, profundidad, ts, actor],
     )?;
     Ok(obtener_rack(conn, id)?.expect("existe"))
 }
@@ -886,7 +965,9 @@ fn map_ubicacion(r: &rusqlite::Row<'_>) -> rusqlite::Result<Ubicacion> {
     })
 }
 
-/// Ver nota de `mover_almacen`: comando dedicado, aislado de `editar_ubicacion`.
+/// Ver nota de `mover_almacen` y de `mover_zona`: valida solapes antes de
+/// escribir. La ubicación no es redimensionable (tamaño fijo de bin) y su
+/// almacén se resuelve por transitividad del árbol (SPEC §3.13).
 pub fn mover_ubicacion(
     conn: &Connection,
     id: &str,
@@ -895,6 +976,26 @@ pub fn mover_ubicacion(
 ) -> AppResult<Ubicacion> {
     puede(conn, Some(actor), "ubicacion", "editar")?;
     verificar_activo(conn, "ubicaciones", id, "ubicación")?;
+    let actual = obtener_ubicacion(conn, id)?
+        .ok_or_else(|| AppError::NoEncontrado("ubicación", id.to_string()))?;
+    let x = pos.pos_x.or(actual.pos_x);
+    let y = pos.pos_y.or(actual.pos_y);
+    if let (Some(x), Some(y)) = (x, y) {
+        let rect = crate::mapa::Rect {
+            x,
+            y,
+            ancho: crate::mapa::UBICACION_ANCHO,
+            profundo: crate::mapa::UBICACION_PROFUNDIDAD,
+        };
+        crate::mapa::validar_colisiones(
+            conn,
+            &resolver_almacen_id_de_ubicacion(conn, id)?,
+            crate::mapa::TipoNodo::Ubicacion,
+            id,
+            &actual.codigo,
+            &rect,
+        )?;
+    }
     let ts = ahora();
     conn.execute(
         "UPDATE ubicaciones SET pos_x = ?2, pos_y = ?3, pos_z = ?4, altura = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",

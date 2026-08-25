@@ -87,6 +87,11 @@ export function almacenMapa3D(id: string): string {
   return `/almacenes/${id}/mapa-3d`;
 }
 
+/** Asistente de layout base (modo construcción, prototipar primero). */
+export function almacenMapaAsistente(id: string): string {
+  return `/almacenes/${id}/mapa/asistente`;
+}
+
 export function catalogoEliminar(slug: string, id: string): string {
   return `/${slug}/${id}/eliminar`;
 }

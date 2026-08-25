@@ -865,6 +865,18 @@ Todas estas consultas son filtrables/ordenables/buscables/paginables (§15).
 - `codigo`/`sku` se normalizan: mayúsculas, sin espacios al inicio/fin, únicos dentro de su contexto.
 - La búsqueda es **case-insensitive** y tolera acentos/espacios extra.
 
+### 14.8 Layout físico del mapa (modo construcción)
+
+El plano del almacén (mapa 2D/3D) representa la geometría real de la operación; por eso el solape físico es una regla de negocio, no un detalle visual:
+
+- Todo elemento posicionado en el mapa (zona, pasillo, rack) ocupa un **rectángulo propio** (`pos_x`, `pos_y`, `ancho`, `profundidad`). Las ubicaciones son bins de tamaño fijo.
+- **Matriz de solapes prohibidos**: ningún elemento puede coincidir en el plano con otro del mismo tipo; un pasillo no puede tener racks ni ubicaciones encima (es espacio de tránsito); una ubicación no puede flotar sobre un rack ajeno. Tocarse por el borde es válido (elementos adyacentes).
+- **Contención permitida**: las zonas contienen a sus pasillos/racks/ubicaciones; esa coincidencia nunca se bloquea ni se exige.
+- La validación se aplica en **toda** mutación de posición/tamaño y en toda creación desde el mapa; el rechazo nombra los dos elementos involucrados ("El rack 'RACK-01' se solapa con el pasillo 'PAS-01'").
+- Los elementos sin posición asignada aún no están en el plano: no participan hasta colocarse.
+- Un elemento inactivo libera su espacio: solo los activos reservan suelo.
+
+
 ---
 
 ## 15. Estándar universal de consulta (Endpoints)

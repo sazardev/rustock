@@ -587,6 +587,34 @@ pub fn mover_ubicacion(
     })
 }
 
+// ============ Modo construcción del mapa (SPEC §14, layout físico) ============
+
+#[tauri::command]
+pub fn crear_en_mapa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    pedido: crate::mapa::CreacionEnMapa,
+) -> AppResult<crate::mapa::NodoCreado> {
+    con_auditoria!(db, sesion, "crear_en_mapa", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        crate::mapa::crear_en_mapa(&conn, &pedido, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn generar_layout_base(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    pedido: crate::mapa::LayoutBasePedido,
+) -> AppResult<crate::mapa::LayoutGenerado> {
+    con_auditoria!(db, sesion, "generar_layout_base", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        crate::mapa::generar_layout_base(&conn, &pedido, &actor)
+    })
+}
+
 #[tauri::command]
 pub fn desactivar_ubicacion(
     db: State<'_, Arc<DbState>>,
@@ -2122,6 +2150,8 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         editar_ubicacion,
         mover_ubicacion,
         desactivar_ubicacion,
+        crear_en_mapa,
+        generar_layout_base,
         listar_cajas,
         crear_caja,
         obtener_caja,

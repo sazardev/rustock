@@ -1360,6 +1360,8 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
         pos_y: Some(-3.0),
         pos_z: Some(2.0),
         altura: Some(1.8),
+        ancho: None,
+        profundidad: None,
     };
 
     let almacen_movido =
@@ -1381,9 +1383,20 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
     assert_eq!(rack_movido.pos_x, Some(10.5));
     assert_eq!(rack_movido.codigo, rack.codigo);
 
-    let ubi_movida =
-        repo::catalogo::mover_ubicacion(&conn, &ubi.id, &pos, "admin").expect("mover ubicacion");
-    assert_eq!(ubi_movida.pos_x, Some(10.5));
+    // La ubicación cuelga del rack: con la regla de solapes (SPEC §14) no
+    // puede quedar sobre el rectángulo de su propio rack, así que va a un
+    // punto libre. Lo que se verifica aquí es persistencia de coordenadas.
+    let pos_ubi = PosicionMapa {
+        pos_x: Some(300.0),
+        pos_y: Some(-3.0),
+        pos_z: Some(2.0),
+        altura: Some(1.8),
+        ancho: None,
+        profundidad: None,
+    };
+    let ubi_movida = repo::catalogo::mover_ubicacion(&conn, &ubi.id, &pos_ubi, "admin")
+        .expect("mover ubicacion");
+    assert_eq!(ubi_movida.pos_x, Some(300.0));
     assert_eq!(ubi_movida.pos_y, Some(-3.0));
     assert_eq!(ubi_movida.pos_z, Some(2.0));
     assert_eq!(ubi_movida.altura, Some(1.8));
@@ -1397,6 +1410,8 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
         pos_y: None,
         pos_z: None,
         altura: None,
+        ancho: None,
+        profundidad: None,
     };
     let ubi_limpia =
         repo::catalogo::mover_ubicacion(&conn, &ubi.id, &limpio, "admin").expect("limpiar pos");
@@ -1464,6 +1479,8 @@ fn pasillo_crud_y_mover_funciona() {
             pos_y: Some(10.0),
             pos_z: None,
             altura: None,
+            ancho: None,
+            profundidad: None,
         },
         "admin",
     )
@@ -5256,4 +5273,486 @@ fn importar_stock_inicial_carga_saldo_aprobado() {
     let saldo = repo::movimiento::listar_saldos(&conn, Some(&ubi1), Some(&prod)).expect("saldos");
     assert_eq!(saldo.len(), 1);
     assert_eq!(saldo[0].cantidad, 40);
+}
+
+// ============ Modo construcción del mapa (SPEC §14, layout físico) ============
+
+use crate::mapa::{self, CreacionEnMapa, LayoutBasePedido, Rect, TipoNodo};
+
+fn rect(x: f64, y: f64, ancho: f64, profundo: f64) -> Rect {
+    Rect {
+        x,
+        y,
+        ancho,
+        profundo,
+    }
+}
+
+fn pos_mapa(x: f64, y: f64, ancho: f64, profundidad: f64) -> PosicionMapa {
+    PosicionMapa {
+        pos_x: Some(x),
+        pos_y: Some(y),
+        pos_z: None,
+        altura: None,
+        ancho: Some(ancho),
+        profundidad: Some(profundidad),
+    }
+}
+
+#[test]
+fn matriz_solapes_prohibe_pares_duros_y_permite_contencion() {
+    use mapa::solape_prohibido;
+    let duros = [
+        (TipoNodo::Zona, TipoNodo::Zona),
+        (TipoNodo::Pasillo, TipoNodo::Pasillo),
+        (TipoNodo::Rack, TipoNodo::Rack),
+        (TipoNodo::Ubicacion, TipoNodo::Ubicacion),
+        (TipoNodo::Pasillo, TipoNodo::Rack),
+        (TipoNodo::Rack, TipoNodo::Pasillo),
+        (TipoNodo::Pasillo, TipoNodo::Ubicacion),
+        (TipoNodo::Ubicacion, TipoNodo::Pasillo),
+        (TipoNodo::Rack, TipoNodo::Ubicacion),
+        (TipoNodo::Ubicacion, TipoNodo::Rack),
+    ];
+    for (a, b) in duros {
+        assert!(
+            solape_prohibido(a, b),
+            "{:?} vs {:?} debe estar prohibido",
+            a,
+            b
+        );
+    }
+    // Zona contiene hijos (ambas direcciones): contención permitida.
+    let contencion = [
+        (TipoNodo::Zona, TipoNodo::Pasillo),
+        (TipoNodo::Pasillo, TipoNodo::Zona),
+        (TipoNodo::Zona, TipoNodo::Rack),
+        (TipoNodo::Rack, TipoNodo::Zona),
+        (TipoNodo::Zona, TipoNodo::Ubicacion),
+        (TipoNodo::Ubicacion, TipoNodo::Zona),
+    ];
+    for (a, b) in contencion {
+        assert!(
+            !solape_prohibido(a, b),
+            "{:?} vs {:?} debe permitir contención",
+            a,
+            b
+        );
+    }
+
+    // AABB: solape real sí; borde compartido no; disjuntos no; contenido sí.
+    let a = rect(0.0, 0.0, 100.0, 100.0);
+    assert!(mapa::rects_solapan(&a, &rect(50.0, 50.0, 100.0, 100.0)));
+    assert!(!mapa::rects_solapan(&a, &rect(100.0, 0.0, 50.0, 50.0)));
+    assert!(!mapa::rects_solapan(&a, &rect(0.0, 100.0, 50.0, 50.0)));
+    assert!(!mapa::rects_solapan(&a, &rect(200.0, 200.0, 10.0, 10.0)));
+    assert!(mapa::rects_solapan(&a, &rect(10.0, 10.0, 5.0, 5.0)));
+
+    // Dimensiones mínimas: degenerado rechazado, ubicación exenta.
+    assert!(matches!(
+        mapa::validar_dimensiones(TipoNodo::Rack, &rect(0.0, 0.0, 5.0, 30.0)),
+        Err(crate::error::AppError::DimensionInvalida("rack", _))
+    ));
+    assert!(mapa::validar_dimensiones(TipoNodo::Rack, &rect(0.0, 0.0, 110.0, 56.0)).is_ok());
+    assert!(mapa::validar_dimensiones(TipoNodo::Ubicacion, &rect(0.0, 0.0, 1.0, 1.0)).is_ok());
+}
+
+/// Árbol mínimo para tests de mapa: almacén + zona posicionada grande.
+fn almacen_con_zona(conn: &rusqlite::Connection) -> (String, String) {
+    let almacen = repo::catalogo::crear_almacen(
+        conn,
+        &NuevoAlmacen {
+            codigo: "ALM-MAPA".into(),
+            nombre: "Almacén Mapa".into(),
+            descripcion: None,
+            direccion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("almacen");
+    let zona = repo::catalogo::crear_zona(
+        conn,
+        &NuevaZona {
+            codigo: "Z-01".into(),
+            nombre: "Zona Mapa".into(),
+            descripcion: None,
+            almacen_id: almacen.id.clone(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("zona");
+    repo::catalogo::mover_zona(conn, &zona.id, &pos_mapa(0.0, 0.0, 600.0, 400.0), "admin")
+        .expect("posicionar zona");
+    (almacen.id, zona.id)
+}
+
+fn crear_pasillo_simple(conn: &rusqlite::Connection, zona_id: &str, codigo: &str) -> String {
+    let p = repo::catalogo::crear_pasillo(
+        conn,
+        &NuevoPasillo {
+            codigo: codigo.into(),
+            nombre: None,
+            zona_id: zona_id.to_string(),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("pasillo");
+    p.id
+}
+
+#[test]
+fn mover_rechaza_solape_entre_pasillos_y_permite_borde_compartido() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, zona_id) = almacen_con_zona(&conn);
+
+    let pas_a = crear_pasillo_simple(&conn, &zona_id, "PAS-A");
+    repo::catalogo::mover_pasillo(&conn, &pas_a, &pos_mapa(20.0, 20.0, 120.0, 60.0), "admin")
+        .expect("pasillo A");
+
+    // Solape real con PAS-A: rechazado y el mensaje nombra ambos códigos.
+    let pas_b = crear_pasillo_simple(&conn, &zona_id, "PAS-B");
+    let err =
+        repo::catalogo::mover_pasillo(&conn, &pas_b, &pos_mapa(80.0, 40.0, 120.0, 60.0), "admin")
+            .unwrap_err();
+    match err {
+        crate::error::AppError::SolapeMapa {
+            codigo_a, codigo_b, ..
+        } => {
+            assert_eq!(codigo_a, "PAS-B");
+            assert_eq!(codigo_b, "PAS-A");
+        }
+        otro => panic!("esperaba SolapeMapa, got {:?}", otro),
+    }
+
+    // Borde compartido (x=140 justo al terminar A): permitido.
+    repo::catalogo::mover_pasillo(&conn, &pas_b, &pos_mapa(140.0, 20.0, 120.0, 60.0), "admin")
+        .expect("borde compartido es válido");
+
+    // Rack sobre el pasillo B: prohibido (el pasillo es espacio de tránsito).
+    let rack = repo::catalogo::crear_rack(
+        &conn,
+        &NuevoRack {
+            codigo: "RACK-X".into(),
+            nombre: None,
+            tipo: None,
+            zona_id: zona_id.clone(),
+            pasillo_id: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("rack");
+    let err =
+        repo::catalogo::mover_rack(&conn, &rack.id, &pos_mapa(150.0, 30.0, 90.0, 40.0), "admin")
+            .unwrap_err();
+    assert!(matches!(err, crate::error::AppError::SolapeMapa { .. }));
+
+    // Rack en espacio libre de la misma zona: ok (contención permitida).
+    repo::catalogo::mover_rack(&conn, &rack.id, &pos_mapa(300.0, 20.0, 90.0, 40.0), "admin")
+        .expect("rack libre");
+
+    // Ubicación directa de zona sobre el rack: prohibido; junto al rack: ok.
+    let ubi = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: "UBI-FUERA".into(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: None,
+            zona_id: Some(zona_id.clone()),
+            tipo: None,
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion");
+    let err = repo::catalogo::mover_ubicacion(
+        &conn,
+        &ubi.id,
+        &pos_mapa(320.0, 30.0, 70.0, 48.0),
+        "admin",
+    )
+    .unwrap_err();
+    assert!(matches!(err, crate::error::AppError::SolapeMapa { .. }));
+    repo::catalogo::mover_ubicacion(&conn, &ubi.id, &pos_mapa(300.0, 120.0, 70.0, 48.0), "admin")
+        .expect("ubicación libre");
+
+    // Redimensionar la zona para que "trague" todo: nunca choca (contención).
+    repo::catalogo::mover_zona(&conn, &zona_id, &pos_mapa(0.0, 0.0, 800.0, 400.0), "admin")
+        .expect("crecer zona");
+
+    // Tamaño degenerado rechazado antes de tocar la BD.
+    let err =
+        repo::catalogo::mover_rack(&conn, &rack.id, &pos_mapa(300.0, 200.0, 5.0, 40.0), "admin")
+            .unwrap_err();
+    assert!(matches!(
+        err,
+        crate::error::AppError::DimensionInvalida(_, _)
+    ));
+}
+
+#[test]
+fn crear_en_mapa_sugiere_codigo_y_revierte_si_choca() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _zona_id) = almacen_con_zona(&conn);
+
+    let pedido_zona = |x: f64, y: f64, w: f64, h: f64| CreacionEnMapa {
+        tipo: "zona".into(),
+        almacen_id: almacen_id.clone(),
+        zona_id: None,
+        x,
+        y,
+        ancho: w,
+        profundidad: h,
+    };
+
+    // Primera zona del almacén ya existe (Z-01 de almacen_con_zona): sugiere Z-02.
+    let z2 = mapa::crear_en_mapa(&conn, &pedido_zona(700.0, 0.0, 300.0, 300.0), "admin")
+        .expect("zona Z-02");
+    assert_eq!(z2.codigo, "Z-02");
+    let z3 = mapa::crear_en_mapa(&conn, &pedido_zona(700.0, 350.0, 300.0, 300.0), "admin")
+        .expect("zona Z-03");
+    assert_eq!(z3.codigo, "Z-03");
+
+    // Pasillo dibujado dentro de Z-01: crea con código consecutivo y posición.
+    let pas = mapa::crear_en_mapa(
+        &conn,
+        &CreacionEnMapa {
+            tipo: "pasillo".into(),
+            almacen_id: almacen_id.clone(),
+            zona_id: None, // se llena abajo
+            x: 20.0,
+            y: 20.0,
+            ancho: 80.0,
+            profundidad: 200.0,
+        },
+        "admin",
+    );
+    // Sin zona_id debe fallar con mensaje claro...
+    assert!(matches!(
+        pas,
+        Err(crate::error::AppError::CampoRequerido(_))
+    ));
+    let pas = mapa::crear_en_mapa(
+        &conn,
+        &CreacionEnMapa {
+            tipo: "pasillo".into(),
+            almacen_id: almacen_id.clone(),
+            zona_id: Some(_zona_id.clone()),
+            x: 20.0,
+            y: 20.0,
+            ancho: 80.0,
+            profundidad: 200.0,
+        },
+        "admin",
+    )
+    .expect("pasillo PAS-01");
+    assert_eq!(pas.codigo, "PAS-01");
+    let guardado = repo::catalogo::obtener_pasillo(&conn, &pas.id)
+        .expect("leer")
+        .expect("existe");
+    assert_eq!(guardado.pos_x, Some(20.0));
+    assert_eq!(guardado.ancho, 80.0);
+
+    // Rack que choca con el pasillo recién creado: error y NO queda nada
+    // (transacción completa: sin rack huérfano ni código consumido).
+    let choque = mapa::crear_en_mapa(
+        &conn,
+        &CreacionEnMapa {
+            tipo: "rack".into(),
+            almacen_id: almacen_id.clone(),
+            zona_id: Some(_zona_id.clone()),
+            x: 40.0,
+            y: 40.0,
+            ancho: 60.0,
+            profundidad: 60.0,
+        },
+        "admin",
+    )
+    .unwrap_err();
+    assert!(matches!(choque, crate::error::AppError::SolapeMapa { .. }));
+    let total_racks: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM racks WHERE zona_id = ?1",
+            [&_zona_id],
+            |r| r.get(0),
+        )
+        .expect("conteo");
+    assert_eq!(total_racks, 0, "la transacción debe revertir el insert");
+
+    // Reintento en espacio libre: obtiene RACK-01 (el código no se quemó).
+    let rack = mapa::crear_en_mapa(
+        &conn,
+        &CreacionEnMapa {
+            tipo: "rack".into(),
+            almacen_id: almacen_id.clone(),
+            zona_id: Some(_zona_id.clone()),
+            x: 200.0,
+            y: 20.0,
+            ancho: 100.0,
+            profundidad: 50.0,
+        },
+        "admin",
+    )
+    .expect("rack RACK-01");
+    assert_eq!(rack.codigo, "RACK-01");
+
+    // Ubicaciones no participan del modo construcción.
+    let err = mapa::crear_en_mapa(
+        &conn,
+        &CreacionEnMapa {
+            tipo: "ubicacion".into(),
+            almacen_id: almacen_id.clone(),
+            zona_id: None,
+            x: 0.0,
+            y: 0.0,
+            ancho: 70.0,
+            profundidad: 48.0,
+        },
+        "admin",
+    )
+    .unwrap_err();
+    assert!(matches!(err, crate::error::AppError::CampoInvalido(_)));
+}
+
+#[test]
+fn layout_base_siembra_sin_solapes_y_solo_en_almacen_vacio() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, _zona_id) = almacen_con_zona(&conn);
+
+    // Con zonas ya existentes: rechazado (es semilla de prototipo inicial).
+    let err = mapa::generar_layout_base(
+        &conn,
+        &LayoutBasePedido {
+            almacen_id: almacen_id.clone(),
+            ancho_recinto: 900.0,
+            profundo_recinto: 500.0,
+            pasillos: 2,
+            racks_por_bloque: 3,
+        },
+        "admin",
+    )
+    .unwrap_err();
+    assert!(matches!(err, crate::error::AppError::CampoInvalido(_)));
+
+    // Almacén vacío de zonas: genera 1 zona + 2 pasillos + 9 racks (3 bloques × 3).
+    let vacio = {
+        let alm = repo::catalogo::crear_almacen(
+            &conn,
+            &NuevoAlmacen {
+                codigo: "ALM-NUEVO".into(),
+                nombre: "Almacén Nuevo".into(),
+                descripcion: None,
+                direccion: None,
+                created_by: Some("admin".into()),
+            },
+        )
+        .expect("almacen nuevo");
+        alm.id
+    };
+    let resumen = mapa::generar_layout_base(
+        &conn,
+        &LayoutBasePedido {
+            almacen_id: vacio.clone(),
+            ancho_recinto: 900.0,
+            profundo_recinto: 500.0,
+            pasillos: 2,
+            racks_por_bloque: 3,
+        },
+        "admin",
+    )
+    .expect("layout base");
+    assert_eq!(resumen.zonas, 1);
+    assert_eq!(resumen.pasillos, 2);
+    assert_eq!(resumen.racks, 9);
+
+    // Códigos consecutivos desde cero.
+    for prefijo in ["Z-01", "PAS-01", "PAS-02", "RACK-01", "RACK-09"] {
+        let hay: i64 = conn
+            .query_row(
+                match prefijo.starts_with("Z") {
+                    true => "SELECT COUNT(*) FROM zonas WHERE almacen_id = ?1 AND codigo = ?2",
+                    false => "SELECT COUNT(*) FROM (
+                        SELECT p.codigo FROM pasillos p JOIN zonas z ON z.id = p.zona_id WHERE z.almacen_id = ?1 AND p.codigo = ?2
+                        UNION ALL
+                        SELECT r.codigo FROM racks r JOIN zonas z ON z.id = r.zona_id WHERE z.almacen_id = ?1 AND r.codigo = ?2
+                    )",
+                },
+                rusqlite::params![vacio, prefijo],
+                |r| r.get(0),
+            )
+            .expect("codigo generado");
+        assert_eq!(hay, 1, "debe existir exactamente un {prefijo}");
+    }
+
+    // La geometría generada pasa el propio motor de colisión elemento por elemento:
+    // revalidar cada rect contra todos los demás no encuentra ningún solape duro.
+    for tipo in ["zona", "pasillo", "rack"] {
+        let filas: Vec<(String, String, f64, f64, f64, f64)> = match tipo {
+            "zona" => conn
+                .prepare("SELECT id, codigo, pos_x, pos_y, ancho, profundidad FROM zonas WHERE almacen_id = ?1 AND pos_x IS NOT NULL")
+                .expect("stmt")
+                .query_map([&vacio], |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+                })
+                .expect("q")
+                .collect::<Result<_, _>>()
+                .expect("filas zona"),
+            "pasillo" => conn
+                .prepare(
+                    "SELECT p.id, p.codigo, p.pos_x, p.pos_y, p.ancho, p.profundidad FROM pasillos p JOIN zonas z ON z.id = p.zona_id WHERE z.almacen_id = ?1 AND p.pos_x IS NOT NULL",
+                )
+                .expect("stmt")
+                .query_map([&vacio], |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+                })
+                .expect("q")
+                .collect::<Result<_, _>>()
+                .expect("filas pasillo"),
+            _ => conn
+                .prepare(
+                    "SELECT r.id, r.codigo, r.pos_x, r.pos_y, r.ancho, r.profundidad FROM racks r JOIN zonas z ON z.id = r.zona_id WHERE z.almacen_id = ?1 AND r.pos_x IS NOT NULL",
+                )
+                .expect("stmt")
+                .query_map([&vacio], |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+                })
+                .expect("q")
+                .collect::<Result<_, _>>()
+                .expect("filas rack"),
+        };
+        for (id, codigo, x, y, w, h) in filas {
+            mapa::validar_colisiones(
+                &conn,
+                &vacio,
+                mapa::TipoNodo::desde_str(tipo).expect("tipo"),
+                &id,
+                &codigo,
+                &Rect {
+                    x,
+                    y,
+                    ancho: w,
+                    profundo: h,
+                },
+            )
+            .unwrap_or_else(|e| panic!("layout base inválido para {tipo} {codigo}: {e}"));
+        }
+    }
+
+    // Parámetros absurdos rechazados antes de escribir nada.
+    let err = mapa::generar_layout_base(
+        &conn,
+        &LayoutBasePedido {
+            almacen_id: vacio.clone(),
+            ancho_recinto: 900.0,
+            profundo_recinto: 500.0,
+            pasillos: 99,
+            racks_por_bloque: 3,
+        },
+        "admin",
+    )
+    .unwrap_err();
+    assert!(matches!(err, crate::error::AppError::CampoInvalido(_)));
 }

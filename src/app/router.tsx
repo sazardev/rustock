@@ -159,6 +159,7 @@ const LoteFormPage = lazyPage(() => import("../pages/LoteFormPage"), "LoteFormPa
 const ImportarPage = lazyPage(() => import("../pages/ImportarPage"), "ImportarPage");
 const AlmacenMapaPage = lazyPage(() => import("../pages/AlmacenMapaPage"), "AlmacenMapaPage");
 const AlmacenMapa3DPage = lazyPage(() => import("../pages/AlmacenMapa3DPage"), "AlmacenMapa3DPage");
+const MapaAsistentePage = lazyPage(() => import("../pages/MapaAsistentePage"), "MapaAsistentePage");
 const AyudaIndexPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaIndexPage");
 const AyudaGlosarioPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaGlosarioPage");
 const AyudaModulePage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaModulePage");
@@ -246,6 +247,7 @@ export const router = createBrowserRouter([
           { path: "almacenes/:id/editar", element: <AlmacenFormPage /> },
           { path: "almacenes/:id/eliminar", element: <CatalogEliminarRoute catalog="almacenes" /> },
           { path: "almacenes/:id/mapa", element: <AlmacenMapaPage /> },
+          { path: "almacenes/:id/mapa/asistente", element: <MapaAsistentePage /> },
           { path: "almacenes/:id/mapa-3d", element: <AlmacenMapa3DPage /> },
           { path: "productos/nuevo", element: <ProductoFormPage /> },
           { path: "productos/:id/editar", element: <ProductoFormPage /> },

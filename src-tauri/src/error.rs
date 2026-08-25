@@ -94,6 +94,19 @@ pub enum AppError {
     #[error("La categoría no puede tener ciclos en su jerarquía")]
     CicloCategoria,
 
+    #[error(
+        "El {tipo_a} '{codigo_a}' se solapa con el {tipo_b} '{codigo_b}' en el mapa. Ajusta la posición o el tamaño para que no coincidan"
+    )]
+    SolapeMapa {
+        tipo_a: &'static str,
+        codigo_a: String,
+        tipo_b: &'static str,
+        codigo_b: String,
+    },
+
+    #[error("El tamaño del {0} no es válido: ancho y profundidad deben ser mayores a {1} unidades")]
+    DimensionInvalida(&'static str, i64),
+
     #[error("Error de base de datos: {0}")]
     Db(#[from] rusqlite::Error),
 

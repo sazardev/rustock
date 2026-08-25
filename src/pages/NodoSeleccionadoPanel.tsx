@@ -10,7 +10,7 @@ import type { Pasillo, Rack, Ubicacion, Zona } from "../shared/types";
 import { Badge, Button, ButtonLink, Card, DetailList, Text } from "../shared/ui";
 import { PosicionFormCard, type PosicionValores } from "../shared/posicion-form-card";
 import { ContenidoInventarioCard } from "./ContenidoInventarioCard";
-import { catalogoDetalle } from "../app/route-paths";
+import { catalogoDetalle, catalogoEliminar } from "../app/route-paths";
 import { formatearFecha } from "../shared/format";
 import { UsuarioNombre } from "../shared/refs";
 import { SLUG_POR_TIPO, type NodoMapa, type TipoNodo } from "./mapa-almacen-datos";
@@ -27,11 +27,16 @@ export function NodoSeleccionadoPanel({
   onCerrar,
   onGuardarPosicion,
   guardandoPosicion,
+  onDuplicar,
+  duplicando = false,
 }: {
   nodo: NodoMapa | null;
   onCerrar: () => void;
   onGuardarPosicion: (pos: PosicionValores) => void;
   guardandoPosicion: boolean;
+  /** Duplicar (estilo Shift+D): solo zona/pasillo/rack del modo construcción. */
+  onDuplicar?: () => void;
+  duplicando?: boolean;
 }) {
   const zonaQ = useQuery({
     queryKey: ["panel-nodo", "zona", nodo?.id],
@@ -84,7 +89,7 @@ export function NodoSeleccionadoPanel({
       >
         <Card.Body>
           <Badge tone="info">{ETIQUETA_TIPO[nodo.tipo]}</Badge>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <ButtonLink
               variant="secondary"
               icon="ver"
@@ -92,12 +97,43 @@ export function NodoSeleccionadoPanel({
             >
               Ir hacia
             </ButtonLink>
+            {onDuplicar && nodo.tipo !== "ubicacion" ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="duplicar"
+                disabled={duplicando}
+                onClick={onDuplicar}
+              >
+                Duplicar
+              </Button>
+            ) : null}
+            {nodo.tipo !== "ubicacion" ? (
+              <ButtonLink
+                variant="ghost"
+                size="sm"
+                icon="eliminar"
+                href={catalogoEliminar(SLUG_POR_TIPO[nodo.tipo], nodo.id)}
+              >
+                Eliminar
+              </ButtonLink>
+            ) : null}
           </div>
         </Card.Body>
       </Card>
 
       <PosicionFormCard
-        valores={{ pos_x: nodo.pos_x, pos_y: nodo.pos_y, pos_z: nodo.pos_z, altura: nodo.altura }}
+        valores={{
+          pos_x: nodo.pos_x,
+          pos_y: nodo.pos_y,
+          pos_z: nodo.pos_z,
+          altura: nodo.altura,
+          // Tamaño editable solo para tipos redimensionables (modo construcción).
+          ...(nodo.tipo !== "ubicacion"
+            ? { ancho: nodo.ancho, profundidad: nodo.profundidad }
+            : {}),
+        }}
+        tamanio={nodo.tipo !== "ubicacion"}
         onGuardar={onGuardarPosicion}
         guardando={guardandoPosicion}
       />

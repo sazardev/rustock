@@ -22,6 +22,10 @@ use super::{Auditoria, TipoUbicacion, normalizar_codigo};
 /// `None` significa "sin posición asignada todavía" (el frontend hace
 /// fallback a una rejilla automática). `pos_z`/`altura` no se usan por el
 /// mapa 2D actual; quedan listos para la futura vista 3D (apilado vertical).
+///
+/// `ancho`/`profundidad` son el tamaño del rectángulo que el nodo ocupa en el
+/// plano (modo construcción): `None` = mantener el tamaño actual (los campos
+/// de posición sí se escriben tal cual, semántica previa intacta).
 #[derive(Debug, Clone, Deserialize)]
 pub struct PosicionMapa {
     #[serde(default)]
@@ -32,6 +36,10 @@ pub struct PosicionMapa {
     pub pos_z: Option<f64>,
     #[serde(default)]
     pub altura: Option<f64>,
+    #[serde(default)]
+    pub ancho: Option<f64>,
+    #[serde(default)]
+    pub profundidad: Option<f64>,
 }
 
 // ============ Almacén (SPEC §3.1) ============
@@ -106,6 +114,10 @@ pub struct Zona {
     pub pos_y: Option<f64>,
     pub pos_z: Option<f64>,
     pub altura: Option<f64>,
+    /// Tamaño del rectángulo en el plano (modo construcción, SPEC §3.2).
+    /// Siempre presente: la migración rellena con el valor por defecto.
+    pub ancho: f64,
+    pub profundidad: f64,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
@@ -142,6 +154,9 @@ pub struct Pasillo {
     pub pos_y: Option<f64>,
     pub pos_z: Option<f64>,
     pub altura: Option<f64>,
+    /// Tamaño del rectángulo en el plano (modo construcción, SPEC §3.3b).
+    pub ancho: f64,
+    pub profundidad: f64,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
@@ -181,6 +196,9 @@ pub struct Rack {
     pub pos_y: Option<f64>,
     pub pos_z: Option<f64>,
     pub altura: Option<f64>,
+    /// Tamaño del rectángulo en el plano (modo construcción, SPEC §3.3).
+    pub ancho: f64,
+    pub profundidad: f64,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }

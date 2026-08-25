@@ -1584,3 +1584,207 @@
 .favoritos__chip-quitar:hover {
   color: var(--color-danger-500);
 }
+
+/* ============ Modo construcción del mapa (SPEC §14, layout físico) ============ */
+
+.mapa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.mapa-toolbar__sep {
+  width: 1px;
+  height: var(--size-sm);
+  background: var(--color-gray-200);
+}
+
+.mapa-herramienta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--size-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-600);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    background-color 150ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 150ms cubic-bezier(0.2, 0, 0, 1),
+    color 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.mapa-herramienta:hover {
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
+}
+
+.mapa-herramienta:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.mapa-herramienta--activa {
+  background: var(--color-info-bg);
+  border-color: var(--color-blue-300);
+  color: var(--color-info-text);
+}
+
+.mapa-herramienta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mapa-toolbar__ayuda {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+}
+
+.mapa-almacen__nodo--invalido {
+  cursor: not-allowed;
+}
+
+.mapa-tirador {
+  fill: var(--color-white);
+  stroke: var(--color-blue-500);
+  stroke-width: 1.5;
+  cursor: nwse-resize;
+}
+
+.mapa-tirador--ne,
+.mapa-tirador--sw {
+  cursor: nesw-resize;
+}
+
+.mapa-dibujo-preview {
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.asistente-layout {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .asistente-layout {
+    grid-template-columns: minmax(20rem, 28rem) 1fr;
+  }
+}
+
+.asistente-preview {
+  width: 100%;
+  max-height: var(--space-16);
+  height: auto;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-gray-50);
+}
+
+/* ============ Mapa 3D inmersivo (estilo Figma/Blender) ============ */
+/* El lienzo ocupa toda la ventana (fixed) y la UI flota encima, estática:
+   barra superior de herramientas + panel del nodo anclado a la izquierda. */
+
+.mapa3d-full {
+  position: fixed;
+  inset: 0;
+  z-index: 210; /* sobre topbar (100) y sidebar (200); bajo tooltip/toast/palette */
+  background: var(--color-surface-muted);
+}
+
+.mapa3d-full__lienzo {
+  position: absolute;
+  inset: 0;
+}
+
+.mapa3d-full__lienzo canvas {
+  display: block;
+}
+
+.mapa3d-full__barra {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+
+.mapa3d-full__barra > * {
+  pointer-events: auto;
+}
+
+.mapa3d-full__grupo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.mapa3d-full__titulo {
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-gray-800);
+  white-space: nowrap;
+}
+
+.mapa3d-full__herramientas {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mapa3d-full__panel {
+  position: absolute;
+  /* Debajo de la barra de herramientas aun cuando esta envuelve a dos líneas
+     en pantallas medianas (la píldora de herramientas es ancha). */
+  top: calc(var(--space-3) + 6rem);
+  left: var(--space-3);
+  bottom: var(--space-3);
+  width: min(21rem, calc(100vw - var(--space-6)));
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+/* HUD de coordenadas del nodo arrastrado en el 3D (estilo editor). */
+.mapa-almacen-3d__hud {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-gray-800);
+  white-space: nowrap;
+}
+
+.mapa3d-full__aviso {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  pointer-events: none;
+}

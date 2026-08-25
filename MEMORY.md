@@ -13,7 +13,7 @@
 |---|---|
 | **Versión activa** | `0.3.0` (sincronizada en package.json, Cargo.toml, tauri.conf.json) |
 | **Último tag** | `v0.3.0` |
-| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 — **completo**. Modo navegador real (servidor HTTP local) — **completo**. Modo navegador sin ventana (`npm run tauri:web`, sin GTK) — **completo**. Formularios de creación/edición de los 8 catálogos — **completo** (Hito 12). Rebranding de identidad visual "Rust & Iron" (paleta de óxido, logo, SEO) — **completo** (Hito 13). Logo sin fondo + login con marca centrada + **landing page en la raíz pública `/`** (presentación del producto sin sesión; dashboard movido a `/dashboard`) — **completo** (Hito 14, sin commit). **Módulo de configuración de empresa + preferencias de usuario + gestión de usuarios real (páginas y backend)** — **completo** (Hito 15, sin commit). **Reportes reales de stock, movimientos, precisión y auditoría** (rutas `/reportes/*` que ya estaban declaradas sin página) — **completo** (Hito 16, sin commit). **Módulo empresa ampliado: país/ubicación con mapa OSM, fiscales, contacto, logo + documentos y entidad Sucursal** — **completo** (Hito 17, sin commit). **Mejoras a los reportes** (exportación CSV/JSON, filtros, reportes de entradas/salidas/mermas/usuarios, gráficas CSS puras) — **completo** (Hito 18, sin commit). **UX de alertas: enlace a la causa raíz + semántica de Resolver/Ignorar** — **completo** (Hito 19, sin commit). **Sección Ayuda: guía de los 19 módulos + glosario de 40 términos en un grupo nuevo del sidebar** — **completo** (Hito 20, sin commit). **Temas configurables: 6 paletas predefinidas + modo claro/oscuro, global (ADMIN) y por usuario** — **completo** (Hito 21, sin commit). **Sección Ayuda potenciada: 26 guías (19 módulos enriquecidos + 6 procesos de negocio SPEC §18 + primeros pasos), glosario de 46 términos con anclas, cruces bidireccionales módulo↔glosario, búsqueda en el índice y tarjeta de contexto de negocio** — **completo** (Hito 22, sin commit). **Command palette "Buscar en todo Rustock" (Ctrl+K)**: búsqueda global en todo — páginas, rutas, acciones, reportes, ayuda/glosario y **datos de negocio en vivo** (8 catálogos + movimientos + sesiones de inventario + alertas) vía un nuevo comando `buscar` en Rust con permisos por recurso y orden por relevancia; subsecuencia tipo fzf para comandos; recientes en localStorage — **completo** (Hito 23, sin commit). **Ampliación: la sección Ayuda (26 guías + glosario de 46 términos) se indexa por contenido completo en el command palette** (procesos, negocio y glosario) **y es configurable por usuario** (preferencia `ayuda_en_palette` con toggle en Mi perfil) — **completo** (ampliación Hito 23, sin commit). **Motor de búsqueda inteligente: matching multi-término con sinónimos del dominio, boost por historial e intención, relevancia multi-columna en `buscar` y desglose analítico en el palette** — **completo** (mejora Hito 23, sin commit). **Confirmación limpia en la Ayuda: toast al navegar desde una guía a la app (`EnlaceAyuda`), toast al abrir una guía desde Ctrl+K y toast descriptivo al activar/desactivar la ayuda en Mi perfil** — **completo** (ampliación Hito 23, sin commit). **Cierre de gaps (Hito 24): edición de movimientos (backend + frontend), "crear y aprobar" conectado a `requiere_aprobacion` con comando `puedo`, CRUD completo de Zona/Rack/Sección/Caja + árbol físico en el detalle de Almacén, UOM editable/desactivable, sesión PLANEADA→EN_CURSO, traslado inter-almacén atómico, unicidad de código por almacén, moderación de comentarios (GERENTE), mensajes de error de usuarios, virtualización de tablas (@tanstack/react-virtual), lazy-loading por ruta, skip-link a11y, iconos/meta del bundle e INSTALACION.md** — **completo** (Hito 24, sin commit). **Tracking total (Hito 25): centro de actividad en `/historial`** — auditoría ampliada (tipo de evento, ruta, módulo, proceso, metadatos JSON, tenant, duración de vista, hora/día local), comando `registrar_vista` (con beacon en beforeunload), `metricas_actividad` con insights automáticos (hora pico, módulo dominante, tendencia 7 días), `listar_historial` paginado con filtros combinables, KPIs/gráficas/exportación — **completo** (Hito 25, sin commit). Ver Hitos 8-25 en §2. **Script de arranque en un solo comando (`dev.sh` / `npm run dev:web`)** con opciones `--seed/--reset/--tmpdb/--stop` — **completo** (Hito 26, sin commit) |
+| **Fase del roadmap** | Backend: completo (§3-§17). Frontend: plan de 6 fases FE-1..FE-6 — **completo**. Modo navegador real (servidor HTTP local) — **completo**. Modo navegador sin ventana (`npm run tauri:web`, sin GTK) — **completo**. Formularios de creación/edición de los 8 catálogos — **completo** (Hito 12). Rebranding de identidad visual "Rust & Iron" (paleta de óxido, logo, SEO) — **completo** (Hito 13). Logo sin fondo + login con marca centrada + **landing page en la raíz pública `/`** (presentación del producto sin sesión; dashboard movido a `/dashboard`) — **completo** (Hito 14, sin commit). **Módulo de configuración de empresa + preferencias de usuario + gestión de usuarios real (páginas y backend)** — **completo** (Hito 15, sin commit). **Reportes reales de stock, movimientos, precisión y auditoría** (rutas `/reportes/*` que ya estaban declaradas sin página) — **completo** (Hito 16, sin commit). **Módulo empresa ampliado: país/ubicación con mapa OSM, fiscales, contacto, logo + documentos y entidad Sucursal** — **completo** (Hito 17, sin commit). **Mejoras a los reportes** (exportación CSV/JSON, filtros, reportes de entradas/salidas/mermas/usuarios, gráficas CSS puras) — **completo** (Hito 18, sin commit). **UX de alertas: enlace a la causa raíz + semántica de Resolver/Ignorar** — **completo** (Hito 19, sin commit). **Sección Ayuda: guía de los 19 módulos + glosario de 40 términos en un grupo nuevo del sidebar** — **completo** (Hito 20, sin commit). **Temas configurables: 6 paletas predefinidas + modo claro/oscuro, global (ADMIN) y por usuario** — **completo** (Hito 21, sin commit). **Sección Ayuda potenciada: 26 guías (19 módulos enriquecidos + 6 procesos de negocio SPEC §18 + primeros pasos), glosario de 46 términos con anclas, cruces bidireccionales módulo↔glosario, búsqueda en el índice y tarjeta de contexto de negocio** — **completo** (Hito 22, sin commit). **Command palette "Buscar en todo Rustock" (Ctrl+K)**: búsqueda global en todo — páginas, rutas, acciones, reportes, ayuda/glosario y **datos de negocio en vivo** (8 catálogos + movimientos + sesiones de inventario + alertas) vía un nuevo comando `buscar` en Rust con permisos por recurso y orden por relevancia; subsecuencia tipo fzf para comandos; recientes en localStorage — **completo** (Hito 23, sin commit). **Ampliación: la sección Ayuda (26 guías + glosario de 46 términos) se indexa por contenido completo en el command palette** (procesos, negocio y glosario) **y es configurable por usuario** (preferencia `ayuda_en_palette` con toggle en Mi perfil) — **completo** (ampliación Hito 23, sin commit). **Motor de búsqueda inteligente: matching multi-término con sinónimos del dominio, boost por historial e intención, relevancia multi-columna en `buscar` y desglose analítico en el palette** — **completo** (mejora Hito 23, sin commit). **Confirmación limpia en la Ayuda: toast al navegar desde una guía a la app (`EnlaceAyuda`), toast al abrir una guía desde Ctrl+K y toast descriptivo al activar/desactivar la ayuda en Mi perfil** — **completo** (ampliación Hito 23, sin commit). **Cierre de gaps (Hito 24): edición de movimientos (backend + frontend), "crear y aprobar" conectado a `requiere_aprobacion` con comando `puedo`, CRUD completo de Zona/Rack/Sección/Caja + árbol físico en el detalle de Almacén, UOM editable/desactivable, sesión PLANEADA→EN_CURSO, traslado inter-almacén atómico, unicidad de código por almacén, moderación de comentarios (GERENTE), mensajes de error de usuarios, virtualización de tablas (@tanstack/react-virtual), lazy-loading por ruta, skip-link a11y, iconos/meta del bundle e INSTALACION.md** — **completo** (Hito 24, sin commit). **Tracking total (Hito 25): centro de actividad en `/historial`** — auditoría ampliada (tipo de evento, ruta, módulo, proceso, metadatos JSON, tenant, duración de vista, hora/día local), comando `registrar_vista` (con beacon en beforeunload), `metricas_actividad` con insights automáticos (hora pico, módulo dominante, tendencia 7 días), `listar_historial` paginado con filtros combinables, KPIs/gráficas/exportación — **completo** (Hito 25, sin commit). Ver Hitos 8-25 en §2. **Script de arranque en un solo comando (`dev.sh` / `npm run dev:web`)** con opciones `--seed/--reset/--tmpdb/--stop` — **completo** (Hito 26, sin commit). **Modo construcción del mapa (Hito 29): motor de colisión por matriz de pares (SPEC §14.8), tamaños reales ancho/profundidad en BD para zona/pasillo/rack, crear dibujando desde el mapa con código auto-sugerido y asistente de layout base con vista previa (`/almacenes/:id/mapa/asistente`)** — **completo**, sin commit |
 | **Backend Rust** | Autenticación real (argon2 + sesión), motor de consulta universal (SPEC §15), CRUD completo de catálogos, árbol de ubicación simplificado, restricción de caja, código de barras, FIFO/FEFO, traslado inter-almacén **atómico**, comentarios con historial, trazabilidad (§13.4), alertas (§17), dashboard/KPIs/kardex (§16), servidor HTTP local en `:1421` (**configurable** con `RUSTOCK_HTTP_PORT`), modo web-only sin ventana, **configuración de empresa + preferencias de usuario + gestión de usuarios + umbrales de alertas + sucursales + archivos de empresa**, **edición de movimientos (`editar_movimiento`)**, **UOM editable y desactivable**, **inicio de sesión de inventario (`iniciar_sesion_inventario`)**, **unicidad de código por almacén completo**, **comando `puedo`**, **mensajes de error específicos en usuarios**, **tracking total (Hito 25): `registrar_vista`, `metricas_actividad`, `listar_historial` paginado+filtros, clasificación módulo/proceso/tenant de cada comando** — **108 tests pasan**, clippy y fmt limpios. Incluye `seed.rs` para datos de ejemplo (`RUSTOCK_SEED=1`, solo debug) |
 | **Pipeline de calidad** | Activo: pre-commit, pre-push, commit-msg (lefthook) |
 | **Guardas de opencode** | Activas: agente `rustock`, `/verify`, `/feature`, `/fix` |
@@ -138,6 +138,390 @@ pasan).
 los comandos nuevos solo actúa tras reiniciar `npm run tauri:web` / `tauri
 dev` (los comandos `registrar_vista`/`metricas_actividad` no existen en el
 proceso viejo). Se dejó intacto el proceso del usuario.
+
+### Hito 29 — Modo construcción del mapa: colisiones, tamaños reales, crear dibujando y asistente de layout base (completo, sin commit)
+
+Pedido del usuario: "para el tema de mapa, almacén, 2D y 3D, falta implementar
+la lógica de no sobrelapar cosas (un pasillo no está arriba de otro pasillo),
+también primero hay que prototipar cómo es el almacén —la forma, qué pasillos
+hay, dejar espacios— una construcción más amena al estilo Sims". Se consultaron
+4 decisiones y eligió: **tamaños reales en BD**, **editor + crear desde el
+mapa**, **bloqueo duro por matriz de pares** y **asistente de layout base**.
+La regla de negocio nueva vive en SPEC §14.8 ("Layout físico del mapa").
+
+**Backend (Rust):**
+- **`src-tauri/src/mapa.rs` (nuevo)**: motor de layout físico — `Rect` AABB,
+  `rects_solapan` con desigualdad estricta (**tocarse por borde es válido**),
+  matriz `solape_prohibido` (mismo tipo entre sí; pasillo↔rack;
+  pasillo↔ubicación; rack↔ubicación; **contención zona→hijos permitida, nunca
+  exigida**), `validar_dimensiones` (lado mínimo 10) y `validar_colisiones`
+  que consulta en UNA SQL todos los nodos activos+posicionados del almacén
+  (zonas directas; pasillos/racks vía zona; ubicaciones resueltas por
+  COALESCE de sección/rack/zona) y devuelve `AppError::SolapeMapa` con el
+  mensaje "El rack 'X' se solapa con el pasillo 'Y'…". Inactivos y sin
+  posición no reservan suelo.
+- **Migración aditiva** (`asegurar_columna`, sin borrar db): `ancho`/
+  `profundidad` (`REAL NOT NULL DEFAULT`) en `zonas` (150×70), `pasillos`
+  (130×56) y `racks` (110×56) — los defaults replican las constantes visuales
+  anteriores para que ningún mapa existente salte. Las ubicaciones quedan de
+  tamaño fijo (bins; constantes `UBICACION_*` compartidas).
+- **`mover_zona/mover_pasillo/mover_rack/mover_ubicacion`** ahora fusionan el
+  candidato (`ancho`/`profundidad` None = sin cambio; posición conserva su
+  semántica previa), validan dimensiones + solape ANTES del UPDATE. El
+  almacén se resuelve por transitividad (`almacen_de_zona` /
+  `resolver_almacen_id_de_ubicacion`).
+- **`crear_en_mapa`**: crea dibujando — sugiere primer código libre
+  (`Z-04`, `PAS-07`, `RACK-12`; unicidad por almacén vía zona), revalida la
+  zona contenedora (obligatoria para pasillo/rack, activa y del mismo
+  almacén), reusa `crear_*` + `mover_*` (permisos y auditoría intactos) y
+  TODO en una transacción: si el rect choca no queda nada ni código quemado.
+  Ubicaciones NO se crean por este camino (documentado; futuro "poblar
+  rack"). **`generar_layout_base`**: prototipo inicial (zona contenedora +
+  columnas alternadas [bloque de racks | pasillo], márgenes 20/gap 10) con
+  geometría garantizada sin solapes; guard: solo almacenes sin zonas activas;
+  rangos 200-100000 / pasillos 1-12 / racks-bloque 1-20.
+- Comandos + dispatcher HTTP espejados (`crear_en_mapa`,
+  `generar_layout_base`); schemas del motor universal con las columnas nuevas
+  (filtrables/ordenable). **Tests**: +4 (121 total): matriz pura completa,
+  mover rechaza solape nombrando códigos y permite borde compartido,
+  crear_en_mapa sugiere/revierte/no-quema-código, layout base siembra 1+2+9
+  sin un solo par prohibido (revalidado elemento a elemento con el propio
+  motor).
+
+**Frontend (React):**
+- **`src/pages/mapa-geometria.ts` (nuevo)**: espejo TS documentado de la
+  matriz/AABB/snap (paso 10, Alt lo desactiva) + `zonaContenedoraDePunto`
+  (menor área contenedora). Feedback EN VIVO; el backend sigue siendo quien
+  rechaza de verdad.
+- **`AlmacenMapaPage` reescrito como lienzo de construcción**: modo por URL
+  `?modo=construir` (deep-linkable); barra de herramientas (Seleccionar/Zona/
+  Pasillo/Rack + Rejilla + Rotar 90°, iconos canónicos, `aria-pressed`);
+  drag/resize con ghost rojo + drop bloqueado con toast cuando la matriz lo
+  prohíbe; tiradores de esquina (con mínimo de lado); rotación alrededor del
+  centro; **crear dibujando** con preview verde/rojo + dimensiones en vivo y
+  resolución automática de zona contenedora por punto central; teclado:
+  Esc deselecciona, flechas mueven el nodo seleccionado (persisten), Enter
+  selecciona y doble clic navega al detalle; rejilla visible con pattern SVG.
+- **Tamaños reales end-to-end**: `NodoMapa` lleva `ancho/profundidad` (el 3D
+  adopta los tamaños automáticamente en sus prismas);
+  `PosicionFormCard` gana Ancho/Profundidad + botón **Rotar 90°** para tipos
+  redimensionables (el panel del nodo 3D los usa); `PosicionMapaEditable` en
+  types/backend.
+- **`MapaAsistentePage` (nueva ruta `/almacenes/:id/mapa/asistente`)**:
+  formulario (medidas, nº pasillos, racks por bloque) + **vista previa SVG en
+  vivo** que replica la misma fórmula geométrica del backend + botón primario
+  "Generar layout base" → redirige al mapa. Enlace "Generar layout base" en
+  la toolbar del mapa cuando el almacén no tiene zonas.
+- Icono nuevo canónico: `rotar` → `RotateCw` (Lucide, DESIGN §6.13 ruta de
+  mantenimiento). CSS nuevo tokenizado (`.mapa-toolbar`, `.mapa-herramienta`,
+  `.mapa-tirador`, `.mapa-dibujo-preview`, `.asistente-*`) — DesignGuard OK.
+
+**Verificación:** pipeline completo en verde — backend (`cargo fmt --check`,
+`clippy -D warnings`, `cargo test --lib` **121**) y frontend (`tsc`, oxlint,
+DesignGuard 153 archivos, RouteGuard 46 rutas, `vite build`). **Prueba en vivo
+por HTTP** (backend web-only, DB temporal, puerto 1455): crear_en_mapa Z-01 →
+PAS-01 dentro de ella → rack solapado **rechazado** con mensaje que nombra
+ambos códigos y **sin rack huérfano** (transacción revertida, conteo 0) →
+reintento en espacio libre recibe RACK-01 (código no quemado) → mover rack al
+pasillo rechazado → mover+redimensionar a espacio libre persiste (400/140×45)
+→ layout base sobre almacén con zonas rechazado → sobre almacén vacío genera
+1 zona + 2 pasillos + 9 racks con **0 pares solapados** verificados
+matemáticamente sobre las filas devueltas.
+
+**Ampliación — verificación E2E en Chrome de Windows real + colores por tipo
+(misma sesión, sin commit):** el usuario reportó "errores" en su Chrome de
+Windows (con WebGL real) y pidió colores para diferenciar cada cosa en los
+modelos. Acceso al Chrome de Windows desde WSL: lanzar chrome.exe con
+`--remote-debugging-port=9223` + perfil temporal y alcanzarlo con un **relay
+Node en Windows** (0.0.0.0:9224 → 127.0.0.1:9223; el relay PowerShell asíncrono
+falla silenciosamente y `netsh portproxy` resetea las conexiones — usar Node).
+Chrome valida el header `Host` del DevTools: enviar `Host: localhost:9223`.
+Hallazgos y cambios:
+- **Diagnóstico de los "errores": la consola está LIMPIA en estado estable** —
+  solo `THREE.Clock deprecated` (interno de three/drei), el preload warning de
+  `rustock.svg` (conocido, Hito 27) y debug de vite HMR. Lo que veía el usuario
+  eran `Failed to fetch` transitorios mientras esta sesión reiniciaba
+  servidores/reinstalaba node_modules. WebGL2 confirmado (`webgl2: true`).
+- **Bug real corregido (3D)**: los prismas seguían usando las constantes
+  `ANCHO_NODO/ALTO_NODO` en vez de los tamaños reales de BD — ahora leen
+  `n.ancho/n.profundidad` con fallback. Verificado en vivo: Z-01 renderiza
+  como plataforma 900×500, RACK-02 se ve girado (140×172), RACK-10 (160×100).
+- **Colores por categoría (2D y 3D consistentes)**: nuevo `COLOR_NODO` en
+  `mapa-almacen-datos.ts` — zona `--color-gray-100` (plataforma), pasillo
+  `--color-gray-200` (canal de tránsito), rack `--color-blue-100` (estructura
+  cálida); ubicaciones conservan color por ocupación (estado). Helper
+  `colorRellenoNodo` compartido. El 3D resuelve la paleta 1 vez por render
+  (antes: `getComputedStyle` por nodo por render).
+- **Alturas 3D realistas**: pasillo deja de ser pared (1.2 → 0.14, marcador de
+  piso sobre la plataforma de zona 0.1); rack 1.2, ubicación 0.4.
+- **Fluidez**: `frameloop="demand"` en el Canvas (la GPU no renderiza en
+  reposo); **61 FPS medidos** vía CDP en el Chrome de Windows.
+- **Comprobación E2E en Chrome Windows real**: consola limpia tras recarga,
+  panel del nodo con tamaños reales, edición de Ancho 172→150 desde el panel
+  3D → **backend persistió** (ciclo PosicionFormCard→mover_rack→validación→DB),
+  capturas de la escena 2D y 3D con colores. Los errores intermedios de HMR
+  durante los edits (COLOR_NODO no definido) se disiparon solos al guardar el
+  import — el archivo final pasó typecheck/lint/build.
+- Limpieza: instancia de Chrome de prueba, relay y portproxy eliminados; la
+  sesión y Chrome del usuario intactos.
+
+**Ampliación 2 — Deshacer/Rehacer + mapa de calor verde/rojo (misma sesión,
+sin commit):** pedido del usuario: "opción de undo por si muevo algo por
+error" y "que al arrastrar se pinten cuadros verdes donde sí se puede y rojo
+donde rompe el sistema".
+- **Deshacer/Rehacer (frontend, por sesión)**: pila de hasta 50 entradas en
+  `AlmacenMapaPage` — mueve/redimensiona/rota registran `{antes, despues}`
+  completo (posición + tamaño + pos_z/altura); la entrada se registra solo
+  cuando el backend CONFIRMA (`mutate(vars, { onSuccess })`), así un rechazo
+  por colisión no ensucia la pila. Deshacer de **creaciones** = `desactivar_*`
+  (la zona/rack/pasillo recién creado no tiene historial; desaparece del mapa
+  porque los listados del mapa ahora filtran `activo:eq:true` — las
+  ubicaciones se filtrán en cliente porque el OR del árbol no mezcla con AND).
+  Rehacer solo para movimientos (re-crear cambiaría el código). Botones
+  Deshacer/Rehacer en el header (ambos modos) + **Ctrl/Cmd+Z**,
+  **Ctrl+Shift+Z/Ctrl+Y** (ignora campos de texto). Iconos canónicos nuevos:
+  `deshacer`→Undo2, `rehacer`→Redo2 (Lucide, §6.13).
+- **Mapa de calor de colocación** (`calcularMapaColocacion` en
+  `mapa-geometria.ts`): mientras arrastras/redimensionas/dibujas, el lienzo
+  pinta celdas **verdes** (el rect cabe ahí sin chocar) y **rojas** (chocaría
+  con un par prohibido). Depende SOLO del tamaño del gesto + los demás nodos
+  (no de la posición del cursor), así que se calcula una vez por gesto y el
+  tamaño va redondeado a celdas de 25; región = bbox de nodos ±150 con tope
+  2500 celdas (paso se duplica si excede). Excluye al nodo arrastrado (su
+  posición original no se pinta roja). Renderizado como componente
+  `React.memo` (`MapaCalor`) para no re-difundir ~2500 rects en cada
+  pointermove; `pointerEvents="none"`.
+- **E2E en Chrome de Windows real (CDP)**: mapa de calor presente durante el
+  arrastre con 1255 celdas verdes + 1239 rojas (captura); drag válido guardó
+  (630,610) → Deshacer devolvió (326,604) → Rehacer re-aplicó (630,610) →
+  Ctrl+Z real volvió a (326,604), todo verificado contra el backend; crear
+  dibujando Z-03 → Deshacer → `activo:false` y fuera del lienzo con toast
+  "Creación deshecha: Z-03 desactivado". Pipeline completo en verde.
+
+**Ampliación 3 — Mapa 3D inmersivo estilo Figma/Blender (misma sesión, sin
+commit):** pedido del usuario: "pasa a ser full screen el mapa 3d, y se queda
+estático los cards a la izquierda más los botones, la UI está encimada del
+mapa 3d".
+- **`AlmacenMapaPage` → `AlmacenMapa3DPage` reescrito como editor inmersivo**:
+  contenedor `.mapa3d-full` `position: fixed; inset: 0; z-index: 210` (sobre
+  topbar 100 y sidebar 200; bajo tooltip 250/toast 300/palette 310) — cubre
+  todo el shell. El lienzo es absoluto inset-0 (canvas 1484×905 medido). Los
+  estados carga/vacío/sin-WebGL siguen renderizando página normal dentro del
+  shell (con PageHeader + ErrorPanel).
+- **UI flotante estática**: barra superior en dos grupos-píldora
+  (`.mapa3d-full__grupo`, surface + border + `--shadow-lg`): izquierda
+  "Mapa 2D" (volver) + título "Mapa 3D — {código}" (nueva query
+  `obtenerAlmacen`); derecha herramientas (Encuadrar, Resetear, Cuadrícula,
+  toggles de tipos, Pantalla completa — la Fullscreen API sigue sobre el
+  contenedor). Panel del nodo anclado a la **izquierda**
+  (`.mapa3d-full__panel`, scrollable, debajo de la barra). La barra usa
+  `pointer-events: none` con hijos `auto` para no bloquear la órbita.
+- **Verificado en Chrome de Windows real (CDP)**: editor cubre innerWidth×
+  innerHeight exacto, 9 controles en la barra, panel a 12px del borde, 61 FPS,
+  consola limpia (solo THREE.Clock); `?resaltar=` puebla el panel izquierdo
+  (RACK-05 con Ancho 172/Profundidad 140); un drag de mouse real sobre el
+  canvas agarró RACK-05 e intentó moverlo → **el backend lo bloqueó con el
+  toast de solape con PAS-02** (la matriz de colisión aplica también desde el
+  editor 3D). Capturas en /tmp/opencode/win-3d-fullscreen.png y
+  win-3d-orbit.png. Pipeline completo en verde (121 tests, tsc, lint,
+  DesignGuard, RouteGuard, build).
+
+**Ampliación 4 — 3D consistente con el 2D: snap, semáforo, bloqueo en cliente,
+mapa de calor en el piso y Deshacer/Rehacer (misma sesión, sin commit):**
+pedido del usuario: "prueba el 3d, analiza más a profundo detalle,
+implemento, consistente". Análisis del arrastre 3D previo: sin snap a
+rejilla, sin validación en vivo (el backend rechazaba después del drop), sin
+mapa de calor y sin undo. Implementado:
+- **Hook compartido `use-historial-mapa.ts`**: pila Deshacer/Rehacer
+  (`registrar`/`deshacer`/`rehacer`/`reponer` + `puedeDeshacer/puedeRehacer`);
+  `snapshotDe` movido aquí. La página 2D migró al hook (mismo comportamiento,
+  verificado) y el 3D lo usa: entradas desde el drag de escena, el panel
+  (PosicionFormCard) y por ende Rotar 90°. Botones Deshacer/Rehacer al inicio
+  de la barra flotante 3D + **Ctrl/Cmd+Z / Ctrl+Shift+Z / Ctrl+Y** (ignora
+  campos del panel). Un drop bloqueado NO registra historial.
+- **Snap a rejilla en 3D**: el rayo→plano del arrastre ahora cae a
+  PASO_REJILLA (10) cuando la Cuadrícula está activa — igual que el 2D.
+- **Semáforo en vivo**: el mesh arrastrado se tiñe por emissive — verde si el
+  candidato está libre, rojo si choca (resaltado por deep-link gana). Helper
+  `tinteDe` + `tamRealDe` (tamaño real BD con fallback) a nivel módulo.
+- **Drop bloqueado en cliente**: en pointerup, `primerChoque` (misma matriz
+  compartida) decide: si choca → el nodo vuelve a su lugar, toast "Movimiento
+  bloqueado: se solaparía con X." y **cero llamadas al backend** (antes el
+  backend rechazaba después). Verificado en vivo: drag de RACK-05 sobre
+  PAS-02 → posición intacta + toast del bloqueo de cliente.
+- **Mapa de calor en el piso 3D**: `calcularMapaColocacion` (compartida)
+  renderizada como **UN solo BufferGeometry con vertex colors** (~1 draw call
+  para ~2500 celdas; verde/rojo a y=0.18, sobre la plataforma de zona 0.1 y
+  bajo los racks 1.2; `meshBasicMaterial` transparente, depthWrite off,
+  DoubleSide; dispose al desmontar). Se calcula una por gesto (depende solo
+  del tamaño + los demás nodos, excluyendo el arrastrado vía `idPropio` —
+  fix: el fix anterior de auto-exclusión NO se había aplicado por un
+  reemplazo silencioso fallido; ahora verificado en ambos mapas).
+- **Fix de layout**: el panel izquierdo quedaba debajo de la barra cuando la
+  píldora de herramientas envolvía a dos líneas (Deshacer/Rehacer ocultos) →
+  panel `top: calc(var(--space-3) + 6rem)`; verificado: barra termina en 104,
+  panel empieza en 108, sin solape.
+- **`otrosParaChoque`** subió a `mapa-almacen-datos.ts` (compartido 2D/3D).
+- **E2E en Chrome de Windows (CDP)**: heatmap 3D visible con rojo sobre
+  pasillos/racks y verde en libre (captura win-3d-heatmap.png); drag inválido
+  bloqueado en cliente con toast y sin mutación; Deshacer/Rehacer operativos
+  desde la barra 3D; 61 FPS con todo activo; consola limpia. Pipeline
+  completo en verde (121 tests, tsc, lint, DesignGuard 154, RouteGuard,
+  build).
+
+**Ampliación 5 — Corrección del mapa de colocación + bug de "volver donde
+estaba" (misma sesión, sin commit):** el usuario reportó: "el mapa de donde
+sí y dónde no está completamente mal y no sugiere, dice que bloquea pasillo
+pero es espacio para rack; si saco rack y lo pongo de nuevo donde estaba
+dice que no es ahí". Tres causas reales encontradas y corregidas:
+- **Bug principal — snap absoluto hacía inalcanzables las posiciones
+  originales**: el layout base genera columnas de 172 (x = 20, 192, 364,
+  536…), que NO son múltiplos de la rejilla de 10; el snap absoluto
+  redondeaba 364→360 al soltar, el rack rozaba el pasillo vecino (362) y el
+  drop se bloqueaba. **"Volver donde estaba" era imposible en ambos mapas.**
+  Fix: **snap RELATIVO al punto de partida** en drag (2D y 3D), resize por
+  arista y dibujo — soltar donde estaba cae EXACTO; el magnetismo sigue en
+  pasos de 10 desde ahí. `sugerirPosicion` también usa el origen crudo.
+- **Mapa de celdas verde/rojo eliminado**: su semántica (validez del ORIGEN
+  del rect por celda) se leía como "el cuerpo cabe aquí" — celdas verdes
+  donde el rack taparía celdas rojas: engañoso y sin sugerencia real.
+  Reemplazado por: (a) **obstáculos brillando en rojo** durante el gesto
+  (2D: rects overlay punteados; 3D: emissive danger tenue vía `tinteDe` +
+  `intensidadDe` con parámetro `obstaculo`) — muestra QUÉ no se puede pisar;
+  (b) **fantasma de SUGERENCIA**: si el candidato choca,
+  `sugerirPosicion` (búsqueda en anillos Chebyshev sobre la rejilla, radio
+  18) marca la posición válida más cercana — 2D: rect verde punteado; 3D:
+  losa verde translúcida en el piso. El fantasma del cursor sigue
+  verde/rojo según el candidato actual.
+- **Bug 3D de agarre**: la esquina saltaba al cursor (sin offset) y la
+  órbita rotaba durante el drag (`setArrastrando` llega con el re-render;
+  los primeros pointermove giraban la cámara y desplazaban el mapeo
+  píxel→plano). Fix: **offset de agarre preservado** (hit0 del
+  `ThreeEvent.ray` en el plano) + `controlsRef.current.enabled = false`
+  SÍNCRONO al agarrar (y `true` al soltar).
+- **E2E Chrome de Windows (CDP, mouse real)**: 3D agarrar→mover→volver al
+  píxel exacto→soltar = ACEPTADO sin toast (antes bloqueaba por PAS-01/02);
+  soltar sobre el vecino = bloqueado con toast y sin mutación; 2D ídem
+  (regreso aceptado, pasillo bloqueado). Pipeline completo en verde
+  (`npm run verify` exit 0, 121 tests, fmt, clippy).
+
+**Ampliación 6 — Revisión de visibilidad total del 3D (misma sesión, sin
+commit):** pedido del usuario: "revisa que todo sea visible en el mapa 3d:
+colores, asignar colores, diseño, tags, detección, etc.". Auditoría y
+cambios:
+- **Pasillo con color propio**: era `--color-gray-200` = EXACTAMENTE el color
+  del piso (invisible fuera de las zonas) → ahora `--color-warning-bg`
+  (ámbar suave): canal de tránsito distinguible del piso, de la zona y de
+  los racks. Aplica a 2D y 3D (COLOR_NODO compartido).
+- **Colores reactivos al tema en 3D**: la paleta se resolvía por render pero
+  un cambio de tema no re-renderizaba — colores congelados en el tema
+  anterior. Fix: `useTema((s) => s.tema)` en Escena3D (el cambio de tema
+  dispara el re-render y getComputedStyle resuelve fresco). Verificado
+  sobrescribiendo tokens en vivo (piso/rejilla oscuros tras re-render).
+- **Selección visible**: hacer clic en un nodo abría el panel pero el nodo
+  no se distinguía — ahora `seleccionId` también enciende el emissive óxido
+  (igual que `?resaltar=`).
+- **Tags completos**: el label 3D mostraba código + SKU; ahora también
+  **% de ocupación** para ubicaciones (igual que el 2D). Labels con
+  `pointer-events: none` (verificado: no bloquean el raycast).
+- **Clic en vacío deselecciona**: clic sin arrastre sobre el piso limpia la
+  selección (el arrastre sigue orbitando; umbral de 4px). Antes solo Esc.
+- **Piso/rejilla adaptativos**: eran 80×80 fijos (se quedaban cortos con el
+  layout grande) → crecen con el bbox de los nodos posicionados.
+- **E2E Chrome de Windows (CDP)**: selección por clic (panel + emissive),
+  deselección por clic en piso, colores en vivo con tokens oscuros
+  (capturas win-3d-colores.png / win-3d-oscuro.png), 61 FPS, consola
+  limpia. `npm run verify` exit 0, 121 tests, fmt OK.
+
+**Ampliación 7 — Personalización del 3D (misma sesión, sin commit):**
+pedido del usuario: "haz que pueda customizar más el user en 3d". Añadido al
+editor inmersivo, con preferencias **persistidas por navegador**
+(`localStorage` "rustock.mapa3d", patrón de recientes del command palette):
+- **Presets de cámara**: Isométrica / Planta (cenital, plano de_floor_plan) /
+  Frente — `irAVista()` reutiliza el cálculo de encuadre (extraído a
+  `centroYDistancia()`). Planta verificado en captura: plano perfecto desde
+  arriba.
+- **Etiquetas on/off**: toggle en la barra (icono `nota`); oculta/muestra los
+  `<Html>` de drei. E2E: 14 → 0 → persiste tras recarga (localStorage) → 0.
+- **Auto-rotar** (modo presentación): `OrbitControls autoRotate` speed 0.8 +
+  `frameloop={prefs.autoRotar ? "always" : "demand"}` (en demand no hay
+  frames para rotar). E2E: dos capturas a 1.5 s muestran la escena rotada.
+- La barra quedó: Deshacer · Rehacer · Encuadrar todo · Resetear vista ·
+  Isométrica · Planta · Frente · Etiquetas · Auto-rotar · Cuadrícula ·
+  Zonas · Pasillos · Racks · Ubicaciones · Pantalla completa.
+- **E2E Chrome de Windows (CDP)**: toggles + persistencia + vistas + rotación
+  + 61 FPS. Pipeline completo en verde (verify exit 0, 121 tests, fmt).
+
+**Ampliación 8 — Experiencia Blender: potencia, velocidad y utilidad (misma
+sesión, sin commit):** pedido del usuario: "mejóralo muchísimo más potente,
+rápido, útil, experiencia blender". Añadido:
+- **Órbita con inercia**: `enableDamping dampingFactor 0.08` en
+  OrbitControls (drei invalida en change, compatible con demand).
+- **Atajos de teclado estilo editor 3D** (ignoran campos del panel):
+  **Flechas** = nudge del seleccionado en pasos de rejilla (bloqueado con
+  toast si chocaría, sin mutación); **R** = rotar 90°; **F** = enfocar
+  seleccionado (frame selected: target al centro del nodo conservando la
+  dirección de cámara); **Shift+D** = duplicar; **Z** = vista de alambre;
+  Ctrl+Z/Y y Esc ya existían. Doble clic sobre un nodo = enfocar.
+- **Duplicar (Shift+D / botón del panel)**: copia el elemento en el hueco
+  libre más cercano (`posicionLibreCercana`, nueva función compartida en
+  `mapa-geometria.ts`; `sugerirPosicion` refactorizada sobre ella), **la
+  copia hereda la zona del original** (`NodoMapa.zona_id` nuevo, llenado por
+  la capa de datos) y queda seleccionada; Ctrl+Z la desactiva. Iconos
+  canónicos nuevos: `duplicar`→Copy, `alambre`→Box (§6.13).
+- **Vista de alambre (Z / botón)**: prismas como rejillas técnicas
+  (`wireframe` en el material).
+- **HUD de coordenadas**: chip mono sobre el nodo arrastrado mostrando
+  "x · y" en vivo (`.mapa-almacen-3d__hud`).
+- **Panel del nodo**: botones **Duplicar** y **Eliminar** (enlace a su página
+  de confirmación por catálogo, DESIGN §7.5) junto a "Ir hacia".
+- **Fixes durante la prueba**: (a) registro doble de creaciones en el
+  historial (global + per-call onSuccess de react-query ambos corren) → un
+  solo registro en el global; (b) el conteo de mis tests incluía filas
+  inactivas (`listar_racks` sin filtro) → verificación final con
+  `activo:eq:true`: **base 10 → duplicar 11 → deshacer 10**.
+- **E2E Chrome de Windows (CDP)**: duplicar crea RACK-nuevo junto al
+  original y queda seleccionado; Ctrl+Z/botón Deshacer lo desactiva;
+  HUD "374 · 180" durante drag; nudge bloqueado correctamente al rozar
+  PAS-02; alambre on/off; 61 FPS. Pipeline en verde (verify exit 0,
+  121 tests, fmt, DesignGuard 154, RouteGuard).
+
+**Ampliación 9 — Selección múltiple + modo caminar (siguiente nivel, misma
+sesión, sin commit):** pedido del usuario: "siguiente nivel, dale" sobre la
+oferta de multi-selección/medidas/modo caminar.
+- **Selección múltiple (3D)**: **Shift+clic** alterna nodos en el grupo
+  (`grupoIds`); arrastrar cualquier miembro mueve a TODO el grupo con el
+  mismo delta (cada nodo conserva su agarre); validación en cliente para
+  todo el grupo (si cualquiera chocaría, nadie se mueve + toast); guardado
+  vía `onMoverGrupo` → `Promise.all` de `mutateAsync` → **UNA entrada
+  `kind: "grupo"`** en el historial (unión discriminada `EntradaHistorial` =
+  mover | creacion | grupo en `use-historial-mapa.ts`); Deshacer/Rehacer
+  grupales aplican todos los `antes`/`despues`; **nudge con flechas mueve al
+  grupo completo** (bloqueo todo-o-nada). Clic simple reinicia el grupo a un
+  nodo (`onClicSimple`, semántica Blender); Esc limpia grupo y selección.
+  Miembros del grupo brillan óxido como los seleccionados.
+- **Modo caminar**: botón **Caminar** (icono `caminar`→Footprints, §6.13) —
+  cámara a altura de ojos (1.7) mirando el centro del layout; **WASD**
+  desplaza cámara+target juntos en la dirección de la mirada; arrastrar
+  mira; **Esc sale** y re-encuadra. Aviso flotante inferior con la ayuda.
+- **Asistente de depuración `window.rustock3dDepur.proyectar(x, y)`**:
+  proyecta coordenadas del plano SVG a pantalla (para E2E determinístico con
+  clics exactos).
+- **Batalla de diagnóstico E2E (lecciones)**: (a) el bitmask de CDP
+  `Input.dispatchMouseEvent` es **Alt=1, Ctrl=2, Shift=8** — mis "shift+clic"
+  con `modifiers: 1` eran ALT+clic (la app estuvo bien; los tests no);
+  (b) proyecciones con coordenadas quemadas de posiciones viejas → proyectar
+  SIEMPRE las posiciones leídas de la API justo antes; (c) el Chrome guest
+  puede quedar con el root de R3F muerto tras matar procesos (escena en
+  blanco sin errores) → reiniciar la instancia de prueba; (d) react-query v5
+  ejecuta el onSuccess global Y el per-call → registro doble de creaciones
+  consolidado al global.
+- **E2E Chrome de Windows (CDP, modifiers correctos)**: Shift+clic R6
+  (panel=RACK-06 ✓) → drag grupal: **R5 (−120,690)→(−100,870) y R6
+  (60,500)→(80,680), deltas idénticos [+20,+180] ✓**; Deshacer grupal
+  restaura ambos ✓; modo caminar: aviso + vista a altura de ojos (captura
+  win-3d-caminar.png) + WASD + Esc sale ✓. Pipeline completo en verde
+  (verify exit 0, 121 tests, fmt, DesignGuard 154, RouteGuard).
 
 ### Hito 26 — Script de arranque en un solo comando: `dev.sh` (completo, sin commit)
 

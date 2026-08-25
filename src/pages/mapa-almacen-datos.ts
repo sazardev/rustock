@@ -33,10 +33,17 @@ export interface NodoMapa {
   tipo: TipoNodo;
   codigo: string;
   nombre: string | null;
+  /** Zona contenedora (pasillos y racks; null para zonas y ubicaciones):
+   * permite duplicar heredando la zona sin consultas extra. */
+  zona_id: string | null;
   pos_x: number | null;
   pos_y: number | null;
   pos_z: number | null;
   altura: number | null;
+  /** Tamaño real del rectángulo en el plano (BD). Para zonas/pasillos/racks
+   * llega de la entidad; para ubicaciones es el tamaño fijo del bin. */
+  ancho: number;
+  profundidad: number;
   /** 0-1, o `null` si no aplica (zonas/pasillos/racks no tienen ocupación propia). */
   ocupacion: number | null;
 }
@@ -58,7 +65,6 @@ export const ALTO_NODO: Record<TipoNodo, number> = {
   rack: 56,
   ubicacion: 48,
 };
-
 const FILA_BASE_POR_TIPO: Record<TipoNodo, number> = {
   zona: 0,
   pasillo: 150,
@@ -105,6 +111,38 @@ export function colorOcupacion(ocupacion: number | null): string {
   return "--color-danger-500";
 }
 
+/** Color de categoría por tipo (DESIGN §3.1, solo tokens): las zonas son la
+ * plataforma neutra, los pasillos el canal de tránsito (ámbar suave: se
+ * distingue del piso y de la zona) y los racks la estructura cálida de
+ * almacenamiento. Las ubicaciones no lo usan: su color comunica ocupación
+ * (verde/ámbar/rojo), que es estado, no categoría. */
+export const COLOR_NODO: Record<TipoNodo, string> = {
+  zona: "--color-gray-100",
+  pasillo: "--color-warning-bg",
+  rack: "--color-blue-100",
+  ubicacion: "--color-gray-100",
+};
+
+/** Relleno efectivo de un nodo: ocupación para ubicaciones, categoría para
+ * el resto. Compartido por el mapa 2D y el 3D para que se vean igual. */
+export function colorRellenoNodo(n: Pick<NodoMapa, "tipo" | "ocupacion">): string {
+  return n.tipo === "ubicacion" ? colorOcupacion(n.ocupacion) : COLOR_NODO[n.tipo];
+}
+
+/** Convierte los nodos al formato que esperan `primerChoque` y
+ * `calcularMapaColocacion` (mapa-geometria.ts). Compartido por 2D y 3D. */
+export function otrosParaChoque(nodos: NodoMapa[]) {
+  return nodos.map((n) => ({
+    id: n.id,
+    codigo: n.codigo,
+    tipo: n.tipo,
+    ancho: n.ancho,
+    profundidad: n.profundidad,
+    pos_x: n.pos_x,
+    pos_y: n.pos_y,
+  }));
+}
+
 /** Resuelve una variable CSS (ej. `--color-success-500`) a su valor real
  * calculado en el DOM (hex/rgb) — necesario para el mapa 3D, ya que los
  * materiales de three.js no entienden `var(--x)`. */
@@ -122,7 +160,11 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
   const zonasQ = useQuery({
     queryKey: ["mapa-almacen", "zonas", almacenId],
     queryFn: () =>
-      listarZonas({ filters: [`almacen_id:eq:${almacenId}`], sort: "codigo", page_size: -1 }),
+      listarZonas({
+        filters: [`almacen_id:eq:${almacenId}`, "activo:eq:true"],
+        sort: "codigo",
+        page_size: -1,
+      }),
     enabled: !!almacenId,
   });
   const zonas = zonasQ.data && esPaginado(zonasQ.data) ? zonasQ.data.data : SIN_DATOS;
@@ -132,7 +174,7 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
     queryKey: ["mapa-almacen", "pasillos", almacenId, zonaIds],
     queryFn: () =>
       listarPasillos({
-        filters: [`zona_id:in:${zonaIds.join(",")}`],
+        filters: [`zona_id:in:${zonaIds.join(",")}`, "activo:eq:true"],
         sort: "codigo",
         page_size: -1,
       }),
@@ -143,7 +185,11 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
   const racksQ = useQuery({
     queryKey: ["mapa-almacen", "racks", almacenId, zonaIds],
     queryFn: () =>
-      listarRacks({ filters: [`zona_id:in:${zonaIds.join(",")}`], sort: "codigo", page_size: -1 }),
+      listarRacks({
+        filters: [`zona_id:in:${zonaIds.join(",")}`, "activo:eq:true"],
+        sort: "codigo",
+        page_size: -1,
+      }),
     enabled: zonaIds.length > 0,
   });
   const racks = racksQ.data && esPaginado(racksQ.data) ? racksQ.data.data : SIN_DATOS;
@@ -171,6 +217,8 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
         rackIds.length ? `rack_id:in:${rackIds.join(",")}` : "",
         zonaIds.length ? `zona_id:in:${zonaIds.join(",")}` : "",
       ].filter(Boolean);
+      // El OR resuelve el árbol simplificado (exactamente un padre); el filtro
+      // de activos va en cliente: el motor no mezcla grupos AND dentro del OR.
       return listarUbicaciones({
         filters: filtros,
         filter_logic: "OR",
@@ -180,8 +228,9 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
     },
     enabled: seccionIds.length > 0 || rackIds.length > 0 || zonaIds.length > 0,
   });
-  const ubicaciones =
-    ubicacionesQ.data && esPaginado(ubicacionesQ.data) ? ubicacionesQ.data.data : SIN_DATOS;
+  const ubicaciones = (
+    ubicacionesQ.data && esPaginado(ubicacionesQ.data) ? ubicacionesQ.data.data : SIN_DATOS
+  ).filter((u) => u.activo);
   const ubicacionIds = ubicaciones.map((u) => u.id);
 
   const saldosQ = useQuery({
@@ -198,6 +247,13 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
   }, [saldosQ.data]);
 
   const nodos: NodoMapa[] = useMemo(() => {
+    // Tamaño real desde BD con fallback a las constantes históricas si el
+    // valor llegara inválido (defensivo; la migración lo rellena siempre).
+    const tam = (v: { ancho: number; profundidad: number }, tipo: TipoNodo) => ({
+      ancho: typeof v?.ancho === "number" && v.ancho > 0 ? v.ancho : ANCHO_NODO[tipo],
+      profundidad:
+        typeof v?.profundidad === "number" && v.profundidad > 0 ? v.profundidad : ALTO_NODO[tipo],
+    });
     const deZona: NodoMapa[] = zonas.map((z: Zona) => ({
       id: z.id,
       tipo: "zona",
@@ -207,6 +263,8 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
       pos_y: z.pos_y,
       pos_z: z.pos_z,
       altura: z.altura,
+      zona_id: null,
+      ...tam(z, "zona"),
       ocupacion: null,
     }));
     const dePasillo: NodoMapa[] = pasillos.map((p: Pasillo) => ({
@@ -218,6 +276,8 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
       pos_y: p.pos_y,
       pos_z: p.pos_z,
       altura: p.altura,
+      zona_id: p.zona_id,
+      ...tam(p, "pasillo"),
       ocupacion: null,
     }));
     const deRack: NodoMapa[] = racks.map((r: Rack) => ({
@@ -229,6 +289,8 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
       pos_y: r.pos_y,
       pos_z: r.pos_z,
       altura: r.altura,
+      zona_id: r.zona_id,
+      ...tam(r, "rack"),
       ocupacion: null,
     }));
     const deUbicacion: NodoMapa[] = ubicaciones.map((u: Ubicacion) => {
@@ -242,6 +304,9 @@ export function useMapaAlmacenDatos(almacenId: string | undefined) {
         pos_y: u.pos_y,
         pos_z: u.pos_z,
         altura: u.altura,
+        zona_id: null,
+        ancho: ANCHO_NODO.ubicacion,
+        profundidad: ALTO_NODO.ubicacion,
         ocupacion: u.capacidad_maxima ? cantidad / u.capacidad_maxima : null,
       };
     });
@@ -358,6 +423,9 @@ export interface PosicionMapaXY {
   pos_y: number;
   pos_z: number | null;
   altura: number | null;
+  /** Tamaño candidato (modo construcción); ausente = mantener. */
+  ancho?: number | null;
+  profundidad?: number | null;
 }
 
 export function useMoverNodoMapa() {

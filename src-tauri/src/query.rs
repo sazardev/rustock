@@ -707,6 +707,15 @@ pub static ZONA_SCHEMA: ResourceSchema = ResourceSchema {
         col("pos_y", "z.pos_y", ColTipo::Real, false, false, false),
         col("pos_z", "z.pos_z", ColTipo::Real, false, false, false),
         col("altura", "z.altura", ColTipo::Real, false, false, false),
+        col("ancho", "z.ancho", ColTipo::Real, true, true, false),
+        col(
+            "profundidad",
+            "z.profundidad",
+            ColTipo::Real,
+            true,
+            true,
+            false,
+        ),
         col(
             "created_by",
             "z.created_by",
@@ -755,6 +764,15 @@ pub static PASILLO_SCHEMA: ResourceSchema = ResourceSchema {
         col("pos_y", "p.pos_y", ColTipo::Real, false, false, false),
         col("pos_z", "p.pos_z", ColTipo::Real, false, false, false),
         col("altura", "p.altura", ColTipo::Real, false, false, false),
+        col("ancho", "p.ancho", ColTipo::Real, true, true, false),
+        col(
+            "profundidad",
+            "p.profundidad",
+            ColTipo::Real,
+            true,
+            true,
+            false,
+        ),
         col(
             "created_by",
             "p.created_by",
@@ -812,6 +830,15 @@ pub static RACK_SCHEMA: ResourceSchema = ResourceSchema {
         col("pos_y", "r.pos_y", ColTipo::Real, false, false, false),
         col("pos_z", "r.pos_z", ColTipo::Real, false, false, false),
         col("altura", "r.altura", ColTipo::Real, false, false, false),
+        col("ancho", "r.ancho", ColTipo::Real, true, true, false),
+        col(
+            "profundidad",
+            "r.profundidad",
+            ColTipo::Real,
+            true,
+            true,
+            false,
+        ),
         col(
             "created_by",
             "r.created_by",

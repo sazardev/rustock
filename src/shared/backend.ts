@@ -75,6 +75,7 @@ import type {
   LotePorVencer,
   Pasillo,
   PosicionMapa,
+  PosicionMapaEditable,
   PreferenciasResueltas,
   PrecisionSesion,
   Producto,
@@ -160,7 +161,7 @@ export const crearZona = (nuevo: NuevaZona): Promise<Zona> => invoke("crear_zona
 export const obtenerZona = (id: string): Promise<Zona | null> => invoke("obtener_zona", { id });
 export const editarZona = (id: string, cambios: EditarZona): Promise<Zona> =>
   invoke("editar_zona", { id, cambios });
-export const moverZona = (id: string, pos: PosicionMapa): Promise<Zona> =>
+export const moverZona = (id: string, pos: PosicionMapaEditable): Promise<Zona> =>
   invoke("mover_zona", { id, pos });
 export const desactivarZona = (id: string): Promise<void> => invoke("desactivar_zona", { id });
 
@@ -174,7 +175,7 @@ export const obtenerPasillo = (id: string): Promise<Pasillo | null> =>
   invoke("obtener_pasillo", { id });
 export const editarPasillo = (id: string, cambios: EditarPasillo): Promise<Pasillo> =>
   invoke("editar_pasillo", { id, cambios });
-export const moverPasillo = (id: string, pos: PosicionMapa): Promise<Pasillo> =>
+export const moverPasillo = (id: string, pos: PosicionMapaEditable): Promise<Pasillo> =>
   invoke("mover_pasillo", { id, pos });
 export const desactivarPasillo = (id: string): Promise<void> =>
   invoke("desactivar_pasillo", { id });
@@ -187,7 +188,7 @@ export const crearRack = (nuevo: NuevoRack): Promise<Rack> => invoke("crear_rack
 export const obtenerRack = (id: string): Promise<Rack | null> => invoke("obtener_rack", { id });
 export const editarRack = (id: string, cambios: EditarRack): Promise<Rack> =>
   invoke("editar_rack", { id, cambios });
-export const moverRack = (id: string, pos: PosicionMapa): Promise<Rack> =>
+export const moverRack = (id: string, pos: PosicionMapaEditable): Promise<Rack> =>
   invoke("mover_rack", { id, pos });
 export const desactivarRack = (id: string): Promise<void> => invoke("desactivar_rack", { id });
 
@@ -214,10 +215,50 @@ export const obtenerUbicacion = (id: string): Promise<Ubicacion | null> =>
   invoke("obtener_ubicacion", { id });
 export const editarUbicacion = (id: string, cambios: EditarUbicacion): Promise<Ubicacion> =>
   invoke("editar_ubicacion", { id, cambios });
-export const moverUbicacion = (id: string, pos: PosicionMapa): Promise<Ubicacion> =>
+export const moverUbicacion = (id: string, pos: PosicionMapaEditable): Promise<Ubicacion> =>
   invoke("mover_ubicacion", { id, pos });
 export const desactivarUbicacion = (id: string): Promise<void> =>
   invoke("desactivar_ubicacion", { id });
+
+// ============ Modo construcción del mapa (SPEC §14, layout físico) ============
+
+export interface CreacionEnMapa {
+  tipo: "zona" | "pasillo" | "rack";
+  almacen_id: string;
+  /** Obligatoria para pasillo/rack: la zona que contiene el centro del rect. */
+  zona_id?: string | null;
+  x: number;
+  y: number;
+  ancho: number;
+  profundidad: number;
+}
+
+export interface NodoCreado {
+  tipo: "zona" | "pasillo" | "rack";
+  id: string;
+  codigo: string;
+}
+
+export interface LayoutBasePedido {
+  almacen_id: string;
+  ancho_recinto: number;
+  profundo_recinto: number;
+  /** Nº de pasillos paralelos verticales (1-12). */
+  pasillos: number;
+  /** Racks apilados por bloque (1-20). */
+  racks_por_bloque: number;
+}
+
+export interface LayoutGenerado {
+  zonas: number;
+  pasillos: number;
+  racks: number;
+}
+
+export const crearEnMapa = (pedido: CreacionEnMapa): Promise<NodoCreado> =>
+  invoke("crear_en_mapa", { pedido });
+export const generarLayoutBase = (pedido: LayoutBasePedido): Promise<LayoutGenerado> =>
+  invoke("generar_layout_base", { pedido });
 
 // ============ Caja ============
 

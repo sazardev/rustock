@@ -8,10 +8,12 @@ import {
   BarChart3,
   Boxes,
   CalendarDays,
+  Box,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  Copy,
   Download,
   Eye,
   FileText,
@@ -34,9 +36,11 @@ import {
   Move,
   Package,
   PackageOpen,
+  Footprints,
   Pencil,
   Plus,
   RefreshCw,
+  RotateCw,
   Ruler,
   Scan,
   ScanBarcode,
@@ -45,7 +49,9 @@ import {
   Shield,
   SlidersHorizontal,
   Trash2,
+  Redo2,
   Truck,
+  Undo2,
   User,
   Users,
   Warehouse,
@@ -106,6 +112,17 @@ export const ICON_MAP = {
   salirPantallaCompleta: Minimize2,
   cuadricula: Grid3x3,
   encuadrar: Scan,
+  /** Rotar 90° (modo construcción del mapa; RotateCw de Lucide, §6.13). */
+  rotar: RotateCw,
+  /** Deshacer/Rehacer cambios del mapa (Undo2/Redo2 de Lucide, §6.13). */
+  deshacer: Undo2,
+  rehacer: Redo2,
+  /** Duplicar elemento del mapa (Copy de Lucide, §6.13). */
+  duplicar: Copy,
+  /** Vista de alambre/wireframe del 3D (Box de Lucide, §6.13). */
+  alambre: Box,
+  /** Modo caminar del 3D (Footprints de Lucide, §6.13). */
+  caminar: Footprints,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;
