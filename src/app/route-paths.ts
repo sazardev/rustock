@@ -26,6 +26,9 @@ export const PATH = {
   galeria: "/galeria",
   ayuda: "/ayuda",
   ayudaGlosario: "/ayuda/glosario",
+  manual: "/manual",
+  manualGlosario: "/manual/m08-glosario",
+  manualImprimir: "/manual/imprimir",
   accesoNoPermitido: "/acceso-no-permitido",
   noEncontrado: "/no-encontrado",
 } as const;
@@ -99,4 +102,9 @@ export function catalogoEliminar(slug: string, id: string): string {
 /** Ruta de la página de ayuda de un módulo (ej. "operacion/movimientos"). */
 export function ayudaModulo(id: string): string {
   return `/ayuda/${id}`;
+}
+
+/** Ruta de un capítulo del Manual del Cliente. */
+export function manualCapitulo(id: string): string {
+  return `/manual/${id}`;
 }

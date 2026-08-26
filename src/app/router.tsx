@@ -8,6 +8,7 @@ import { LandingPage } from "../pages/LandingPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { AYUDA_GRUPOS } from "../pages/ayuda/ayuda-data";
+import { MANUAL_PARTES } from "../pages/manual/manual-data";
 import {
   CATALOGOS,
   CatalogDetailRoute,
@@ -163,6 +164,16 @@ const MapaAsistentePage = lazyPage(() => import("../pages/MapaAsistentePage"), "
 const AyudaIndexPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaIndexPage");
 const AyudaGlosarioPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaGlosarioPage");
 const AyudaModulePage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaModulePage");
+const ManualIndexPage = lazyPage(() => import("../pages/manual/ManualPages"), "ManualIndexPage");
+const ManualCapituloPage = lazyPage(
+  () => import("../pages/manual/ManualPages"),
+  "ManualCapituloPage",
+);
+const ManualGlosarioPage = lazyPage(
+  () => import("../pages/manual/ManualPages"),
+  "ManualGlosarioPage",
+);
+const ManualPrintPage = lazyPage(() => import("../pages/manual/ManualPages"), "ManualPrintPage");
 
 const CATALOG_KEYS = Object.keys(CATALOGOS);
 
@@ -227,6 +238,17 @@ export const router = createBrowserRouter([
             path: `ayuda/${mod.id}`,
             element: <AyudaModulePage id={mod.id} />,
           })),
+          { path: "manual", element: <ManualIndexPage /> },
+          { path: "manual/imprimir", element: <ManualPrintPage /> },
+          { path: "manual/m08-glosario", element: <ManualGlosarioPage /> },
+          ...MANUAL_PARTES.flatMap((parte) =>
+            parte.capitulos
+              .filter((cap) => cap.id !== "m08-glosario")
+              .map((cap) => ({
+                path: `manual/${cap.id}`,
+                element: <ManualCapituloPage id={cap.id} />,
+              })),
+          ),
           { path: "usuarios", element: <UsuariosPage /> },
           { path: "usuarios/nuevo", element: <UsuarioFormPage /> },
           { path: "usuarios/:id", element: <UsuarioDetallePage /> },

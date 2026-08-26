@@ -1,4 +1,5 @@
 import { CATALOGOS } from "../pages/catalogs";
+import { MANUAL_PARTES } from "../pages/manual/manual-data";
 
 export interface Crumb {
   label: string;
@@ -25,6 +26,7 @@ const CRUMB_MAP: CrumbSegment[] = [
   { segment: "usuarios", label: "Usuarios y roles" },
   { segment: "configuracion", label: "Configuración" },
   { segment: "galeria", label: "Galería de diseño" },
+  { segment: "manual", label: "Manual" },
   { segment: "ayuda", label: "Ayuda" },
   { segment: "acceso-no-permitido", label: "Sin acceso" },
   { segment: "no-encontrado", label: "No encontrado" },
@@ -41,6 +43,7 @@ const ACTION_LABELS: Record<string, string> = {
   conteos: "Registrar conteos",
   mapa: "Mapa",
   "mapa-3d": "Mapa 3D",
+  imprimir: "Imprimir",
 };
 
 /**
@@ -97,6 +100,14 @@ export function crumbsFromPath(pathname: string): Crumb[] {
       return crumbs;
     }
 
+    // Manual: /manual/:id → usa título real del capítulo si existe
+    if (first === "manual" && rest.length >= 1) {
+      const capId = rest[0];
+      const titulo = tituloManual(capId);
+      crumbs.push({ label: titulo ?? ACTION_LABELS[capId] ?? legible(capId) });
+      return crumbs;
+    }
+
     // /seccion/accion  (ej. /movimientos/nuevo, /inventario/nuevo)
     const action = rest[0];
     crumbs.push({ label: ACTION_LABELS[action] ?? action });
@@ -123,6 +134,14 @@ function crumbDetalleCatalogo(slug: string, id: string): Crumb | null {
   const cfg = CATALOGOS[slug as keyof typeof CATALOGOS];
   if (!cfg) return null;
   return { label: `${cfg.singular} ${id.slice(0, 8)}`, href: `/${slug}/${id}` };
+}
+
+function tituloManual(id: string): string | null {
+  for (const parte of MANUAL_PARTES) {
+    const cap = parte.capitulos.find((c) => c.id === id);
+    if (cap) return cap.titulo;
+  }
+  return null;
 }
 
 /** Convierte un slug de ruta en texto legible (kebab-case -> Capitalizado). */

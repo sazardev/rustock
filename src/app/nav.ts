@@ -209,6 +209,17 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    title: "Manual",
+    items: [
+      {
+        label: "Manual del Cliente",
+        href: PATH.manual,
+        icon: "ayuda",
+        descripcion: "Guía completa de la lógica de negocio — 8 partes, 50 términos",
+      },
+    ],
+  },
+  {
     title: "Ayuda",
     items: [
       {

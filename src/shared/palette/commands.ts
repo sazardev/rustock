@@ -16,8 +16,9 @@ import type { IconName } from "../ui";
 import { itemsDeNav } from "../../app/nav";
 import { PATH, ayudaModulo, catalogoNuevo } from "../../app/route-paths";
 import { AYUDA_GRUPOS, GLOSARIO, textoModulo } from "../../pages/ayuda/ayuda-data";
+import { MANUAL_GLOSARIO, MANUAL_PARTES, textoManual } from "../../pages/manual/manual-data";
 
-export type GrupoComando = "Páginas" | "Acciones" | "Ayuda";
+export type GrupoComando = "Páginas" | "Acciones" | "Ayuda" | "Manual";
 
 export interface ComandoPalette {
   id: string;
@@ -353,12 +354,59 @@ function palabrasAyuda(): ComandoPalette[] {
   return [...modulos, ...glosario];
 }
 
+/** Manual: capítulos + glosario (indexado igual que Ayuda, pero grupo Manual). */
+function palabrasManual(): ComandoPalette[] {
+  const capitulos: ComandoPalette[] = MANUAL_PARTES.flatMap((parte) => parte.capitulos).map(
+    (c) => ({
+      id: `manual:${c.id}`,
+      titulo: c.titulo,
+      subtitulo: `Manual · ${c.resumen}`,
+      icono: c.icono,
+      grupo: "Manual",
+      href: `/manual/${c.id}`,
+      keywords: [
+        c.resumen,
+        c.paraQueSirve ?? "",
+        c.cuandoUsarlo ?? "",
+        textoManual(c),
+        (c.terminosClave ?? []).join(" "),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }),
+  );
+  const glosario: ComandoPalette[] = MANUAL_GLOSARIO.map((t) => ({
+    id: `manual-glosario:${t.id}`,
+    titulo: t.termino,
+    subtitulo: t.definicion,
+    icono: "historial",
+    grupo: "Manual",
+    href: `/manual/m08-glosario#${t.id}`,
+    keywords: t.definicion,
+  }));
+  const imprimir: ComandoPalette = {
+    id: "manual:imprimir",
+    titulo: "Imprimir manual completo (PDF)",
+    subtitulo: "Todo el manual en un solo documento A4, listo para Guardar como PDF",
+    icono: "ayuda",
+    grupo: "Manual",
+    href: "/manual/imprimir",
+    keywords: "imprimir pdf todo documento completo portada indice a4 guardar como pdf",
+  };
+  return [...capitulos, ...glosario, imprimir];
+}
+
 /** Comandos estáticos completos, filtrados por el rol de la sesión. */
 export function comandosPalette(
   rolCodigo: string | undefined,
   mostrarAyuda = true,
 ): ComandoPalette[] {
-  return [...paginas(), ...acciones(rolCodigo), ...(mostrarAyuda ? palabrasAyuda() : [])];
+  return [
+    ...paginas(),
+    ...acciones(rolCodigo),
+    ...(mostrarAyuda ? palabrasAyuda() : []),
+    ...palabrasManual(),
+  ];
 }
 
 // ============ Recientes (localStorage, solo del cliente) ============
