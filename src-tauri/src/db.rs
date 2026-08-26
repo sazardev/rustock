@@ -752,6 +752,34 @@ impl DbState {
             ",
         )?;
 
+        // Estado ANULADA para sesión de inventario (SPEC §11.1): una sesión
+        // planeada o en curso que se descarta sin cerrarla queda auditada,
+        // no simplemente abandonada sin rastro.
+        asegurar_columna(&tx, "sesiones_inventario", "anulado_by", "TEXT")?;
+        asegurar_columna(&tx, "sesiones_inventario", "anulado_at", "TEXT")?;
+
+        // SPEC §15.11: todo campo usado en `sort`/`filters`/`group_by` debe
+        // estar indexado. `created_at` es el desempate de `orden_defecto` de
+        // casi todos los recursos del motor de consulta universal (query.rs)
+        // y no tenía índice — cada listado sin filtros hacía table scan + sort.
+        // `productos.activo` es el filtro más común de los listados de catálogo.
+        tx.execute_batch(
+            "
+            CREATE INDEX IF NOT EXISTS idx_almacenes_created_at ON almacenes(created_at);
+            CREATE INDEX IF NOT EXISTS idx_zonas_created_at ON zonas(created_at);
+            CREATE INDEX IF NOT EXISTS idx_pasillos_created_at ON pasillos(created_at);
+            CREATE INDEX IF NOT EXISTS idx_racks_created_at ON racks(created_at);
+            CREATE INDEX IF NOT EXISTS idx_secciones_created_at ON secciones(created_at);
+            CREATE INDEX IF NOT EXISTS idx_ubicaciones_created_at ON ubicaciones(created_at);
+            CREATE INDEX IF NOT EXISTS idx_cajas_created_at ON cajas(created_at);
+            CREATE INDEX IF NOT EXISTS idx_productos_created_at ON productos(created_at);
+            CREATE INDEX IF NOT EXISTS idx_proveedores_created_at ON proveedores(created_at);
+            CREATE INDEX IF NOT EXISTS idx_clientes_created_at ON clientes(created_at);
+            CREATE INDEX IF NOT EXISTS idx_sesiones_created_at ON sesiones_inventario(created_at);
+            CREATE INDEX IF NOT EXISTS idx_productos_activo ON productos(activo);
+            ",
+        )?;
+
         // Recupera el correlativo máximo ya usado por año (para dbs existentes)
         // y lo deja como valor de arranque; en dbs nuevas no hay filas y es 0.
         tx.execute_batch(

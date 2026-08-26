@@ -844,6 +844,18 @@ fn despachar(
             puede(&conn, Some(&sesion.usuario_id()?), "rol", "ver")?;
             ok(repo::seguridad::listar_roles(&conn)?)
         }),
+        "editar_rol" => con_auditoria!(db, sesion, "editar_rol", {
+            let id = str_req(args, "id")?;
+            let descripcion = str_req(args, "descripcion")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::seguridad::editar_rol(
+                &conn,
+                &id,
+                &descripcion,
+                &actor,
+            )?)
+        }),
         "editar_usuario" => con_auditoria!(db, sesion, "editar_usuario", {
             let id = str_req(args, "id")?;
             let cambios: crate::domain::seguridad::EditarUsuario = de_req(args, "cambios")?;
@@ -1200,6 +1212,12 @@ fn despachar(
             let conn = db.conn();
             ok(repo::inventario::cerrar_sesion(&conn, &sesion_id, &actor)?)
         }),
+        "anular_sesion_inventario" => con_auditoria!(db, sesion, "anular_sesion_inventario", {
+            let sesion_id = str_req(args, "sesionId")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::inventario::anular_sesion(&conn, &sesion_id, &actor)?)
+        }),
 
         // ============ Comentarios ============
         "crear_comentario" => con_auditoria!(db, sesion, "crear_comentario", {
@@ -1288,6 +1306,11 @@ fn despachar(
             let conn = db.conn();
             ok(repo::trazabilidad::lotes_por_vencer(&conn, dias, &actor)?)
         }),
+        "vencimientos_por_rango" => con_auditoria!(db, sesion, "vencimientos_por_rango", {
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            ok(repo::trazabilidad::vencimientos_por_rango(&conn, &actor)?)
+        }),
         "historial_caja" => con_auditoria!(db, sesion, "historial_caja", {
             let caja_id = str_req(args, "cajaId")?;
             let actor = sesion.usuario_id()?;
@@ -1332,6 +1355,17 @@ fn despachar(
             let conn = db.conn();
             puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
             ok(repo::reporte::kpis_generales(&conn)?)
+        }),
+        "desempeno_usuarios" => con_auditoria!(db, sesion, "desempeno_usuarios", {
+            let desde = str_opt(args, "desde");
+            let hasta = str_opt(args, "hasta");
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+            ok(repo::reporte::desempeno_usuarios(
+                &conn,
+                desde.as_deref(),
+                hasta.as_deref(),
+            )?)
         }),
         "kardex_producto" => con_auditoria!(db, sesion, "kardex_producto", {
             let producto_id = str_req(args, "productoId")?;

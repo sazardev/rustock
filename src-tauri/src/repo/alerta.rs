@@ -171,7 +171,10 @@ pub fn regenerar_alertas(conn: &Connection, dias_por_vencer: i64) -> AppResult<(
             [id],
             |r| r.get(0),
         )?;
-        if actual >= *capacidad {
+        // SPEC §17.1: "intentar ingresar más de capacidad_maxima" — coherente
+        // con `validar_capacidad` (movimiento.rs), que bloquea al *superar*
+        // el máximo pero permite llenar exactamente hasta el límite.
+        if actual > *capacidad {
             upsert_alerta(
                 &tx,
                 "UBICACION_SOBRECAPACIDAD",

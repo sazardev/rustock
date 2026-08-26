@@ -62,7 +62,10 @@ fn operador(recurso: &str, accion: &str) -> bool {
         ("inventario", "ejecutar") => true,
         ("comentario", "crear") => true,
         ("reporte", "ver") | ("reporte", "exportar") => true,
-        _ => accion == "ver",
+        // SPEC §4.4: "Exportar reportes" es ✔ para todos salvo LECTOR — se
+        // aplica por recurso (§4.3: `exportar` se exige de forma
+        // independiente de `ver`), no solo al recurso `reporte`.
+        _ => accion == "ver" || accion == "exportar",
     }
 }
 
@@ -81,7 +84,7 @@ fn encargado(recurso: &str, accion: &str) -> bool {
         ("cliente", "crear") | ("cliente", "editar") => true,
         ("categoria", "crear") | ("categoria", "editar") => true,
         ("uom", "crear") | ("uom", "editar") => true,
-        _ => accion == "ver",
+        _ => accion == "ver" || accion == "exportar",
     }
 }
 
@@ -92,7 +95,7 @@ fn gerente(recurso: &str, accion: &str) -> bool {
         ("salida", "crear") | ("salida", "aprobar") | ("salida", "anular") => true,
         ("traslado", "crear") | ("traslado", "aprobar") | ("traslado", "anular") => true,
         ("ajuste", "crear") | ("ajuste", "aprobar") | ("ajuste", "anular") => true,
-        ("inventario", "ejecutar") | ("inventario", "cerrar") => true,
+        ("inventario", "ejecutar") | ("inventario", "cerrar") | ("inventario", "anular") => true,
         ("comentario", "crear") | ("comentario", "eliminar") => true,
         ("reporte", "ver") | ("reporte", "exportar") => true,
         ("producto", "crear") | ("producto", "editar") | ("producto", "desactivar") => true,
@@ -108,7 +111,7 @@ fn gerente(recurso: &str, accion: &str) -> bool {
         ("ubicacion", "crear") | ("ubicacion", "editar") | ("ubicacion", "desactivar") => true,
         ("caja", "crear") | ("caja", "editar") | ("caja", "desactivar") => true,
         ("lote", "crear") | ("lote", "editar") => true,
-        _ => accion == "ver",
+        _ => accion == "ver" || accion == "exportar",
     }
 }
 

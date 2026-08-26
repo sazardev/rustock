@@ -200,6 +200,67 @@ pub fn lotes_por_vencer(
     Ok(rows)
 }
 
+/// Un rango del reporte de vencimientos: cuántos lotes y unidades caen en él.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct BucketVencimiento {
+    pub lotes: Vec<LotePorVencer>,
+    pub total_lotes: i64,
+    pub total_unidades: i64,
+}
+
+impl BucketVencimiento {
+    fn de(lotes: Vec<LotePorVencer>) -> Self {
+        let total_unidades = lotes.iter().map(|l| l.cantidad).sum();
+        BucketVencimiento {
+            total_lotes: lotes.len() as i64,
+            total_unidades,
+            lotes,
+        }
+    }
+}
+
+/// Reporte de vencimientos (SPEC §16.2): "próximos 30/60/90 días y vencidos,
+/// por producto/lote/ubicación" en una sola llamada, en vez de que el
+/// cliente tenga que invocar `lotes_por_vencer` tres veces con distintos
+/// horizontes y deducir los rangos él mismo.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct VencimientosPorRango {
+    pub vencidos: BucketVencimiento,
+    pub proximos_30: BucketVencimiento,
+    pub proximos_60: BucketVencimiento,
+    pub proximos_90: BucketVencimiento,
+}
+
+pub fn vencimientos_por_rango(conn: &Connection, actor: &str) -> AppResult<VencimientosPorRango> {
+    let todos = lotes_por_vencer(conn, 90, actor)?;
+    let hoy = ahora()[..10].to_string();
+    let limite_30 = fecha_mas_dias(&hoy, 30);
+    let limite_60 = fecha_mas_dias(&hoy, 60);
+
+    let mut vencidos = Vec::new();
+    let mut proximos_30 = Vec::new();
+    let mut proximos_60 = Vec::new();
+    let mut proximos_90 = Vec::new();
+    for lote in todos {
+        if lote.vencido {
+            vencidos.push(lote);
+        } else if lote.fecha_vencimiento.as_str() <= limite_30.as_str() {
+            proximos_30.push(lote);
+        } else if lote.fecha_vencimiento.as_str() <= limite_60.as_str() {
+            proximos_60.push(lote);
+        } else {
+            proximos_90.push(lote);
+        }
+    }
+
+    Ok(VencimientosPorRango {
+        vencidos: BucketVencimiento::de(vencidos),
+        proximos_30: BucketVencimiento::de(proximos_30),
+        proximos_60: BucketVencimiento::de(proximos_60),
+        proximos_90: BucketVencimiento::de(proximos_90),
+    })
+}
+
 /// Suma `dias` días a una fecha `YYYY-MM-DD` (aritmética simple, suficiente
 /// para el horizonte de alertas de vencimiento).
 pub(crate) fn fecha_mas_dias(fecha_iso: &str, dias: i64) -> String {

@@ -41,7 +41,8 @@ pub fn crear_sesion(
 pub fn obtener_sesion(conn: &Connection, id: &str) -> AppResult<Option<SesionInventario>> {
     let mut stmt = conn.prepare(
         "SELECT id, numero, tipo, estado, almacen_id, alcance, fecha_inicio, fecha_fin,
-                responsable_id, conteo_ciego, exige_doble_conteo, created_by, created_at, closed_by, closed_at
+                responsable_id, conteo_ciego, exige_doble_conteo, created_by, created_at, closed_by, closed_at,
+                anulado_by, anulado_at
          FROM sesiones_inventario WHERE id = ?1",
     )?;
     let mut rows = stmt.query_map([id], map_sesion)?;
@@ -75,8 +76,8 @@ pub fn iniciar_sesion(conn: &Connection, id: &str, by: &str) -> AppResult<Sesion
         "iniciar",
         "inventario",
         Some(id),
-        None,
-        None,
+        Some(&estado),
+        Some("EN_CURSO"),
         None,
     )?;
     tx.commit()?;
@@ -100,6 +101,8 @@ fn map_sesion(r: &rusqlite::Row<'_>) -> rusqlite::Result<SesionInventario> {
         created_at: r.get(12)?,
         closed_by: r.get(13)?,
         closed_at: r.get(14)?,
+        anulado_by: r.get(15)?,
+        anulado_at: r.get(16)?,
     })
 }
 
@@ -440,8 +443,60 @@ pub fn cerrar_sesion(conn: &Connection, sesion_id: &str, by: &str) -> AppResult<
         "UPDATE sesiones_inventario SET estado = 'CERRADA', closed_by = ?2, closed_at = ?3, fecha_fin = ?3 WHERE id = ?1",
         rusqlite::params![sesion_id, by, ts],
     )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        &tx,
+        Some(by),
+        "cerrar",
+        "inventario",
+        Some(sesion_id),
+        Some("EN_CURSO"),
+        Some(&format!(
+            r#"{{"estado":"CERRADA","ajustes_generados":{}}}"#,
+            ajustes.len()
+        )),
+        None,
+    )?;
     tx.commit()?;
     Ok(ajustes)
+}
+
+/// Anula una sesión de inventario (SPEC §11.1): descarta una sesión
+/// `PLANEADA` o `EN_CURSO` sin generar ajustes — a diferencia de `cerrar_sesion`,
+/// que concilia diferencias. Deja rastro de auditoría (`anulado_by`/`anulado_at`)
+/// en vez de desaparecer sin registro. Una sesión `CERRADA` o ya `ANULADA` no
+/// puede anularse (son estados terminales).
+pub fn anular_sesion(conn: &Connection, sesion_id: &str, by: &str) -> AppResult<SesionInventario> {
+    puede(conn, Some(by), "inventario", "anular")?;
+    let tx = rusqlite::Transaction::new_unchecked(conn, rusqlite::TransactionBehavior::Immediate)?;
+
+    let estado: String = tx
+        .query_row(
+            "SELECT estado FROM sesiones_inventario WHERE id = ?1",
+            [sesion_id],
+            |r| r.get(0),
+        )
+        .map_err(|_| AppError::NoEncontrado("sesión de inventario", sesion_id.to_string()))?;
+    if estado != "PLANEADA" && estado != "EN_CURSO" {
+        return Err(AppError::TransicionInvalida("ANULADA".into(), estado));
+    }
+
+    let ts = ahora();
+    tx.execute(
+        "UPDATE sesiones_inventario SET estado = 'ANULADA', anulado_by = ?2, anulado_at = ?3 WHERE id = ?1",
+        rusqlite::params![sesion_id, by, ts],
+    )?;
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        &tx,
+        Some(by),
+        "anular",
+        "inventario",
+        Some(sesion_id),
+        Some(&estado),
+        Some("ANULADA"),
+        None,
+    )?;
+    tx.commit()?;
+    Ok(obtener_sesion(conn, sesion_id)?.expect("existe"))
 }
 
 /// Genera el ajuste (entrada/salida por "diferencia de inventario") para una diferencia.

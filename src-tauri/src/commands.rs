@@ -133,6 +133,7 @@ pub fn listar_almacenes(
     con_auditoria!(db, sesion, "listar_almacenes", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "almacen", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "almacen", &params)?;
         query::listar(&conn, &query::ALMACEN_SCHEMA, &params)
     })
 }
@@ -215,6 +216,7 @@ pub fn listar_zonas(
     con_auditoria!(db, sesion, "listar_zonas", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "zona", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "zona", &params)?;
         query::listar(&conn, &query::ZONA_SCHEMA, &params)
     })
 }
@@ -297,6 +299,7 @@ pub fn listar_pasillos(
     con_auditoria!(db, sesion, "listar_pasillos", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "pasillo", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "pasillo", &params)?;
         query::listar(&conn, &query::PASILLO_SCHEMA, &params)
     })
 }
@@ -379,6 +382,7 @@ pub fn listar_racks(
     con_auditoria!(db, sesion, "listar_racks", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "rack", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "rack", &params)?;
         query::listar(&conn, &query::RACK_SCHEMA, &params)
     })
 }
@@ -461,6 +465,7 @@ pub fn listar_secciones(
     con_auditoria!(db, sesion, "listar_secciones", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "seccion", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "seccion", &params)?;
         query::listar(&conn, &query::SECCION_SCHEMA, &params)
     })
 }
@@ -529,6 +534,12 @@ pub fn listar_ubicaciones(
     con_auditoria!(db, sesion, "listar_ubicaciones", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "ubicacion", "ver")?;
+        query::verificar_permiso_exportar(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "ubicacion",
+            &params,
+        )?;
         query::listar(&conn, &query::UBICACION_SCHEMA, &params)
     })
 }
@@ -639,6 +650,7 @@ pub fn listar_cajas(
     con_auditoria!(db, sesion, "listar_cajas", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "caja", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "caja", &params)?;
         query::listar(&conn, &query::CAJA_SCHEMA, &params)
     })
 }
@@ -707,6 +719,7 @@ pub fn listar_productos(
     con_auditoria!(db, sesion, "listar_productos", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "producto", &params)?;
         query::listar(&conn, &query::PRODUCTO_SCHEMA, &params)
     })
 }
@@ -821,6 +834,7 @@ pub fn listar_lotes(
     con_auditoria!(db, sesion, "listar_lotes", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "lote", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "lote", &params)?;
         query::listar(&conn, &query::LOTE_SCHEMA, &params)
     })
 }
@@ -876,6 +890,12 @@ pub fn listar_proveedores(
     con_auditoria!(db, sesion, "listar_proveedores", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "proveedor", "ver")?;
+        query::verificar_permiso_exportar(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "proveedor",
+            &params,
+        )?;
         query::listar(&conn, &query::PROVEEDOR_SCHEMA, &params)
     })
 }
@@ -942,6 +962,7 @@ pub fn listar_clientes(
     con_auditoria!(db, sesion, "listar_clientes", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "cliente", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "cliente", &params)?;
         query::listar(&conn, &query::CLIENTE_SCHEMA, &params)
     })
 }
@@ -1010,6 +1031,7 @@ pub fn listar_uoms(
     con_auditoria!(db, sesion, "listar_uoms", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "uom", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "uom", &params)?;
         query::listar(&conn, &query::UOM_SCHEMA, &params)
     })
 }
@@ -1076,6 +1098,12 @@ pub fn listar_categorias(
     con_auditoria!(db, sesion, "listar_categorias", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "categoria", "ver")?;
+        query::verificar_permiso_exportar(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "categoria",
+            &params,
+        )?;
         query::listar(&conn, &query::CATEGORIA_SCHEMA, &params)
     })
 }
@@ -1144,6 +1172,7 @@ pub fn listar_usuarios(
     con_auditoria!(db, sesion, "listar_usuarios", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "usuario", "ver")?;
+        query::verificar_permiso_exportar(&conn, Some(&sesion.usuario_id()?), "usuario", &params)?;
         query::listar(&conn, &query::USUARIO_SCHEMA, &params)
     })
 }
@@ -1183,6 +1212,22 @@ pub fn listar_roles(
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "rol", "ver")?;
         repo::seguridad::listar_roles(&conn)
+    })
+}
+
+/// Renombra un rol (SPEC §4.2): solo `descripcion` (el nombre visible), el
+/// `codigo` de sistema (`ADMIN`/`GERENTE`/...) nunca se toca.
+#[tauri::command]
+pub fn editar_rol(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    descripcion: String,
+) -> AppResult<Rol> {
+    con_auditoria!(db, sesion, "editar_rol", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::seguridad::editar_rol(&conn, &id, &descripcion, &actor)
     })
 }
 
@@ -1654,6 +1699,12 @@ pub fn listar_movimientos(
     con_auditoria!(db, sesion, "listar_movimientos", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "movimiento", "ver")?;
+        query::verificar_permiso_exportar(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "movimiento",
+            &params,
+        )?;
         query::listar(&conn, &query::MOVIMIENTO_SCHEMA, &params)
     })
 }
@@ -1681,6 +1732,12 @@ pub fn listar_lineas_movimiento(
     con_auditoria!(db, sesion, "listar_lineas_movimiento", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "movimiento", "ver")?;
+        query::verificar_permiso_exportar(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "movimiento",
+            &params,
+        )?;
         let mut filtros = params.filters.take().unwrap_or_default();
         filtros.push(format!("movimiento_id:eq:{movimiento_id}"));
         params.filters = Some(filtros);
@@ -1769,6 +1826,12 @@ pub fn listar_sesiones_inventario(
     con_auditoria!(db, sesion, "listar_sesiones_inventario", {
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "inventario", "ver")?;
+        query::verificar_permiso_exportar(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "inventario",
+            &params,
+        )?;
         query::listar(&conn, &query::SESION_INVENTARIO_SCHEMA, &params)
     })
 }
@@ -1848,6 +1911,19 @@ pub fn cerrar_sesion_inventario(
         let actor = sesion.usuario_id()?;
         let conn = db.conn();
         repo::inventario::cerrar_sesion(&conn, &sesion_id, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn anular_sesion_inventario(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    sesion_id: String,
+) -> AppResult<SesionInventario> {
+    con_auditoria!(db, sesion, "anular_sesion_inventario", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::inventario::anular_sesion(&conn, &sesion_id, &actor)
     })
 }
 
@@ -1988,6 +2064,21 @@ pub fn lotes_por_vencer(
     })
 }
 
+/// Reporte de vencimientos (SPEC §16.2): buckets vencidos/30/60/90 días en
+/// una sola llamada, en vez de que el cliente invoque `lotes_por_vencer` tres
+/// veces con distintos horizontes.
+#[tauri::command]
+pub fn vencimientos_por_rango(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<repo::trazabilidad::VencimientosPorRango> {
+    con_auditoria!(db, sesion, "vencimientos_por_rango", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        repo::trazabilidad::vencimientos_por_rango(&conn, &actor)
+    })
+}
+
 /// "¿Dónde estuvo la caja Z?"
 #[tauri::command]
 pub fn historial_caja(
@@ -2074,6 +2165,22 @@ pub fn obtener_kpis_generales(
         let conn = db.conn();
         puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
         repo::reporte::kpis_generales(&conn)
+    })
+}
+
+/// Desempeño de usuarios (SPEC §16.2): movimientos creados por usuario,
+/// desglosados por tipo y resultado, en un rango de fechas opcional.
+#[tauri::command]
+pub fn desempeno_usuarios(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    desde: Option<String>,
+    hasta: Option<String>,
+) -> AppResult<Vec<repo::reporte::DesempenoUsuario>> {
+    con_auditoria!(db, sesion, "desempeno_usuarios", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::reporte::desempeno_usuarios(&conn, desde.as_deref(), hasta.as_deref())
     })
 }
 
@@ -2193,6 +2300,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         obtener_usuario,
         crear_usuario,
         listar_roles,
+        editar_rol,
         bootstrap_admin,
         editar_usuario,
         desactivar_usuario,
@@ -2237,6 +2345,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         listar_conteos,
         diferencias_sesion,
         cerrar_sesion_inventario,
+        anular_sesion_inventario,
         crear_comentario,
         listar_comentarios,
         editar_comentario,
@@ -2246,12 +2355,14 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         origen_de_salida,
         movimientos_de_producto_en_rango,
         lotes_por_vencer,
+        vencimientos_por_rango,
         historial_caja,
         listar_alertas,
         resolver_alerta,
         ignorar_alerta,
         obtener_dashboard,
         obtener_kpis_generales,
+        desempeno_usuarios,
         kardex_producto,
         precision_sesion,
         listar_historial,

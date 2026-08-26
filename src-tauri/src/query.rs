@@ -191,6 +191,22 @@ impl ResourceSchema {
     }
 }
 
+/// SPEC §4.3/§15.8: "`exportar` se exige de forma independiente (puede
+/// leerse sin poder exportar)". Un listado "quiere exportar" cuando pide
+/// `export: true` o `page_size: -1` (todos los registros, sin paginar) —
+/// ambos casos deben pasar por el permiso `exportar`, no solo `ver`.
+pub fn verificar_permiso_exportar(
+    conn: &Connection,
+    actor: Option<&str>,
+    recurso: &str,
+    params: &ListParams,
+) -> AppResult<()> {
+    if params.export || params.page_size == Some(-1) {
+        crate::security::puede(conn, actor, recurso, "exportar")?;
+    }
+    Ok(())
+}
+
 /// Punto de entrada único: ejecuta un listado universal contra `schema` según
 /// `params` y devuelve la respuesta ya lista para serializar al frontend.
 pub fn listar(

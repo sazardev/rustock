@@ -163,6 +163,7 @@ pub fn editar_almacen(
     puede(conn, Some(actor), "almacen", "editar")?;
     let actual = obtener_almacen(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("almacén", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
     let descripcion = cambios.descripcion.clone().or(actual.descripcion);
     let direccion = cambios.direccion.clone().or(actual.direccion);
@@ -171,17 +172,18 @@ pub fn editar_almacen(
         "UPDATE almacenes SET nombre = ?2, descripcion = ?3, direccion = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
         rusqlite::params![id, nombre, descripcion, direccion, ts, actor],
     )?;
+    let despues = obtener_almacen(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "almacen",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_almacen(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// Borrado lógico (SPEC §14.5). Un almacén inactivo no admite movimientos.
@@ -319,6 +321,7 @@ pub fn editar_zona(
     puede(conn, Some(actor), "zona", "editar")?;
     let actual =
         obtener_zona(conn, id)?.ok_or_else(|| AppError::NoEncontrado("zona", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
     let descripcion = cambios.descripcion.clone().or(actual.descripcion);
     let ts = ahora();
@@ -326,17 +329,18 @@ pub fn editar_zona(
         "UPDATE zonas SET nombre = ?2, descripcion = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?1",
         rusqlite::params![id, nombre, descripcion, ts, actor],
     )?;
+    let despues = obtener_zona(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "zona",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_zona(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// No se desactiva una zona con stock vigente en cualquiera de sus
@@ -493,23 +497,25 @@ pub fn editar_pasillo(
     puede(conn, Some(actor), "pasillo", "editar")?;
     let actual = obtener_pasillo(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("pasillo", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().or(actual.nombre);
     let ts = ahora();
     conn.execute(
         "UPDATE pasillos SET nombre = ?2, updated_at = ?3, updated_by = ?4 WHERE id = ?1",
         rusqlite::params![id, nombre, ts, actor],
     )?;
+    let despues = obtener_pasillo(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "pasillo",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_pasillo(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// No se desactiva un pasillo con stock vigente en las ubicaciones
@@ -682,6 +688,7 @@ pub fn editar_rack(
     puede(conn, Some(actor), "rack", "editar")?;
     let actual =
         obtener_rack(conn, id)?.ok_or_else(|| AppError::NoEncontrado("rack", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().or(actual.nombre);
     let tipo = cambios.tipo.clone().or(actual.tipo);
     let pasillo_id = match &cambios.pasillo_id {
@@ -696,17 +703,18 @@ pub fn editar_rack(
         "UPDATE racks SET nombre = ?2, tipo = ?3, pasillo_id = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
         rusqlite::params![id, nombre, tipo, pasillo_id, ts, actor],
     )?;
+    let despues = obtener_rack(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "rack",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_rack(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// No se desactiva un rack con stock vigente en sus ubicaciones descendientes
@@ -819,6 +827,7 @@ pub fn editar_seccion(
     puede(conn, Some(actor), "seccion", "editar")?;
     let actual = obtener_seccion(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("sección", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().or(actual.nombre);
     let nivel = cambios.nivel.clone().or(actual.nivel);
     let descripcion = cambios.descripcion.clone().or(actual.descripcion);
@@ -827,17 +836,18 @@ pub fn editar_seccion(
         "UPDATE secciones SET nombre = ?2, nivel = ?3, descripcion = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
         rusqlite::params![id, nombre, nivel, descripcion, ts, actor],
     )?;
+    let despues = obtener_seccion(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "seccion",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_seccion(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// No se desactiva una sección con stock vigente en sus ubicaciones.
@@ -1041,6 +1051,7 @@ pub fn editar_ubicacion(
     puede(conn, Some(actor), "ubicacion", "editar")?;
     let actual = obtener_ubicacion(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("ubicación", id.to_string()))?;
+    let antes = actual.clone();
     let tipo = match &cambios.tipo {
         Some(t) => TipoUbicacion::parse(t)
             .ok_or_else(|| AppError::CampoRequerido("tipo".into()))?
@@ -1055,17 +1066,18 @@ pub fn editar_ubicacion(
         "UPDATE ubicaciones SET nombre = ?2, tipo = ?3, capacidad_maxima = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
         rusqlite::params![id, nombre, tipo, capacidad_maxima, ts, actor],
     )?;
+    let despues = obtener_ubicacion(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "ubicacion",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_ubicacion(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// Regla SPEC §3.5: no desactivar ubicación con saldo > 0.
@@ -1189,6 +1201,7 @@ pub fn editar_caja(
     puede(conn, Some(actor), "caja", "editar")?;
     let actual =
         obtener_caja(conn, id)?.ok_or_else(|| AppError::NoEncontrado("caja", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().or(actual.nombre);
     let etiqueta = cambios.etiqueta.clone().or(actual.etiqueta);
     let ts = ahora();
@@ -1196,17 +1209,18 @@ pub fn editar_caja(
         "UPDATE cajas SET nombre = ?2, etiqueta = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?1",
         rusqlite::params![id, nombre, etiqueta, ts, actor],
     )?;
+    let despues = obtener_caja(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "caja",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_caja(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 pub fn desactivar_caja(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
@@ -1316,6 +1330,7 @@ pub fn editar_categoria(
     puede(conn, Some(actor), "categoria", "editar")?;
     let actual = obtener_categoria(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("categoría", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
     let descripcion = cambios.descripcion.clone().or(actual.descripcion);
     let parent_id = match &cambios.parent_id {
@@ -1334,17 +1349,18 @@ pub fn editar_categoria(
         "UPDATE categorias SET nombre = ?2, parent_id = ?3, descripcion = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
         rusqlite::params![id, nombre, parent_id, descripcion, ts, actor],
     )?;
+    let despues = obtener_categoria(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "categoria",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_categoria(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 pub fn desactivar_categoria(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
@@ -1448,6 +1464,7 @@ pub fn editar_uom(conn: &Connection, id: &str, cambios: &EditarUom, actor: &str)
     puede(conn, Some(actor), "uom", "editar")?;
     let actual = obtener_uom(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("unidad de medida", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios
         .nombre
         .clone()
@@ -1461,17 +1478,18 @@ pub fn editar_uom(conn: &Connection, id: &str, cambios: &EditarUom, actor: &str)
         "UPDATE uoms SET nombre = ?2, tipo = ?3, factor = ?4, base = ?5, updated_at = ?6 WHERE id = ?1",
         rusqlite::params![id, nombre, tipo, factor, base as i64, ts],
     )?;
+    let despues = obtener_uom(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "uom",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_uom(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// Borrado lógico de una UOM. No se puede desactivar si algún producto la
@@ -1571,6 +1589,7 @@ pub fn editar_proveedor(
     puede(conn, Some(actor), "proveedor", "editar")?;
     let actual = obtener_proveedor(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("proveedor", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
     let contacto_nombre = cambios.contacto_nombre.clone().or(actual.contacto_nombre);
     let contacto_telefono = cambios
@@ -1584,17 +1603,18 @@ pub fn editar_proveedor(
         "UPDATE proveedores SET nombre = ?2, contacto_nombre = ?3, contacto_telefono = ?4, contacto_email = ?5, direccion = ?6, updated_at = ?7, updated_by = ?8 WHERE id = ?1",
         rusqlite::params![id, nombre, contacto_nombre, contacto_telefono, contacto_email, direccion, ts, actor],
     )?;
+    let despues = obtener_proveedor(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "proveedor",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_proveedor(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 pub fn desactivar_proveedor(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
@@ -1682,6 +1702,7 @@ pub fn editar_cliente(
     puede(conn, Some(actor), "cliente", "editar")?;
     let actual = obtener_cliente(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("cliente", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
     let contacto_nombre = cambios.contacto_nombre.clone().or(actual.contacto_nombre);
     let contacto_telefono = cambios
@@ -1695,17 +1716,18 @@ pub fn editar_cliente(
         "UPDATE clientes SET nombre = ?2, contacto_nombre = ?3, contacto_telefono = ?4, contacto_email = ?5, direccion = ?6, updated_at = ?7, updated_by = ?8 WHERE id = ?1",
         rusqlite::params![id, nombre, contacto_nombre, contacto_telefono, contacto_email, direccion, ts, actor],
     )?;
+    let despues = obtener_cliente(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "cliente",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_cliente(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 pub fn desactivar_cliente(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
@@ -1821,6 +1843,7 @@ pub fn editar_producto(
     puede(conn, Some(actor), "producto", "editar")?;
     let actual = obtener_producto(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("producto", id.to_string()))?;
+    let antes = actual.clone();
     let nombre = cambios.nombre.clone().unwrap_or(actual.nombre);
     let descripcion = cambios.descripcion.clone().or(actual.descripcion);
     let categoria_id = cambios.categoria_id.clone().or(actual.categoria_id);
@@ -1911,17 +1934,18 @@ pub fn editar_producto(
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado("codigo_barras".into()))?;
+    let despues = obtener_producto(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "producto",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_producto(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 pub fn desactivar_producto(conn: &Connection, id: &str, actor: &str) -> AppResult<()> {
@@ -2147,6 +2171,7 @@ pub fn editar_lote(
     puede(conn, Some(actor), "lote", "editar")?;
     let actual =
         obtener_lote(conn, id)?.ok_or_else(|| AppError::NoEncontrado("lote", id.to_string()))?;
+    let antes = actual.clone();
     let producto = obtener_producto(conn, &actual.producto_id)?
         .ok_or_else(|| AppError::NoEncontrado("producto", actual.producto_id.clone()))?;
     let mut fecha_fabricacion = cambios
@@ -2169,17 +2194,18 @@ pub fn editar_lote(
         "UPDATE lotes SET fecha_fabricacion = ?2, fecha_vencimiento = ?3, origen = ?4, notas = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?1",
         rusqlite::params![id, fecha_fabricacion, fecha_vencimiento, origen, notas, ts, actor],
     )?;
+    let despues = obtener_lote(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "lote",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_lote(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 #[allow(unused)]

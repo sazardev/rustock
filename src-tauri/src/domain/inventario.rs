@@ -18,6 +18,8 @@ pub struct SesionInventario {
     pub created_at: String,
     pub closed_by: Option<String>,
     pub closed_at: Option<String>,
+    pub anulado_by: Option<String>,
+    pub anulado_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

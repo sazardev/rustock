@@ -198,6 +198,63 @@ pub fn listar_roles(conn: &Connection) -> AppResult<Vec<crate::domain::seguridad
     Ok(rows)
 }
 
+pub fn obtener_rol(
+    conn: &Connection,
+    id: &str,
+) -> AppResult<Option<crate::domain::seguridad::Rol>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, codigo, descripcion, es_sistema, created_at, updated_at
+         FROM roles WHERE id = ?1",
+    )?;
+    let mut rows = stmt.query_map([id], |r| {
+        Ok(crate::domain::seguridad::Rol {
+            id: r.get(0)?,
+            codigo: r.get(1)?,
+            descripcion: r.get(2)?,
+            es_sistema: r.get::<_, i64>(3)? != 0,
+            created_at: r.get(4)?,
+            updated_at: r.get(5)?,
+        })
+    })?;
+    rows.next().transpose().map_err(AppError::from)
+}
+
+/// Renombra un rol (SPEC §4.2: "los roles por defecto ... sí [se pueden]
+/// renombrar con permiso de ADMIN"). Solo toca `descripcion` (el nombre
+/// visible) — el `codigo` (`ADMIN`/`GERENTE`/...) es el identificador
+/// estable que usa toda la matriz de permisos en `security.rs` y nunca se
+/// edita, ni siquiera para roles no-sistema.
+pub fn editar_rol(
+    conn: &Connection,
+    id: &str,
+    descripcion: &str,
+    actor: &str,
+) -> AppResult<crate::domain::seguridad::Rol> {
+    puede(conn, Some(actor), "rol", "editar")?;
+    if descripcion.trim().is_empty() {
+        return Err(AppError::CampoRequerido("descripcion".into()));
+    }
+    let antes =
+        obtener_rol(conn, id)?.ok_or_else(|| AppError::NoEncontrado("rol", id.to_string()))?;
+    let ts = ahora();
+    conn.execute(
+        "UPDATE roles SET descripcion = ?2, updated_at = ?3 WHERE id = ?1",
+        rusqlite::params![id, descripcion.trim(), ts],
+    )?;
+    let despues = obtener_rol(conn, id)?.expect("existe");
+    crate::domain::seguridad::EventoAuditoria::registrar(
+        conn,
+        Some(actor),
+        "editar",
+        "rol",
+        Some(id),
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
+        None,
+    )?;
+    Ok(despues)
+}
+
 // ============ Gestión de usuarios (SPEC §4.1, §4.5) ============
 //
 // `nombre_usuario` es estable una vez creado (es el identificador de la
@@ -219,6 +276,7 @@ pub fn editar_usuario(
     cambios.validar()?;
     puede(conn, Some(actor), "usuario", "editar")?;
     usuario_existe(conn, id)?;
+    let antes = obtener_usuario(conn, id)?.expect("existe (usuario_existe ya validó)");
     let ts = ahora();
     conn.execute(
         "UPDATE usuarios SET
@@ -237,17 +295,18 @@ pub fn editar_usuario(
             id,
         ],
     )?;
+    let despues = obtener_usuario(conn, id)?.expect("recién editado");
     EventoAuditoria::registrar(
         conn,
         Some(actor),
         "editar",
         "usuario",
         Some(id),
-        None,
-        None,
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
         None,
     )?;
-    Ok(obtener_usuario(conn, id)?.expect("recién editado"))
+    Ok(despues)
 }
 
 /// Cantidad de administradores activos (rol ADMIN).

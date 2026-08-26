@@ -1,4 +1,4 @@
-use rusqlite::{Connection, TransactionBehavior};
+use rusqlite::{Connection, OptionalExtension, TransactionBehavior};
 use uuid::Uuid;
 
 use crate::domain::movimiento::*;
@@ -17,15 +17,19 @@ type LineaInversa = (
     Option<String>,
 );
 
-/// Genera el número correlativo del movimiento (SPEC §6.1): MOV-YYYY-NNNNNN.
+/// Genera el número correlativo del movimiento (SPEC §6.1): "número
+/// correlativo único por año/almacén", ej. `MOV-ALM-PRINCIPAL-2026-000123`.
 ///
 /// El incremento es atómico: se apoya en la tabla `correlativos`, cuyo
 /// `UPDATE ... RETURNING` adquiere el candado de escritura de la fila. Al
 /// ejecutarse dentro de una transacción `IMMEDIATE` (ver `crear_movimiento`/
 /// `crear_traslado`/`anular_movimiento`), dos creaciones concurrentes quedan
-/// serializadas y no colisionan en el `UNIQUE(numero)`.
-fn generar_numero(conn: &Connection, anio: &str) -> AppResult<String> {
-    let clave = format!("MOV-{anio}");
+/// serializadas y no colisionan en el `UNIQUE(numero)`. La clave incluye el
+/// código de almacén para que la secuencia sea independiente por almacén
+/// (dos almacenes pueden tener ambos un "000001" el mismo año) mientras el
+/// `numero` final, que sí lleva el código, se mantiene único globalmente.
+fn generar_numero(conn: &Connection, almacen_codigo: &str, anio: &str) -> AppResult<String> {
+    let clave = format!("MOV-{almacen_codigo}-{anio}");
     conn.execute(
         "INSERT OR IGNORE INTO correlativos (clave, valor) VALUES (?1, 0)",
         [clave.clone()],
@@ -35,7 +39,29 @@ fn generar_numero(conn: &Connection, anio: &str) -> AppResult<String> {
         [clave],
         |r| r.get(0),
     )?;
-    Ok(format!("MOV-{anio}-{:06}", valor))
+    Ok(format!("MOV-{almacen_codigo}-{anio}-{:06}", valor))
+}
+
+/// Resuelve el código del almacén (SPEC §6.1) a partir de la ubicación de
+/// origen o destino de un movimiento — al menos una de las dos siempre está
+/// presente (§6.1: toda línea tiene origen o destino según su tipo).
+fn resolver_almacen_codigo(
+    conn: &Connection,
+    origen_ubicacion_id: Option<&str>,
+    destino_ubicacion_id: Option<&str>,
+) -> AppResult<String> {
+    let ubicacion_id = destino_ubicacion_id
+        .or(origen_ubicacion_id)
+        .ok_or_else(|| {
+            AppError::CampoRequerido("origen_ubicacion_id o destino_ubicacion_id".into())
+        })?;
+    let almacen_id = crate::repo::catalogo::resolver_almacen_id_de_ubicacion(conn, ubicacion_id)?;
+    conn.query_row(
+        "SELECT codigo FROM almacenes WHERE id = ?1",
+        [&almacen_id],
+        |r| r.get(0),
+    )
+    .map_err(|_| AppError::NoEncontrado("almacén", almacen_id))
 }
 
 /// Lee un producto y devuelve si controla lote / vencimiento / está activo.
@@ -121,9 +147,10 @@ pub fn stock_total_producto(conn: &Connection, producto: &str) -> AppResult<i64>
 /// **dos** movimientos ligados por el mismo `documento_referencia` (§9.3):
 /// `SALIDA`/`TRASLADO_SALIDA` en el almacén de origen y
 /// `ENTRADA`/`TRASLADO_ENTRADA` en el de destino. Cada movimiento nace en
-/// `BORRADOR` y se aprueba por separado (§6.2); como ninguno de los dos
-/// afecta stock hasta su propia aprobación, la falta de una transacción
-/// conjunta entre ambas creaciones no compromete la consistencia del saldo.
+/// `BORRADOR`; ninguno afecta stock hasta la aprobación, y `aprobar_movimiento`
+/// aprueba ambas piernas atómicamente en cuanto se aprueba cualquiera de las
+/// dos (ver `par_traslado_interalmacen`), así que la falta de una transacción
+/// conjunta entre ambas *creaciones* no compromete la consistencia del saldo.
 pub fn crear_traslado(conn: &Connection, nuevo: &NuevoTraslado) -> AppResult<TrasladoCreado> {
     if nuevo.cantidad <= 0 {
         return Err(AppError::CampoRequerido("cantidad (> 0)".into()));
@@ -297,10 +324,32 @@ fn insertar_movimiento(tx: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Mo
     }
     let tipo = nuevo.tipo()?.as_str();
     let sub_tipo = nuevo.sub_tipo()?.as_str();
+    // SPEC §4.3/§10.3: crear un AJUSTE (positivo o negativo) exige el permiso
+    // específico `ajuste:crear`, distinto del genérico `movimiento:crear` que
+    // ya valida OPERADOR — sin este check, cualquier rol con `movimiento:crear`
+    // podría crear ajustes que el SPEC le prohíbe explícitamente (§4.4).
+    if tipo == TipoMovimiento::Ajuste.as_str() {
+        puede(tx, Some(&nuevo.created_by), "ajuste", "crear")?;
+    }
     let id = Uuid::new_v4().to_string();
     let ts = ahora();
     let anio = &ts[..4];
-    let numero = generar_numero(tx, anio)?;
+    // El origen/destino puede vivir en la cabecera del movimiento o, si se
+    // omite ahí, en la primera línea (varias líneas pueden repartirse entre
+    // ubicaciones, pero todas resuelven al mismo almacén por §3.13).
+    let primera_linea = nuevo.lineas.first();
+    let almacen_codigo = resolver_almacen_codigo(
+        tx,
+        nuevo
+            .origen_ubicacion_id
+            .as_deref()
+            .or_else(|| primera_linea.and_then(|l| l.origen_ubicacion_id.as_deref())),
+        nuevo
+            .destino_ubicacion_id
+            .as_deref()
+            .or_else(|| primera_linea.and_then(|l| l.destino_ubicacion_id.as_deref())),
+    )?;
+    let numero = generar_numero(tx, &almacen_codigo, anio)?;
     let fecha_movimiento = nuevo.fecha_movimiento.clone().unwrap_or_else(ahora);
 
     // Validaciones por línea (producto activo, lote requerido, etc.).
@@ -366,15 +415,16 @@ fn insertar_movimiento(tx: &Connection, nuevo: &NuevoMovimiento) -> AppResult<Mo
         )?;
     }
 
+    let creado = obtener_movimiento(tx, &id)?.expect("recién insertado");
     EventoAuditoria(tx).registrar(
         Some(&nuevo.created_by),
         "crear",
         "movimiento",
         Some(&id),
         None,
-        None,
+        serde_json::to_string(&creado).ok().as_deref(),
     )?;
-    Ok(obtener_movimiento(tx, &id)?.expect("recién insertado"))
+    Ok(creado)
 }
 
 /// Edita un movimiento en `BORRADOR`/`PENDIENTE_APROBACION` (SPEC §6.2: los
@@ -401,6 +451,7 @@ pub fn editar_movimiento(
     let tx = conn.unchecked_transaction()?;
     let actual = obtener_movimiento(&tx, id)?
         .ok_or_else(|| AppError::NoEncontrado("movimiento", id.to_string()))?;
+    let antes = actual.clone();
 
     // SPEC §6.2: "BORRADOR: editable por su creador". Un aprobado jamás se edita.
     if actual.created_by != actor {
@@ -523,9 +574,17 @@ pub fn editar_movimiento(
         )?;
     }
 
-    EventoAuditoria(&tx).registrar(Some(actor), "editar", "movimiento", Some(id), None, None)?;
+    let despues = obtener_movimiento(&tx, id)?.expect("existe");
+    EventoAuditoria(&tx).registrar(
+        Some(actor),
+        "editar",
+        "movimiento",
+        Some(id),
+        serde_json::to_string(&antes).ok().as_deref(),
+        serde_json::to_string(&despues).ok().as_deref(),
+    )?;
     tx.commit()?;
-    Ok(obtener_movimiento(conn, id)?.expect("existe"))
+    Ok(despues)
 }
 
 /// Pasa un movimiento de BORRADOR a PENDIENTE_APROBACION.
@@ -552,8 +611,8 @@ pub fn enviar_a_aprobacion(conn: &Connection, id: &str, by: &str) -> AppResult<M
         "enviar_a_aprobacion",
         "movimiento",
         Some(id),
-        None,
-        None,
+        Some(estado.as_str()),
+        Some("PENDIENTE_APROBACION"),
     )?;
     tx.commit()?;
     Ok(obtener_movimiento(conn, id)?.expect("existe"))
@@ -562,11 +621,60 @@ pub fn enviar_a_aprobacion(conn: &Connection, id: &str, by: &str) -> AppResult<M
 /// Aprobar = ejecutar las líneas atómicamente (SPEC §6.2). Único estado que altera saldos.
 /// Usa transacción `Immediate` (no `DEFERRED`) para serializar lecturas de
 /// saldo concurrentes y evitar saldo negativo por carrera (SPEC §14.2, §14.6).
+///
+/// SPEC §9.3: un traslado inter-almacén son **dos** movimientos ligados por
+/// el mismo `documento_referencia` (`TRASLADO_SALIDA` en el origen,
+/// `TRASLADO_ENTRADA` en el destino). Si `id` es una de esas dos piernas y su
+/// par sigue pendiente, ambas se aprueban dentro de la **misma transacción**
+/// — así el origen nunca descuenta stock mientras el destino queda sin
+/// aprobar (lo que dejaría mercancía "perdida" del sistema trazado).
 pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Movimiento> {
-    puede(conn, Some(by), "movimiento", "aprobar")?;
     let tx = rusqlite::Transaction::new_unchecked(conn, rusqlite::TransactionBehavior::Immediate)?;
+    aprobar_movimiento_en_tx(&tx, id, by)?;
+    if let Some(par_id) = par_traslado_interalmacen(&tx, id)? {
+        aprobar_movimiento_en_tx(&tx, &par_id, by)?;
+    }
+    tx.commit()?;
+    Ok(obtener_movimiento(conn, id)?.expect("existe"))
+}
 
-    let (estado, tipo, sub_tipo) = estado_tipo(&tx, id)?;
+/// Busca la pierna hermana de un traslado inter-almacén (SPEC §9.3): mismo
+/// `documento_referencia`, `sub_tipo` opuesto, aún sin aprobar. `None` si
+/// `id` no es una pierna de traslado inter-almacén o no tiene par pendiente.
+fn par_traslado_interalmacen(tx: &Connection, id: &str) -> AppResult<Option<String>> {
+    let (tipo, sub_tipo, documento_referencia): (String, String, Option<String>) = tx.query_row(
+        "SELECT tipo, sub_tipo, documento_referencia FROM movimientos WHERE id = ?1",
+        [id],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    let Some(referencia) = documento_referencia else {
+        return Ok(None);
+    };
+    let opuesto = match (tipo.as_str(), sub_tipo.as_str()) {
+        ("SALIDA", "TRASLADO_SALIDA") => "TRASLADO_ENTRADA",
+        ("ENTRADA", "TRASLADO_ENTRADA") => "TRASLADO_SALIDA",
+        _ => return Ok(None),
+    };
+    tx.query_row(
+        "SELECT id FROM movimientos
+         WHERE documento_referencia = ?1 AND sub_tipo = ?2 AND id != ?3
+           AND estado IN ('BORRADOR', 'PENDIENTE_APROBACION')
+         LIMIT 1",
+        rusqlite::params![referencia, opuesto, id],
+        |r| r.get(0),
+    )
+    .optional()
+    .map_err(AppError::from)
+}
+
+/// Ejecuta la aprobación de un único movimiento dentro de `tx` (sin
+/// gestionar la transacción): valida, aplica las líneas contra los saldos y
+/// marca `APROBADO`. Compartida por `aprobar_movimiento` para aprobar, si
+/// aplica, las dos piernas de un traslado inter-almacén como un solo hecho.
+fn aprobar_movimiento_en_tx(tx: &Connection, id: &str, by: &str) -> AppResult<()> {
+    puede(tx, Some(by), "movimiento", "aprobar")?;
+
+    let (estado, tipo, sub_tipo) = estado_tipo(tx, id)?;
     if estado != EstadoMovimiento::Borrador && estado != EstadoMovimiento::PendienteAprobacion {
         return Err(AppError::TransicionInvalida(
             "APROBADO".into(),
@@ -576,6 +684,14 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
     let tipo_mov = tipo.as_str();
     let sub = sub_tipo.as_str();
 
+    // SPEC §4.4: "Aprobar ajustes (si aplica doble control)" es un permiso
+    // distinto de "Aprobar/validar movimientos" — ENCARGADO puede lo segundo
+    // pero no lo primero. Sin este check, un ENCARGADO podría aprobar sus
+    // propios ajustes con el permiso genérico `movimiento:aprobar`.
+    if tipo_mov == TipoMovimiento::Ajuste.as_str() {
+        puede(tx, Some(by), "ajuste", "aprobar")?;
+    }
+
     // Validar proveedor/cliente activos también en aprobar (por si se
     // desactivó entre crear y aprobar).
     let (proveedor_id, cliente_id): (Option<String>, Option<String>) = tx.query_row(
@@ -584,10 +700,10 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
     if let Some(pid) = proveedor_id {
-        validar_proveedor_activo(&tx, &pid)?;
+        validar_proveedor_activo(tx, &pid)?;
     }
     if let Some(cid) = cliente_id {
-        validar_cliente_activo(&tx, &cid)?;
+        validar_cliente_activo(tx, &cid)?;
     }
 
     // Cargar líneas.
@@ -615,25 +731,25 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
     drop(stmt);
 
     for linea in &lineas {
-        let reglas = reglas_producto(&tx, &linea.producto_id)?;
+        let reglas = reglas_producto(tx, &linea.producto_id)?;
         // Productos inactivos no reciben entradas ni salidas (SPEC §3.7).
         if !reglas.activo {
             return Err(AppError::EntidadInactiva("producto"));
         }
 
         let (origen, destino) = match tipo_mov {
-            "ENTRADA" => (None, Some(destino_obligatorio(&tx, sub, linea)?)),
-            "SALIDA" => (Some(origen_obligatorio(&tx, sub, linea)?), None),
+            "ENTRADA" => (None, Some(destino_obligatorio(tx, sub, linea)?)),
+            "SALIDA" => (Some(origen_obligatorio(tx, sub, linea)?), None),
             "TRASLADO" => (
-                Some(origen_obligatorio(&tx, sub, linea)?),
-                Some(destino_obligatorio(&tx, sub, linea)?),
+                Some(origen_obligatorio(tx, sub, linea)?),
+                Some(destino_obligatorio(tx, sub, linea)?),
             ),
             "AJUSTE" => match sub {
-                "AJUSTE_POSITIVO" => (None, Some(destino_obligatorio(&tx, sub, linea)?)),
-                "AJUSTE_NEGATIVO" => (Some(origen_obligatorio(&tx, sub, linea)?), None),
+                "AJUSTE_POSITIVO" => (None, Some(destino_obligatorio(tx, sub, linea)?)),
+                "AJUSTE_NEGATIVO" => (Some(origen_obligatorio(tx, sub, linea)?), None),
                 _ => return Err(AppError::CampoRequerido("sub_tipo".into())),
             },
-            "CONSUMO" => (Some(origen_obligatorio(&tx, sub, linea)?), None),
+            "CONSUMO" => (Some(origen_obligatorio(tx, sub, linea)?), None),
             _ => return Err(AppError::CampoRequerido("tipo".into())),
         };
 
@@ -645,14 +761,14 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
                 .as_deref()
                 .or(destino.as_deref())
                 .expect("ajuste siempre tiene un lado");
-            verificar_sin_inventario_en_curso(&tx, ubicacion_ajustada)?;
+            verificar_sin_inventario_en_curso(tx, ubicacion_ajustada)?;
         }
 
         // Salidas y traslados: saldo suficiente (SPEC §14.2), nunca negativo.
         if let Some(ori) = &origen {
-            let disponible = saldo_actual(&tx, ori, &linea.producto_id, linea.lote_id.as_deref())?;
+            let disponible = saldo_actual(tx, ori, &linea.producto_id, linea.lote_id.as_deref())?;
             if disponible < linea.cantidad {
-                let codigo = codigo_ubicacion(&tx, ori)?;
+                let codigo = codigo_ubicacion(tx, ori)?;
                 return Err(AppError::SaldoInsuficiente {
                     ubicacion: codigo,
                     disponible,
@@ -671,7 +787,7 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
                 if let Some(venc) = vencimiento {
                     let hoy = &ahora()[..10];
                     if venc.as_str() < hoy {
-                        let num = codigo_lote(&tx, lote_id)?;
+                        let num = codigo_lote(tx, lote_id)?;
                         return Err(AppError::LoteVencido(num));
                     }
                 }
@@ -680,16 +796,16 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
 
         // Entradas y traslados: validar capacidad de destino (SPEC §5.4, §3.5).
         if let Some(dest) = &destino {
-            validar_capacidad(&tx, dest, &linea.producto_id, linea.cantidad)?;
+            validar_capacidad(tx, dest, &linea.producto_id, linea.cantidad)?;
         }
 
         // Restricción de caja (SPEC §3.6): si la caja declara producto/lote,
         // solo admite ese producto/lote.
         if let Some(caja_id) = &linea.caja_origen_id {
-            validar_restriccion_caja(&tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
+            validar_restriccion_caja(tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
         }
         if let Some(caja_id) = &linea.caja_destino_id {
-            validar_restriccion_caja(&tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
+            validar_restriccion_caja(tx, caja_id, &linea.producto_id, linea.lote_id.as_deref())?;
         }
 
         // Valorización (Fase D): si la línea es una entrada con costo, se
@@ -699,10 +815,10 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
             && let Some(costo) = linea.costo_unitario
             && costo > 0.0
         {
-            actualizar_costo_producto(&tx, &linea.producto_id, costo, linea.cantidad)?;
+            actualizar_costo_producto(tx, &linea.producto_id, costo, linea.cantidad)?;
         }
 
-        aplicar_linea(&tx, linea, origen.as_deref(), destino.as_deref())?;
+        aplicar_linea(tx, linea, origen.as_deref(), destino.as_deref())?;
     }
 
     let ts = ahora();
@@ -711,17 +827,16 @@ pub fn aprobar_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mo
         rusqlite::params![id, by, ts],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
-        &tx,
+        tx,
         Some(by),
         "aprobar",
         "movimiento",
         Some(id),
-        None,
-        None,
+        Some(estado.as_str()),
+        Some("APROBADO"),
         None,
     )?;
-    tx.commit()?;
-    Ok(obtener_movimiento(conn, id)?.expect("existe"))
+    Ok(())
 }
 
 /// Anular: si el movimiento afectó stock (APROBADO), genera el inverso (SPEC §6.2).
@@ -734,7 +849,30 @@ pub fn anular_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mov
             let inverso_id = Uuid::new_v4().to_string();
             let ts = ahora();
             let anio = &ts[..4];
-            let numero = generar_numero(&tx, anio)?;
+            let (origen_ubicacion_id, destino_ubicacion_id): (Option<String>, Option<String>) = tx
+                .query_row(
+                    "SELECT origen_ubicacion_id, destino_ubicacion_id FROM movimientos WHERE id = ?1",
+                    [id],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )?;
+            // Igual que en `insertar_movimiento`: si la cabecera no trae
+            // ubicación (movimientos con líneas multi-ubicación), se resuelve
+            // desde la primera línea.
+            let (linea_origen, linea_destino): (Option<String>, Option<String>) = tx
+                .query_row(
+                    "SELECT origen_ubicacion_id, destino_ubicacion_id FROM movimiento_lineas
+                     WHERE movimiento_id = ?1 LIMIT 1",
+                    [id],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .optional()?
+                .unwrap_or((None, None));
+            let almacen_codigo = resolver_almacen_codigo(
+                &tx,
+                origen_ubicacion_id.as_deref().or(linea_origen.as_deref()),
+                destino_ubicacion_id.as_deref().or(linea_destino.as_deref()),
+            )?;
+            let numero = generar_numero(&tx, &almacen_codigo, anio)?;
 
             // Cargar líneas del original.
             let mut stmt = tx.prepare(
@@ -817,8 +955,10 @@ pub fn anular_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mov
                 "anular",
                 "movimiento",
                 Some(id),
-                None,
-                None,
+                Some("APROBADO"),
+                Some(&format!(
+                    r#"{{"estado":"ANULADO","movimiento_inverso_id":"{inverso_id}","movimiento_inverso_numero":"{numero}"}}"#
+                )),
                 None,
             )?;
             tx.commit()?;
@@ -835,8 +975,8 @@ pub fn anular_movimiento(conn: &Connection, id: &str, by: &str) -> AppResult<Mov
                 "anular",
                 "movimiento",
                 Some(id),
-                None,
-                None,
+                Some(estado.as_str()),
+                Some("ANULADO"),
             )?;
             tx.commit()?;
         }
