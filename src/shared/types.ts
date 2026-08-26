@@ -678,6 +678,8 @@ export interface SesionInventario {
   created_at: string;
   closed_by: string | null;
   closed_at: string | null;
+  anulado_by: string | null;
+  anulado_at: string | null;
 }
 
 export interface NuevaSesionInventario {
@@ -795,6 +797,32 @@ export interface LotePorVencer {
   vencido: boolean;
 }
 
+export interface BucketVencimiento {
+  lotes: LotePorVencer[];
+  total_lotes: number;
+  total_unidades: number;
+}
+
+export interface VencimientosPorRango {
+  vencidos: BucketVencimiento;
+  proximos_30: BucketVencimiento;
+  proximos_60: BucketVencimiento;
+  proximos_90: BucketVencimiento;
+}
+
+export interface DesempenoUsuario {
+  usuario_id: string;
+  nombre_usuario: string;
+  nombre_completo: string;
+  total_movimientos: number;
+  entradas: number;
+  salidas: number;
+  traslados: number;
+  ajustes: number;
+  aprobados: number;
+  anulados: number;
+}
+
 export interface HistorialCaja {
   movimiento_id: string;
   numero: string;
@@ -833,20 +861,35 @@ export interface Alerta {
 
 // ============ Reportes y KPIs (SPEC §16) ============
 
+export interface MovimientosHoyPorTipo {
+  entradas: number;
+  salidas: number;
+  traslados: number;
+  ajustes: number;
+}
+
 export interface DashboardResumen {
   total_skus_activos: number;
   total_unidades: number;
+  valor_inventario: number;
   alertas_activas: number;
   precision_sku_ultima_sesion: number | null;
   movimientos_hoy: number;
+  movimientos_hoy_por_tipo: MovimientosHoyPorTipo;
   ubicaciones_con_stock: number;
   ubicaciones_totales: number;
   ocupacion_pct: number;
 }
 
 export interface KpisGenerales {
+  precision_sku_ultima_sesion: number | null;
+  precision_cantidad_ultima_sesion: number | null;
+  exactitud_ubicacion_ultima_sesion: number | null;
+  rotacion_stock_30d: number;
+  dias_cobertura: number | null;
   tasa_merma_pct: number;
   lotes_vencidos_sin_dar_de_baja: number;
+  antiguedad_stock_dias: number | null;
 }
 
 export interface KardexLinea {

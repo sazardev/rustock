@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { CatalogAdapter } from "./catalog-adapters";
 import {
   esPaginado,
@@ -71,8 +71,26 @@ export function CatalogListPage<T extends { id: string }>({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [q, setQ] = useState("");
+
+  // Filtros en la URL (DESIGN §6.10): deep-link, recarga segura y
+  // compartible — igual que MovimientosPage. `page`/`q` son la única fuente
+  // de verdad, no estado local que se pierde al refrescar o volver atrás.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get("page")) || 1;
+  const q = searchParams.get("q") ?? "";
+
+  function actualizarFiltros(cambios: { q?: string; page?: number }) {
+    const next = new URLSearchParams(searchParams);
+    const setear = (clave: string, valor: string | number | undefined) => {
+      if (valor === undefined || valor === "" || valor === 1) next.delete(clave);
+      else next.set(clave, String(valor));
+    };
+    if (cambios.q !== undefined) setear("q", cambios.q);
+    if (cambios.page !== undefined) setear("page", cambios.page);
+    setSearchParams(next);
+  }
+  const setPage = (p: number) => actualizarFiltros({ page: p });
+  const setQ = (nuevoQ: string) => actualizarFiltros({ q: nuevoQ, page: 1 });
 
   const query = useQuery({
     queryKey: ["catalogo", slug, { page, q }],
@@ -124,10 +142,7 @@ export function CatalogListPage<T extends { id: string }>({
             aria-label={`Buscar ${adapter.singular.toLowerCase()}`}
             placeholder={`Buscar ${adapter.singular.toLowerCase()}…`}
             value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setQ(e.target.value)}
           />
         </FilterField>
       </FilterBar>

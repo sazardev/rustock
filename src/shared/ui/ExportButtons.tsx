@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Button } from "./Button";
-import { exportarCSV, exportarJSON } from "../exportar";
+import { useToast } from "./Toast";
+import { exportarCSV, exportarJSON, exportarXLSX } from "../exportar";
+import { mensajeError } from "../format";
 import { cn } from "../lib/cn";
 
 export interface ExportButtonsProps {
@@ -12,12 +15,28 @@ export interface ExportButtonsProps {
 }
 
 /**
- * Botones de exportación CSV/JSON de un reporte (SPEC §15.8). Se deshabilitan
- * cuando no hay filas que exportar. El formato y la descarga viven en
- * `src/shared/exportar.ts` — aquí solo se dispara la acción.
+ * Botones de exportación CSV/XLSX/JSON de un reporte (SPEC §15.8). Se
+ * deshabilitan cuando no hay filas que exportar. El formato y la descarga
+ * viven en `src/shared/exportar.ts` — aquí solo se dispara la acción. XLSX
+ * es asíncrono (genera el .xlsx real en el navegador), por eso tiene su
+ * propio estado de carga.
  */
 export function ExportButtons({ nombre, filas, disabled, className }: ExportButtonsProps) {
+  const { toast } = useToast();
+  const [generandoXlsx, setGenerandoXlsx] = useState(false);
   const sinFilas = filas.length === 0;
+
+  async function manejarXlsx() {
+    setGenerandoXlsx(true);
+    try {
+      await exportarXLSX(nombre, filas);
+    } catch (err) {
+      toast(`No se pudo generar el XLSX: ${mensajeError(err)}`, "error");
+    } finally {
+      setGenerandoXlsx(false);
+    }
+  }
+
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Button
@@ -28,6 +47,15 @@ export function ExportButtons({ nombre, filas, disabled, className }: ExportButt
         onClick={() => exportarCSV(nombre, filas)}
       >
         Exportar CSV
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="exportar"
+        disabled={disabled || sinFilas || generandoXlsx}
+        onClick={() => void manejarXlsx()}
+      >
+        {generandoXlsx ? "Generando…" : "XLSX"}
       </Button>
       <Button
         variant="ghost"

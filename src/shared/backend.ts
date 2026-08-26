@@ -20,6 +20,7 @@ import type {
   ConfiguracionEmpresa,
   Conteo,
   DashboardResumen,
+  DesempenoUsuario,
   DiferenciaInventario,
   EditarAlmacen,
   EditarCaja,
@@ -95,6 +96,7 @@ import type {
   Ubicacion,
   UbicacionDeLote,
   Usuario,
+  VencimientosPorRango,
   Zona,
 } from "./types";
 import type { MetricasHistorial } from "./audit";
@@ -357,6 +359,8 @@ export const obtenerUsuario = (id: string): Promise<Usuario | null> =>
 export const crearUsuario = (nuevo: NuevoUsuario): Promise<Usuario> =>
   invoke("crear_usuario", { nuevo });
 export const listarRoles = (): Promise<Rol[]> => invoke("listar_roles");
+export const editarRol = (id: string, descripcion: string): Promise<Rol> =>
+  invoke("editar_rol", { id, descripcion });
 export const editarUsuario = (id: string, cambios: EditarUsuario): Promise<Usuario> =>
   invoke("editar_usuario", { id, cambios });
 export const desactivarUsuario = (id: string): Promise<void> =>
@@ -468,6 +472,8 @@ export const diferenciasSesion = (sesionId: string): Promise<DiferenciaInventari
   invoke("diferencias_sesion", { sesionId });
 export const cerrarSesionInventario = (sesionId: string): Promise<string[]> =>
   invoke("cerrar_sesion_inventario", { sesionId });
+export const anularSesionInventario = (sesionId: string): Promise<SesionInventario> =>
+  invoke("anular_sesion_inventario", { sesionId });
 export const precisionSesion = (sesionId: string): Promise<PrecisionSesion> =>
   invoke("precision_sesion", { sesionId });
 
@@ -533,6 +539,8 @@ export const movimientosDeProductoEnRango = (
   invoke("movimientos_de_producto_en_rango", { productoId, desde, hasta });
 export const lotesPorVencer = (dias?: number): Promise<LotePorVencer[]> =>
   invoke("lotes_por_vencer", { dias });
+export const vencimientosPorRango = (): Promise<VencimientosPorRango> =>
+  invoke("vencimientos_por_rango");
 export const historialCaja = (cajaId: string): Promise<HistorialCaja[]> =>
   invoke("historial_caja", { cajaId });
 
@@ -546,5 +554,7 @@ export const ignorarAlerta = (id: string): Promise<void> => invoke("ignorar_aler
 
 export const obtenerDashboard = (): Promise<DashboardResumen> => invoke("obtener_dashboard");
 export const obtenerKpisGenerales = (): Promise<KpisGenerales> => invoke("obtener_kpis_generales");
+export const desempenoUsuarios = (desde?: string, hasta?: string): Promise<DesempenoUsuario[]> =>
+  invoke("desempeno_usuarios", { desde, hasta });
 export const kardexProducto = (productoId: string, loteId?: string): Promise<KardexLinea[]> =>
   invoke("kardex_producto", { productoId, loteId });

@@ -70,10 +70,18 @@ export function DashboardPage() {
     ? [
         { label: "SKUs activos", value: resumen.total_skus_activos.toLocaleString(), code: true },
         { label: "Unidades totales", value: resumen.total_unidades.toLocaleString(), code: true },
+        {
+          label: "Valor del inventario",
+          value: resumen.valor_inventario.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }),
+          code: true,
+        },
         { label: "Alertas activas", value: resumen.alertas_activas.toLocaleString(), code: true },
         {
           label: "Movimientos de hoy",
-          value: resumen.movimientos_hoy.toLocaleString(),
+          value: `${resumen.movimientos_hoy.toLocaleString()} (E:${resumen.movimientos_hoy_por_tipo.entradas} S:${resumen.movimientos_hoy_por_tipo.salidas} T:${resumen.movimientos_hoy_por_tipo.traslados} A:${resumen.movimientos_hoy_por_tipo.ajustes})`,
           code: true,
         },
         {
@@ -99,6 +107,41 @@ export function DashboardPage() {
           label: "Lotes vencidos sin dar de baja",
           value: kpis.lotes_vencidos_sin_dar_de_baja.toLocaleString(),
           code: true,
+        },
+        {
+          label: "Rotación de stock (30 días)",
+          value: kpis.rotacion_stock_30d.toFixed(2),
+          code: true,
+        },
+        {
+          label: "Días de cobertura",
+          value:
+            kpis.dias_cobertura !== null ? kpis.dias_cobertura.toFixed(1) : "Sin salidas recientes",
+          code: kpis.dias_cobertura !== null,
+        },
+        {
+          label: "Antigüedad promedio del stock",
+          value:
+            kpis.antiguedad_stock_dias !== null
+              ? `${kpis.antiguedad_stock_dias.toFixed(1)} días`
+              : "Sin stock",
+          code: kpis.antiguedad_stock_dias !== null,
+        },
+        {
+          label: "Precisión por cantidad (última sesión)",
+          value:
+            kpis.precision_cantidad_ultima_sesion !== null
+              ? `${kpis.precision_cantidad_ultima_sesion.toFixed(1)}%`
+              : "Sin sesiones cerradas",
+          code: kpis.precision_cantidad_ultima_sesion !== null,
+        },
+        {
+          label: "Exactitud por ubicación (última sesión)",
+          value:
+            kpis.exactitud_ubicacion_ultima_sesion !== null
+              ? `${kpis.exactitud_ubicacion_ultima_sesion.toFixed(1)}%`
+              : "Sin sesiones cerradas",
+          code: kpis.exactitud_ubicacion_ultima_sesion !== null,
         },
       ]
     : [];
