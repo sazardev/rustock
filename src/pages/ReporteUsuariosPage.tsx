@@ -100,7 +100,6 @@ export function ReporteUsuariosPage() {
     <>
       <PageHeader
         title="Desempeño de usuarios"
-        description="Número de movimientos registrados por usuario, filtrable por tipo y periodo (SPEC §16.2)."
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
             Volver a reportes

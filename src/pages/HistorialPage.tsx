@@ -275,10 +275,7 @@ export function HistorialPage() {
 
   return (
     <>
-      <PageHeader
-        title="Centro de actividad"
-        description="Tracking total del sistema: rutas visitadas, módulos, ejecuciones, procesos, usuarios, horas y tendencias para análisis profundo."
-      />
+      <PageHeader title="Centro de actividad" />
 
       {error ? (
         <ErrorPanel title="No se pudo cargar la actividad">{mensajeError(error)}</ErrorPanel>

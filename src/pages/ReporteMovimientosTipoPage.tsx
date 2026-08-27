@@ -212,7 +212,6 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
     <>
       <PageHeader
         title={config.titulo}
-        description={config.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
             Volver a reportes

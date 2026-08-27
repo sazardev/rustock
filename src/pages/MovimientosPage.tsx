@@ -127,15 +127,7 @@ export function MovimientosPage() {
 
   return (
     <>
-      <PageHeader
-        title="Movimientos"
-        description="Entradas, salidas, traslados y ajustes de inventario."
-        actions={
-          <ButtonLink variant="primary" icon="agregar" href={PATH.movimientosNuevo}>
-            Nuevo movimiento
-          </ButtonLink>
-        }
-      />
+      <PageHeader title="Movimientos" />
 
       {query.error ? (
         <ErrorPanel title="No se pudieron cargar los movimientos">
@@ -143,7 +135,13 @@ export function MovimientosPage() {
         </ErrorPanel>
       ) : null}
 
-      <FilterBar>
+      <FilterBar
+        action={
+          <ButtonLink variant="primary" icon="agregar" href={PATH.movimientosNuevo}>
+            Nuevo movimiento
+          </ButtonLink>
+        }
+      >
         <FilterField>
           <Select
             aria-label="Filtrar por tipo"

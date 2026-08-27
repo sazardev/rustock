@@ -8,13 +8,16 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
+/**
+ * El breadcrumb de la barra superior ya identifica la página — el título y
+ * la descripción visuales son redundantes y solo restan espacio vertical.
+ * El h1 se conserva oculto (`sr-only`) para lectores de pantalla; `actions`
+ * sigue siendo el único contenido visible de este bloque.
+ */
+export function PageHeader({ title, actions, className }: PageHeaderProps) {
   return (
-    <header className={cn("page-header", className)}>
-      <div>
-        <h1 className="page-header__title">{title}</h1>
-        {description ? <p className="page-header__desc">{description}</p> : null}
-      </div>
+    <header className={cn("page-header", "page-enter", className)}>
+      <h1 className="sr-only">{title}</h1>
       {actions ? <div className="page-header__actions">{actions}</div> : null}
     </header>
   );

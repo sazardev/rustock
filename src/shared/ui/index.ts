@@ -79,7 +79,14 @@ export type { BrandProps, TopbarNavToggleProps } from "./Brand";
 export { LogoMark } from "./LogoMark";
 export type { LogoMarkProps } from "./LogoMark";
 
-export { AlertsIndicator, TopbarUser, Breadcrumbs, Sidebar, SkipLink } from "./Chrome";
+export {
+  AlertsIndicator,
+  TopbarUser,
+  Breadcrumbs,
+  Sidebar,
+  SidebarCollapseToggle,
+  SkipLink,
+} from "./Chrome";
 export type {
   AlertsIndicatorProps,
   TopbarUserProps,
@@ -87,6 +94,7 @@ export type {
   SidebarItem,
   SidebarGroup,
   SidebarProps,
+  SidebarCollapseToggleProps,
   SkipLinkProps,
 } from "./Chrome";
 

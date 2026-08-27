@@ -178,7 +178,6 @@ export function ReporteAuditoriaPage() {
     <>
       <PageHeader
         title="Auditoría"
-        description="Quién hizo qué, cuándo y con qué resultado: comandos, vistas de página, módulos, procesos y tenant, filtrable por usuario, tipo, nivel y rango de fechas."
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
             Volver a reportes

@@ -135,10 +135,7 @@ export function AlertasPage() {
 
   return (
     <>
-      <PageHeader
-        title="Alertas"
-        description="Avisos de stock, vencimientos y movimientos pendientes."
-      />
+      <PageHeader title="Alertas" />
 
       {alertasQuery.error ? (
         <ErrorPanel title="No se pudieron cargar las alertas">

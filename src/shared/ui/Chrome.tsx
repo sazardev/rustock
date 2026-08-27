@@ -57,18 +57,34 @@ export interface TopbarUserProps {
   initials?: string;
   href?: string;
   className?: string;
+  /** Muestra solo el avatar (sin nombre/rol) — el nombre completo queda en el título del enlace. */
+  avatarOnly?: boolean;
 }
 
-export function TopbarUser({ name, role, initials, href = "/perfil", className }: TopbarUserProps) {
+export function TopbarUser({
+  name,
+  role,
+  initials,
+  href = "/perfil",
+  className,
+  avatarOnly = false,
+}: TopbarUserProps) {
   return (
-    <RouterLink to={href} className={cn("topbar__user", className)}>
+    <RouterLink
+      to={href}
+      className={cn("topbar__user", avatarOnly && "topbar__user--avatar-only", className)}
+      title={avatarOnly ? name : undefined}
+      aria-label={avatarOnly ? `Mi perfil — ${name}` : undefined}
+    >
       <span className="topbar__user-avatar" aria-hidden="true">
         {initials ?? name.charAt(0).toUpperCase()}
       </span>
-      <span className="topbar__user-name">
-        <span className="topbar__user-name-text">{name}</span>
-        {role ? <span className="topbar__user-role">{role}</span> : null}
-      </span>
+      {avatarOnly ? null : (
+        <span className="topbar__user-name">
+          <span className="topbar__user-name-text">{name}</span>
+          {role ? <span className="topbar__user-role">{role}</span> : null}
+        </span>
+      )}
     </RouterLink>
   );
 }
@@ -228,6 +244,36 @@ export function Sidebar({ groups, onNavigate, collapsed = false, className }: Si
         </div>
       ))}
     </nav>
+  );
+}
+
+export interface SidebarCollapseToggleProps {
+  collapsed: boolean;
+  onClick?: () => void;
+  className?: string;
+}
+
+/**
+ * Control de colapso del sidebar: vive dentro del propio drawer (borde
+ * derecho, centrado verticalmente) en vez de la barra superior — el
+ * colapsar/expandir es una acción de la navegación, no de la barra superior.
+ * Oculto en móvil (el drawer siempre se muestra expandido ahí).
+ */
+export function SidebarCollapseToggle({
+  collapsed,
+  onClick,
+  className,
+}: SidebarCollapseToggleProps) {
+  return (
+    <button
+      type="button"
+      className={cn("sidebar__collapse-toggle", className)}
+      onClick={onClick}
+      aria-label={collapsed ? "Expandir navegación" : "Colapsar navegación"}
+      aria-pressed={collapsed}
+    >
+      <Icon name={collapsed ? "expandirPanel" : "colapsarPanel"} size={14} aria-hidden="true" />
+    </button>
   );
 }
 

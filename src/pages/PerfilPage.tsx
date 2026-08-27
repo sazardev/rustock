@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router";
 import { z } from "zod";
 import { cambiarPassword, listarTemas } from "../shared/backend";
+import { PATH } from "../app/route-paths";
 import {
   FORMATO_FECHA_LABEL,
   TAMANIO_FUENTE_LABEL,
@@ -59,11 +61,18 @@ const ROL_LABEL: Record<string, string> = {
 
 export function PerfilPage() {
   const usuario = useSession((s) => s.usuario);
+  const cerrarSesion = useSession((s) => s.cerrarSesion);
   const preferencias = usePreferencias((s) => s.resueltas);
   const guardarPrefs = usePreferencias((s) => s.guardar);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+
+  async function handleLogout() {
+    await cerrarSesion();
+    navigate(PATH.login, { replace: true });
+  }
 
   // ---- Orden del sidebar (solo UI; se persiste al guardar preferencias) ----
   const [orden, setOrden] = useState<string[]>(() => {
@@ -215,11 +224,58 @@ export function PerfilPage() {
     void useTema.getState().previsualizar(p, m);
   }
 
+  // La apariencia (paleta + modo) se guarda al instante al elegirla — a
+  // diferencia del resto de "Preferencias", no depende del botón "Guardar
+  // preferencias" de abajo. Antes solo se previsualizaba, así que navegar
+  // (p.ej. al dar clic en el logo) recargaba las preferencias persistidas y
+  // deshacía visualmente el cambio recién elegido.
+  //
+  // Paleta y modo se eligen en controles separados: elegir uno justo después
+  // del otro dispara dos guardados independientes que viajan en paralelo. Si
+  // el de la paleta responde después del de modo, pisa el modo recién
+  // guardado con el valor viejo (condición de carrera). Por eso se debounce:
+  // solo el último cambio dentro de la ventana llega a la red, y ya lleva la
+  // combinación final de paleta+modo.
+  const guardarAparienciaMut = useMutation({
+    mutationFn: (payload: { tema_id: string | null; modo_oscuro: boolean | null }) =>
+      guardarPrefs(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["preferencias"] });
+    },
+    onError: (err) => setError(mensajeError(err)),
+  });
+  const guardarAparienciaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function guardarApariencia(paleta: string | null, modo: "CLARO" | "OSCURO" | null) {
+    if (guardarAparienciaTimer.current) {
+      clearTimeout(guardarAparienciaTimer.current);
+    }
+    guardarAparienciaTimer.current = setTimeout(() => {
+      guardarAparienciaMut.mutate({
+        tema_id: paleta,
+        modo_oscuro: modo === null ? null : modo === "OSCURO",
+      });
+    }, 350);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (guardarAparienciaTimer.current) {
+        clearTimeout(guardarAparienciaTimer.current);
+      }
+    };
+  }, []);
+
   return (
     <>
       <PageHeader
         title="Mi perfil"
         description="Tus datos, tus preferencias de presentación y tu contraseña."
+        actions={
+          <Button type="button" variant="secondary" icon="cerrarSesion" onClick={handleLogout}>
+            Cerrar sesión
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -360,8 +416,8 @@ export function PerfilPage() {
       <Card title="Apariencia" className="mt-6">
         <Card.Body>
           <p className="mb-4 text-sm text-gray-600">
-            Elige la paleta de colores y el modo claro u oscuro. La vista previa se aplica al
-            instante; el cambio se guarda con el botón de abajo.
+            Elige la paleta de colores y el modo claro u oscuro. El cambio se aplica y se guarda al
+            instante, sin necesidad del botón de preferencias de abajo.
           </p>
           <FormGrid columns={1}>
             <Field
@@ -375,11 +431,13 @@ export function PerfilPage() {
                 onSeleccionar={(id) => {
                   setPaletaSel(id);
                   previewTema(id, modoSel);
+                  guardarApariencia(id, modoSel);
                 }}
                 heredar
                 onHeredar={() => {
                   setPaletaSel(null);
                   previewTema(null, modoSel);
+                  guardarApariencia(null, modoSel);
                 }}
                 ariaLabel="Paleta de colores de la interfaz"
               />
@@ -394,11 +452,13 @@ export function PerfilPage() {
                 onSeleccionar={(m) => {
                   setModoSel(m);
                   previewTema(paletaSel, m);
+                  guardarApariencia(paletaSel, m);
                 }}
                 heredar
                 onHeredar={() => {
                   setModoSel(null);
                   previewTema(paletaSel, null);
+                  guardarApariencia(paletaSel, null);
                 }}
                 ariaLabel="Modo de color de la interfaz"
               />

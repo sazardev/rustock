@@ -18,7 +18,7 @@ export function Brand({ name = "Rustock", href = "/", className, logoSize = 32 }
       <span className="topbar__logo" aria-hidden="true">
         <LogoMark size={logoSize} />
       </span>
-      <span>{name}</span>
+      <span className="topbar__brand-name">{name}</span>
     </RouterLink>
   );
 }

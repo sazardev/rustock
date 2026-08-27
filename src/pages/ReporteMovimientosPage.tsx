@@ -286,7 +286,6 @@ export function ReporteMovimientosPage() {
     <>
       <PageHeader
         title="Movimientos por periodo"
-        description="Historial de entradas, salidas, traslados y ajustes con filtros, totales y exportación."
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
             Volver a reportes

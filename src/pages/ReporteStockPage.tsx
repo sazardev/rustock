@@ -312,7 +312,6 @@ export function ReporteStockPage() {
     <>
       <PageHeader
         title="Stock actual"
-        description="Existencias registradas por producto, ubicación y lote, con mínimos y máximos."
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
             Volver a reportes

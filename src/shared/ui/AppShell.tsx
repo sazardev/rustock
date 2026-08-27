@@ -46,6 +46,11 @@ export function AppShell({
       />
       <aside className="app-shell__sidebar">{sidebar}</aside>
       <main id="contenido" className="app-shell__content" onScroll={handleContentScroll}>
+        {/* Destino del portal de FilterBar (ver FilterBar.tsx): fuera del ancho
+            máximo centrado de `.content`, para que el toolbar quede pegado y
+            del mismo ancho que la barra superior — no dentro del flujo de la
+            página. Pages sin FilterBar lo dejan vacío (CSS lo oculta). */}
+        <div id="toolbar-slot" className="toolbar-slot" />
         <div className="content content__inner">{children}</div>
       </main>
     </div>

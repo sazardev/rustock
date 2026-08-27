@@ -75,9 +75,9 @@
 
 Rustock es una herramienta de trabajo: **precisa, moderna y con carácter**. El diseño no compite con los datos; los ordena con elegancia y les da un escenario a la altura de la operación que representan.
 
-La identidad se llama **"Rust & Iron"**: superficies de hierro oscuro (`iron`) que anclan la navegación, y un acento de óxido (`rust`) que marca exactamente lo que importa — la acción principal, el elemento activo, el dato que cambia. Todo lo demás se queda en calma. La referencia visual es una caja de almacén a medio oxidar: sólida, resistente, con carácter de taller.
+La identidad se llama **"Rust & Iron"**: superficies claras y cálidas en toda la aplicación — incluida la navegación —, y un acento de óxido (`rust`) que marca exactamente lo que importa: la acción principal, el elemento activo, el dato que cambia. Todo lo demás se queda en calma. La escala `iron` (superficies oscuras) queda reservada para el landing y bloques de énfasis puntuales; la navegación del sistema ya no es una caja oscura, sino un lienzo ligero con la misma calma que el contenido.
 
-- **Contraste de superficie con propósito** — la barra lateral vive en una superficie oscura de hierro (`--color-ink-900`); el contenido vive en un lienzo claro y cálido. El contraste separa "dónde navego" de "qué estoy viendo", sin necesidad de líneas ni decoración adicional.
+- **Contraste con propósito, sin peso innecesario** — la barra lateral comparte el mismo lienzo claro que el contenido, separada solo por un borde de 1px (`--color-gray-200`). "Dónde navego" se distingue de "qué estoy viendo" por jerarquía tipográfica y el acento en el ítem activo, no por una caja oscura pesada.
 - **Redondeado con precisión** — esquinas suaves (`--radius-md`/`--radius-lg`) en todos los componentes, pero comedidas: ni agresivas ni infantiles. La curva es una firma, no un capricho.
 - **Elevación deliberada, nunca decorativa** — se permite una **sombra suave, difusa y de tinte cálido** (§3.5) para separar capas (tarjetas, menús, toasts) de su fondo. La sombra siempre comunica jerarquía real (esto flota sobre esto); nunca se usa para "decorar".
 - **Un acento, una función** — el óxido `--color-blue-500` (escala Rust) se reserva exclusivamente para: acción primaria, elemento activo, foco y enlaces. Si algo no es la acción principal ni un enlace, no lleva el acento.
@@ -122,20 +122,20 @@ La "Filosofía de profesionalismo" es parte integral de la identidad visual: cua
 
 ### 3.1 Color
 
-La paleta tiene tres familias con roles distintos y no intercambiables: **Iron** (superficies oscuras de navegación), **Rust** (el único acento de óxido) y **Gray** (neutros de contenido, con tinte tierra cálido). Esta separación es lo que da coherencia: el acento nunca se usa como fondo grande, y los neutros nunca cargan significado por sí mismos. La paleta evoca una caja de almacén de metal a medio oxidar.
+La paleta tiene tres familias con roles distintos y no intercambiables: **Iron** (superficies oscuras puntuales — landing, bloques de énfasis), **Rust** (el único acento de óxido) y **Gray** (neutros de contenido, con tinte tierra cálido, incluida la navegación). Esta separación es lo que da coherencia: el acento nunca se usa como fondo grande, y los neutros nunca cargan significado por sí mismos. La paleta evoca una caja de almacén de metal a medio oxidar.
 
-**Escala Iron (superficies oscuras — sidebar, encabezados de énfasis):**
+**Escala Iron (superficies oscuras puntuales — landing, encabezados de énfasis; el sidebar ya no la usa, ver §4.3):**
 
 | Token | Valor | Uso |
 |---|---|---|
 | `--color-ink-950` | `#150F0B` | Fondo de énfasis máximo (raro; solo bloques destacados) |
-| `--color-ink-900` | `#1F1813` | **Fondo de la barra lateral** |
-| `--color-ink-800` | `#2C231B` | Fondo de ítem de sidebar en hover |
+| `--color-ink-900` | `#1F1813` | Bandas oscuras del landing, bloques de énfasis puntuales |
+| `--color-ink-800` | `#2C231B` | Hover sobre superficie oscura puntual |
 | `--color-ink-700` | `#3D3226` | Bordes y separadores sobre superficie oscura |
 | `--color-ink-600` | `#554635` | Bordes activos, iconos secundarios sobre oscuro |
 | `--color-ink-400` | `#A18C78` | Texto secundario sobre superficie oscura |
-| `--color-ink-200` | `#C9BCAB` | Texto de ítems inactivos del sidebar |
-| `--color-ink-50` | `#F5F0E9` | Texto de ítems activos/hover sobre oscuro |
+| `--color-ink-200` | `#C9BCAB` | Texto secundario sobre superficie oscura puntual |
+| `--color-ink-50` | `#F5F0E9` | Texto activo/hover sobre superficie oscura puntual |
 
 **Escala Rust (acento único — óxido):**
 
@@ -207,7 +207,7 @@ La paleta tiene tres familias con roles distintos y no intercambiables: **Iron**
 | `--color-danger-text` | `#9F1239` |
 | `--color-info-text` | `#7C2C0A` |
 
-**Regla de uso de familias:** `Iron` solo aparece en el sidebar y en bloques de énfasis puntuales explícitamente definidos en este documento. `Rust` solo aparece en elementos activos, foco, enlaces y el botón primario. Ningún otro componente usa estas dos familias como fondo extenso.
+**Regla de uso de familias:** `Iron` solo aparece en el landing y en bloques de énfasis puntuales explícitamente definidos en este documento — ya no en el sidebar (§4.3). `Rust` solo aparece en elementos activos, foco, enlaces y el botón primario. Ningún otro componente usa estas dos familias como fondo extenso.
 
 > **Paleta configurable (Hito 21):** la paleta de tokens es **dinámica**. El
 > backend expone 6 paletas predefinidas (Óxido, Bosque, Océano, Uva, Miel,
@@ -360,17 +360,18 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 ┌──────────────┬─────────────────────────────────────────────┐
 │              │  Barra superior (breadcrumb + búsqueda + usuario) │
 │  Sidebar     ├─────────────────────────────────────────────┤
-│  tinta oscura│                                              │
+│  lienzo claro│                                              │
 │  (navegación │   Área de contenido — lienzo claro           │
 │  principal)  │   (una sola tarea por página)                │
 │              │                                              │
 └──────────────┴─────────────────────────────────────────────┘
 ```
 
-- **Barra superior**: fija, altura `--topbar-height` (56px), fondo `--color-white`, borde inferior `1px --color-gray-200`. Al hacer scroll, adopta `backdrop-filter: blur(8px)` y `background: rgba(255,255,255,0.85)` con `--shadow-xs` — el único uso de blur permitido en toda la interfaz.
-- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-ink-900`. Es la única superficie oscura de la aplicación y ancla visualmente la navegación. Items redondeados (`--radius-lg`); el activo usa `--color-blue-500` con texto blanco y `--shadow-glow-primary`.
-- **Área de contenido**: fondo `--color-surface-muted`, scroll vertical, padding `--space-6`, ancho máximo `--width-max-content` centrado.
+- **Barra superior**: fija, altura `--topbar-height` (56px), fondo `--color-white`, sin borde en reposo (se funde con el contenido). Al hacer scroll, adopta `backdrop-filter: blur(8px)` y `background: rgba(255,255,255,0.85)` con `--shadow-xs` — el único uso de blur permitido en toda la interfaz.
+- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-white`, borde derecho `1px --color-gray-200`. Comparte el lienzo claro con el contenido; ancla la navegación por jerarquía tipográfica, no por contraste de superficie. Items redondeados (`--radius-lg`); el activo usa `--color-blue-500` con texto blanco y `--shadow-glow-primary`.
+- **Área de contenido**: fondo `--color-surface-muted`, scroll vertical, padding `--space-8`, ancho máximo `--width-max-content` centrado.
 - La barra superior y la sidebar **no** flotan sobre el contenido: ocupan su propio espacio (nada de overlay ni scroll separado sobre ellas en desktop).
+- El sidebar ocupa **todo el alto de la ventana** (de arriba a abajo); la barra superior **no** cruza por encima de él — solo cubre el ancho del área de contenido, a la derecha del sidebar (patrón de grid: `"sidebar topbar" / "sidebar content"`, no `"topbar topbar" / "sidebar content"`).
 
 ### 4.2 Barra superior
 
@@ -414,16 +415,16 @@ Al hacer scroll en el contenido, la barra adopta el efecto de cristal descrito e
   - Configuración
 
 Reglas:
-- El sidebar es **oscuro** (`--color-ink-900`) con títulos de grupo en `--text-xs` mayúsculas `--color-ink-400`, separados por `--space-6`.
-- Los ítems inactivos usan texto `--color-ink-200`; el icono hereda el mismo color.
-- El ítem activo usa fondo `--color-blue-500`, texto blanco, radio `--radius-lg` y `--shadow-glow-primary` (un resplandor sutil de la propia acción, no una sombra genérica).
-- Hover de un ítem inactivo: fondo `--color-ink-800`, texto `--color-ink-50` — sin sombra, solo cambio de superficie.
+- El sidebar es **claro** (`--color-white`), separado del contenido por un borde derecho `1px --color-gray-200`. Títulos de grupo en `--text-xs` mayúsculas `--color-gray-400`, separados por `--space-6`.
+- Los ítems inactivos usan texto `--color-gray-600`; el icono hereda el mismo color.
+- El ítem activo usa fondo `--color-blue-500`, texto blanco, radio `--radius-lg` y `--shadow-glow-primary` (un resplandor sutil de la propia acción, no una sombra genérica) — el único acento de color fuerte en todo el sidebar.
+- Hover de un ítem inactivo: fondo `--color-gray-100`, texto `--color-gray-900` — sin sombra, solo cambio de superficie.
 - Cada ítem es un **enlace real** (no un botón).
-- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda con su propia marca en el encabezado, misma superficie `--color-ink-900`.
+- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda con su propia marca en el encabezado, misma superficie clara `--color-white`.
 
 ### 4.4 Área de contenido
 
-- Fondo `--color-surface-muted`, padding uniforme `--space-6`.
+- Fondo `--color-surface-muted`, padding uniforme `--space-8`.
 - Contenido máximo `--width-max-content`, centrado con `margin: 0 auto`.
 - Las páginas se componen de bloques: encabezado de página + contenido, cada tarjeta/panel se apoya sobre el fondo muted con `--shadow-sm` para separarse visualmente sin necesidad de bordes gruesos.
 
@@ -631,9 +632,9 @@ Para un recurso genérico `recurso`:
 
 ### 6.6 Tarjetas y paneles
 
-- Fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, padding `--space-4`, `--shadow-sm` en reposo.
+- Fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, padding `--space-4`, sin sombra en reposo (el borde de 1px ya separa la capa — plano, estilo Linear/Notion).
 - Título del panel: `--text-lg`, `--color-gray-800`, con borde inferior `--color-gray-200` opcional.
-- Las tarjetas interactivas (ej. tarjetas de resumen clickeables en el dashboard) suben a `--shadow-md` y se desplazan `-2px` en hover.
+- Las tarjetas interactivas (ej. tarjetas de resumen clickeables en el dashboard) suben a `--shadow-md` y se desplazan `-2px` en hover — la sombra aparece solo como respuesta a la interacción, nunca en reposo.
 - Los paneles pueden ser "secciones" de una página de detalle (ej. "Datos generales", "Saldo por lote", "Historial de movimientos").
 
 ### 6.7 Insignias y etiquetas
@@ -644,17 +645,14 @@ Para un recurso genérico `recurso`:
 
 ### 6.8 Encabezados de página
 
-Todo encabezado de página sigue la misma estructura:
-
-```
-[Título de página — text-xl, gray-800]
-[Descripción de 1 línea — text-base, gray-500]      [Botón principal — right]
-[Breadcrumb implícito arriba en la barra superior]
-```
-
-- Título en `--text-xl`, semibold, `--color-gray-800`, tracking `-0.015em`.
-- Subtexto descriptivo en `--text-base` `--color-gray-500`.
-- Acciones principales a la derecha, alineadas a la línea del título.
+El breadcrumb de la barra superior ya identifica la página — un título y una
+descripción repitiendo lo mismo debajo de él son ruido puro, no jerarquía.
+`PageHeader` ya no renderiza texto visible: el `title` se mantiene como `h1`
+oculto (`sr-only`) solo para accesibilidad/lectores de pantalla, y `description`
+no se usa. Lo único visible del bloque, si existe, son las `actions`
+(alineadas a la derecha) — para listados esas acciones viven en el toolbar
+(§7.1), no aquí; `PageHeader` con acciones se reserva para páginas de
+detalle/formulario con botones que no son "crear" (Editar, Eliminar, Volver).
 
 ### 6.9 Acciones de fila y de página
 
@@ -779,11 +777,10 @@ Todo encabezado de página sigue la misma estructura:
 
 ### 7.1 Página de listado
 
-Estructura:
-1. Encabezado (título + descripción + botón "Nuevo..." primario).
-2. Barra de filtros (§6.10).
-3. Tabla (§6.5) con columnas ordenables, filas clickeables y columna de acciones.
-4. Paginación (Anterior/Página X de Y/Siguiente) + resumen de registros.
+Estructura (§6.8 — sin título/descripción visibles, el breadcrumb de la topbar ya identifica la página):
+1. Toolbar único bajo la barra superior: búsqueda/filtros a la izquierda + botón "Nuevo..." primario a la derecha (una sola fila, `FilterBar` con `action`).
+2. Tabla (§6.5) con columnas ordenables, filas clickeables y columna de acciones.
+3. Paginación (Anterior/Página X de Y/Siguiente) + resumen de registros.
 
 Reglas:
 - Los filtros/orden/búsqueda viven en la URL.
@@ -942,7 +939,7 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 - ❌ Modales, drawers, popovers, confirmaciones flotantes.
 - ❌ Alertas nativas (`alert`, `confirm`, `prompt`).
 - ❌ Textos con `font-family` distinto a los tokens (`--font-sans`/`--font-mono`).
-- ❌ Colores fuera de la paleta declarada; uso de `--color-ink-*` o `--color-blue-*` como fondo extenso fuera de sidebar/acento (§3.1).
+- ❌ Colores fuera de la paleta declarada; uso de `--color-ink-*` o `--color-blue-*` como fondo extenso fuera del landing/acento (§3.1).
 - ❌ Elementos "decorativos" sin función (imágenes, ilustraciones, doodles, mascotas).
 - ❌ **Emojis en la UI. Tolerancia cero: ningún carácter emoji en textos, botones, mensajes, estados, placeholders o notificaciones (§1.1).**
 - ❌ **Iconos fuera del set Lucide** (`lucide-react`): ningún SVG suelto, icono de otro paquete, icono custom o de stock (§6.13).
@@ -954,7 +951,7 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 
 ## 10. Accesibilidad
 
-- Contraste: todo texto cumple WCAG AA (mínimo 4.5:1 en texto normal; 3:1 en texto grande y UI) — incluyendo texto sobre la superficie oscura del sidebar (`--color-ink-*`).
+- Contraste: todo texto cumple WCAG AA (mínimo 4.5:1 en texto normal; 3:1 en texto grande y UI) — incluyendo el texto blanco del ítem activo del sidebar sobre `--color-blue-500`.
 - El color nunca es el único canal: estados con ícono + texto.
 - Elementos interactivos con área de 40px mínimo (ya cubierto por `--size-md`).
 - Etiquetas `label` asociadas a cada campo (`for`/`id`).
@@ -981,7 +978,7 @@ Antes de dar una pantalla por terminada, debe cumplir:
 - [ ] Estados vacíos presentes (sin datos / sin resultados).
 - [ ] Errores bajo los campos y panel de error, sin alertas nativas.
 - [ ] Foco visible en todos los controles (`--shadow-focus-ring`).
-- [ ] Contraste AA verificado, incluyendo sidebar oscuro.
+- [ ] Contraste AA verificado, incluyendo el ítem activo del sidebar.
 - [ ] Sin emojis en ningún texto o mensaje (tolerancia cero).
 - [ ] Todos los iconos provienen del set Lucide y usan la semántica canónica (§6.13).
 - [ ] Sin iconos custom, SVG sueltos ni sets mezclados.

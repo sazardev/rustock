@@ -120,23 +120,21 @@ export function CatalogListPage<T extends { id: string }>({
 
   return (
     <>
-      <PageHeader
-        title={adapter.titulo}
-        description={adapter.descripcion}
-        actions={
+      <PageHeader title={adapter.titulo} />
+
+      {query.error ? (
+        <ErrorPanel title="No se pudo cargar el catálogo">{mensajeError(query.error)}</ErrorPanel>
+      ) : null}
+
+      <FilterBar
+        action={
           adapter.crearHref ? (
             <ButtonLink variant="primary" icon="agregar" href={adapter.crearHref}>
               {articuloNuevo(adapter)} {adapter.singular.toLowerCase()}
             </ButtonLink>
           ) : undefined
         }
-      />
-
-      {query.error ? (
-        <ErrorPanel title="No se pudo cargar el catálogo">{mensajeError(query.error)}</ErrorPanel>
-      ) : null}
-
-      <FilterBar>
+      >
         <FilterField grow>
           <Search
             aria-label={`Buscar ${adapter.singular.toLowerCase()}`}
@@ -227,7 +225,6 @@ export function CatalogDetailPage<T extends { id: string }>({
     <>
       <PageHeader
         title={adapter.tituloDetalle(row)}
-        description={`Detalle de ${adapter.singular.toLowerCase()}.`}
         actions={
           <div className="flex gap-2">
             {slug === "almacenes" ? (

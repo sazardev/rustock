@@ -9,6 +9,7 @@ import {
   ButtonLink,
   Card,
   ErrorPanel,
+  FilterBar,
   PageHeader,
   Table,
   type TableColumn,
@@ -48,10 +49,10 @@ export function SucursalesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Sucursales"
-        description="Puntos de operación de la empresa con su ubicación geográfica."
-        actions={
+      <PageHeader title="Sucursales" />
+
+      <FilterBar
+        action={
           <ButtonLink variant="primary" icon="agregar" href={`${PATH.sucursales}/nuevo`}>
             Nueva sucursal
           </ButtonLink>

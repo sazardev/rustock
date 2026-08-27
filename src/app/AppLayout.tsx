@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { Navigate, Outlet, useNavigate } from "react-router";
+import { Navigate, Outlet } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { listarAlertas, listarRoles } from "../shared/backend";
 import { usePreferencias } from "../shared/preferencias";
@@ -8,10 +8,10 @@ import {
   AlertsIndicator,
   AppShell,
   Brand,
-  Button,
   Icon,
   Kbd,
   Sidebar,
+  SidebarCollapseToggle,
   Skeleton,
   SkipLink,
   Topbar,
@@ -82,11 +82,9 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(loadSidebarCollapsed);
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const isTablet = useMediaQuery(TABLET_QUERY);
-  const navigate = useNavigate();
   const usuario = useSession((s) => s.usuario);
   const cargandoSesion = useSession((s) => s.cargando);
   const refrescar = useSession((s) => s.refrescar);
-  const cerrarSesion = useSession((s) => s.cerrarSesion);
   useTrackVista();
   useAtajosGlobales();
 
@@ -133,11 +131,6 @@ export function AppLayout() {
   });
   const rolCodigo = roles?.find((r) => r.id === usuario?.rol_id)?.codigo;
 
-  async function handleLogout() {
-    await cerrarSesion();
-    navigate(PATH.login, { replace: true });
-  }
-
   if (cargandoSesion) {
     return null;
   }
@@ -157,14 +150,6 @@ export function AppLayout() {
     });
   }
 
-  function handleNavToggle() {
-    if (isMobile) {
-      setNavOpen(true);
-    } else {
-      toggleSidebar();
-    }
-  }
-
   return (
     <>
       <SeoManager />
@@ -172,42 +157,33 @@ export function AppLayout() {
       <AppShell
         navOpen={navOpen}
         onCloseNav={() => setNavOpen(false)}
-        sidebarCollapsed={sidebarCollapsed}
+        sidebarCollapsed={sidebarCompact}
         topbar={
           <Topbar
             navToggle={
               <TopbarNavToggle
-                expanded={isMobile ? navOpen : !sidebarCollapsed}
-                onClick={handleNavToggle}
+                expanded={navOpen}
+                ariaLabel="Abrir navegación"
+                onClick={() => setNavOpen(true)}
               />
             }
             breadcrumbs={<SmartBreadcrumbs />}
             search={<PaletteTrigger />}
             alerts={<AlertsIndicator count={alertasAbiertas?.length ?? 0} href={PATH.alertas} />}
             user={
-              <div className="flex items-center gap-4" style={{ flexShrink: 0 }}>
-                <TopbarUser
-                  name={usuario.nombre_completo}
-                  role={rolCodigo ? (ROL_LABEL[rolCodigo] ?? rolCodigo) : undefined}
-                  href={PATH.perfil}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Cerrar sesión"
-                  onClick={handleLogout}
-                >
-                  <Icon name="cerrarSesion" size={16} aria-hidden="true" />
-                </Button>
-              </div>
+              <TopbarUser
+                name={usuario.nombre_completo}
+                role={rolCodigo ? (ROL_LABEL[rolCodigo] ?? rolCodigo) : undefined}
+                href={PATH.perfil}
+                avatarOnly
+              />
             }
           />
         }
         sidebar={
           <>
             <div className="sidebar__header">
-              <Brand name="Rustock" />
+              <Brand name="Rustock" href={PATH.dashboard} />
             </div>
             <Sidebar
               groups={gruposNav}
@@ -240,6 +216,9 @@ export function AppLayout() {
               ]}
               onNavigate={() => setNavOpen(false)}
             />
+            {!isMobile ? (
+              <SidebarCollapseToggle collapsed={sidebarCollapsed} onClick={toggleSidebar} />
+            ) : null}
           </>
         }
       >

@@ -76,15 +76,7 @@ export function InventarioPage() {
 
   return (
     <>
-      <PageHeader
-        title="Inventario físico"
-        description="Sesiones de conteo y conciliación de existencias."
-        actions={
-          <ButtonLink variant="primary" icon="agregar" href={PATH.inventarioNuevo}>
-            Nueva sesión
-          </ButtonLink>
-        }
-      />
+      <PageHeader title="Inventario físico" />
 
       {query.error ? (
         <ErrorPanel title="No se pudieron cargar las sesiones">
@@ -92,7 +84,13 @@ export function InventarioPage() {
         </ErrorPanel>
       ) : null}
 
-      <FilterBar>
+      <FilterBar
+        action={
+          <ButtonLink variant="primary" icon="agregar" href={PATH.inventarioNuevo}>
+            Nueva sesión
+          </ButtonLink>
+        }
+      >
         <FilterField>
           <Select
             aria-label="Filtrar por estado"

@@ -101,17 +101,7 @@ export function UsuariosPage() {
 
   return (
     <>
-      <PageHeader
-        title="Usuarios"
-        description="Cuentas que acceden a Rustock y sus roles."
-        actions={
-          esAdmin ? (
-            <ButtonLink variant="primary" icon="agregar" href={`${PATH.usuarios}/nuevo`}>
-              Nuevo usuario
-            </ButtonLink>
-          ) : undefined
-        }
-      />
+      <PageHeader title="Usuarios" />
 
       {query.error ? (
         <ErrorPanel title="No se pudieron cargar los usuarios">
@@ -119,7 +109,15 @@ export function UsuariosPage() {
         </ErrorPanel>
       ) : null}
 
-      <FilterBar>
+      <FilterBar
+        action={
+          esAdmin ? (
+            <ButtonLink variant="primary" icon="agregar" href={`${PATH.usuarios}/nuevo`}>
+              Nuevo usuario
+            </ButtonLink>
+          ) : undefined
+        }
+      >
         <FilterField>
           <Select
             aria-label="Filtrar por estado"

@@ -7,6 +7,7 @@ import {
   Card,
   DetailList,
   ErrorPanel,
+  FilterBar,
   PageHeader,
   Table,
   type TableColumn,
@@ -150,10 +151,10 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description="Resumen de la operación del almacén."
-        actions={
+      <PageHeader title="Dashboard" />
+
+      <FilterBar
+        action={
           <ButtonLink variant="primary" icon="agregar" href="/movimientos/nuevo">
             Nuevo movimiento
           </ButtonLink>
@@ -169,12 +170,12 @@ export function DashboardPage() {
           {dashboardQuery.isLoading ? (
             <p className="text-base text-gray-500">Cargando…</p>
           ) : (
-            <DetailList items={kpiItems} />
+            <DetailList items={kpiItems} className="detail-list--stats" />
           )}
         </Card.Body>
       </Card>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card title="Movimientos recientes">
           <Table
             columns={columns}
