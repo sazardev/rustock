@@ -37,12 +37,14 @@ import {
   formatearFecha,
   mensajeError,
 } from "../shared/format";
+import { useSession } from "../shared/session";
 
 export function MovimientoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const movimientoId = id as string;
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const sesion = useSession((s) => s.usuario);
 
   const movimientoQuery = useQuery({
     queryKey: ["movimiento", movimientoId],
@@ -64,6 +66,10 @@ export function MovimientoDetallePage() {
 
   const movimiento = movimientoQuery.data;
   const lineas = lineasQuery.data && esPaginado(lineasQuery.data) ? lineasQuery.data.data : [];
+  const esCreador = Boolean(sesion && movimiento && sesion.id === movimiento.created_by);
+  const puedeEditar =
+    esCreador &&
+    (movimiento?.estado === "BORRADOR" || movimiento?.estado === "PENDIENTE_APROBACION");
 
   const columns: Array<TableColumn<LineaMovimiento>> = [
     { key: "producto_id", header: "Producto", render: (l) => <ProductoRef id={l.producto_id} /> },
@@ -159,7 +165,7 @@ export function MovimientoDetallePage() {
             >
               Duplicar
             </ButtonLink>
-            {movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION" ? (
+            {puedeEditar ? (
               <ButtonLink variant="secondary" icon="editar" href={movimientoEditar(movimientoId)}>
                 Editar
               </ButtonLink>

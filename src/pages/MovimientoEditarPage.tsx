@@ -5,6 +5,7 @@ import { esPaginado } from "../shared/types";
 import { ErrorPanel, Link, PageHeader } from "../shared/ui";
 import { PATH } from "../app/route-paths";
 import { MovimientoGenericoForm, TrasladoForm } from "./movimiento-form";
+import { useSession } from "../shared/session";
 
 /**
  * Página de edición de un movimiento (SPEC §6.2): solo los que están en
@@ -14,6 +15,7 @@ import { MovimientoGenericoForm, TrasladoForm } from "./movimiento-form";
  */
 export function MovimientoEditarPage() {
   const { id = "" } = useParams();
+  const sesion = useSession((s) => s.usuario);
 
   const movQuery = useQuery({
     queryKey: ["movimiento", id],
@@ -39,6 +41,18 @@ export function MovimientoEditarPage() {
   }
 
   const lineas = lineasQuery.data && esPaginado(lineasQuery.data) ? lineasQuery.data.data : [];
+
+  const esCreador = Boolean(sesion && movimiento.created_by === sesion.id);
+  const estadoEditable =
+    movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION";
+  if (!estadoEditable || !esCreador) {
+    return (
+      <ErrorPanel title="No se puede editar este movimiento">
+        Solo el creador puede editar un movimiento en estado borrador o pendiente de aprobación.{" "}
+        <Link href={PATH.movimientos}>Volver al listado</Link>.
+      </ErrorPanel>
+    );
+  }
 
   return (
     <>
