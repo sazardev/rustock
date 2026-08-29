@@ -6,16 +6,21 @@ import { z } from "zod";
 import { PATH } from "../app/route-paths";
 import { Seo } from "../shared/seo";
 import { useSession } from "../shared/session";
+import { useT } from "../shared/i18n";
 import { AuthShell, Button, ErrorPanel, Field, Input, Link, PasswordInput } from "../shared/ui";
 
-const esquema = z.object({
-  nombre_usuario: z.string().trim().min(1, "El usuario es obligatorio"),
-  password: z.string().min(1, "La contraseña es obligatoria"),
-});
+/** El esquema recibe el diccionario para que los errores salgan traducidos. */
+function esquemaDe(t: ReturnType<typeof useT>) {
+  return z.object({
+    nombre_usuario: z.string().trim().min(1, t.auth.errores.usuarioObligatorio),
+    password: z.string().min(1, t.auth.errores.contrasenaObligatoria),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 export function LoginPage() {
+  const t = useT();
   const navigate = useNavigate();
   const iniciarSesion = useSession((s) => s.iniciarSesion);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +28,7 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(esquema) });
+  } = useForm<FormValues>({ resolver: zodResolver(esquemaDe(t)) });
 
   async function onSubmit(valores: FormValues) {
     setError(null);
@@ -37,25 +42,21 @@ export function LoginPage() {
 
   return (
     <>
-      <Seo
-        robots="noindex, nofollow"
-        title="Iniciar sesión — Rustock"
-        description="Accede a tu almacén Rustock. WMS self-hosted: stock, lotes y trazabilidad en tu infraestructura."
-      />
+      <Seo robots="noindex, nofollow" title={t.seo.loginTitulo} description={t.seo.loginDesc} />
       <AuthShell
         marcaHref={PATH.landing}
-        titulo="Iniciar sesión"
-        descripcion="Accede con tu usuario de esta instalación de Rustock."
+        titulo={t.auth.iniciarSesion}
+        descripcion={t.auth.iniciarSesionDesc}
         pie={
           <>
-            ¿Primera vez usando Rustock?{" "}
-            <Link href={PATH.configurarAdministrador}>Configurar el administrador</Link>
+            {t.auth.primeraVez}{" "}
+            <Link href={PATH.configurarAdministrador}>{t.auth.configurarAdmin}</Link>
           </>
         }
       >
         <form onSubmit={handleSubmit(onSubmit)} className="form-stack" noValidate>
           <Field
-            label="Usuario"
+            label={t.auth.usuario}
             htmlFor="nombre_usuario"
             required
             error={errors.nombre_usuario?.message}
@@ -68,7 +69,12 @@ export function LoginPage() {
             />
           </Field>
 
-          <Field label="Contraseña" htmlFor="password" required error={errors.password?.message}>
+          <Field
+            label={t.auth.contrasena}
+            htmlFor="password"
+            required
+            error={errors.password?.message}
+          >
             <PasswordInput
               id="password"
               autoComplete="current-password"
@@ -76,7 +82,7 @@ export function LoginPage() {
             />
           </Field>
 
-          {error ? <ErrorPanel title="No se pudo iniciar sesión">{error}</ErrorPanel> : null}
+          {error ? <ErrorPanel title={t.auth.noSePudoIniciar}>{error}</ErrorPanel> : null}
 
           <Button
             type="submit"
@@ -85,7 +91,7 @@ export function LoginPage() {
             disabled={isSubmitting}
             className="w-full"
           >
-            {isSubmitting ? "Ingresando…" : "Ingresar"}
+            {isSubmitting ? t.auth.ingresando : t.auth.ingresar}
           </Button>
         </form>
       </AuthShell>

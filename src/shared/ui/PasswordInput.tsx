@@ -1,6 +1,7 @@
 import { useState, type InputHTMLAttributes, type Ref } from "react";
 import { cn } from "../lib/cn";
 import { Icon } from "./Icon";
+import { useT } from "../i18n";
 
 export interface PasswordInputProps extends InputHTMLAttributes<HTMLInputElement> {
   ref?: Ref<HTMLInputElement>;
@@ -15,6 +16,7 @@ export interface PasswordInputProps extends InputHTMLAttributes<HTMLInputElement
  * lectores de pantalla (DESIGN §6.4).
  */
 export function PasswordInput({ className, ref, ...rest }: PasswordInputProps) {
+  const t = useT();
   const [visible, setVisible] = useState(false);
   return (
     <div className="password">
@@ -28,7 +30,7 @@ export function PasswordInput({ className, ref, ...rest }: PasswordInputProps) {
         type="button"
         className="password__toggle"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? "Ocultar la contraseña" : "Mostrar la contraseña"}
+        aria-label={visible ? t.auth.ocultarContrasena : t.auth.mostrarContrasena}
         aria-pressed={visible}
         tabIndex={-1}
       >

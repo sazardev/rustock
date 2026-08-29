@@ -8,6 +8,7 @@ import {
 import { Link as RouterLink, useLocation } from "react-router";
 import { cn } from "../lib/cn";
 import { Icon, type IconName } from "./Icon";
+import { useT } from "../i18n";
 
 export interface AlertsIndicatorProps {
   count: number;
@@ -22,6 +23,7 @@ export function AlertsIndicator({
   onClick,
   className,
 }: AlertsIndicatorProps) {
+  const t = useT();
   const content = (
     <>
       <Icon name="alerta" size={16} aria-hidden="true" />
@@ -34,7 +36,7 @@ export function AlertsIndicator({
         type="button"
         className={cn("topbar__alerts", className)}
         onClick={onClick}
-        aria-label={`${count} alertas activas`}
+        aria-label={t.shell.alertasActivas({ total: count })}
       >
         {content}
       </button>
@@ -44,7 +46,7 @@ export function AlertsIndicator({
     <RouterLink
       to={href}
       className={cn("topbar__alerts", className)}
-      aria-label={`${count} alertas activas`}
+      aria-label={t.shell.alertasActivas({ total: count })}
     >
       {content}
     </RouterLink>
@@ -65,12 +67,13 @@ export interface TopbarScanProps {
  * ofrece un botón que le va a ser denegado.
  */
 export function TopbarScan({ href = "/escanear", className }: TopbarScanProps) {
+  const t = useT();
   return (
     <RouterLink
       to={href}
       className={cn("topbar__alerts", className)}
-      aria-label="Escanear un código"
-      title="Escanear un código"
+      aria-label={t.shell.escanearCodigo}
+      title={t.shell.escanearCodigo}
     >
       <Icon name="codigoBarras" size={16} aria-hidden="true" />
     </RouterLink>
@@ -95,12 +98,13 @@ export function TopbarUser({
   className,
   avatarOnly = false,
 }: TopbarUserProps) {
+  const t = useT();
   return (
     <RouterLink
       to={href}
       className={cn("topbar__user", avatarOnly && "topbar__user--avatar-only", className)}
       title={avatarOnly ? name : undefined}
-      aria-label={avatarOnly ? `Mi perfil — ${name}` : undefined}
+      aria-label={avatarOnly ? t.shell.miPerfil({ nombre: name }) : undefined}
     >
       <span className="topbar__user-avatar" aria-hidden="true">
         {initials ?? name.charAt(0).toUpperCase()}
@@ -121,8 +125,9 @@ export interface BreadcrumbsProps {
 }
 
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+  const t = useT();
   return (
-    <nav className={cn("breadcrumbs", className)} aria-label="Migas de pan">
+    <nav className={cn("breadcrumbs", className)} aria-label={t.shell.migasDePan}>
       {items.map((item, index) => {
         const isCurrent = index === items.length - 1;
         return (
@@ -275,6 +280,7 @@ export function hrefActivo(pathname: string, hrefs: string[]): string | null {
 }
 
 export function Sidebar({ groups, onNavigate, collapsed = false, className }: SidebarProps) {
+  const t = useT();
   const { pathname } = useLocation();
   // Un solo ítem encendido por ruta: el del prefijo más específico. Sin esto,
   // un módulo que cuelga de otro (Captura rápida bajo /movimientos) encendería
@@ -287,7 +293,7 @@ export function Sidebar({ groups, onNavigate, collapsed = false, className }: Si
   return (
     <nav
       className={cn("sidebar", collapsed && "sidebar--collapsed", className)}
-      aria-label="Navegación principal"
+      aria-label={t.shell.navegacionPrincipal}
     >
       {groups.map((group) => (
         <div className="sidebar__group" key={group.title}>
@@ -325,12 +331,13 @@ export function SidebarCollapseToggle({
   onClick,
   className,
 }: SidebarCollapseToggleProps) {
+  const t = useT();
   return (
     <button
       type="button"
       className={cn("sidebar__collapse-toggle", className)}
       onClick={onClick}
-      aria-label={collapsed ? "Expandir navegación" : "Colapsar navegación"}
+      aria-label={collapsed ? t.shell.expandirNavegacion : t.shell.colapsarNavegacion}
       aria-pressed={collapsed}
     >
       <Icon name={collapsed ? "expandirPanel" : "colapsarPanel"} size={14} aria-hidden="true" />
@@ -344,9 +351,10 @@ export interface SkipLinkProps {
 }
 
 export function SkipLink({ href = "#contenido", className }: SkipLinkProps) {
+  const t = useT();
   return (
     <a href={href} className={cn("skip-link", className)}>
-      Saltar al contenido
+      {t.shell.saltarAlContenido}
     </a>
   );
 }

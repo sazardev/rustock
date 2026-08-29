@@ -13,6 +13,7 @@
  * `CommandPalette`.
  */
 import type { IconName } from "../ui";
+import type { Diccionario } from "../i18n";
 import { itemsDeNav } from "../../app/nav";
 import { PATH, ayudaModulo, catalogoNuevo } from "../../app/route-paths";
 import { AYUDA_GRUPOS, GLOSARIO, textoModulo } from "../../pages/ayuda/ayuda-data";
@@ -120,8 +121,8 @@ const REPORTES: Array<ComandoPalette> = [
 ];
 
 /** Páginas: navegación real del sidebar + destinos fuera de él. */
-function paginas(): ComandoPalette[] {
-  const delNav = itemsDeNav().map(({ item }) => ({
+function paginas(t: Diccionario): ComandoPalette[] {
+  const delNav = itemsDeNav(t).map(({ item }) => ({
     id: `pagina:${item.href}`,
     titulo: item.label,
     subtitulo: item.descripcion,
@@ -399,10 +400,11 @@ function palabrasManual(): ComandoPalette[] {
 /** Comandos estáticos completos, filtrados por el rol de la sesión. */
 export function comandosPalette(
   rolCodigo: string | undefined,
+  t: Diccionario,
   mostrarAyuda = true,
 ): ComandoPalette[] {
   return [
-    ...paginas(),
+    ...paginas(t),
     ...acciones(rolCodigo),
     ...(mostrarAyuda ? palabrasAyuda() : []),
     ...palabrasManual(),

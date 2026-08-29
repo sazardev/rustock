@@ -19,6 +19,7 @@ import { useTema } from "../shared/tema";
 import { useSession } from "../shared/session";
 import { mensajeError } from "../shared/format";
 import { itemsDeNav } from "../app/nav";
+import { useT } from "../shared/i18n";
 import {
   Button,
   Card,
@@ -60,6 +61,7 @@ const ROL_LABEL: Record<string, string> = {
 };
 
 export function PerfilPage() {
+  const t = useT();
   const usuario = useSession((s) => s.usuario);
   const cerrarSesion = useSession((s) => s.cerrarSesion);
   const preferencias = usePreferencias((s) => s.resueltas);
@@ -76,25 +78,25 @@ export function PerfilPage() {
 
   // ---- Orden del sidebar (solo UI; se persiste al guardar preferencias) ----
   const [orden, setOrden] = useState<string[]>(() => {
-    if (!preferencias?.orden_sidebar) return itemsDeNav().map(({ item }) => item.href);
+    if (!preferencias?.orden_sidebar) return itemsDeNav(t).map(({ item }) => item.href);
     try {
       const parsed: unknown = JSON.parse(preferencias.orden_sidebar);
       if (!Array.isArray(parsed)) {
-        return itemsDeNav().map(({ item }) => item.href);
+        return itemsDeNav(t).map(({ item }) => item.href);
       }
-      const actuales = new Set(itemsDeNav().map(({ item }) => item.href));
+      const actuales = new Set(itemsDeNav(t).map(({ item }) => item.href));
       const validos = (parsed as string[]).filter((h) => actuales.has(h));
-      const faltantes = itemsDeNav()
+      const faltantes = itemsDeNav(t)
         .map(({ item }) => item.href)
         .filter((h) => !validos.includes(h));
       return [...validos, ...faltantes];
     } catch {
-      return itemsDeNav().map(({ item }) => item.href);
+      return itemsDeNav(t).map(({ item }) => item.href);
     }
   });
 
   const grupos = useMemo(() => {
-    const items = itemsDeNav();
+    const items = itemsDeNav(t);
     const gruposUnicos = [...new Set(items.map(({ grupo }) => grupo))];
     return gruposUnicos.map((titulo) => {
       const hrefsDelGrupo = items.filter((i) => i.grupo === titulo).map(({ item }) => item.href);
@@ -111,7 +113,7 @@ export function PerfilPage() {
           .toSorted((a, b) => a.orden - b.orden),
       };
     });
-  }, [orden]);
+  }, [t, orden]);
 
   function moverItem(href: string, delta: -1 | 1) {
     setOrden((actual) => {

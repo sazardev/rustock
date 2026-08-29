@@ -14,6 +14,7 @@ import {
   Sidebar,
   SidebarCollapseToggle,
   Skeleton,
+  SelectorIdioma,
   SkipLink,
   Topbar,
   TopbarNavToggle,
@@ -28,6 +29,7 @@ import { SeoManager } from "../shared/seo";
 import { SmartBreadcrumbs } from "./SmartBreadcrumbs";
 import { useTrackVista } from "../shared/actividad";
 import { useAtajosGlobales } from "../shared/atajos";
+import { useT } from "../shared/i18n";
 import { useEscanerDeMano } from "../shared/useEscanerGlobal";
 
 const SIDEBAR_STORAGE_KEY = "rustock.sidebar.collapsed";
@@ -53,26 +55,19 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-const ROL_LABEL: Record<string, string> = {
-  ADMIN: "Administrador",
-  GERENTE: "Gerente",
-  ENCARGADO_ALMACEN: "Encargado de almacén",
-  OPERADOR: "Operador",
-  LECTOR: "Lector",
-};
-
 /** Píldora de la topbar que abre el command palette (DESIGN §4.2, §6.10). */
 function PaletteTrigger() {
+  const t = useT();
   const abrir = usePalette((s) => s.abrir);
   return (
     <button
       type="button"
       className="palette-trigger"
       onClick={abrir}
-      aria-label="Buscar en todo Rustock (Ctrl+K)"
+      aria-label={t.shell.buscarGlobalAria}
     >
       <Icon name="buscar" size={16} className="palette-trigger__icono" aria-hidden="true" />
-      <span className="palette-trigger__texto">Buscar en todo Rustock</span>
+      <span className="palette-trigger__texto">{t.shell.buscarGlobal}</span>
       <Kbd className="palette-trigger__kbd" aria-hidden="true">
         Ctrl K
       </Kbd>
@@ -104,6 +99,7 @@ export function AppLayout() {
   const usuario = useSession((s) => s.usuario);
   const cargandoSesion = useSession((s) => s.cargando);
   const refrescar = useSession((s) => s.refrescar);
+  const t = useT();
   useTrackVista();
   useAtajosGlobales();
   // Escucha del lector de mano en toda la aplicación: se puede escanear desde
@@ -133,7 +129,7 @@ export function AppLayout() {
       return null;
     }
   }, [preferenciasResueltas?.orden_sidebar]);
-  const gruposNav = useMemo(() => construirNav(ordenSidebar), [ordenSidebar]);
+  const gruposNav = useMemo(() => construirNav(ordenSidebar, t), [ordenSidebar, t]);
   // El modo compacto aplica en escritorio colapsado o en tablet (nunca en el
   // drawer móvil, que siempre se muestra expandido).
   const sidebarCompact = !isMobile && (sidebarCollapsed || isTablet);
@@ -189,18 +185,25 @@ export function AppLayout() {
             navToggle={
               <TopbarNavToggle
                 expanded={navOpen}
-                ariaLabel="Abrir navegación"
+                ariaLabel={t.shell.abrirNavegacion}
                 onClick={() => setNavOpen(true)}
               />
             }
             breadcrumbs={<SmartBreadcrumbs />}
             search={<PaletteTrigger />}
-            scan={puedeEscanear ? <TopbarScan href={PATH.escanear} /> : null}
+            scan={
+              <>
+                <SelectorIdioma />
+                {puedeEscanear ? <TopbarScan href={PATH.escanear} /> : null}
+              </>
+            }
             alerts={<AlertsIndicator count={alertasAbiertas?.length ?? 0} href={PATH.alertas} />}
             user={
               <TopbarUser
                 name={usuario.nombre_completo}
-                role={rolCodigo ? (ROL_LABEL[rolCodigo] ?? rolCodigo) : undefined}
+                role={
+                  rolCodigo ? (t.roles[rolCodigo as keyof typeof t.roles] ?? rolCodigo) : undefined
+                }
                 href={PATH.perfil}
                 avatarOnly
               />
@@ -222,7 +225,7 @@ export function AppLayout() {
               collapsed={sidebarCompact}
               groups={[
                 {
-                  title: "Sistema",
+                  title: t.nav.grupos.sistema,
                   items: [
                     {
                       label: "Galería de diseño",

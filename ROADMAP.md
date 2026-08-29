@@ -286,3 +286,23 @@ El servidor HTTP tenía **una sola sesión para todo el proceso**: la última pe
 - [ ] **Estados configurables**: crear y nombrar estatus propios por entidad.
 - [ ] **Flujos**: uno ideal predefinido y otro a medida.
 - [ ] **Etiquetado en el resto de módulos** (hoy en catálogo y escáner).
+
+---
+
+## Fase 12 — Internacionalización (es / en)
+
+### Entrega 1 — Cimientos ✅
+
+- [x] Diccionarios tipados: `es` como fuente de verdad, `en` comprobado por el compilador. Una traducción que falte no compila (verificado).
+- [x] Entradas con datos como funciones, no plantillas: los parámetros se comprueban en el punto de uso.
+- [x] Store de idioma con copia local para el primer frame y `<html lang>` sincronizado.
+- [x] Selector en la barra superior, con cada idioma en su propia lengua.
+- [x] Shell completo: navegación, barra superior, migas, avisos de plataforma, roles y command palette.
+- [x] Pantallas de acceso, incluidos los mensajes de validación de los formularios.
+
+### Pendiente
+
+- [ ] **Errores del backend** (§17.3): 32 variantes de `AppError` y ~60 `format!()` pasan a código + datos.
+- [ ] **Cadenas de interfaz**: ~1 000 textos en 119 archivos `.tsx`.
+- [ ] **Prosa larga**: ayuda (26 guías + glosario), manual del cliente (8 partes) y landing — 6 854 líneas.
+- [ ] Preferencia de idioma en el perfil (migración `preferencias_usuario.idioma`).

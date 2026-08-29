@@ -23,6 +23,7 @@ import { useSession } from "../session";
 import { usePreferencias } from "../preferencias";
 import type { BuscarItem } from "../types";
 import { Icon, useToast, type IconName } from "../ui";
+import { useT } from "../i18n";
 import { usePalette } from "./palette-store";
 import { comandosPalette, leerRecientes, registrarReciente, type ComandoPalette } from "./commands";
 import { indiceResaltado, puntuacionCandidato } from "./fuzzy";
@@ -225,6 +226,7 @@ function TituloResaltado({ titulo, consulta }: { titulo: string; consulta: strin
 }
 
 export function CommandPalette() {
+  const t = useT();
   const navigate = useNavigate();
   const { toast } = useToast();
   const abierto = usePalette((s) => s.abierto);
@@ -246,8 +248,8 @@ export function CommandPalette() {
   const ayudaEnPalette = usePreferencias((s) => s.resueltas?.ayuda_en_palette ?? true);
 
   const comandos = useMemo(
-    () => comandosPalette(rolCodigo, ayudaEnPalette),
-    [rolCodigo, ayudaEnPalette],
+    () => comandosPalette(rolCodigo, t, ayudaEnPalette),
+    [rolCodigo, t, ayudaEnPalette],
   );
 
   const qDebounced = useValorDebounced(consulta.trim(), DEBOUNCE_MS);

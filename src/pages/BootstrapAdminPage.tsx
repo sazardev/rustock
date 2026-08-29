@@ -7,21 +7,25 @@ import { PATH } from "../app/route-paths";
 import { Seo } from "../shared/seo";
 import * as backend from "../shared/backend";
 import { useSession } from "../shared/session";
+import { useT } from "../shared/i18n";
 import { AuthShell, Button, ErrorPanel, Field, Input, Link, PasswordInput } from "../shared/ui";
 
-const esquema = z
-  .object({
-    nombre_usuario: z.string().trim().min(1, "El usuario es obligatorio"),
-    nombre_completo: z.string().trim().min(1, "El nombre completo es obligatorio"),
-    password: z.string().min(8, "Mínimo 8 caracteres"),
-    confirmar_password: z.string().min(1, "Confirma la contraseña"),
-  })
-  .refine((v) => v.password === v.confirmar_password, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmar_password"],
-  });
+/** El esquema recibe el diccionario para que los errores salgan traducidos. */
+function esquemaDe(t: ReturnType<typeof useT>) {
+  return z
+    .object({
+      nombre_usuario: z.string().trim().min(1, t.auth.errores.usuarioObligatorio),
+      nombre_completo: z.string().trim().min(1, t.auth.errores.nombreObligatorio),
+      password: z.string().min(8, t.auth.errores.minimoOcho),
+      confirmar_password: z.string().min(1, t.auth.errores.confirmaContrasena),
+    })
+    .refine((v) => v.password === v.confirmar_password, {
+      message: t.auth.errores.noCoinciden,
+      path: ["confirmar_password"],
+    });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 /**
  * Bootstrap del primer ADMIN (SPEC §4.1). `bootstrap_admin` es idempotente:
@@ -30,6 +34,7 @@ type FormValues = z.infer<typeof esquema>;
  * (el propio comando lo decide, y nunca revela si un admin ya existe).
  */
 export function BootstrapAdminPage() {
+  const t = useT();
   const navigate = useNavigate();
   const iniciarSesion = useSession((s) => s.iniciarSesion);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +42,7 @@ export function BootstrapAdminPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(esquema) });
+  } = useForm<FormValues>({ resolver: zodResolver(esquemaDe(t)) });
 
   async function onSubmit(valores: FormValues) {
     setError(null);
@@ -56,20 +61,16 @@ export function BootstrapAdminPage() {
 
   return (
     <>
-      <Seo
-        robots="noindex, nofollow"
-        title="Configurar administrador — Rustock"
-        description="Primer arranque de Rustock: crea el administrador y toma el control de tu almacén."
-      />
+      <Seo robots="noindex, nofollow" title={t.seo.adminTitulo} description={t.seo.adminDesc} />
       <AuthShell
         marcaHref={PATH.landing}
-        titulo="Configurar el administrador"
-        descripcion="Crea el usuario administrador de esta instalación. Si ya existe uno, este formulario no lo altera e inicia sesión con las credenciales indicadas."
-        pie={<Link href={PATH.login}>Volver a iniciar sesión</Link>}
+        titulo={t.auth.crearAdmin}
+        descripcion={t.auth.crearAdminDesc}
+        pie={<Link href={PATH.login}>{t.auth.volverAIniciar}</Link>}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="form-stack" noValidate>
           <Field
-            label="Usuario"
+            label={t.auth.usuario}
             htmlFor="nombre_usuario"
             required
             error={errors.nombre_usuario?.message}
@@ -83,7 +84,7 @@ export function BootstrapAdminPage() {
           </Field>
 
           <Field
-            label="Nombre completo"
+            label={t.auth.nombreCompleto}
             htmlFor="nombre_completo"
             required
             error={errors.nombre_completo?.message}
@@ -92,17 +93,17 @@ export function BootstrapAdminPage() {
           </Field>
 
           <Field
-            label="Contraseña"
+            label={t.auth.contrasena}
             htmlFor="password"
             required
-            help="Mínimo 8 caracteres."
+            help={t.auth.minimoOchoCaracteres}
             error={errors.password?.message}
           >
             <PasswordInput id="password" autoComplete="new-password" {...register("password")} />
           </Field>
 
           <Field
-            label="Confirmar contraseña"
+            label={t.auth.confirmarContrasena}
             htmlFor="confirmar_password"
             required
             error={errors.confirmar_password?.message}
@@ -114,9 +115,7 @@ export function BootstrapAdminPage() {
             />
           </Field>
 
-          {error ? (
-            <ErrorPanel title="No se pudo crear el administrador">{error}</ErrorPanel>
-          ) : null}
+          {error ? <ErrorPanel title={t.auth.noSePudoCrearAdmin}>{error}</ErrorPanel> : null}
 
           <Button
             type="submit"
@@ -125,7 +124,7 @@ export function BootstrapAdminPage() {
             disabled={isSubmitting}
             className="w-full"
           >
-            {isSubmitting ? "Creando…" : "Crear administrador e ingresar"}
+            {isSubmitting ? t.auth.creando : t.auth.crearAdminAccion}
           </Button>
         </form>
       </AuthShell>

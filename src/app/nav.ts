@@ -1,4 +1,5 @@
 import type { IconName } from "../shared/ui";
+import type { Diccionario } from "../shared/i18n";
 import { PATH } from "./route-paths";
 
 export interface NavItem {
@@ -15,16 +16,25 @@ export interface NavGroup {
 }
 
 /**
+ * Nombres de la navegación en el idioma activo (SPEC §17).
+ *
+ * El árbol de rutas es el mismo en todos los idiomas —las URL no se traducen,
+ * porque un enlace compartido tiene que abrir lo mismo para todo el mundo—;
+ * lo que cambia es cómo se llama cada módulo en pantalla.
+ */
+
+/**
  * Construye la navegación según el orden personalizado del usuario: recibe la
  * lista de hrefs en el orden deseado (persistida en `preferencias_usuario`).
  * Los ítems de cada grupo se ordenan según su posición global en esa lista;
  * los que no aparecen (por ejemplo, una sección nueva) van al final de su
  * grupo en el orden por defecto.
  */
-export function construirNav(ordenHrefs: string[] | null): NavGroup[] {
-  if (!ordenHrefs || ordenHrefs.length === 0) return NAV_GROUPS;
+export function construirNav(ordenHrefs: string[] | null, t: Diccionario): NavGroup[] {
+  const grupos = navDe(t);
+  if (!ordenHrefs || ordenHrefs.length === 0) return grupos;
   const posicion = new Map(ordenHrefs.map((href, i) => [href, i]));
-  return NAV_GROUPS.map((grupo) => ({
+  return grupos.map((grupo) => ({
     ...grupo,
     items: grupo.items.toSorted((a, b) => {
       const pa = posicion.get(a.href);
@@ -43,215 +53,217 @@ export interface NavItemConGrupo {
   item: NavItem;
 }
 
-export function itemsDeNav(): NavItemConGrupo[] {
-  return NAV_GROUPS.flatMap((grupo) => grupo.items.map((item) => ({ grupo: grupo.title, item })));
+export function itemsDeNav(t: Diccionario): NavItemConGrupo[] {
+  return navDe(t).flatMap((grupo) => grupo.items.map((item) => ({ grupo: grupo.title, item })));
 }
 
-export const NAV_GROUPS: NavGroup[] = [
-  {
-    title: "Operación",
-    items: [
-      {
-        label: "Dashboard",
-        href: PATH.dashboard,
-        icon: "dashboard",
-        descripcion: "KPIs, movimientos recientes y alertas activas",
-      },
-      {
-        label: "Movimientos",
-        href: PATH.movimientos,
-        icon: "movements",
-        descripcion: "Entradas, salidas, traslados y ajustes de stock",
-      },
-      {
-        label: "Escáner",
-        href: PATH.escanear,
-        icon: "codigoBarras",
-        descripcion: "Leer un código con la cámara o el lector de mano",
-      },
-      {
-        label: "Etiquetas",
-        href: PATH.etiquetas,
-        icon: "exportar",
-        descripcion: "Generar e imprimir códigos de barras y QR",
-      },
-      {
-        label: "Captura rápida",
-        href: "/movimientos/captura-recepcion",
-        icon: "escanear",
-        descripcion: "Recepción y despacho guiados por escáner",
-      },
-      {
-        label: "Inventario físico",
-        href: PATH.inventario,
-        icon: "inventario",
-        descripcion: "Sesiones de conteo, diferencias y precisión",
-      },
-      {
-        label: "Alertas",
-        href: PATH.alertas,
-        icon: "alerta",
-        descripcion: "Stock bajo, vencimientos y pendientes de aprobación",
-      },
-    ],
-  },
-  {
-    title: "Catálogos",
-    items: [
-      {
-        label: "Almacenes",
-        href: "/almacenes",
-        icon: "almacen",
-        descripcion: "Zonas, racks y secciones del árbol físico",
-      },
-      {
-        label: "Zonas",
-        href: "/zonas",
-        icon: "zona",
-        descripcion: "Divisiones lógicas o físicas dentro de un almacén",
-      },
-      {
-        label: "Pasillos",
-        href: "/pasillos",
-        icon: "zona",
-        descripcion: "Pasillos físicos que agrupan racks dentro de una zona",
-      },
-      {
-        label: "Racks",
-        href: "/racks",
-        icon: "zona",
-        descripcion: "Estructuras de almacenamiento dentro de una zona",
-      },
-      {
-        label: "Secciones",
-        href: "/secciones",
-        icon: "zona",
-        descripcion: "Subdivisiones de un rack (niveles, bahías)",
-      },
-      {
-        label: "Ubicaciones",
-        href: "/ubicaciones",
-        icon: "ubicacion",
-        descripcion: "Puntos de almacenamiento y su contenido",
-      },
-      {
-        label: "Cajas",
-        href: "/cajas",
-        icon: "caja",
-        descripcion: "Contenedores dentro de una ubicación que agrupan stock",
-      },
-      {
-        label: "Productos",
-        href: "/productos",
-        icon: "producto",
-        descripcion: "SKU, códigos de barras y unidades de medida",
-      },
-      {
-        label: "Lotes",
-        href: "/lotes",
-        icon: "lote",
-        descripcion: "Origen, vencimientos y trazabilidad",
-      },
-      {
-        label: "Categorías",
-        href: "/categorias",
-        icon: "categoria",
-        descripcion: "Clasificación jerárquica de productos",
-      },
-      {
-        label: "Unidades de medida",
-        href: "/uoms",
-        icon: "uom",
-        descripcion: "UOM y factores de conversión",
-      },
-      {
-        label: "Proveedores",
-        href: "/proveedores",
-        icon: "proveedor",
-        descripcion: "Origen de compras y recepciones",
-      },
-      {
-        label: "Clientes",
-        href: "/clientes",
-        icon: "cliente",
-        descripcion: "Destino de despachos y devoluciones",
-      },
-    ],
-  },
-  {
-    title: "Análisis",
-    items: [
-      {
-        label: "Reportes",
-        href: PATH.reportes,
-        icon: "reportes",
-        descripcion: "Stock, movimientos, vencimientos y auditoría",
-      },
-      {
-        label: "Escaneos",
-        href: PATH.escaneos,
-        icon: "codigoBarras",
-        descripcion: "Quién escaneó qué, etiquetas rotas e intentos fuera de rol",
-      },
-      {
-        label: "Historial",
-        href: PATH.historial,
-        icon: "historial",
-        descripcion: "Centro de actividad: tracking total, análisis y auditoría",
-      },
-    ],
-  },
-  {
-    title: "Administración",
-    items: [
-      {
-        label: "Usuarios y roles",
-        href: PATH.usuarios,
-        icon: "rol",
-        descripcion: "Cuentas, permisos y matriz de acceso",
-      },
-      {
-        label: "Sucursales",
-        href: PATH.sucursales,
-        icon: "ubicacion",
-        descripcion: "Puntos de operación y su ubicación",
-      },
-      {
-        label: "Reglas de negocio",
-        href: PATH.reglas,
-        icon: "ajuste",
-        descripcion: "Topes de peso, límites por pasillo y prohibiciones propias",
-      },
-      {
-        label: "Configuración",
-        href: PATH.configuracion,
-        icon: "configuracion",
-        descripcion: "Parámetros del sistema y preferencias",
-      },
-    ],
-  },
-  {
-    title: "Manual",
-    items: [
-      {
-        label: "Manual del Cliente",
-        href: PATH.manual,
-        icon: "ayuda",
-        descripcion: "Guía completa de la lógica de negocio — 8 partes, 50 términos",
-      },
-    ],
-  },
-  {
-    title: "Ayuda",
-    items: [
-      {
-        label: "Guía de uso",
-        href: PATH.ayuda,
-        icon: "ayuda",
-        descripcion: "Todos los módulos, acciones y glosario de términos",
-      },
-    ],
-  },
-];
+export function navDe(t: Diccionario): NavGroup[] {
+  return [
+    {
+      title: t.nav.grupos.operacion,
+      items: [
+        {
+          label: t.nav.dashboard,
+          href: PATH.dashboard,
+          icon: "dashboard",
+          descripcion: t.nav.dashboardDesc,
+        },
+        {
+          label: t.nav.movimientos,
+          href: PATH.movimientos,
+          icon: "movements",
+          descripcion: t.nav.movimientosDesc,
+        },
+        {
+          label: t.nav.escaner,
+          href: PATH.escanear,
+          icon: "codigoBarras",
+          descripcion: t.nav.escanerDesc,
+        },
+        {
+          label: t.nav.etiquetas,
+          href: PATH.etiquetas,
+          icon: "exportar",
+          descripcion: t.nav.etiquetasDesc,
+        },
+        {
+          label: t.nav.capturaRapida,
+          href: "/movimientos/captura-recepcion",
+          icon: "escanear",
+          descripcion: t.nav.capturaRapidaDesc,
+        },
+        {
+          label: t.nav.inventario,
+          href: PATH.inventario,
+          icon: "inventario",
+          descripcion: t.nav.inventarioDesc,
+        },
+        {
+          label: t.nav.alertas,
+          href: PATH.alertas,
+          icon: "alerta",
+          descripcion: t.nav.alertasDesc,
+        },
+      ],
+    },
+    {
+      title: t.nav.grupos.catalogos,
+      items: [
+        {
+          label: t.nav.almacenes,
+          href: "/almacenes",
+          icon: "almacen",
+          descripcion: t.nav.almacenesDesc,
+        },
+        {
+          label: t.nav.zonas,
+          href: "/zonas",
+          icon: "zona",
+          descripcion: t.nav.zonasDesc,
+        },
+        {
+          label: t.nav.pasillos,
+          href: "/pasillos",
+          icon: "zona",
+          descripcion: t.nav.pasillosDesc,
+        },
+        {
+          label: t.nav.racks,
+          href: "/racks",
+          icon: "zona",
+          descripcion: t.nav.racksDesc,
+        },
+        {
+          label: t.nav.secciones,
+          href: "/secciones",
+          icon: "zona",
+          descripcion: t.nav.seccionesDesc,
+        },
+        {
+          label: t.nav.ubicaciones,
+          href: "/ubicaciones",
+          icon: "ubicacion",
+          descripcion: t.nav.ubicacionesDesc,
+        },
+        {
+          label: t.nav.cajas,
+          href: "/cajas",
+          icon: "caja",
+          descripcion: t.nav.cajasDesc,
+        },
+        {
+          label: t.nav.productos,
+          href: "/productos",
+          icon: "producto",
+          descripcion: t.nav.productosDesc,
+        },
+        {
+          label: t.nav.lotes,
+          href: "/lotes",
+          icon: "lote",
+          descripcion: t.nav.lotesDesc,
+        },
+        {
+          label: t.nav.categorias,
+          href: "/categorias",
+          icon: "categoria",
+          descripcion: t.nav.categoriasDesc,
+        },
+        {
+          label: t.nav.uoms,
+          href: "/uoms",
+          icon: "uom",
+          descripcion: t.nav.uomsDesc,
+        },
+        {
+          label: t.nav.proveedores,
+          href: "/proveedores",
+          icon: "proveedor",
+          descripcion: t.nav.proveedoresDesc,
+        },
+        {
+          label: t.nav.clientes,
+          href: "/clientes",
+          icon: "cliente",
+          descripcion: t.nav.clientesDesc,
+        },
+      ],
+    },
+    {
+      title: t.nav.grupos.analisis,
+      items: [
+        {
+          label: t.nav.reportes,
+          href: PATH.reportes,
+          icon: "reportes",
+          descripcion: t.nav.reportesDesc,
+        },
+        {
+          label: t.nav.escaneos,
+          href: PATH.escaneos,
+          icon: "codigoBarras",
+          descripcion: t.nav.escaneosDesc,
+        },
+        {
+          label: t.nav.historial,
+          href: PATH.historial,
+          icon: "historial",
+          descripcion: t.nav.historialDesc,
+        },
+      ],
+    },
+    {
+      title: t.nav.grupos.administracion,
+      items: [
+        {
+          label: t.nav.usuarios,
+          href: PATH.usuarios,
+          icon: "rol",
+          descripcion: t.nav.usuariosDesc,
+        },
+        {
+          label: t.nav.sucursales,
+          href: PATH.sucursales,
+          icon: "ubicacion",
+          descripcion: t.nav.sucursalesDesc,
+        },
+        {
+          label: t.nav.reglas,
+          href: PATH.reglas,
+          icon: "ajuste",
+          descripcion: t.nav.reglasDesc,
+        },
+        {
+          label: t.nav.configuracion,
+          href: PATH.configuracion,
+          icon: "configuracion",
+          descripcion: t.nav.configuracionDesc,
+        },
+      ],
+    },
+    {
+      title: t.nav.grupos.manual,
+      items: [
+        {
+          label: t.nav.manualCliente,
+          href: PATH.manual,
+          icon: "ayuda",
+          descripcion: t.nav.manualClienteDesc,
+        },
+      ],
+    },
+    {
+      title: t.nav.grupos.ayuda,
+      items: [
+        {
+          label: t.nav.guiaUso,
+          href: PATH.ayuda,
+          icon: "ayuda",
+          descripcion: t.nav.guiaUsoDesc,
+        },
+      ],
+    },
+  ];
+}
 
 export const DESIGN_HREF = PATH.galeria;

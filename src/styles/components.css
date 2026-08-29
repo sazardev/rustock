@@ -359,6 +359,51 @@
   margin-top: var(--space-4);
 }
 
+/* ============ Selector de idioma (SPEC §17) ============
+ * Dos botones pegados en la barra superior. El activo usa el mismo lenguaje
+ * que el resto de estados activos del sistema: neutro contrastado, sin gastar
+ * el acento de óxido en algo que no es una acción primaria. */
+.selector-idioma {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.125rem;
+  border-radius: var(--radius-md);
+  background-color: var(--color-gray-100);
+}
+
+.selector-idioma__opcion {
+  min-width: 1.75rem;
+  height: 1.625rem;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.selector-idioma__opcion:hover {
+  color: var(--color-gray-900);
+}
+
+.selector-idioma__opcion--activa,
+.selector-idioma__opcion--activa:hover {
+  background-color: var(--color-surface);
+  color: var(--color-gray-900);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (max-width: 47.99rem) {
+  /* En móvil la barra superior compite por cada píxel: el idioma se cambia
+     desde Configuración, no aquí. */
+  .topbar .selector-idioma {
+    display: none;
+  }
+}
+
 /* ============ Reglas de negocio (SPEC §16) ============
  * Una regla se lee como una frase: el nombre arriba y debajo, en gris, lo que
  * de verdad hace. Sin eso la tabla obliga a reconstruir la regla mentalmente

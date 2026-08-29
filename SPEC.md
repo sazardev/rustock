@@ -1355,3 +1355,57 @@ Una regla es **una frase con tres partes**:
 ### 16.3 Permisos
 
 `regla:ver` lo tienen todos los roles salvo LECTOR — hace falta para que la interfaz explique por qué se bloqueó un movimiento. `regla:crear`, `regla:editar` y `regla:eliminar` son de GERENTE y ADMIN: las restricciones de la operación las define quien responde de ella.
+
+---
+
+## 17. Internacionalización
+
+Rustock habla **castellano e inglés**. El idioma no es una capa de barniz sobre una interfaz escrita en castellano: es una propiedad del sistema, y por eso alcanza también a los mensajes de error del backend (§17.3).
+
+### 17.1 Diccionarios tipados
+
+Los diccionarios son **objetos de TypeScript**, no archivos de datos. `es` es la fuente de verdad y el resto de idiomas se declaran con el tipo derivado de él:
+
+```ts
+export const en: Diccionario = { … };  // falta una clave → no compila
+```
+
+Esto es deliberado y es la diferencia con los `.json` de traducción al uso: allí una clave olvidada se descubre en producción, como un hueco vacío o una clave cruda en pantalla. Aquí no llega a compilar.
+
+Las entradas con datos son **funciones**, no plantillas con marcadores:
+
+```ts
+mostrando: (p: { desde: number; hasta: number; total: number }) => `Mostrando ${p.desde}–${p.hasta} de ${p.total}`
+```
+
+Dos ventajas: olvidar un parámetro es un error de compilación, y cada idioma ordena la frase como le corresponde en vez de rellenar huecos en el orden que impuso el castellano.
+
+### 17.2 Dónde se guarda la elección
+
+| Dónde | Para qué |
+|---|---|
+| En el equipo (`localStorage`) | Pintar el **primer frame** en el idioma correcto. La preferencia del perfil llega por red; sin copia local, la pantalla de acceso saldría siempre en castellano y cambiaría de golpe al entrar. |
+| En el perfil (backend) | Que la persona encuentre su idioma en cualquier equipo del almacén. |
+
+Una elección explícita hecha en el equipo **manda** sobre la del perfil: quien acaba de cambiar el idioma no espera que la siguiente carga lo revierta.
+
+Sin elección previa se usa el del navegador, y si no lo hablamos, castellano.
+
+### 17.3 Errores del backend
+
+El backend **no redacta mensajes**: devuelve un código y sus datos, y la interfaz compone la frase en el idioma activo.
+
+```
+backend → { codigo: "SALDO_INSUFICIENTE", datos: { ubicacion: "RACK-A1", disponible: 5, intentado: 8 } }
+es      → "Saldo insuficiente en RACK-A1: 5 disponibles, se intentaron 8"
+en      → "Insufficient stock in RACK-A1: 5 available, 8 attempted"
+```
+
+Es la única forma de que añadir un idioma no obligue a tocar Rust ni a recompilar. Y evita lo peor de las alternativas: que quien use la aplicación en inglés reciba los mensajes de error en castellano, justo cuando más importa entender.
+
+### 17.4 Reglas
+
+- **Las URL no se traducen.** Un enlace compartido tiene que abrir lo mismo para todo el mundo.
+- `<html lang>` refleja el idioma activo: de él dependen el lector de pantalla, el corrector y la separación silábica del navegador.
+- El selector vive en la barra superior, no enterrado en Configuración: quien abre la aplicación en un idioma que no entiende necesita encontrarlo **sin leer nada**. Por eso cada opción se muestra en su propia lengua («English», no «Inglés»).
+- Fechas, horas y números se formatean con `Intl` y la etiqueta BCP-47 del idioma activo, respetando la zona horaria de las preferencias (§14.4).

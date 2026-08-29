@@ -1,6 +1,7 @@
 import { useState, type ReactNode, type UIEvent } from "react";
 import { useLocation } from "react-router";
 import { cn } from "../lib/cn";
+import { useT } from "../i18n";
 
 export interface AppShellProps {
   topbar: ReactNode;
@@ -25,6 +26,7 @@ export function AppShell({
   // La clave por ruta reinicia la animación de entrada en cada navegación —
   // no en cada cambio de filtro (que solo toca la query string), para no
   // parpadear mientras se ajusta un listado.
+  const t = useT();
   const { pathname } = useLocation();
   function handleContentScroll(event: UIEvent<HTMLElement>) {
     setScrolled(event.currentTarget.scrollTop > 4);
@@ -46,7 +48,7 @@ export function AppShell({
         type="button"
         className="app-shell__nav-backdrop"
         onClick={onCloseNav}
-        aria-label="Cerrar navegación"
+        aria-label={t.shell.cerrarNavegacion}
       />
       <aside className="app-shell__sidebar">{sidebar}</aside>
       <main id="contenido" className="app-shell__content" onScroll={handleContentScroll}>

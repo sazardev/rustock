@@ -1,6 +1,7 @@
 import { usePwa } from "../pwa";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
+import { useT } from "../i18n";
 
 /**
  * Franja de avisos de plataforma (DESIGN §6.12, §8.3).
@@ -12,6 +13,7 @@ import { Icon } from "./Icon";
  * correspondiente sin interrumpir la tarea en curso.
  */
 export function AvisoSistema() {
+  const t = useT();
   const enLinea = usePwa((s) => s.enLinea);
   const actualizacionLista = usePwa((s) => s.actualizacionLista);
   const aplicarActualizacion = usePwa((s) => s.aplicarActualizacion);
@@ -25,10 +27,7 @@ export function AvisoSistema() {
       {enLinea ? null : (
         <div className="aviso aviso--warning">
           <Icon name="sinConexion" size={16} className="aviso__icono" aria-hidden="true" />
-          <p className="aviso__texto">
-            Sin conexión con el servidor. Se muestran los últimos datos cargados; los cambios no se
-            guardarán hasta recuperar la conexión.
-          </p>
+          <p className="aviso__texto">{t.plataforma.sinConexion}</p>
         </div>
       )}
       {actualizacionLista ? (
@@ -36,7 +35,7 @@ export function AvisoSistema() {
           <Icon name="refrescar" size={16} className="aviso__icono" aria-hidden="true" />
           <p className="aviso__texto">Hay una versión nueva de Rustock lista para usarse.</p>
           <Button variant="secondary" size="sm" onClick={aplicarActualizacion}>
-            Actualizar ahora
+            {t.plataforma.actualizarAhora}
           </Button>
         </div>
       ) : null}
