@@ -262,10 +262,10 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  height: var(--size-sm);
-  padding: 0 var(--space-3);
+  height: var(--control-height);
+  padding: 0 var(--space-2);
   border: 1px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background-color: var(--color-gray-100);
   color: var(--color-gray-500);
   cursor: pointer;
@@ -312,7 +312,8 @@
   }
   .palette-trigger {
     justify-content: center;
-    width: var(--size-md);
+    width: var(--control-height);
     padding: 0;
+    background-color: transparent;
   }
 }

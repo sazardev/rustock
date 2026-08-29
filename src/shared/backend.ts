@@ -40,7 +40,20 @@ import type {
   EditarUom,
   EditarUsuario,
   EditarZona,
-  EscaneoResuelto,
+  EntradaEscaneo,
+  Etiqueta,
+  Etiquetable,
+  PeticionEtiquetas,
+  DestinoImpresora,
+  ResultadoImpresion,
+  TandaEtiquetas,
+  TipoEtiqueta,
+  EventoEscaneo,
+  Incumplimiento,
+  NuevaRegla,
+  Regla,
+  MetricasEscaneo,
+  ResultadoEscaneo,
   EstadoAlerta,
   HistorialCaja,
   HistorialComentario,
@@ -286,8 +299,82 @@ export const desactivarProducto = (id: string): Promise<void> =>
   invoke("desactivar_producto", { id });
 export const buscarProductoPorCodigoBarras = (codigoBarras: string): Promise<Producto | null> =>
   invoke("buscar_producto_por_codigo_barras", { codigoBarras });
-export const resolverEscaneo = (codigo: string): Promise<EscaneoResuelto | null> =>
-  invoke("resolver_escaneo", { codigo });
+
+/**
+ * Escanea un código y deja constancia del intento (SPEC §14.3).
+ *
+ * Es la única forma de resolver un código: no hay ningún comando que lo haga
+ * sin dejar rastro. Exige el permiso propio `escaneo:usar` y registra el
+ * evento incluso cuando el permiso lo niega, que es justo el intento que
+ * interesa vigilar.
+ */
+export const escanear = (entrada: EntradaEscaneo): Promise<ResultadoEscaneo> =>
+  invoke("escanear", { entrada });
+
+/** Últimos eventos del registro de escaneos (auditoría; exige `escaneo:ver`). */
+export const listarEventosEscaneo = (limite?: number): Promise<EventoEscaneo[]> =>
+  invoke("listar_eventos_escaneo", { limite });
+
+/** Métricas del panel de escaneos sobre los últimos `dias` días. */
+export const metricasEscaneo = (dias?: number): Promise<MetricasEscaneo> =>
+  invoke("metricas_escaneo", { dias });
+
+// ============ Reglas de negocio (SPEC §16) ============
+
+export const listarReglas = (): Promise<Regla[]> => invoke("listar_reglas");
+export const obtenerRegla = (id: string): Promise<Regla | null> => invoke("obtener_regla", { id });
+export const crearRegla = (nueva: NuevaRegla): Promise<Regla> => invoke("crear_regla", { nueva });
+export const editarRegla = (id: string, cambios: NuevaRegla): Promise<Regla> =>
+  invoke("editar_regla", { id, cambios });
+export const eliminarRegla = (id: string): Promise<void> => invoke("eliminar_regla", { id });
+
+/**
+ * Comprueba qué reglas incumpliría una línea **antes** de registrarla: avisa
+ * mientras se llena el formulario, en vez de dejar que la persona termine el
+ * movimiento y descubra al aprobar que no cabía.
+ */
+export const simularReglas = (
+  productoId: string,
+  ubicacionDestino: string,
+  cantidad: number,
+  loteId?: string | null,
+): Promise<Incumplimiento[]> =>
+  invoke("simular_reglas", { productoId, ubicacionDestino, cantidad, loteId });
+
+// ============ Etiquetas (SPEC §14.3.5) ============
+
+/**
+ * Genera los SVG de las etiquetas. La generación vive en Rust junto a la
+ * resolución del escáner: así lo que se imprime y lo que se busca no pueden
+ * divergir.
+ */
+export const generarEtiquetas = (peticion: PeticionEtiquetas): Promise<Etiqueta[]> =>
+  invoke("generar_etiquetas", { peticion });
+
+/**
+ * Genera la tanda en el formato pedido (SVG, ZPL, EPL o PDF), lista para
+ * descargar. El contenido viaja en base64 sea texto o binario: un solo camino
+ * de transporte en vez de dos ramas según el formato.
+ */
+export const generarTandaEtiquetas = (peticion: PeticionEtiquetas): Promise<TandaEtiquetas> =>
+  invoke("generar_tanda_etiquetas", { peticion });
+
+/** Envía la tanda directamente a una impresora de red. Solo ZPL o EPL. */
+export const imprimirEtiquetas = (
+  peticion: PeticionEtiquetas,
+  destino: DestinoImpresora,
+): Promise<ResultadoImpresion> => invoke("imprimir_etiquetas", { peticion, destino });
+
+/** Comprueba que una impresora de red responde, sin gastar etiqueta. */
+export const probarImpresora = (destino: DestinoImpresora): Promise<ResultadoImpresion> =>
+  invoke("probar_impresora", { destino });
+
+/** Entidades con código imprimible, para el selector de la pantalla. */
+export const listarEtiquetables = (
+  tipo: TipoEtiqueta,
+  busqueda?: string,
+  limite?: number,
+): Promise<Etiquetable[]> => invoke("listar_etiquetables", { tipo, busqueda, limite });
 
 // ============ Importación masiva (Fase C) ============
 

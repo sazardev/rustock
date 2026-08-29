@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as backend from "./backend";
+import { olvidarSesion } from "./api";
 import type { Usuario } from "./types";
 
 interface SessionState {
@@ -26,6 +27,9 @@ export const useSession = create<SessionState>((set) => ({
   },
   async cerrarSesion() {
     await backend.logout();
+    // El token deja de ser válido en el backend: olvidarlo aquí evita que la
+    // siguiente petición lo presente y reciba un "no autenticado" confuso.
+    olvidarSesion();
     set({ usuario: null });
   },
   async refrescar() {

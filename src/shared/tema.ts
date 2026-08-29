@@ -26,13 +26,67 @@ interface TemaState {
   limpiar: () => void;
 }
 
+/** Copia local del último tema resuelto, para pintarlo antes del primer frame. */
+const CLAVE_CACHE = "rustock.tema";
+
+/**
+ * Aplica el mapa de variables al root.
+ *
+ * Mientras se aplica se suspenden **todas** las transiciones del documento. Sin
+ * eso, cada elemento con `transition` anima desde el valor por defecto de
+ * `tokens.css` (tema claro) hasta el del tema real: en modo oscuro se ve cómo
+ * los campos y las tarjetas pasan de blanco a oscuro en cada carga. El cambio
+ * de tema no es una interacción del usuario, así que no debe animarse.
+ */
 function escribirVariables(tema: TemaActivo): void {
   const root = document.documentElement;
+  root.dataset.temaAplicando = "";
   for (const [token, valor] of Object.entries(tema.variables)) {
     root.style.setProperty(token, valor);
   }
   root.dataset.tema = tema.id;
   root.dataset.modo = tema.modo.toLowerCase();
+  // Forzar el recálculo antes de volver a permitir transiciones: si no, el
+  // navegador agrupa ambos cambios y la supresión no llega a tener efecto.
+  void root.offsetHeight;
+  requestAnimationFrame(() => {
+    delete root.dataset.temaAplicando;
+  });
+  try {
+    window.localStorage.setItem(CLAVE_CACHE, JSON.stringify(tema));
+  } catch {
+    // Sin almacenamiento el tema se pedirá al backend en cada carga.
+  }
+}
+
+/**
+ * Pinta el último tema conocido **antes del primer frame**.
+ *
+ * El tema lo decide el backend, así que llega por red: entre que la página
+ * pinta y que responde el servidor, la interfaz se vería con los colores por
+ * defecto de `tokens.css`. En modo oscuro eso es un destello blanco a pantalla
+ * completa en cada carga. Con la copia local se pinta ya correcto y, cuando
+ * llega la respuesta, casi siempre es idéntica y no se nota nada.
+ *
+ * Se llama desde `main.tsx` antes de montar React.
+ */
+export function aplicarTemaCacheado(): void {
+  try {
+    const crudo = window.localStorage.getItem(CLAVE_CACHE);
+    if (!crudo) return;
+    const tema = JSON.parse(crudo) as TemaActivo;
+    if (!tema?.variables) return;
+    const root = document.documentElement;
+    for (const [token, valor] of Object.entries(tema.variables)) {
+      root.style.setProperty(token, valor);
+    }
+    root.dataset.tema = tema.id;
+    root.dataset.modo = tema.modo.toLowerCase();
+    useTema.setState({ tema });
+  } catch {
+    // Copia corrupta o almacenamiento no disponible: se pinta con los
+    // defaults y el backend corrige en cuanto responda.
+  }
 }
 
 export const useTema = create<TemaState>((set) => ({
@@ -71,6 +125,11 @@ export const useTema = create<TemaState>((set) => ({
     }
   },
   limpiar() {
+    try {
+      window.localStorage.removeItem(CLAVE_CACHE);
+    } catch {
+      // Sin almacenamiento no hay copia que limpiar.
+    }
     const root = document.documentElement;
     const aplicadas = useTema.getState().tema;
     if (aplicadas) {

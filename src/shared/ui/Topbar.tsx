@@ -4,18 +4,29 @@ import { cn } from "../lib/cn";
 export interface TopbarProps {
   breadcrumbs?: ReactNode;
   search?: ReactNode;
+  /** Acceso al escáner (SPEC §14.3); ausente si el rol no puede usarlo. */
+  scan?: ReactNode;
   alerts?: ReactNode;
   user?: ReactNode;
   navToggle?: ReactNode;
   className?: string;
 }
 
-export function Topbar({ breadcrumbs, search, alerts, user, navToggle, className }: TopbarProps) {
+export function Topbar({
+  breadcrumbs,
+  search,
+  scan,
+  alerts,
+  user,
+  navToggle,
+  className,
+}: TopbarProps) {
   return (
     <div className={cn("topbar", className)}>
       {navToggle}
       {breadcrumbs ? <div className="topbar__breadcrumbs">{breadcrumbs}</div> : null}
       {search ? <div className="topbar__search">{search}</div> : null}
+      {scan}
       {alerts}
       {user}
     </div>

@@ -9,11 +9,18 @@
 //! de permisos (`puede`) y el mismo registro de auditoría
 //! (`con_auditoria!`). Es sólo una segunda fachada de transporte.
 //!
-//! Sesión: como el resto de la app asume un único operador por instalación
-//! (SPEC §4.1), esta capa reutiliza el mismo `SesionState` en memoria que
-//! usan los comandos Tauri — no hay cookies ni tokens: iniciar sesión desde
-//! el navegador o desde la ventana nativa es, a todo efecto, la misma
-//! sesión activa del proceso.
+//! **Sesión: una por cliente.** A diferencia de la ventana de escritorio —un
+//! proceso, un operador—, por HTTP pueden entrar varias personas a la vez
+//! desde equipos distintos. Cada petición presenta su token en la cabecera
+//! `x-rustock-sesion`, y esta capa construye con él un `SesionState` acotado
+//! a esa petición. Así todo el despacho de abajo sigue llamando a
+//! `sesion.usuario_id()` sin enterarse de que hay varias sesiones vivas, y la
+//! auditoría atribuye cada acto a quien realmente lo hizo.
+//!
+//! Se usa cabecera y no cookie a propósito: el frontend vive en otro origen
+//! (`localhost:6821` frente a `127.0.0.1:1421`), donde una cookie `SameSite`
+//! no viajaría, y una cabecera evita además todo el enredo de CORS con
+//! credenciales.
 
 use std::sync::Arc;
 
@@ -31,7 +38,7 @@ use crate::error::{AppError, AppResult};
 use crate::query::{self, ListParams};
 use crate::repo;
 use crate::security::puede;
-use crate::sesion::{SesionActiva, SesionState};
+use crate::sesion::{CABECERA_SESION, RegistroSesiones, SesionActiva, SesionState};
 
 const PUERTO: u16 = 1421;
 
@@ -47,8 +54,9 @@ pub fn puerto_http() -> u16 {
 /// Arranca el servidor en un hilo aparte. No bloquea: si el puerto ya está
 /// ocupado (ej. otra instancia corriendo), se registra el error y la app
 /// sigue funcionando igual como app de escritorio pura.
-pub fn iniciar(db: Arc<DbState>, sesion: Arc<SesionState>) {
+pub fn iniciar(db: Arc<DbState>) {
     std::thread::spawn(move || {
+        let registro = Arc::new(RegistroSesiones::default());
         let puerto = puerto_http();
         let server = match Server::http(("127.0.0.1", puerto)) {
             Ok(s) => s,
@@ -61,7 +69,7 @@ pub fn iniciar(db: Arc<DbState>, sesion: Arc<SesionState>) {
             "[server] API HTTP local en http://127.0.0.1:{puerto} (para el frontend en modo navegador)"
         );
         for request in server.incoming_requests() {
-            manejar(&db, &sesion, request);
+            manejar(&db, &registro, request);
         }
     });
 }
@@ -70,11 +78,25 @@ fn cors_headers() -> Vec<Header> {
     vec![
         Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
         Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"POST, OPTIONS"[..]).unwrap(),
-        Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type"[..]).unwrap(),
+        Header::from_bytes(
+            &b"Access-Control-Allow-Headers"[..],
+            format!("Content-Type, {CABECERA_SESION}").as_bytes(),
+        )
+        .unwrap(),
     ]
 }
 
-fn manejar(db: &Arc<DbState>, sesion: &Arc<SesionState>, mut request: tiny_http::Request) {
+/// Token de sesión que presenta el cliente, si lo trae.
+fn token_de(request: &tiny_http::Request) -> Option<String> {
+    request
+        .headers()
+        .iter()
+        .find(|h| h.field.equiv(CABECERA_SESION))
+        .map(|h| h.value.as_str().trim().to_string())
+        .filter(|t| !t.is_empty())
+}
+
+fn manejar(db: &Arc<DbState>, registro: &Arc<RegistroSesiones>, mut request: tiny_http::Request) {
     if request.method() == &Method::Options {
         let mut response = Response::empty(204);
         for h in cors_headers() {
@@ -98,9 +120,45 @@ fn manejar(db: &Arc<DbState>, sesion: &Arc<SesionState>, mut request: tiny_http:
         serde_json::from_str(&cuerpo).unwrap_or(Value::Null)
     };
 
-    let resultado = despachar(db, sesion, &comando, &args);
+    // Sesión acotada a esta petición, construida **solo** con el token que
+    // presenta el cliente. Sin token no hay sesión: nunca se hereda la de la
+    // ventana de escritorio ni la de otro cliente. Las dos caras de la app
+    // comparten lógica de negocio y base de datos, no identidad.
+    let token_entrante = token_de(&request);
+    let sesion_previa = token_entrante.as_ref().and_then(|t| registro.obtener(t));
+    let ambito = Arc::new(SesionState::desde(sesion_previa.clone()));
+
+    let resultado = despachar(db, &ambito, &comando, &args);
+
+    // Reconciliación: comparar la sesión antes y después del despacho cubre
+    // `login`, `logout` y el reinicio de sesión con otro usuario sin que esta
+    // función tenga que conocer ninguno de esos comandos por su nombre.
+    let sesion_final = ambito.actual();
+    let mut token_emitido: Option<String> = None;
+    match (&sesion_previa, &sesion_final) {
+        (None, Some(nueva)) => {
+            token_emitido = Some(registro.abrir(nueva.clone()));
+        }
+        (Some(_), None) => {
+            if let Some(t) = &token_entrante {
+                registro.cerrar(t);
+            }
+        }
+        // Iniciar sesión con otro usuario sin cerrar la anterior: el token
+        // pasa a identificar a la nueva persona, no se acumulan sesiones.
+        (Some(previa), Some(nueva)) if previa.usuario_id != nueva.usuario_id => {
+            if let Some(t) = &token_entrante {
+                registro.actualizar(t, nueva.clone());
+            }
+        }
+        _ => {}
+    }
+
     let cuerpo_respuesta = match resultado {
-        Ok(v) => json!({ "ok": true, "data": v }).to_string(),
+        Ok(v) => match &token_emitido {
+            Some(token) => json!({ "ok": true, "data": v, "sesion": token }).to_string(),
+            None => json!({ "ok": true, "data": v }).to_string(),
+        },
         Err(e) => json!({ "ok": false, "error": e.to_string() }).to_string(),
     };
 
@@ -627,12 +685,146 @@ fn despachar(
                 )?)
             })
         }
-        "resolver_escaneo" => {
-            con_auditoria!(db, sesion, "resolver_escaneo", {
-                let codigo = str_req(args, "codigo")?;
+        "escanear" => {
+            con_auditoria!(db, sesion, "escanear", {
+                let entrada: repo::escaneo::EntradaEscaneo = de_req(args, "entrada")?;
+                let actor = sesion.usuario_id()?;
                 let conn = db.conn();
-                puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
-                ok(repo::catalogo::resolver_escaneo(&conn, &codigo)?)
+                if let Err(e) = puede(&conn, Some(&actor), "escaneo", "usar") {
+                    let motivo = e.to_string();
+                    let _ = repo::escaneo::registrar_denegado(&conn, &actor, &entrada, &motivo);
+                    return Err(e);
+                }
+                ok(repo::escaneo::escanear(&conn, &actor, &entrada)?)
+            })
+        }
+        "listar_eventos_escaneo" => {
+            con_auditoria!(db, sesion, "listar_eventos_escaneo", {
+                let limite: Option<i64> = de_opt(args, "limite");
+                let conn = db.conn();
+                puede(&conn, Some(&sesion.usuario_id()?), "escaneo", "ver")?;
+                ok(repo::escaneo::listar_eventos(&conn, limite.unwrap_or(100))?)
+            })
+        }
+        "metricas_escaneo" => {
+            con_auditoria!(db, sesion, "metricas_escaneo", {
+                let dias: Option<i64> = de_opt(args, "dias");
+                let conn = db.conn();
+                puede(&conn, Some(&sesion.usuario_id()?), "escaneo", "ver")?;
+                ok(repo::escaneo::metricas(&conn, dias.unwrap_or(30))?)
+            })
+        }
+        "listar_reglas" => con_auditoria!(db, sesion, "listar_reglas", {
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "regla", "ver")?;
+            ok(repo::regla::listar(&conn)?)
+        }),
+        "obtener_regla" => con_auditoria!(db, sesion, "obtener_regla", {
+            let id = str_req(args, "id")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "regla", "ver")?;
+            ok(repo::regla::obtener(&conn, &id)?)
+        }),
+        "crear_regla" => con_auditoria!(db, sesion, "crear_regla", {
+            let mut nueva: crate::domain::regla::NuevaRegla = de_req(args, "nueva")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "regla", "crear")?;
+            nueva.created_by = Some(actor);
+            ok(repo::regla::crear(&conn, &nueva)?)
+        }),
+        "editar_regla" => con_auditoria!(db, sesion, "editar_regla", {
+            let id = str_req(args, "id")?;
+            let cambios: crate::domain::regla::NuevaRegla = de_req(args, "cambios")?;
+            let actor = sesion.usuario_id()?;
+            let conn = db.conn();
+            puede(&conn, Some(&actor), "regla", "editar")?;
+            ok(repo::regla::editar(&conn, &id, &cambios, &actor)?)
+        }),
+        "eliminar_regla" => con_auditoria!(db, sesion, "eliminar_regla", {
+            let id = str_req(args, "id")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "regla", "eliminar")?;
+            ok(repo::regla::eliminar(&conn, &id)?)
+        }),
+        "simular_reglas" => con_auditoria!(db, sesion, "simular_reglas", {
+            let producto_id = str_req(args, "productoId")?;
+            let lote_id: Option<String> = de_opt(args, "loteId");
+            let cantidad: i64 = de_opt(args, "cantidad").unwrap_or(1);
+            let ubicacion_destino = str_req(args, "ubicacionDestino")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "regla", "ver")?;
+            ok(repo::regla::evaluar_entrada(
+                &conn,
+                &repo::regla::LineaEntrante {
+                    producto_id: &producto_id,
+                    lote_id: lote_id.as_deref(),
+                    cantidad,
+                    ubicacion_destino: &ubicacion_destino,
+                },
+            )?)
+        }),
+        "generar_etiquetas" => {
+            con_auditoria!(db, sesion, "generar_etiquetas", {
+                let peticion: repo::etiqueta::PeticionEtiquetas = de_req(args, "peticion")?;
+                let conn = db.conn();
+                let recurso = repo::etiqueta::recurso_de(&peticion.tipo)?;
+                puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+                ok(repo::etiqueta::generar(&conn, &peticion)?)
+            })
+        }
+        "generar_tanda_etiquetas" => {
+            con_auditoria!(db, sesion, "generar_tanda_etiquetas", {
+                let peticion: repo::etiqueta::PeticionEtiquetas = de_req(args, "peticion")?;
+                let conn = db.conn();
+                let recurso = repo::etiqueta::recurso_de(&peticion.tipo)?;
+                puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+                ok(repo::etiqueta::generar_tanda(&conn, &peticion)?)
+            })
+        }
+        "imprimir_etiquetas" => {
+            con_auditoria!(db, sesion, "imprimir_etiquetas", {
+                use crate::domain::etiqueta::Formato;
+                let peticion: repo::etiqueta::PeticionEtiquetas = de_req(args, "peticion")?;
+                let destino: repo::impresora::DestinoImpresora = de_req(args, "destino")?;
+                let conn = db.conn();
+                let recurso = repo::etiqueta::recurso_de(&peticion.tipo)?;
+                puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+                if !matches!(peticion.formato, Formato::Zpl | Formato::Epl) {
+                    return Err(AppError::CampoInvalido(
+                        "formato para impresión directa (una impresora térmica entiende ZPL o EPL, no PDF ni SVG)".into(),
+                    ));
+                }
+                let tanda = repo::etiqueta::generar_tanda(&conn, &peticion)?;
+                use base64::Engine as _;
+                let bytes = base64::engine::general_purpose::STANDARD
+                    .decode(&tanda.contenido_base64)
+                    .unwrap_or_default();
+                ok(repo::impresora::enviar(&destino, &bytes)?)
+            })
+        }
+        "probar_impresora" => {
+            con_auditoria!(db, sesion, "probar_impresora", {
+                let destino: repo::impresora::DestinoImpresora = de_req(args, "destino")?;
+                let conn = db.conn();
+                puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+                ok(repo::impresora::probar(&destino)?)
+            })
+        }
+        "listar_etiquetables" => {
+            con_auditoria!(db, sesion, "listar_etiquetables", {
+                let tipo = str_req(args, "tipo")?;
+                let busqueda: Option<String> = de_opt(args, "busqueda");
+                let limite: Option<i64> = de_opt(args, "limite");
+                let conn = db.conn();
+                let recurso = repo::etiqueta::recurso_de(&tipo)?;
+                puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+                ok(repo::etiqueta::listar_etiquetables(
+                    &conn,
+                    &tipo,
+                    busqueda.as_deref(),
+                    limite.unwrap_or(100),
+                )?)
             })
         }
         "importar_datos" => con_auditoria!(db, sesion, "importar_datos", {

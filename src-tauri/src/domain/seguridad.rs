@@ -68,6 +68,11 @@ pub enum Recurso {
     Comentario,
     Reporte,
     Configuracion,
+    /// Lectura por escáner (SPEC §14.3): usar el escáner y consultar su
+    /// registro de eventos.
+    Escaneo,
+    /// Reglas de negocio configurables (SPEC §16).
+    Regla,
 }
 
 impl Recurso {
@@ -96,6 +101,8 @@ impl Recurso {
             Self::Comentario => "comentario",
             Self::Reporte => "reporte",
             Self::Configuracion => "configuracion",
+            Self::Escaneo => "escaneo",
+            Self::Regla => "regla",
         }
     }
 }
@@ -114,6 +121,8 @@ pub enum Accion {
     Ejecutar,
     Cerrar,
     Asignar,
+    /// Ejecutar una lectura por escáner (SPEC §14.3).
+    Usar,
 }
 
 impl Accion {
@@ -130,6 +139,7 @@ impl Accion {
             Self::Ejecutar => "ejecutar",
             Self::Cerrar => "cerrar",
             Self::Asignar => "asignar",
+            Self::Usar => "usar",
         }
     }
 }

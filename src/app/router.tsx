@@ -63,6 +63,11 @@ const MovimientoAnularPage = lazyPage(
   () => import("../pages/MovimientoAnularPage"),
   "MovimientoAnularPage",
 );
+const EscanearPage = lazyPage(() => import("../pages/EscanearPage"), "EscanearPage");
+const EtiquetasPage = lazyPage(() => import("../pages/EtiquetasPage"), "EtiquetasPage");
+const ReglasPage = lazyPage(() => import("../pages/ReglasPage"), "ReglasPage");
+const ReglaFormPage = lazyPage(() => import("../pages/ReglaFormPage"), "ReglaFormPage");
+const EscaneosPanelPage = lazyPage(() => import("../pages/EscaneosPanelPage"), "EscaneosPanelPage");
 const CapturaRecepcionPage = lazyPage(
   () => import("../pages/captura-rapida"),
   "CapturaRecepcionPage",
@@ -195,6 +200,12 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: "dashboard", element: <DashboardPage /> },
+          { path: "escanear", element: <EscanearPage /> },
+          { path: "etiquetas", element: <EtiquetasPage /> },
+          { path: "escaneos", element: <EscaneosPanelPage /> },
+          { path: "reglas", element: <ReglasPage /> },
+          { path: "reglas/nueva", element: <ReglaFormPage /> },
+          { path: "reglas/:id/editar", element: <ReglaFormPage /> },
           { path: "movimientos", element: <MovimientosPage /> },
           { path: "movimientos/nuevo", element: <MovimientoNuevoPage /> },
           { path: "movimientos/captura-recepcion", element: <CapturaRecepcionPage /> },

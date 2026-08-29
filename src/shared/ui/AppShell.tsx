@@ -1,4 +1,5 @@
 import { useState, type ReactNode, type UIEvent } from "react";
+import { useLocation } from "react-router";
 import { cn } from "../lib/cn";
 
 export interface AppShellProps {
@@ -21,7 +22,10 @@ export function AppShell({
   className,
 }: AppShellProps) {
   const [scrolled, setScrolled] = useState(false);
-
+  // La clave por ruta reinicia la animación de entrada en cada navegación —
+  // no en cada cambio de filtro (que solo toca la query string), para no
+  // parpadear mientras se ajusta un listado.
+  const { pathname } = useLocation();
   function handleContentScroll(event: UIEvent<HTMLElement>) {
     setScrolled(event.currentTarget.scrollTop > 4);
   }
@@ -51,7 +55,9 @@ export function AppShell({
             del mismo ancho que la barra superior — no dentro del flujo de la
             página. Pages sin FilterBar lo dejan vacío (CSS lo oculta). */}
         <div id="toolbar-slot" className="toolbar-slot" />
-        <div className="content content__inner">{children}</div>
+        <div key={pathname} className="content content__inner page-enter">
+          {children}
+        </div>
       </main>
     </div>
   );

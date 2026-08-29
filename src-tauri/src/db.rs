@@ -780,6 +780,91 @@ impl DbState {
             ",
         )?;
 
+        // Registro de escaneos (SPEC §14.3, Fase 10). Va aquí y no en el batch
+        // inicial para que una base de datos ya existente también la reciba.
+        //
+        // Es un registro de eventos, no un catálogo: cada lectura del escáner
+        // deja una fila — resuelta, no encontrada o denegada — con quién,
+        // cuándo, desde dónde y con qué rol. Los intentos fallidos y los
+        // denegados son tan interesantes como los aciertos: un código que nadie
+        // logra resolver es una etiqueta rota, y una racha de denegados es
+        // alguien operando fuera de su rol.
+        //
+        // `rol_codigo` se guarda como copia del momento del escaneo, no como
+        // referencia: si mañana cambia el rol del usuario, el registro debe
+        // seguir diciendo con qué permiso actuó entonces.
+        tx.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS eventos_escaneo (
+                id TEXT PRIMARY KEY,
+                codigo TEXT NOT NULL,
+                codigo_normalizado TEXT NOT NULL,
+                resultado TEXT NOT NULL,
+                motivo TEXT,
+                tipo_entidad TEXT,
+                entidad_id TEXT,
+                entidad_etiqueta TEXT,
+                origen TEXT NOT NULL,
+                formato TEXT,
+                proposito TEXT NOT NULL,
+                ruta TEXT,
+                usuario_id TEXT NOT NULL,
+                rol_codigo TEXT NOT NULL,
+                ubicacion_contexto_id TEXT,
+                latitud REAL,
+                longitud REAL,
+                dispositivo TEXT,
+                duracion_ms INTEGER,
+                tenant TEXT,
+                hora_local INTEGER,
+                dia_semana INTEGER,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_escaneo_usuario ON eventos_escaneo(usuario_id);
+            CREATE INDEX IF NOT EXISTS idx_escaneo_resultado ON eventos_escaneo(resultado);
+            CREATE INDEX IF NOT EXISTS idx_escaneo_created_at ON eventos_escaneo(created_at);
+            CREATE INDEX IF NOT EXISTS idx_escaneo_codigo ON eventos_escaneo(codigo_normalizado);
+            CREATE INDEX IF NOT EXISTS idx_escaneo_entidad ON eventos_escaneo(tipo_entidad, entidad_id);
+            CREATE INDEX IF NOT EXISTS idx_escaneo_tenant ON eventos_escaneo(tenant);
+            CREATE INDEX IF NOT EXISTS idx_escaneo_tiempo_local ON eventos_escaneo(hora_local, dia_semana);
+            ",
+        )?;
+
+        // Reglas de negocio configurables (SPEC §16, Fase 11).
+        //
+        // El almacén de cada cliente tiene restricciones que no caben en el
+        // modelo general —un rack que no aguanta 800 kg, un pasillo donde no
+        // entra química—. Codificarlas en Rust obligaría a recompilar por
+        // cliente; dejarlas fuera obliga a confiar en que nadie se equivoque.
+        //
+        // `ambito_id` nulo significa "todos los elementos de ese ámbito": una
+        // sola fila puede decir "ninguna ubicación admite más de un SKU".
+        tx.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS reglas_negocio (
+                id TEXT PRIMARY KEY,
+                codigo TEXT NOT NULL UNIQUE,
+                nombre TEXT NOT NULL,
+                descripcion TEXT,
+                ambito TEXT NOT NULL,
+                ambito_id TEXT,
+                tipo TEXT NOT NULL,
+                valor_numerico REAL,
+                valor_referencia TEXT,
+                severidad TEXT NOT NULL DEFAULT 'BLOQUEA',
+                mensaje TEXT,
+                activa INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT,
+                updated_by TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_reglas_activa ON reglas_negocio(activa);
+            CREATE INDEX IF NOT EXISTS idx_reglas_ambito ON reglas_negocio(ambito, ambito_id);
+            CREATE INDEX IF NOT EXISTS idx_reglas_tipo ON reglas_negocio(tipo);
+            ",
+        )?;
+
         // Recupera el correlativo máximo ya usado por año (para dbs existentes)
         // y lo deja como valor de arranque; en dbs nuevas no hay filas y es 0.
         tx.execute_batch(

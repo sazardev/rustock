@@ -1,14 +1,27 @@
 //! Autenticación y sesión activa (SPEC §4.1).
 //!
-//! Rustock es una app de escritorio de un solo proceso: una sola sesión activa
-//! a la vez, guardada en memoria (nunca en el frontend). Ningún comando confía
-//! en un id de usuario provisto por el invocador: el actor de cada operación se
-//! resuelve siempre desde este estado, poblado únicamente por `login`.
+//! Ningún comando confía en un id de usuario provisto por el invocador: el
+//! actor de cada operación se resuelve siempre desde el estado de sesión,
+//! poblado únicamente por `login`.
+//!
+//! Hay dos formas de tener sesión, según la cara por la que se entre:
+//!
+//! - **Ventana de escritorio**: un proceso, un operador, una sesión. El estado
+//!   vive en el `SesionState` que Tauri gestiona (`app.manage`).
+//! - **Navegador (servidor HTTP)**: varias personas pueden estar conectadas a
+//!   la vez desde distintos equipos. Cada una tiene su propia sesión en el
+//!   `RegistroSesiones`, identificada por un token que el cliente envía en
+//!   cada petición. Sin esto, la última persona en entrar se llevaría por
+//!   delante la sesión de todas las demás y la auditoría atribuiría sus actos
+//!   a quien no fue.
+
+use std::collections::HashMap;
 
 use argon2::Argon2;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use parking_lot::Mutex;
 use rand_core::OsRng;
+use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 
@@ -45,6 +58,13 @@ pub struct SesionActiva {
 pub struct SesionState(Mutex<Option<SesionActiva>>);
 
 impl SesionState {
+    /// Estado ya poblado. Lo usa el servidor HTTP para dar a cada petición la
+    /// sesión de su propio cliente, de modo que todo el despacho siga
+    /// llamando a `sesion.usuario_id()` sin saber que hay varias sesiones.
+    pub fn desde(sesion: Option<SesionActiva>) -> Self {
+        Self(Mutex::new(sesion))
+    }
+
     pub fn iniciar(&self, sesion: SesionActiva) {
         *self.0.lock() = Some(sesion);
     }
@@ -64,5 +84,45 @@ impl SesionState {
             .as_ref()
             .map(|s| s.usuario_id.clone())
             .ok_or(AppError::NoAutenticado)
+    }
+}
+
+/// Nombre de la cabecera con la que el cliente HTTP presenta su sesión.
+pub const CABECERA_SESION: &str = "x-rustock-sesion";
+
+/// Sesiones abiertas del servidor HTTP, una por cliente.
+///
+/// El token es opaco y solo vive en memoria: reiniciar el backend cierra todas
+/// las sesiones, que es el comportamiento correcto para una herramienta
+/// self-hosted — no hay nada que persistir ni que revocar en otro sitio.
+#[derive(Default)]
+pub struct RegistroSesiones(Mutex<HashMap<String, SesionActiva>>);
+
+impl RegistroSesiones {
+    /// Abre una sesión y devuelve su token.
+    pub fn abrir(&self, sesion: SesionActiva) -> String {
+        let token = Uuid::new_v4().to_string();
+        self.0.lock().insert(token.clone(), sesion);
+        token
+    }
+
+    pub fn obtener(&self, token: &str) -> Option<SesionActiva> {
+        self.0.lock().get(token).cloned()
+    }
+
+    /// Reemplaza la sesión de un token (p. ej. al iniciar sesión con otro
+    /// usuario sin haber cerrado la anterior).
+    pub fn actualizar(&self, token: &str, sesion: SesionActiva) {
+        self.0.lock().insert(token.to_string(), sesion);
+    }
+
+    pub fn cerrar(&self, token: &str) {
+        self.0.lock().remove(token);
+    }
+
+    /// Cuántas sesiones hay abiertas. Solo lo usan las pruebas.
+    #[cfg(test)]
+    pub fn abiertas(&self) -> usize {
+        self.0.lock().len()
     }
 }

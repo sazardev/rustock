@@ -6710,3 +6710,1101 @@ fn layout_base_siembra_sin_solapes_y_solo_en_almacen_vacio() {
     .unwrap_err();
     assert!(matches!(err, crate::error::AppError::CampoInvalido(_)));
 }
+
+// ============ Registro de escaneos (Fase 10, SPEC §14.3) ============
+
+/// Crea un usuario con el rol indicado y devuelve su id.
+fn crear_usuario_con_rol(conn: &rusqlite::Connection, usuario: &str, rol: &str) -> String {
+    let rol_id: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = ?1", [rol], |r| {
+            r.get(0)
+        })
+        .expect("rol existe");
+    repo::seguridad::crear_usuario(
+        conn,
+        &crate::domain::seguridad::NuevoUsuario {
+            nombre_usuario: usuario.into(),
+            nombre_completo: format!("Usuario {usuario}"),
+            email: None,
+            password: "clave1234".into(),
+            rol_id,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("crear usuario")
+    .id
+}
+
+fn entrada_escaneo(codigo: &str) -> repo::escaneo::EntradaEscaneo {
+    repo::escaneo::EntradaEscaneo {
+        codigo: codigo.into(),
+        origen: "CAMARA".into(),
+        formato: Some("EAN_13".into()),
+        proposito: "CONSULTA".into(),
+        ruta: Some("/escanear".into()),
+        ubicacion_contexto_id: None,
+        latitud: None,
+        longitud: None,
+        dispositivo: Some("test".into()),
+    }
+}
+
+#[test]
+fn escanear_registra_el_evento_resuelto_con_la_entidad() {
+    let db = setup();
+    let conn = db.conn();
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    conn.execute(
+        "UPDATE productos SET codigo_barras = ?1 WHERE id = ?2",
+        rusqlite::params!["7501111111111", prod],
+    )
+    .expect("barras");
+    let admin = id_admin(&conn);
+
+    let r = repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("7501111111111"))
+        .expect("escanear");
+
+    assert_eq!(r.resultado, repo::escaneo::RESUELTO);
+    assert_eq!(r.fallos_recientes, 0);
+    let resuelto = r.resuelto.expect("entidad resuelta");
+    assert_eq!(resuelto.tipo, "PRODUCTO");
+    assert_eq!(resuelto.id, prod);
+
+    // El evento queda escrito con el rol vigente y la entidad resuelta.
+    let eventos = repo::escaneo::listar_eventos(&conn, 10).expect("listar");
+    assert_eq!(eventos.len(), 1);
+    assert_eq!(eventos[0].resultado, repo::escaneo::RESUELTO);
+    assert_eq!(eventos[0].tipo_entidad.as_deref(), Some("PRODUCTO"));
+    assert_eq!(eventos[0].rol_codigo, "ADMIN");
+    assert_eq!(eventos[0].origen, "CAMARA");
+}
+
+#[test]
+fn escanear_codigo_desconocido_queda_registrado_como_no_encontrado() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let r = repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("NO-EXISTE-999"))
+        .expect("escanear");
+
+    assert_eq!(r.resultado, repo::escaneo::NO_ENCONTRADO);
+    assert!(r.resuelto.is_none());
+    assert!(r.motivo.is_some());
+    // El fallo cuenta: es la señal de una etiqueta rota o mal impresa.
+    assert_eq!(r.fallos_recientes, 1);
+
+    let eventos = repo::escaneo::listar_eventos(&conn, 10).expect("listar");
+    assert_eq!(eventos[0].resultado, repo::escaneo::NO_ENCONTRADO);
+    assert!(eventos[0].entidad_id.is_none());
+}
+
+#[test]
+fn fallos_consecutivos_se_acumulan_por_usuario() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    for _ in 0..3 {
+        repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("ILEGIBLE")).expect("escanear");
+    }
+    let r = repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("ILEGIBLE")).expect("escanear");
+    assert_eq!(r.fallos_recientes, 4);
+
+    // Los fallos son por usuario: otro operador arranca su propia cuenta.
+    let otro = crear_usuario_con_rol(&conn, "operador_escaneo", "OPERADOR");
+    let r2 =
+        repo::escaneo::escanear(&conn, &otro, &entrada_escaneo("OTRO-ILEGIBLE")).expect("escanear");
+    assert_eq!(r2.fallos_recientes, 1);
+}
+
+#[test]
+fn lector_no_puede_usar_el_escaner_y_el_intento_queda_registrado() {
+    let db = setup();
+    let conn = db.conn();
+    let lector = crear_usuario_con_rol(&conn, "lector_escaneo", "LECTOR");
+
+    // El permiso se niega...
+    let err = crate::security::puede(&conn, Some(&lector), "escaneo", "usar")
+        .expect_err("el LECTOR no usa el escáner");
+    assert!(matches!(err, crate::error::AppError::SinPermiso(_)));
+
+    // ...y el intento denegado se registra igual: es el evento que interesa
+    // vigilar, y sería el único que no quedaría escrito si el permiso cortara
+    // antes de registrar.
+    repo::escaneo::registrar_denegado(
+        &conn,
+        &lector,
+        &entrada_escaneo("7501111111111"),
+        &err.to_string(),
+    )
+    .expect("registrar denegado");
+
+    let eventos = repo::escaneo::listar_eventos(&conn, 10).expect("listar");
+    assert_eq!(eventos.len(), 1);
+    assert_eq!(eventos[0].resultado, repo::escaneo::DENEGADO);
+    assert_eq!(eventos[0].rol_codigo, "LECTOR");
+    assert!(
+        eventos[0]
+            .motivo
+            .as_deref()
+            .unwrap_or("")
+            .contains("escaneo")
+    );
+}
+
+#[test]
+fn operador_y_encargado_pueden_usar_el_escaner_pero_no_ver_su_registro() {
+    let db = setup();
+    let conn = db.conn();
+    let operador = crear_usuario_con_rol(&conn, "op_escaneo", "OPERADOR");
+    let encargado = crear_usuario_con_rol(&conn, "enc_escaneo", "ENCARGADO_ALMACEN");
+    let gerente = crear_usuario_con_rol(&conn, "ger_escaneo", "GERENTE");
+
+    // Usar el escáner: sí (es la herramienta del piso).
+    crate::security::puede(&conn, Some(&operador), "escaneo", "usar").expect("operador usa");
+    crate::security::puede(&conn, Some(&encargado), "escaneo", "usar").expect("encargado usa");
+
+    // Ver el registro: no — es auditoría, no operación.
+    assert!(crate::security::puede(&conn, Some(&operador), "escaneo", "ver").is_err());
+    assert!(crate::security::puede(&conn, Some(&encargado), "escaneo", "ver").is_err());
+
+    // El gerente sí audita.
+    crate::security::puede(&conn, Some(&gerente), "escaneo", "ver").expect("gerente audita");
+}
+
+#[test]
+fn el_rol_del_evento_es_una_copia_del_momento_del_escaneo() {
+    let db = setup();
+    let conn = db.conn();
+    let usuario = crear_usuario_con_rol(&conn, "cambia_rol", "OPERADOR");
+
+    repo::escaneo::escanear(&conn, &usuario, &entrada_escaneo("X-1")).expect("escanear");
+
+    // Se le asciende a GERENTE después del escaneo.
+    let rol_gerente: String = conn
+        .query_row("SELECT id FROM roles WHERE codigo = 'GERENTE'", [], |r| {
+            r.get(0)
+        })
+        .expect("rol");
+    conn.execute(
+        "UPDATE usuarios SET rol_id = ?1 WHERE id = ?2",
+        rusqlite::params![rol_gerente, usuario],
+    )
+    .expect("ascender");
+
+    // El evento anterior conserva el rol con el que se actuó entonces.
+    let eventos = repo::escaneo::listar_eventos(&conn, 10).expect("listar");
+    assert_eq!(eventos[0].rol_codigo, "OPERADOR");
+}
+
+// ============ Etiquetas (Fase 10 · Entrega 2, SPEC §14.3.5) ============
+
+#[test]
+fn code128_calcula_el_digito_de_control_del_estandar() {
+    use crate::domain::etiqueta::code128_modulos;
+
+    // Vector conocido de la norma: "Code128" en Code B tiene checksum 65.
+    // Se comprueba por el ancho total, que es determinista:
+    //   (1 inicio + 7 datos + 1 checksum) * 11 módulos + 13 de la parada.
+    let modulos = code128_modulos("Code128").expect("codificable");
+    assert_eq!(modulos.len(), 9 * 11 + 13);
+
+    // Todo Code128 empieza con barra y termina con barra (patrón de parada).
+    assert!(modulos[0], "debe abrir con barra");
+    assert!(*modulos.last().expect("no vacío"), "debe cerrar con barra");
+}
+
+#[test]
+fn code128_rechaza_lo_que_no_puede_representar() {
+    use crate::domain::etiqueta::{code128_admite, code128_modulos};
+
+    assert!(code128_admite("UBI-A1-N2"));
+    assert!(!code128_admite(""), "vacío no es un código");
+    // Fuera de ASCII imprimible: se rechaza en vez de imprimir algo ilegible.
+    assert!(!code128_admite("CAJA-Ñ1"));
+    assert!(code128_modulos("CAJA-Ñ1").is_none());
+}
+
+#[test]
+fn code128_longitud_crece_once_modulos_por_caracter() {
+    use crate::domain::etiqueta::code128_modulos;
+
+    let corto = code128_modulos("AB").expect("corto").len();
+    let largo = code128_modulos("ABC").expect("largo").len();
+    assert_eq!(
+        largo - corto,
+        11,
+        "cada carácter añade un símbolo de 11 módulos"
+    );
+}
+
+#[test]
+fn svg_de_etiqueta_es_valido_y_lleva_el_codigo_legible() {
+    use crate::domain::etiqueta::{Medidas, Simbologia, svg};
+
+    let medidas = Medidas {
+        ancho_mm: 50.0,
+        alto_mm: 25.0,
+    };
+    let barras = svg("SKU-1004", Simbologia::Code128, medidas).expect("code128");
+    assert!(barras.starts_with("<svg xmlns="));
+    assert!(barras.ends_with("</svg>"));
+    // El texto humano va impreso: si el lector falla, alguien lo teclea.
+    assert!(barras.contains(">SKU-1004</text>"));
+    assert!(barras.contains("width=\"50mm\""));
+
+    let qr = svg("SKU-1004", Simbologia::Qr, medidas).expect("qr");
+    assert!(qr.starts_with("<svg xmlns="));
+    assert!(qr.contains("<rect"));
+    // El QR es cuadrado: toma el lado menor de la etiqueta.
+    assert!(qr.contains("width=\"25mm\""));
+}
+
+#[test]
+fn el_svg_escapa_lo_que_podria_romperlo() {
+    use crate::domain::etiqueta::{Medidas, Simbologia, svg};
+
+    let medidas = Medidas {
+        ancho_mm: 50.0,
+        alto_mm: 25.0,
+    };
+    // Un código con `<` y `&` no debe poder inyectar marcado en el SVG.
+    let salida = svg("A<B&C", Simbologia::Code128, medidas).expect("code128");
+    assert!(salida.contains("A&lt;B&amp;C"));
+    assert!(!salida.contains(">A<B&C<"));
+}
+
+#[test]
+fn el_qr_admite_lo_que_code128_rechaza() {
+    use crate::domain::etiqueta::{Medidas, Simbologia, svg};
+
+    let medidas = Medidas {
+        ancho_mm: 40.0,
+        alto_mm: 40.0,
+    };
+    // Caracteres fuera de ASCII: Code128 no puede, el QR sí.
+    assert!(svg("LOTE-Ñ-2026", Simbologia::Code128, medidas).is_none());
+    assert!(svg("LOTE-Ñ-2026", Simbologia::Qr, medidas).is_some());
+}
+
+#[test]
+fn avisa_cuando_las_barras_quedan_demasiado_finas_para_leerse() {
+    use crate::domain::etiqueta::{Medidas, Simbologia, advertencia, modulo_mm};
+
+    let pequena = Medidas {
+        ancho_mm: 50.0,
+        alto_mm: 25.0,
+    };
+
+    // Un código corto en 50 mm da barras holgadas: sin aviso.
+    let ancho_corto = modulo_mm("SKU-1004", Simbologia::Code128, pequena).expect("code128");
+    assert!(ancho_corto > 0.3, "barras de {ancho_corto} mm");
+    assert!(advertencia(Some(ancho_corto)).is_none());
+
+    // Un código largo en la misma etiqueta las estrecha por debajo del mínimo:
+    // es la trampa real de imprimir cien etiquetas que luego no leen.
+    let ancho_largo =
+        modulo_mm("LOTE-CINTA-2026-01", Simbologia::Code128, pequena).expect("code128");
+    assert!(ancho_largo < 0.25, "barras de {ancho_largo} mm");
+    assert!(advertencia(Some(ancho_largo)).is_some());
+
+    // Con una etiqueta más ancha el mismo código vuelve a ser legible.
+    let grande = Medidas {
+        ancho_mm: 100.0,
+        alto_mm: 50.0,
+    };
+    let ancho_grande =
+        modulo_mm("LOTE-CINTA-2026-01", Simbologia::Code128, grande).expect("code128");
+    assert!(advertencia(Some(ancho_grande)).is_none());
+
+    // El QR no tiene barras: no aplica el aviso.
+    assert!(modulo_mm("LOTE-CINTA-2026-01", Simbologia::Qr, pequena).is_none());
+    assert!(advertencia(None).is_none());
+}
+
+// ============ Sesiones concurrentes (SPEC §4.1) ============
+
+#[test]
+fn cada_cliente_http_tiene_su_propia_sesion() {
+    use crate::sesion::{RegistroSesiones, SesionActiva, SesionState};
+
+    let registro = RegistroSesiones::default();
+
+    let token_a = registro.abrir(SesionActiva {
+        usuario_id: "id-admin".into(),
+        nombre_usuario: "admin".into(),
+        rol_codigo: "ADMIN".into(),
+    });
+    let token_b = registro.abrir(SesionActiva {
+        usuario_id: "id-operador".into(),
+        nombre_usuario: "operador".into(),
+        rol_codigo: "OPERADOR".into(),
+    });
+
+    assert_eq!(registro.abiertas(), 2);
+    // Lo que este cambio arregla: la segunda persona en entrar ya no se lleva
+    // por delante la sesión de la primera.
+    assert_eq!(
+        registro.obtener(&token_a).expect("sesión A").usuario_id,
+        "id-admin"
+    );
+    assert_eq!(
+        registro.obtener(&token_b).expect("sesión B").usuario_id,
+        "id-operador"
+    );
+
+    // Cerrar una no toca la otra.
+    registro.cerrar(&token_a);
+    assert!(registro.obtener(&token_a).is_none());
+    assert_eq!(
+        registro
+            .obtener(&token_b)
+            .expect("sesión B sigue")
+            .usuario_id,
+        "id-operador"
+    );
+
+    // El ámbito por petición se construye desde la sesión del cliente.
+    let ambito = SesionState::desde(registro.obtener(&token_b));
+    assert_eq!(ambito.usuario_id().expect("autenticado"), "id-operador");
+
+    // Sin token no hay sesión: nunca se hereda la de otro.
+    let anonimo = SesionState::desde(None);
+    assert!(matches!(
+        anonimo.usuario_id(),
+        Err(crate::error::AppError::NoAutenticado)
+    ));
+}
+
+#[test]
+fn un_token_desconocido_no_da_acceso() {
+    use crate::sesion::{RegistroSesiones, SesionState};
+
+    let registro = RegistroSesiones::default();
+    assert!(registro.obtener("token-inventado").is_none());
+    let ambito = SesionState::desde(registro.obtener("token-inventado"));
+    assert!(ambito.usuario_id().is_err());
+}
+
+// ============ Acciones desde la lectura (Fase 10 · Entrega 3) ============
+
+#[test]
+fn un_codigo_desconocido_ofrece_darlo_de_alta_sin_crear_nada() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let r = repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("CODIGO-NUEVO-77"))
+        .expect("escanear");
+
+    assert_eq!(r.resultado, repo::escaneo::NO_ENCONTRADO);
+    let claves: Vec<&str> = r.acciones.iter().map(|a| a.clave.as_str()).collect();
+    assert!(claves.contains(&"alta_producto"));
+    assert!(
+        r.acciones.iter().any(|a| a.href.contains("/nuevo")),
+        "el alta lleva a un formulario, no crea nada"
+    );
+
+    // Lo esencial (SPEC §14.3): el escaneo no ha creado ninguna entidad.
+    let productos: i64 = conn
+        .query_row("SELECT COUNT(*) FROM productos", [], |r| r.get(0))
+        .expect("contar");
+    assert_eq!(productos, 0, "el escaneo nunca crea datos por sí solo");
+}
+
+#[test]
+fn las_acciones_dependen_de_los_permisos_de_quien_escanea() {
+    let db = setup();
+    let conn = db.conn();
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    conn.execute(
+        "UPDATE productos SET codigo_barras = ?1 WHERE id = ?2",
+        rusqlite::params!["7509999999999", prod],
+    )
+    .expect("barras");
+
+    let admin = id_admin(&conn);
+    let operador = crear_usuario_con_rol(&conn, "op_acciones", "OPERADOR");
+
+    let del_admin = repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("7509999999999"))
+        .expect("escanear admin");
+    let del_operador = repo::escaneo::escanear(&conn, &operador, &entrada_escaneo("7509999999999"))
+        .expect("escanear operador");
+
+    // Ambos pueden ver la ficha y registrar un movimiento.
+    for r in [&del_admin, &del_operador] {
+        let claves: Vec<&str> = r.acciones.iter().map(|a| a.clave.as_str()).collect();
+        assert!(claves.contains(&"ver"));
+        assert!(claves.contains(&"movimiento"));
+    }
+
+    // Pero un código desconocido solo ofrece el alta a quien puede crear.
+    let desconocido_operador =
+        repo::escaneo::escanear(&conn, &operador, &entrada_escaneo("NADA-DE-NADA"))
+            .expect("escanear");
+    assert!(
+        desconocido_operador.acciones.is_empty(),
+        "el operador no crea catálogo, así que no se le ofrece el alta"
+    );
+}
+
+#[test]
+fn el_proposito_decide_cual_es_la_accion_principal() {
+    let db = setup();
+    let conn = db.conn();
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    conn.execute(
+        "UPDATE productos SET codigo_barras = ?1 WHERE id = ?2",
+        rusqlite::params!["7508888888888", prod],
+    )
+    .expect("barras");
+    let admin = id_admin(&conn);
+
+    let mut consulta = entrada_escaneo("7508888888888");
+    consulta.proposito = "CONSULTA".into();
+    let r = repo::escaneo::escanear(&conn, &admin, &consulta).expect("consulta");
+    let principal = r.acciones.iter().find(|a| a.principal).expect("principal");
+    assert_eq!(principal.clave, "ver");
+
+    let mut captura = entrada_escaneo("7508888888888");
+    captura.proposito = "CAPTURA".into();
+    let r = repo::escaneo::escanear(&conn, &admin, &captura).expect("captura");
+    let principal = r.acciones.iter().find(|a| a.principal).expect("principal");
+    assert_eq!(principal.clave, "movimiento");
+}
+
+// ============ Métricas del panel de escaneos (Fase 10 · Entrega 4) ============
+
+#[test]
+fn las_metricas_separan_aciertos_fallos_y_denegados() {
+    let db = setup();
+    let conn = db.conn();
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    conn.execute(
+        "UPDATE productos SET codigo_barras = ?1 WHERE id = ?2",
+        rusqlite::params!["7507777777777", prod],
+    )
+    .expect("barras");
+    let admin = id_admin(&conn);
+    let lector = crear_usuario_con_rol(&conn, "lector_metricas", "LECTOR");
+
+    // Dos aciertos, tres fallos del mismo código y un denegado.
+    for _ in 0..2 {
+        repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("7507777777777")).expect("ok");
+    }
+    for _ in 0..3 {
+        repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("ETIQUETA-ROTA")).expect("fallo");
+    }
+    repo::escaneo::registrar_denegado(
+        &conn,
+        &lector,
+        &entrada_escaneo("7507777777777"),
+        "Acción no autorizada: se requiere permiso 'escaneo:usar'",
+    )
+    .expect("denegado");
+
+    let m = repo::escaneo::metricas(&conn, 30).expect("métricas");
+    assert_eq!(m.total, 6);
+    assert_eq!(m.resueltos, 2);
+    assert_eq!(m.no_encontrados, 3);
+    assert_eq!(m.denegados, 1);
+    assert!((m.acierto - 33.3).abs() < 0.1, "acierto = {}", m.acierto);
+
+    // El código que falla repetidamente sale señalado: es una etiqueta a
+    // reimprimir, no un problema de quien escanea.
+    let problematico = m
+        .codigos_problematicos
+        .iter()
+        .find(|c| c.codigo == "ETIQUETA-ROTA")
+        .expect("código problemático");
+    assert_eq!(problematico.intentos, 3);
+    assert_eq!(problematico.personas, 1);
+
+    // El intento fuera de rol queda atribuido a quien lo hizo.
+    let denegado = m
+        .denegados_por_usuario
+        .iter()
+        .find(|d| d.usuario_id == lector)
+        .expect("denegado registrado");
+    assert_eq!(denegado.intentos, 1);
+    assert_eq!(denegado.rol_codigo, "LECTOR");
+
+    // Las 24 horas siempre presentes, aunque estén a cero.
+    assert_eq!(m.por_hora.len(), 24);
+    assert_eq!(m.por_hora.iter().map(|h| h.total).sum::<i64>(), 6);
+}
+
+#[test]
+fn un_fallo_suelto_no_marca_una_etiqueta_como_rota() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    // Un solo fallo es un dedo torpe, no una etiqueta que reimprimir.
+    repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("TROPIEZO")).expect("fallo");
+    let m = repo::escaneo::metricas(&conn, 30).expect("métricas");
+    assert!(m.codigos_problematicos.is_empty());
+
+    // Con el segundo intento ya hay patrón.
+    repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("TROPIEZO")).expect("fallo");
+    let m = repo::escaneo::metricas(&conn, 30).expect("métricas");
+    assert_eq!(m.codigos_problematicos.len(), 1);
+    assert_eq!(m.codigos_problematicos[0].intentos, 2);
+}
+
+#[test]
+fn las_metricas_distinguen_camara_de_lector_de_mano() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let mut teclado = entrada_escaneo("X");
+    teclado.origen = "TECLADO".into();
+    repo::escaneo::escanear(&conn, &admin, &teclado).expect("teclado");
+    // `entrada_escaneo` usa CAMARA por defecto.
+    repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("Y")).expect("cámara");
+    repo::escaneo::escanear(&conn, &admin, &entrada_escaneo("Z")).expect("cámara");
+
+    let m = repo::escaneo::metricas(&conn, 30).expect("métricas");
+    assert_eq!(m.por_camara, 2);
+    assert_eq!(m.por_teclado, 1);
+}
+
+// ============ Formatos de salida de etiquetas (Fase 10 · Entrega 2b) ============
+
+fn etiqueta_de_prueba(codigo: &str, simbologia: &str) -> crate::domain::etiqueta::Etiqueta {
+    crate::domain::etiqueta::Etiqueta {
+        tipo: "PRODUCTO".into(),
+        entidad_id: "id-1".into(),
+        codigo: codigo.into(),
+        titulo: "Tornillo M6".into(),
+        subtitulo: None,
+        simbologia: simbologia.into(),
+        svg: String::new(),
+        modulo_mm: None,
+        advertencia: None,
+    }
+}
+
+const MEDIDAS_PRUEBA: crate::domain::etiqueta::Medidas = crate::domain::etiqueta::Medidas {
+    ancho_mm: 50.0,
+    alto_mm: 25.0,
+};
+
+#[test]
+fn el_zpl_lleva_apertura_cierre_y_el_codigo() {
+    use crate::domain::etiqueta::{Dpi, zpl};
+
+    let etiquetas = vec![
+        etiqueta_de_prueba("SKU-1004", "CODE_128"),
+        etiqueta_de_prueba("UBI-A1", "QR_CODE"),
+    ];
+    let salida = zpl(&etiquetas, MEDIDAS_PRUEBA, Dpi::D203);
+
+    // Dos etiquetas, dos trabajos completos.
+    assert_eq!(salida.matches("^XA").count(), 2);
+    assert_eq!(salida.matches("^XZ").count(), 2);
+    // Code128 usa ^BC; el QR usa ^BQ con el prefijo QA del modo alfanumérico.
+    assert!(salida.contains("^BCN,"));
+    assert!(salida.contains("^BQN,2,"));
+    assert!(salida.contains("^FDSKU-1004^FS"));
+    assert!(salida.contains("^FDQA,UBI-A1^FS"));
+    // El ancho y el largo van explícitos: sin ellos la impresora usa su
+    // configuración guardada y recorta la etiqueta.
+    assert!(salida.contains("^PW"));
+    assert!(salida.contains("^LL"));
+}
+
+#[test]
+fn la_resolucion_cambia_las_medidas_del_zpl() {
+    use crate::domain::etiqueta::{Dpi, zpl};
+
+    let etiquetas = vec![etiqueta_de_prueba("SKU-1004", "CODE_128")];
+    let a203 = zpl(&etiquetas, MEDIDAS_PRUEBA, Dpi::D203);
+    let a300 = zpl(&etiquetas, MEDIDAS_PRUEBA, Dpi::D300);
+
+    // 50 mm son 400 puntos a 203 dpi y 591 a 300 dpi. Confundirlos imprime la
+    // etiqueta a un tamaño equivocado.
+    assert!(a203.contains("^PW400"), "203 dpi: {a203}");
+    assert!(a300.contains("^PW591"), "300 dpi: {a300}");
+}
+
+#[test]
+fn los_caracteres_de_control_no_se_cuelan_en_el_zpl() {
+    use crate::domain::etiqueta::{Dpi, zpl};
+
+    // `^` y `~` son de control en ZPL: si pasaran tal cual, un código que los
+    // contenga rompería el trabajo o imprimiría cualquier cosa.
+    let etiquetas = vec![etiqueta_de_prueba("A^B~C", "CODE_128")];
+    let salida = zpl(&etiquetas, MEDIDAS_PRUEBA, Dpi::D203);
+    assert!(salida.contains("^FDA-B-C^FS"));
+}
+
+#[test]
+fn el_epl_abre_y_cierra_cada_etiqueta() {
+    use crate::domain::etiqueta::{Dpi, epl};
+
+    let etiquetas = vec![etiqueta_de_prueba("SKU-1004", "CODE_128")];
+    let salida = epl(&etiquetas, MEDIDAS_PRUEBA, Dpi::D203);
+    assert!(salida.contains("\nN\n"), "EPL abre con N");
+    assert!(salida.contains("P1\n"), "EPL imprime con P1");
+    assert!(salida.contains("\"SKU-1004\""));
+}
+
+#[test]
+fn el_pdf_es_estructuralmente_valido() {
+    use crate::domain::etiqueta::{Disposicion, pdf};
+
+    let etiquetas = vec![
+        etiqueta_de_prueba("SKU-1004", "CODE_128"),
+        etiqueta_de_prueba("SKU-1005", "CODE_128"),
+    ];
+    let bytes = pdf(&etiquetas, MEDIDAS_PRUEBA, Disposicion::Hoja);
+    let texto = String::from_utf8_lossy(&bytes);
+
+    assert!(texto.starts_with("%PDF-1.4"), "cabecera de PDF");
+    assert!(texto.trim_end().ends_with("%%EOF"), "cierre de PDF");
+    // Un PDF sin tabla de referencias cruzadas no lo abre ningún lector.
+    assert!(texto.contains("\nxref\n"));
+    assert!(texto.contains("trailer"));
+    assert!(texto.contains("startxref"));
+    assert!(texto.contains("/Type /Catalog"));
+    // Fuentes base: no se incrusta ninguna tipografía.
+    assert!(texto.contains("/BaseFont /Helvetica"));
+    assert!(texto.contains("/BaseFont /Courier"));
+    // El código va escrito como texto legible bajo las barras.
+    assert!(texto.contains("(SKU-1004) Tj"));
+
+    // El desplazamiento de `startxref` debe apuntar a la palabra `xref`.
+    let inicio: usize = texto
+        .rsplit("startxref")
+        .next()
+        .and_then(|resto| resto.trim().lines().next())
+        .and_then(|n| n.trim().parse().ok())
+        .expect("startxref numérico");
+    assert_eq!(
+        &texto[inicio..inicio + 4],
+        "xref",
+        "startxref mal calculado"
+    );
+}
+
+#[test]
+fn el_pdf_en_rollo_usa_una_pagina_por_etiqueta() {
+    use crate::domain::etiqueta::{Disposicion, pdf};
+
+    let etiquetas: Vec<_> = (0..3)
+        .map(|i| etiqueta_de_prueba(&format!("SKU-100{i}"), "CODE_128"))
+        .collect();
+
+    let rollo = pdf(&etiquetas, MEDIDAS_PRUEBA, Disposicion::Rollo);
+    let texto_rollo = String::from_utf8_lossy(&rollo);
+    assert!(texto_rollo.contains("/Count 3"), "una página por etiqueta");
+
+    // En hoja A4 caben las tres en una sola página.
+    let hoja = pdf(&etiquetas, MEDIDAS_PRUEBA, Disposicion::Hoja);
+    let texto_hoja = String::from_utf8_lossy(&hoja);
+    assert!(texto_hoja.contains("/Count 1"), "las tres caben en una A4");
+}
+
+#[test]
+fn los_parentesis_del_texto_no_rompen_el_pdf() {
+    use crate::domain::etiqueta::{Disposicion, pdf};
+
+    // Los paréntesis delimitan cadenas en PDF: sin escapar, un nombre como
+    // "Arandela (5/16)" cerraría la cadena y corrompería el archivo.
+    let mut etiqueta = etiqueta_de_prueba("SKU-1", "CODE_128");
+    etiqueta.titulo = "Arandela (5/16) \\ especial".into();
+    let bytes = pdf(&[etiqueta], MEDIDAS_PRUEBA, Disposicion::Rollo);
+    let texto = String::from_utf8_lossy(&bytes);
+    assert!(texto.contains("Arandela \\(5/16\\) \\\\ especial"));
+}
+
+#[test]
+fn la_impresora_rechaza_un_destino_sin_sentido() {
+    use crate::repo::impresora::{DestinoImpresora, probar};
+
+    let vacio = DestinoImpresora {
+        host: "  ".into(),
+        puerto: 9100,
+    };
+    assert!(probar(&vacio).is_err(), "host vacío");
+
+    let puerto_cero = DestinoImpresora {
+        host: "127.0.0.1".into(),
+        puerto: 0,
+    };
+    assert!(probar(&puerto_cero).is_err(), "puerto 0");
+}
+
+// ============ Reglas de negocio configurables (Fase 11, SPEC §16) ============
+
+fn regla_base(codigo: &str, ambito: &str, tipo: &str) -> crate::domain::regla::NuevaRegla {
+    crate::domain::regla::NuevaRegla {
+        codigo: codigo.into(),
+        nombre: format!("Regla {codigo}"),
+        descripcion: None,
+        ambito: ambito.into(),
+        ambito_id: None,
+        tipo: tipo.into(),
+        valor_numerico: None,
+        valor_referencia: None,
+        severidad: "BLOQUEA".into(),
+        mensaje: None,
+        activa: true,
+        created_by: Some("admin".into()),
+    }
+}
+
+/// Id del rack del árbol de pruebas (el que crea `crear_arbol`).
+fn id_rack(conn: &rusqlite::Connection) -> String {
+    conn.query_row("SELECT id FROM racks WHERE codigo = 'RACK-A'", [], |r| {
+        r.get(0)
+    })
+    .expect("rack")
+}
+
+#[test]
+fn una_regla_incompleta_no_se_guarda() {
+    let db = setup();
+    let conn = db.conn();
+
+    // Un tope sin número no limita nada, pero aparecería en la lista como si
+    // protegiera algo: es peor que no tener la regla.
+    let sin_valor = regla_base("R1", "RACK", "PESO_MAXIMO");
+    assert!(repo::regla::crear(&conn, &sin_valor).is_err());
+
+    // Una prohibición sin categoría tampoco prohíbe nada.
+    let sin_referencia = regla_base("R2", "PASILLO", "CATEGORIA_PROHIBIDA");
+    assert!(repo::regla::crear(&conn, &sin_referencia).is_err());
+
+    // Un tope negativo no tiene sentido.
+    let mut negativo = regla_base("R3", "RACK", "PESO_MAXIMO");
+    negativo.valor_numerico = Some(-5.0);
+    assert!(repo::regla::crear(&conn, &negativo).is_err());
+}
+
+#[test]
+fn el_peso_total_del_rack_bloquea_la_entrada() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    // 10 kg por unidad.
+    conn.execute(
+        "UPDATE productos SET peso_unitario = 10.0 WHERE id = ?1",
+        [&prod],
+    )
+    .expect("peso");
+
+    // El rack aguanta 100 kg.
+    let mut regla = regla_base("RACK-PESO", "RACK", "PESO_MAXIMO");
+    regla.ambito_id = Some(id_rack(&conn));
+    regla.valor_numerico = Some(100.0);
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    let linea = |cantidad| repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad,
+        ubicacion_destino: &ubi,
+    };
+
+    // 10 unidades son exactamente 100 kg: cabe.
+    assert!(
+        repo::regla::evaluar_entrada(&conn, &linea(10))
+            .expect("eval")
+            .is_empty()
+    );
+
+    // 11 son 110 kg: no cabe, y el mensaje dice por cuánto se pasa.
+    let fallos = repo::regla::evaluar_entrada(&conn, &linea(11)).expect("eval");
+    assert_eq!(fallos.len(), 1);
+    assert_eq!(fallos[0].severidad, "BLOQUEA");
+    assert!(
+        fallos[0].mensaje.contains("110.00 kg"),
+        "{}",
+        fallos[0].mensaje
+    );
+    assert!(fallos[0].mensaje.contains("100.00 kg"));
+    assert!(repo::regla::exigir_cumplimiento(&conn, &linea(11)).is_err());
+}
+
+#[test]
+fn el_peso_se_acumula_con_lo_que_ya_hay_en_el_rack() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    conn.execute(
+        "UPDATE productos SET peso_unitario = 10.0 WHERE id = ?1",
+        [&prod],
+    )
+    .expect("peso");
+
+    let mut regla = regla_base("RACK-PESO", "RACK", "PESO_MAXIMO");
+    regla.ambito_id = Some(id_rack(&conn));
+    regla.valor_numerico = Some(100.0);
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    // Ya hay 6 unidades (60 kg) en OTRA ubicación del mismo rack.
+    conn.execute(
+        "INSERT INTO saldos (ubicacion_id, producto_id, lote_id, lote_key, cantidad, updated_at)
+         VALUES (?2, ?1, NULL, '', 6, datetime('now'))",
+        rusqlite::params![prod, ubi2],
+    )
+    .expect("saldo previo");
+
+    let linea = |cantidad| repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad,
+        ubicacion_destino: &ubi,
+    };
+
+    // 4 más son 100 kg en total: justo en el límite.
+    assert!(
+        repo::regla::evaluar_entrada(&conn, &linea(4))
+            .expect("eval")
+            .is_empty()
+    );
+    // 5 más se pasan: el tope es del rack entero, no de cada ubicación.
+    assert!(
+        !repo::regla::evaluar_entrada(&conn, &linea(5))
+            .expect("eval")
+            .is_empty()
+    );
+}
+
+#[test]
+fn una_regla_de_zona_alcanza_a_los_racks_que_cuelgan_de_ella() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    // Regla escrita a nivel de zona, sin nombrar ningún rack.
+    let mut regla = regla_base("ZONA-CANT", "ZONA", "CANTIDAD_MAXIMA");
+    regla.valor_numerico = Some(50.0);
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    let linea = |cantidad| repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad,
+        ubicacion_destino: &ubi,
+    };
+
+    // La ubicación cuelga de sección → rack → zona: la regla la alcanza.
+    assert!(
+        repo::regla::evaluar_entrada(&conn, &linea(50))
+            .expect("eval")
+            .is_empty()
+    );
+    let fallos = repo::regla::evaluar_entrada(&conn, &linea(51)).expect("eval");
+    assert_eq!(fallos.len(), 1, "la regla de zona debe alcanzar al rack");
+}
+
+#[test]
+fn una_categoria_prohibida_no_entra_en_el_pasillo() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    let categoria = repo::catalogo::crear_categoria(
+        &conn,
+        &crate::domain::catalogo::NuevaCategoria {
+            nombre: "Química".into(),
+            parent_id: None,
+            descripcion: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("categoria");
+    conn.execute(
+        "UPDATE productos SET categoria_id = ?1 WHERE id = ?2",
+        rusqlite::params![categoria.id, prod],
+    )
+    .expect("categorizar");
+
+    let mut regla = regla_base("SIN-QUIMICA", "RACK", "CATEGORIA_PROHIBIDA");
+    regla.ambito_id = Some(id_rack(&conn));
+    regla.valor_referencia = Some(categoria.id.clone());
+    regla.mensaje = Some("En este rack no entra química.".into());
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    let linea = repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad: 1,
+        ubicacion_destino: &ubi,
+    };
+    let fallos = repo::regla::evaluar_entrada(&conn, &linea).expect("eval");
+    assert_eq!(fallos.len(), 1);
+    // El mensaje del cliente manda sobre el genérico del sistema.
+    assert_eq!(fallos[0].mensaje, "En este rack no entra química.");
+}
+
+#[test]
+fn un_solo_producto_por_ubicacion() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    let (_uom2, prod2) = {
+        let uom = repo::catalogo::crear_uom(
+            &conn,
+            &NuevaUom {
+                codigo: "U9".into(),
+                nombre: "Unidad 9".into(),
+                tipo: "UNIDAD".into(),
+                factor: 1,
+                base: true,
+            },
+            "admin",
+        )
+        .expect("uom");
+        let p = repo::catalogo::crear_producto(
+            &conn,
+            &NuevoProducto {
+                costo_unitario: None,
+                sku: "OTRO-SKU".into(),
+                nombre: "Otro".into(),
+                descripcion: None,
+                categoria_id: None,
+                uom_base_id: uom.id.clone(),
+                uom_venta_id: None,
+                uom_compra_id: None,
+                codigo_barras: None,
+                peso_unitario: None,
+                volumen_unitario: None,
+                stock_minimo: None,
+                stock_maximo: None,
+                controla_lote: false,
+                controla_vencimiento: false,
+                perecedero: false,
+                created_by: Some("admin".into()),
+            },
+        )
+        .expect("producto2");
+        (uom.id, p.id)
+    };
+
+    // Sin `ambito_id`: aplica a TODAS las ubicaciones.
+    let mut regla = regla_base("UNA-SKU", "UBICACION", "PRODUCTOS_DISTINTOS_MAXIMO");
+    regla.valor_numerico = Some(1.0);
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    // La ubicación ya tiene el primer producto.
+    conn.execute(
+        "INSERT INTO saldos (ubicacion_id, producto_id, lote_id, lote_key, cantidad, updated_at)
+         VALUES (?2, ?1, NULL, '', 5, datetime('now'))",
+        rusqlite::params![prod, ubi],
+    )
+    .expect("saldo");
+
+    // Reponer el mismo producto no añade variedad: pasa.
+    let mismo = repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad: 3,
+        ubicacion_destino: &ubi,
+    };
+    assert!(
+        repo::regla::evaluar_entrada(&conn, &mismo)
+            .expect("eval")
+            .is_empty()
+    );
+
+    // Meter otro producto sí la añade: se bloquea.
+    let otro = repo::regla::LineaEntrante {
+        producto_id: &prod2,
+        lote_id: None,
+        cantidad: 1,
+        ubicacion_destino: &ubi,
+    };
+    let fallos = repo::regla::evaluar_entrada(&conn, &otro).expect("eval");
+    assert_eq!(fallos.len(), 1);
+    assert!(fallos[0].mensaje.contains("OTRO-SKU"));
+}
+
+#[test]
+fn una_regla_que_no_puede_evaluarse_avisa_en_vez_de_callar() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    // El producto NO tiene peso definido.
+
+    let mut regla = regla_base("RACK-PESO", "RACK", "PESO_MAXIMO");
+    regla.ambito_id = Some(id_rack(&conn));
+    regla.valor_numerico = Some(100.0);
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    let linea = repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad: 999,
+        ubicacion_destino: &ubi,
+    };
+    let avisos = repo::regla::evaluar_entrada(&conn, &linea).expect("eval");
+    assert_eq!(avisos.len(), 1);
+    // Avisa, no bloquea: una protección que el cliente cree tener y no tiene
+    // debe decirse en voz alta, pero no puede frenar la operación por un dato
+    // que falta en el catálogo.
+    assert_eq!(avisos[0].severidad, "ADVIERTE");
+    assert!(avisos[0].mensaje.contains("peso unitario"));
+    assert!(repo::regla::exigir_cumplimiento(&conn, &linea).is_ok());
+}
+
+#[test]
+fn una_regla_que_solo_advierte_deja_pasar() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    let mut regla = regla_base("AVISO", "ZONA", "CANTIDAD_MAXIMA");
+    regla.valor_numerico = Some(1.0);
+    regla.severidad = "ADVIERTE".into();
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    let linea = repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad: 100,
+        ubicacion_destino: &ubi,
+    };
+    let avisos = repo::regla::evaluar_entrada(&conn, &linea).expect("eval");
+    assert_eq!(avisos.len(), 1);
+    assert_eq!(avisos[0].severidad, "ADVIERTE");
+    // Estrenar una regla sin frenar la operación es justo para lo que sirve.
+    assert!(repo::regla::exigir_cumplimiento(&conn, &linea).is_ok());
+}
+
+#[test]
+fn una_regla_desactivada_no_se_evalua() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, ubi, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+
+    let mut regla = regla_base("APAGADA", "ZONA", "CANTIDAD_MAXIMA");
+    regla.valor_numerico = Some(1.0);
+    regla.activa = false;
+    repo::regla::crear(&conn, &regla).expect("crear regla");
+
+    let linea = repo::regla::LineaEntrante {
+        producto_id: &prod,
+        lote_id: None,
+        cantidad: 100,
+        ubicacion_destino: &ubi,
+    };
+    assert!(
+        repo::regla::evaluar_entrada(&conn, &linea)
+            .expect("eval")
+            .is_empty()
+    );
+}

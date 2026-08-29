@@ -1,5 +1,55 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
+  version: string;
+};
+
+/**
+ * Materializa `src/pwa/sw-template.js` en `dist/sw.js` con la versión real y
+ * la lista de artefactos del build (shell precacheado). Solo en build: en
+ * desarrollo no hay worker, así el HMR nunca sirve una copia vieja.
+ */
+function rustockPwa() {
+  return {
+    name: "rustock-pwa",
+    apply: "build" as const,
+    writeBundle(options: { dir?: string }, bundle: Record<string, unknown>) {
+      const dir = options.dir ?? "dist";
+      // Shell de arranque: solo lo necesario para pintar la primera pantalla
+      // — el chunk de entrada y lo que importa de forma estática — más hojas
+      // de estilo y fuentes. Los fragmentos por ruta (mapa 3D, manual,
+      // reportes) se guardan al visitarlos, no al instalar la aplicación.
+      const delArranque = new Set<string>();
+      for (const [nombre, item] of Object.entries(bundle)) {
+        const chunk = item as { isEntry?: boolean; imports?: string[] };
+        if (!chunk.isEntry) continue;
+        delArranque.add(nombre);
+        for (const importado of chunk.imports ?? []) {
+          delArranque.add(importado);
+        }
+      }
+      const artefactos = Object.keys(bundle).filter(
+        (nombre) => delArranque.has(nombre) || /\.(?:css|woff2)$/.test(nombre),
+      );
+      const precache = [
+        "/",
+        "/index.html",
+        "/manifest.webmanifest",
+        "/rustock.svg",
+        "/rustock-192.png",
+        "/rustock-512.png",
+        ...artefactos.map((nombre) => `/${nombre}`),
+      ];
+      const plantilla = readFileSync(new URL("./src/pwa/sw-template.js", import.meta.url), "utf8");
+      const salida = plantilla
+        .replaceAll("__RUSTOCK_VERSION__", pkg.version)
+        .replaceAll("__RUSTOCK_PRECACHE__", JSON.stringify(precache, null, 2));
+      writeFileSync(`${dir}/sw.js`, salida);
+    },
+  };
+}
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -8,6 +58,7 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [
     react(),
+    rustockPwa(),
     {
       name: "rustock-font-preload",
       transformIndexHtml(html, ctx) {
@@ -55,7 +106,10 @@ export default defineConfig(async () => ({
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "strict-origin-when-cross-origin",
-      "Permissions-Policy": "camera=(), microphone=(), geolocation=(self)",
+      // La cámara es la herramienta del escáner (SPEC §14.3): se habilita
+      // solo para el propio origen. El micrófono sigue denegado — Rustock no
+      // graba audio en ninguna pantalla.
+      "Permissions-Policy": "camera=(self), microphone=(), geolocation=(self)",
     },
   },
 

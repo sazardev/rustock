@@ -73,5 +73,12 @@
     "jsx-props-no-spreading": "off",
     "typescript/array-type": "off"
   },
-  "ignorePatterns": ["dist", "node_modules", "src-tauri/target", "src-tauri/gen", "public"]
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "src-tauri/target",
+    "src-tauri/gen",
+    "public",
+    "src/pwa/sw-template.js"
+  ]
 }

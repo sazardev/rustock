@@ -1,11 +1,12 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { crearMovimiento, resolverEscaneo } from "../shared/backend";
+import { crearMovimiento, escanear } from "../shared/backend";
 import type { EscaneoResuelto, NuevaLinea } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { movimientoDetalle, PATH } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useCapturaEscaneo } from "../shared/useEscanerGlobal";
 import {
   Badge,
   Button,
@@ -159,12 +160,29 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
     scanRef.current?.focus();
   }
 
+  // Estando en captura, los códigos son de esta pantalla: se reclaman para que
+  // la acción por defecto del escáner global no navegue a otro sitio.
+  useCapturaEscaneo(
+    useCallback((codigo: string) => {
+      scanRef.current?.focus();
+      void onEnter(codigo);
+      // `onEnter` se redefine en cada render pero solo lee estado actual a
+      // través de refs y setters, así que basta con recrear el manejador.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+
   function quitarLinea(key: string) {
     setLineas((prev) => prev.filter((l) => l.key !== key));
   }
 
-  async function onEnter() {
-    const valor = escaneo.trim();
+  /**
+   * Procesa un código. `codigoExterno` llega del lector de mano cuando el foco
+   * se ha perdido (alguien pulsó un botón): sin esto, la escucha global se
+   * llevaría el código a otra pantalla en mitad de una captura.
+   */
+  async function onEnter(codigoExterno?: string) {
+    const valor = (codigoExterno ?? escaneo).trim();
     if (!valor || busy) return;
 
     if (etapa === "cantidad") {
@@ -189,12 +207,22 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
 
     setBusy(true);
     try {
-      const res = await resolverEscaneo(valor);
-      if (!res) {
+      // `escanear` resuelve el código y deja constancia de la lectura. Esta
+      // es la pantalla donde más se escanea: dejarla fuera del registro
+      // vaciaba de sentido el panel de escaneos (SPEC §14.3.4).
+      const res = await escanear({
+        codigo: valor,
+        origen: "TECLADO",
+        proposito: "CAPTURA",
+        ruta: window.location.pathname,
+        ubicacion_contexto_id: linea.ubicacion_id || null,
+        dispositivo: navigator.userAgent,
+      });
+      if (!res.resuelto) {
         setError(`No se encontró «${valor}». Verifica el código o búscalo manualmente.`);
         return;
       }
-      aplicarResuelto(res);
+      aplicarResuelto(res.resuelto);
     } catch (e) {
       setError(mensajeError(e));
     } finally {

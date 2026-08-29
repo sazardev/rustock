@@ -22,53 +22,71 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-synthesis: none;
+  /* Sin resaltado azul del navegador al tocar en móvil: la retroalimentación
+     táctil la da el propio componente (:active), no el sistema operativo. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: var(--text-base--lh);
-  color: var(--color-gray-600);
-  background-color: var(--color-gray-50);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
+  letter-spacing: var(--tracking-normal);
+  color: var(--color-gray-700);
+  background-color: var(--color-surface);
+  /* Cifras de ancho fijo en toda la interfaz: las columnas numéricas se
+     alinean sin depender de la clase del componente. */
+  font-variant-numeric: tabular-nums;
 }
 
 ::selection {
   background-color: var(--color-blue-100);
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-gray-900);
+  text-wrap: balance;
+}
+
 h1 {
   font-size: var(--text-2xl);
   line-height: var(--text-2xl--lh);
-  font-weight: var(--fw-bold);
-  color: var(--color-gray-800);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
 }
 
 h2 {
-  font-size: var(--text-xl);
-  line-height: var(--text-xl--lh);
-  font-weight: var(--fw-semibold);
-  color: var(--color-gray-800);
-}
-
-h3 {
   font-size: var(--text-lg);
   line-height: var(--text-lg--lh);
   font-weight: var(--fw-semibold);
-  color: var(--color-gray-800);
+  letter-spacing: var(--tracking-snug);
+}
+
+h3 {
+  font-size: var(--text-base);
+  line-height: var(--text-base--lh);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-snug);
 }
 
 h4,
 h5,
 h6 {
-  font-size: var(--text-base);
-  line-height: var(--text-base--lh);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
   font-weight: var(--fw-semibold);
-  color: var(--color-gray-800);
 }
 
 a {
   color: var(--color-blue-500);
-  transition: color var(--duration-fast) ease;
+  text-decoration-color: var(--color-blue-200);
+  text-underline-offset: 0.18em;
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
 a:hover {
@@ -103,9 +121,14 @@ kbd {
   border-radius: var(--radius-sm);
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -122,4 +145,30 @@ kbd {
   background: var(--color-gray-300);
   border: 2px solid transparent;
   background-clip: padding-box;
+}
+
+/* Respeto global a la preferencia de movimiento reducido: el sistema es
+   animado por defecto, pero toda animación es un refuerzo, nunca el canal
+   principal de información (DESIGN §8.5). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Cambio de tema sin animación (ver `tema.ts`).
+   El tema llega del backend después del primer pintado; sin esta supresión,
+   cada elemento con `transition` animaría desde el valor por defecto de
+   `tokens.css` hasta el real, y en modo oscuro se vería toda la interfaz
+   pasando de blanco a oscuro. Cambiar de tema no es una interacción: se
+   aplica de golpe. */
+html[data-tema-aplicando] *,
+html[data-tema-aplicando] *::before,
+html[data-tema-aplicando] *::after {
+  transition: none !important;
 }

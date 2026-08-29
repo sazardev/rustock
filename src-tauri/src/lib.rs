@@ -1,7 +1,10 @@
 mod buscar;
 mod commands;
 mod db;
-mod domain;
+/// Público para que los ejemplos de verificación (`examples/`) puedan
+/// comprobar la codificación de etiquetas contra un lector externo sin pasar
+/// por el servidor. El resto de módulos siguen siendo internos.
+pub mod domain;
 mod error;
 mod importar;
 mod mapa;
@@ -53,7 +56,7 @@ pub fn run() {
             // Servidor HTTP local (127.0.0.1:1421): expone la misma lógica de
             // negocio para poder usar Rustock desde un navegador normal, sin
             // el puente IPC de la ventana de escritorio (ver src/server.rs).
-            server::iniciar(db.clone(), sesion.clone());
+            server::iniciar(db.clone());
 
             app.manage(db);
             app.manage(sesion);
@@ -97,8 +100,9 @@ fn ruta_base_de_datos() -> PathBuf {
 /// datos + el servidor HTTP local (`server.rs`, `127.0.0.1:1421`) sin
 /// inicializar GTK/WebKit ni crear ventana alguna. Pensado para entornos sin
 /// servidor X/Wayland funcional (WSL, CI) donde la ventana nativa no puede
-/// crearse y para el script `npm run tauri:web`. Misma lógica de negocio,
-/// mismos permisos, misma sesión en memoria que el modo escritorio.
+/// crearse y para el script `npm run tauri:web`. Misma lógica de negocio y
+/// mismos permisos que el modo escritorio; las sesiones, en cambio, son por
+/// cliente HTTP y viven en el registro del servidor (ver `sesion.rs`).
 pub fn run_web() {
     let db_path = ruta_base_de_datos();
     if let Some(dir) = db_path.parent() {
@@ -113,8 +117,7 @@ pub fn run_web() {
             seed::sembrar_si_vacio(&conn).expect("no se pudieron sembrar los datos de ejemplo");
         }
     }
-    let sesion = Arc::new(SesionState::default());
-    server::iniciar(db, sesion);
+    server::iniciar(db);
     println!(
         "[rustock-web] backend HTTP en 127.0.0.1:{} — Ctrl+C para detener",
         server::puerto_http()

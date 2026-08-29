@@ -797,6 +797,21 @@ fn aprobar_movimiento_en_tx(tx: &Connection, id: &str, by: &str) -> AppResult<()
         // Entradas y traslados: validar capacidad de destino (SPEC §5.4, §3.5).
         if let Some(dest) = &destino {
             validar_capacidad(tx, dest, &linea.producto_id, linea.cantidad)?;
+            // Reglas de negocio del cliente (SPEC §16): topes de peso, de
+            // cantidad, prohibiciones de categoría… Se evalúan aquí, en la
+            // aprobación y dentro de la misma transacción que mueve el saldo:
+            // comprobarlas antes dejaría una ventana en la que otro movimiento
+            // aprobado en paralelo llenaría el rack entre la comprobación y el
+            // apunte.
+            crate::repo::regla::exigir_cumplimiento(
+                tx,
+                &crate::repo::regla::LineaEntrante {
+                    producto_id: &linea.producto_id,
+                    lote_id: linea.lote_id.as_deref(),
+                    cantidad: linea.cantidad,
+                    ubicacion_destino: dest,
+                },
+            )?;
         }
 
         // Restricción de caja (SPEC §3.6): si la caja declara producto/lote,

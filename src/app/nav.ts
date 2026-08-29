@@ -5,7 +5,6 @@ export interface NavItem {
   label: string;
   href: string;
   icon: IconName;
-  end?: boolean;
   /** Breve descripción del módulo; se muestra en el tooltip del modo compacto. */
   descripcion?: string;
 }
@@ -56,7 +55,6 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Dashboard",
         href: PATH.dashboard,
         icon: "dashboard",
-        end: true,
         descripcion: "KPIs, movimientos recientes y alertas activas",
       },
       {
@@ -66,9 +64,21 @@ export const NAV_GROUPS: NavGroup[] = [
         descripcion: "Entradas, salidas, traslados y ajustes de stock",
       },
       {
+        label: "Escáner",
+        href: PATH.escanear,
+        icon: "codigoBarras",
+        descripcion: "Leer un código con la cámara o el lector de mano",
+      },
+      {
+        label: "Etiquetas",
+        href: PATH.etiquetas,
+        icon: "exportar",
+        descripcion: "Generar e imprimir códigos de barras y QR",
+      },
+      {
         label: "Captura rápida",
         href: "/movimientos/captura-recepcion",
-        icon: "codigoBarras",
+        icon: "escanear",
         descripcion: "Recepción y despacho guiados por escáner",
       },
       {
@@ -178,6 +188,12 @@ export const NAV_GROUPS: NavGroup[] = [
         descripcion: "Stock, movimientos, vencimientos y auditoría",
       },
       {
+        label: "Escaneos",
+        href: PATH.escaneos,
+        icon: "codigoBarras",
+        descripcion: "Quién escaneó qué, etiquetas rotas e intentos fuera de rol",
+      },
+      {
         label: "Historial",
         href: PATH.historial,
         icon: "historial",
@@ -199,6 +215,12 @@ export const NAV_GROUPS: NavGroup[] = [
         href: PATH.sucursales,
         icon: "ubicacion",
         descripcion: "Puntos de operación y su ubicación",
+      },
+      {
+        label: "Reglas de negocio",
+        href: PATH.reglas,
+        icon: "ajuste",
+        descripcion: "Topes de peso, límites por pasillo y prohibiciones propias",
       },
       {
         label: "Configuración",

@@ -792,18 +792,266 @@ pub fn buscar_producto_por_codigo_barras(
     })
 }
 
-/// Resuelve un código escaneado (tipo teclado) a una entidad del dominio para
-/// la captura rápida (SPEC §14.3). Consulta pura: el escaneo nunca crea datos.
+// ============ Escaneo (SPEC §14.3) ============
+
+/// Resuelve un código escaneado y deja constancia del intento.
+///
+/// Es la **única** puerta de entrada a una lectura: no existe ningún comando
+/// que resuelva un código sin dejar rastro, para que ninguna pantalla pueda
+/// escanear por la puerta de atrás y quedar fuera del panel (SPEC §14.3.4).
+///
+/// Exige el permiso propio `escaneo:usar` (no el de ver productos), y **graba
+/// el intento aunque el permiso lo niegue** — el intento denegado es justo el
+/// evento que interesa vigilar, y sería el único que no quedaría escrito si
+/// el permiso cortara antes de registrar.
 #[tauri::command]
-pub fn resolver_escaneo(
+pub fn escanear(
     db: State<'_, Arc<DbState>>,
     sesion: State<'_, Arc<SesionState>>,
-    codigo: String,
-) -> AppResult<Option<repo::catalogo::EscaneoResuelto>> {
-    con_auditoria!(db, sesion, "resolver_escaneo", {
+    entrada: repo::escaneo::EntradaEscaneo,
+) -> AppResult<repo::escaneo::ResultadoEscaneo> {
+    con_auditoria!(db, sesion, "escanear", {
+        let actor = sesion.usuario_id()?;
         let conn = db.conn();
-        puede(&conn, Some(&sesion.usuario_id()?), "producto", "ver")?;
-        repo::catalogo::resolver_escaneo(&conn, &codigo)
+        if let Err(e) = puede(&conn, Some(&actor), "escaneo", "usar") {
+            let motivo = e.to_string();
+            // El registro del intento no debe tapar el error real de permiso:
+            // si falla, se ignora y se devuelve la denegación igualmente.
+            let _ = repo::escaneo::registrar_denegado(&conn, &actor, &entrada, &motivo);
+            return Err(e);
+        }
+        repo::escaneo::escanear(&conn, &actor, &entrada)
+    })
+}
+
+/// Últimos eventos del registro de escaneos. Es dato de auditoría: exige
+/// `escaneo:ver`, que solo tienen GERENTE y ADMIN.
+#[tauri::command]
+pub fn listar_eventos_escaneo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    limite: Option<i64>,
+) -> AppResult<Vec<repo::escaneo::EventoEscaneo>> {
+    con_auditoria!(db, sesion, "listar_eventos_escaneo", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "escaneo", "ver")?;
+        repo::escaneo::listar_eventos(&conn, limite.unwrap_or(100))
+    })
+}
+
+/// Métricas del panel de escaneos. Auditoría: exige `escaneo:ver`.
+#[tauri::command]
+pub fn metricas_escaneo(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    dias: Option<i64>,
+) -> AppResult<repo::escaneo::MetricasEscaneo> {
+    con_auditoria!(db, sesion, "metricas_escaneo", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "escaneo", "ver")?;
+        repo::escaneo::metricas(&conn, dias.unwrap_or(30))
+    })
+}
+
+// ============ Reglas de negocio (SPEC §16) ============
+
+#[tauri::command]
+pub fn listar_reglas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<crate::domain::regla::Regla>> {
+    con_auditoria!(db, sesion, "listar_reglas", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "regla", "ver")?;
+        repo::regla::listar(&conn)
+    })
+}
+
+#[tauri::command]
+pub fn obtener_regla(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<Option<crate::domain::regla::Regla>> {
+    con_auditoria!(db, sesion, "obtener_regla", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "regla", "ver")?;
+        repo::regla::obtener(&conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn crear_regla(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    mut nueva: crate::domain::regla::NuevaRegla,
+) -> AppResult<crate::domain::regla::Regla> {
+    con_auditoria!(db, sesion, "crear_regla", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "regla", "crear")?;
+        nueva.created_by = Some(actor);
+        repo::regla::crear(&conn, &nueva)
+    })
+}
+
+#[tauri::command]
+pub fn editar_regla(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+    cambios: crate::domain::regla::NuevaRegla,
+) -> AppResult<crate::domain::regla::Regla> {
+    con_auditoria!(db, sesion, "editar_regla", {
+        let actor = sesion.usuario_id()?;
+        let conn = db.conn();
+        puede(&conn, Some(&actor), "regla", "editar")?;
+        repo::regla::editar(&conn, &id, &cambios, &actor)
+    })
+}
+
+#[tauri::command]
+pub fn eliminar_regla(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    id: String,
+) -> AppResult<()> {
+    con_auditoria!(db, sesion, "eliminar_regla", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "regla", "eliminar")?;
+        repo::regla::eliminar(&conn, &id)
+    })
+}
+
+/// Comprueba qué reglas incumpliría una línea **antes** de registrarla.
+///
+/// Sirve para avisar mientras se llena el formulario, en vez de dejar que la
+/// persona termine el movimiento y descubra al aprobar que no cabía.
+#[tauri::command]
+pub fn simular_reglas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    producto_id: String,
+    lote_id: Option<String>,
+    cantidad: i64,
+    ubicacion_destino: String,
+) -> AppResult<Vec<crate::domain::regla::Incumplimiento>> {
+    con_auditoria!(db, sesion, "simular_reglas", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "regla", "ver")?;
+        repo::regla::evaluar_entrada(
+            &conn,
+            &repo::regla::LineaEntrante {
+                producto_id: &producto_id,
+                lote_id: lote_id.as_deref(),
+                cantidad,
+                ubicacion_destino: &ubicacion_destino,
+            },
+        )
+    })
+}
+
+// ============ Etiquetas (SPEC §14.3.5) ============
+
+/// Genera las etiquetas imprimibles de un conjunto de entidades.
+///
+/// Imprimir la etiqueta de algo exige poder **verlo**: no es una acción nueva
+/// sobre la entidad, es una forma de leerla. Por eso el permiso que se pide es
+/// el `ver` del recurso correspondiente y no un permiso propio de impresión.
+#[tauri::command]
+pub fn generar_etiquetas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    peticion: repo::etiqueta::PeticionEtiquetas,
+) -> AppResult<Vec<crate::domain::etiqueta::Etiqueta>> {
+    con_auditoria!(db, sesion, "generar_etiquetas", {
+        let conn = db.conn();
+        let recurso = repo::etiqueta::recurso_de(&peticion.tipo)?;
+        puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+        repo::etiqueta::generar(&conn, &peticion)
+    })
+}
+
+/// Genera la tanda de etiquetas en el formato pedido (SVG, ZPL, EPL o PDF),
+/// lista para descargar o para enviar a la impresora.
+#[tauri::command]
+pub fn generar_tanda_etiquetas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    peticion: repo::etiqueta::PeticionEtiquetas,
+) -> AppResult<repo::etiqueta::TandaEtiquetas> {
+    con_auditoria!(db, sesion, "generar_tanda_etiquetas", {
+        let conn = db.conn();
+        let recurso = repo::etiqueta::recurso_de(&peticion.tipo)?;
+        puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+        repo::etiqueta::generar_tanda(&conn, &peticion)
+    })
+}
+
+/// Envía la tanda directamente a una impresora de red (puerto 9100).
+///
+/// El formato debe ser ZPL o EPL: son los lenguajes que una térmica entiende
+/// en crudo. Mandarle un PDF por ese puerto imprimiría el código fuente del
+/// PDF como texto, así que se rechaza antes de gastar una etiqueta.
+#[tauri::command]
+pub fn imprimir_etiquetas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    peticion: repo::etiqueta::PeticionEtiquetas,
+    destino: repo::impresora::DestinoImpresora,
+) -> AppResult<repo::impresora::ResultadoImpresion> {
+    use crate::domain::etiqueta::Formato;
+    con_auditoria!(db, sesion, "imprimir_etiquetas", {
+        let conn = db.conn();
+        let recurso = repo::etiqueta::recurso_de(&peticion.tipo)?;
+        puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+        if !matches!(peticion.formato, Formato::Zpl | Formato::Epl) {
+            return Err(crate::error::AppError::CampoInvalido(
+                "formato para impresión directa (una impresora térmica entiende ZPL o EPL, no PDF ni SVG)".into(),
+            ));
+        }
+        let tanda = repo::etiqueta::generar_tanda(&conn, &peticion)?;
+        use base64::Engine as _;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(&tanda.contenido_base64)
+            .unwrap_or_default();
+        repo::impresora::enviar(&destino, &bytes)
+    })
+}
+
+/// Comprueba que una impresora de red responde, sin gastar etiqueta.
+#[tauri::command]
+pub fn probar_impresora(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    destino: repo::impresora::DestinoImpresora,
+) -> AppResult<repo::impresora::ResultadoImpresion> {
+    con_auditoria!(db, sesion, "probar_impresora", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
+        repo::impresora::probar(&destino)
+    })
+}
+
+/// Entidades de un tipo que tienen código imprimible, para el selector.
+#[tauri::command]
+pub fn listar_etiquetables(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    tipo: String,
+    busqueda: Option<String>,
+    limite: Option<i64>,
+) -> AppResult<Vec<repo::etiqueta::Etiquetable>> {
+    con_auditoria!(db, sesion, "listar_etiquetables", {
+        let conn = db.conn();
+        let recurso = repo::etiqueta::recurso_de(&tipo)?;
+        puede(&conn, Some(&sesion.usuario_id()?), recurso, "ver")?;
+        repo::etiqueta::listar_etiquetables(
+            &conn,
+            &tipo,
+            busqueda.as_deref(),
+            limite.unwrap_or(100),
+        )
     })
 }
 
@@ -2270,7 +2518,20 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         editar_producto,
         desactivar_producto,
         buscar_producto_por_codigo_barras,
-        resolver_escaneo,
+        escanear,
+        listar_eventos_escaneo,
+        metricas_escaneo,
+        listar_reglas,
+        obtener_regla,
+        crear_regla,
+        editar_regla,
+        eliminar_regla,
+        simular_reglas,
+        generar_etiquetas,
+        generar_tanda_etiquetas,
+        imprimir_etiquetas,
+        probar_impresora,
+        listar_etiquetables,
         importar_datos,
         listar_lotes,
         crear_lote,

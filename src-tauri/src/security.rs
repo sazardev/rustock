@@ -49,12 +49,24 @@ pub fn puede(
     }
 }
 
-fn lector(_recurso: &str, accion: &str) -> bool {
+fn lector(recurso: &str, accion: &str) -> bool {
+    // El registro de escaneos es auditoría, no catálogo: un LECTOR ve datos de
+    // negocio, no quién escaneó qué. Y `escaneo:usar` es una acción de piso,
+    // así que tampoco le corresponde — un intento suyo queda registrado como
+    // DENEGADO, que es justo la señal que interesa vigilar (SPEC §14.3).
+    if recurso == "escaneo" {
+        return false;
+    }
     accion == "ver"
 }
 
 fn operador(recurso: &str, accion: &str) -> bool {
     match (recurso, accion) {
+        // El escáner es la herramienta del operador en el piso del almacén,
+        // pero su registro es auditoría: se deniega explícitamente porque el
+        // `_ => accion == "ver"` de abajo lo concedería sin querer.
+        ("escaneo", "usar") => true,
+        ("escaneo", _) => false,
         ("movimiento", "crear") => true,
         ("entrada", "crear") => true,
         ("salida", "crear") => true,
@@ -71,6 +83,9 @@ fn operador(recurso: &str, accion: &str) -> bool {
 
 fn encargado(recurso: &str, accion: &str) -> bool {
     match (recurso, accion) {
+        // Igual que el operador: usa el escáner, no audita su registro.
+        ("escaneo", "usar") => true,
+        ("escaneo", _) => false,
         ("movimiento", "crear") | ("movimiento", "aprobar") => true,
         ("entrada", "crear") | ("entrada", "aprobar") => true,
         ("salida", "crear") | ("salida", "aprobar") => true,
@@ -90,6 +105,11 @@ fn encargado(recurso: &str, accion: &str) -> bool {
 
 fn gerente(recurso: &str, accion: &str) -> bool {
     match (recurso, accion) {
+        // El gerente además audita: `escaneo:ver` abre el registro de eventos,
+        // que es dato de auditoría y no de operación.
+        ("escaneo", "usar") | ("escaneo", "ver") => true,
+        // Las reglas de negocio las define quien responde de la operación.
+        ("regla", "crear") | ("regla", "editar") | ("regla", "eliminar") => true,
         ("movimiento", "crear") | ("movimiento", "aprobar") | ("movimiento", "anular") => true,
         ("entrada", "crear") | ("entrada", "aprobar") | ("entrada", "anular") => true,
         ("salida", "crear") | ("salida", "aprobar") | ("salida", "anular") => true,
@@ -167,6 +187,8 @@ pub fn seed_roles(conn: &Connection) -> AppResult<()> {
         R::Comentario,
         R::Reporte,
         R::Configuracion,
+        R::Escaneo,
+        R::Regla,
     ];
     let acciones = [
         A::Ver,
@@ -180,6 +202,7 @@ pub fn seed_roles(conn: &Connection) -> AppResult<()> {
         A::Ejecutar,
         A::Cerrar,
         A::Asignar,
+        A::Usar,
     ];
     for r in &recursos {
         for a in &acciones {

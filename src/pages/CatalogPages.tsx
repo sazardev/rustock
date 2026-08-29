@@ -12,7 +12,13 @@ import {
 } from "../shared/types";
 import { crearComentario, listarComentarios } from "../shared/backend";
 import { mensajeError } from "../shared/format";
-import { almacenMapa, catalogoDetalle, catalogoLista } from "../app/route-paths";
+import {
+  TIPO_ETIQUETA_POR_SLUG,
+  almacenMapa,
+  catalogoDetalle,
+  catalogoLista,
+  etiquetasDe,
+} from "../app/route-paths";
 import { ArbolAlmacen } from "./ArbolAlmacen";
 import { MapaContextoCard } from "./MapaContextoCard";
 import { ContenidoInventarioCard } from "./ContenidoInventarioCard";
@@ -230,6 +236,15 @@ export function CatalogDetailPage<T extends { id: string }>({
             {slug === "almacenes" ? (
               <ButtonLink variant="secondary" icon="ubicacion" href={almacenMapa(id)}>
                 Ver mapa
+              </ButtonLink>
+            ) : null}
+            {TIPO_ETIQUETA_POR_SLUG[slug] ? (
+              <ButtonLink
+                variant="secondary"
+                icon="codigoBarras"
+                href={etiquetasDe(TIPO_ETIQUETA_POR_SLUG[slug], [id])}
+              >
+                Etiqueta
               </ButtonLink>
             ) : null}
             {adapter.duplicarHref ? (

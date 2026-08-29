@@ -89,6 +89,7 @@ export function ProductoFormPage() {
   const esEdicion = Boolean(id);
   const [searchParams] = useSearchParams();
   const duplicarDe = searchParams.get("duplicarDe");
+  const codigoEscaneado = esEdicion ? null : searchParams.get("codigo");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +128,13 @@ export function ProductoFormPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(esquema),
-    defaultValues: VALORES_INICIALES,
+    // `?codigo=` llega del escáner cuando se leyó un código que no existe en el
+    // catálogo (SPEC §14.3): se precarga el campo para no obligar a teclear a
+    // mano lo que la máquina acaba de leer. El alta sigue haciéndola una
+    // persona en este formulario — el escaneo nunca crea nada por sí solo.
+    defaultValues: codigoEscaneado
+      ? { ...VALORES_INICIALES, codigo_barras: codigoEscaneado }
+      : VALORES_INICIALES,
   });
 
   // Conserva el borrador al salir a crear UOM/categoría (creación rápida) y
@@ -409,7 +416,13 @@ export function ProductoFormPage() {
                   ) : null}
                 </div>
               </Field>
-              <Field label="Código de barras" htmlFor="codigo_barras">
+              <Field
+                label="Código de barras"
+                htmlFor="codigo_barras"
+                help={
+                  codigoEscaneado ? "Precargado desde el código que acabas de escanear." : undefined
+                }
+              >
                 <Input id="codigo_barras" code {...register("codigo_barras")} />
               </Field>
               <Field label="Peso unitario (kg)" htmlFor="peso_unitario">

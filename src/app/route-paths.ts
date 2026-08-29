@@ -1,7 +1,13 @@
 export const PATH = {
+  landing: "/",
   login: "/login",
   configurarAdministrador: "/configurar-administrador",
   dashboard: "/dashboard",
+  escanear: "/escanear",
+  etiquetas: "/etiquetas",
+  escaneos: "/escaneos",
+  reglas: "/reglas",
+  reglaNueva: "/reglas/nueva",
   movimientos: "/movimientos",
   movimientosNuevo: "/movimientos/nuevo",
   inventario: "/inventario",
@@ -71,6 +77,32 @@ export function catalogoLista(slug: string): string {
 
 export function catalogoNuevo(slug: string): string {
   return `/${slug}/nuevo`;
+}
+
+/**
+ * Catálogos que se pueden etiquetar, y a qué tipo de etiqueta corresponden.
+ * Es el mismo conjunto que resuelve el escáner: se imprime lo que se lee.
+ */
+export const TIPO_ETIQUETA_POR_SLUG: Record<string, string> = {
+  productos: "PRODUCTO",
+  ubicaciones: "UBICACION",
+  lotes: "LOTE",
+  cajas: "CAJA",
+};
+
+/**
+ * Pantalla de etiquetas ya preparada con lo que se quiere imprimir.
+ *
+ * Permite llamarla desde donde esté el usuario —la ficha de un producto, un
+ * listado con varias filas marcadas— en vez de obligarle a ir a otra pantalla
+ * y volver a buscar allí lo que ya tenía delante.
+ */
+export function etiquetasDe(tipo: string, ids: string[]): string {
+  return `${PATH.etiquetas}?tipo=${tipo}&ids=${ids.join(",")}`;
+}
+
+export function reglaEditar(id: string): string {
+  return `/reglas/${id}/editar`;
 }
 
 export function catalogoDetalle(slug: string, id: string): string {

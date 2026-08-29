@@ -632,6 +632,259 @@ export interface EscaneoResuelto {
   controla_lote?: boolean;
 }
 
+/** Origen físico de la lectura. */
+export type OrigenEscaneo = "CAMARA" | "TECLADO" | "MANUAL";
+
+/** Para qué se está escaneando: decide qué ofrece la pantalla al resolver. */
+export type PropositoEscaneo = "CONSULTA" | "CAPTURA" | "INVENTARIO" | "ETIQUETA";
+
+/** Desenlace de una lectura (SPEC §14.3). */
+export type ResultadoEscaneoTipo = "RESUELTO" | "NO_ENCONTRADO" | "DENEGADO";
+
+/** Lo que la interfaz envía al escanear: el código y su contexto. */
+export interface EntradaEscaneo {
+  codigo: string;
+  origen: OrigenEscaneo;
+  formato?: string | null;
+  proposito: PropositoEscaneo;
+  ruta?: string | null;
+  ubicacion_contexto_id?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+  dispositivo?: string | null;
+}
+
+/** Respuesta del backend a una lectura, con el evento ya registrado. */
+export interface ResultadoEscaneo {
+  evento_id: string;
+  resultado: ResultadoEscaneoTipo;
+  motivo: string | null;
+  resuelto: EscaneoResuelto | null;
+  /** Lecturas fallidas seguidas del usuario en los últimos 10 minutos. */
+  fallos_recientes: number;
+  /** Qué se puede hacer ahora, según lo leído y los permisos de quien lee. */
+  acciones: AccionEscaneo[];
+}
+
+/** Una fila del registro de escaneos (auditoría; exige `escaneo:ver`). */
+export interface EventoEscaneo {
+  id: string;
+  codigo: string;
+  resultado: ResultadoEscaneoTipo;
+  motivo: string | null;
+  tipo_entidad: string | null;
+  entidad_id: string | null;
+  entidad_etiqueta: string | null;
+  origen: OrigenEscaneo;
+  formato: string | null;
+  proposito: PropositoEscaneo;
+  ruta: string | null;
+  usuario_id: string;
+  usuario_nombre: string | null;
+  rol_codigo: string;
+  ubicacion_contexto_id: string | null;
+  duracion_ms: number | null;
+  created_at: string;
+}
+
+/** Acción ofrecida tras una lectura. La decide el backend, con los permisos. */
+export interface AccionEscaneo {
+  clave: string;
+  etiqueta: string;
+  href: string;
+  /** La acción sugerida para este resultado y propósito. */
+  principal: boolean;
+}
+
+/** Código que falla repetidamente: casi siempre una etiqueta a reimprimir. */
+export interface CodigoProblematico {
+  codigo: string;
+  intentos: number;
+  ultimo_intento: string;
+  /** Personas distintas que han tropezado con él. */
+  personas: number;
+}
+
+export interface ActividadUsuarioEscaneo {
+  usuario_id: string;
+  usuario_nombre: string | null;
+  rol_codigo: string;
+  total: number;
+  resueltos: number;
+  no_encontrados: number;
+  denegados: number;
+  acierto: number;
+}
+
+export interface IntentoDenegado {
+  usuario_id: string;
+  usuario_nombre: string | null;
+  rol_codigo: string;
+  intentos: number;
+  ultimo_intento: string;
+}
+
+export interface VolumenHora {
+  hora: number;
+  total: number;
+}
+
+/** Todo lo que muestra el panel de escaneos, resuelto en el backend. */
+export interface MetricasEscaneo {
+  total: number;
+  resueltos: number;
+  no_encontrados: number;
+  denegados: number;
+  acierto: number;
+  por_camara: number;
+  por_teclado: number;
+  duracion_media_ms: number;
+  codigos_problematicos: CodigoProblematico[];
+  por_usuario: ActividadUsuarioEscaneo[];
+  denegados_por_usuario: IntentoDenegado[];
+  por_hora: VolumenHora[];
+}
+
+/** Simbología de una etiqueta imprimible (SPEC §14.3.5). */
+export type Simbologia = "CODE128" | "QR";
+
+/** Tipos de entidad que se pueden etiquetar — los mismos que resuelve el escáner. */
+export type TipoEtiqueta = "PRODUCTO" | "UBICACION" | "LOTE" | "CAJA";
+
+/** Entidad candidata a etiquetar, para el selector. */
+export interface Etiquetable {
+  id: string;
+  codigo: string;
+  nombre: string;
+}
+
+// ============ Reglas de negocio (SPEC §16) ============
+
+/** Nivel del árbol físico donde aplica una regla. */
+export type AmbitoRegla = "ALMACEN" | "ZONA" | "PASILLO" | "RACK" | "SECCION" | "UBICACION";
+
+/** Qué limita o prohíbe la regla. */
+export type TipoRegla =
+  | "PESO_MAXIMO"
+  | "CANTIDAD_MAXIMA"
+  | "VOLUMEN_MAXIMO"
+  | "PRODUCTOS_DISTINTOS_MAXIMO"
+  | "CATEGORIA_PROHIBIDA"
+  | "CATEGORIA_EXCLUSIVA"
+  | "PRODUCTO_PROHIBIDO"
+  | "REQUIERE_LOTE"
+  | "PROHIBIR_VENCIDO";
+
+/** Qué ocurre al incumplirla. */
+export type SeveridadRegla = "BLOQUEA" | "ADVIERTE";
+
+export interface Regla {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  ambito: AmbitoRegla;
+  /** `null` = aplica a todos los elementos de ese ámbito. */
+  ambito_id: string | null;
+  ambito_etiqueta: string | null;
+  tipo: TipoRegla;
+  valor_numerico: number | null;
+  valor_referencia: string | null;
+  referencia_etiqueta: string | null;
+  severidad: SeveridadRegla;
+  mensaje: string | null;
+  activa: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+}
+
+export interface NuevaRegla {
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  ambito: AmbitoRegla;
+  ambito_id?: string | null;
+  tipo: TipoRegla;
+  valor_numerico?: number | null;
+  valor_referencia?: string | null;
+  severidad: SeveridadRegla;
+  mensaje?: string | null;
+  activa: boolean;
+}
+
+/** Regla incumplida por una línea concreta. */
+export interface Incumplimiento {
+  regla_id: string;
+  regla_codigo: string;
+  regla_nombre: string;
+  severidad: SeveridadRegla;
+  mensaje: string;
+  ubicacion_codigo: string;
+  valor_resultante: number | null;
+  limite: number | null;
+}
+
+/** Formato de salida de una tanda de etiquetas. */
+export type FormatoEtiqueta = "SVG" | "ZPL" | "EPL" | "PDF";
+
+/** Resolución de la impresora. ZPL y EPL miden en puntos, no en milímetros. */
+export type DpiImpresora = "d203" | "d300" | "d600";
+
+/** Disposición sobre el papel. */
+export type DisposicionEtiqueta = "rollo" | "hoja";
+
+/** Impresora de etiquetas conectada por red (puerto 9100). */
+export interface DestinoImpresora {
+  host: string;
+  puerto: number;
+}
+
+export interface ResultadoImpresion {
+  enviado: boolean;
+  bytes: number;
+  destino: string;
+}
+
+/** Tanda lista para descargar o enviar a la impresora. */
+export interface TandaEtiquetas {
+  etiquetas: Etiqueta[];
+  formato: FormatoEtiqueta;
+  mime: string;
+  extension: string;
+  contenido_base64: string;
+  nombre_archivo: string;
+}
+
+/** Petición de impresión. Las medidas son milímetros reales sobre el papel. */
+export interface PeticionEtiquetas {
+  tipo: TipoEtiqueta;
+  ids: string[];
+  simbologia: Simbologia;
+  ancho_mm: number;
+  alto_mm: number;
+  formato?: FormatoEtiqueta;
+  dpi?: DpiImpresora;
+  disposicion?: DisposicionEtiqueta;
+}
+
+/** Etiqueta generada por el backend: SVG listo para imprimir. */
+export interface Etiqueta {
+  tipo: string;
+  entidad_id: string;
+  /** El código impreso — exactamente lo que leerá el escáner. */
+  codigo: string;
+  titulo: string;
+  subtitulo: string | null;
+  simbologia: string;
+  svg: string;
+  /** Ancho de la barra estrecha en mm (solo Code128). Decide si se podrá leer. */
+  modulo_mm: number | null;
+  /** Aviso de legibilidad cuando las barras quedan demasiado finas. */
+  advertencia: string | null;
+}
+
 /** Resultado de una fila importada (importación masiva). */
 export interface ResultadoImportacion {
   fila: number;

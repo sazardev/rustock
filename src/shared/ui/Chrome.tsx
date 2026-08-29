@@ -5,7 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { Link as RouterLink, NavLink } from "react-router";
+import { Link as RouterLink, useLocation } from "react-router";
 import { cn } from "../lib/cn";
 import { Icon, type IconName } from "./Icon";
 
@@ -47,6 +47,32 @@ export function AlertsIndicator({
       aria-label={`${count} alertas activas`}
     >
       {content}
+    </RouterLink>
+  );
+}
+
+export interface TopbarScanProps {
+  href?: string;
+  className?: string;
+}
+
+/**
+ * Acceso al escáner desde cualquier pantalla (SPEC §14.3).
+ *
+ * Vive en la barra superior porque escanear no pertenece a ningún módulo: se
+ * hace en medio de cualquier tarea, con el teléfono en una mano y la caja en
+ * la otra. Solo se muestra a quien tiene `escaneo:usar` — a un LECTOR no se le
+ * ofrece un botón que le va a ser denegado.
+ */
+export function TopbarScan({ href = "/escanear", className }: TopbarScanProps) {
+  return (
+    <RouterLink
+      to={href}
+      className={cn("topbar__alerts", className)}
+      aria-label="Escanear un código"
+      title="Escanear un código"
+    >
+      <Icon name="codigoBarras" size={16} aria-hidden="true" />
     </RouterLink>
   );
 }
@@ -129,7 +155,6 @@ export interface SidebarItem {
   label: string;
   href: string;
   icon: IconName;
-  end?: boolean;
   /** Breve descripción del módulo; se muestra en el tooltip del modo compacto. */
   descripcion?: string;
 }
@@ -160,10 +185,13 @@ interface TooltipPos {
 function SidebarNavItem({
   item,
   collapsed,
+  activo,
   onNavigate,
 }: {
   item: SidebarItem;
   collapsed: boolean;
+  /** Lo decide el Sidebar con la regla del prefijo más largo (ver nav.ts). */
+  activo: boolean;
   onNavigate?: () => void;
 }) {
   const tipId = useId();
@@ -195,14 +223,14 @@ function SidebarNavItem({
   const tipStyle = tooltip ? { left: tooltip.x, top: tooltip.y } : undefined;
 
   return (
-    <NavLink
+    <RouterLink
       to={item.href}
-      end={item.end}
       onPointerEnter={showTooltip}
       onPointerLeave={hideTooltip}
       onFocus={showTooltip}
       onBlur={hideTooltip}
-      className={({ isActive }) => cn("sidebar__item", isActive && "sidebar__item--active")}
+      className={cn("sidebar__item", activo && "sidebar__item--active")}
+      aria-current={activo ? "page" : undefined}
       onClick={onNavigate}
       aria-label={collapsed ? item.label : undefined}
       aria-describedby={collapsed && tooltip ? tipId : undefined}
@@ -219,11 +247,43 @@ function SidebarNavItem({
           ) : null}
         </span>
       ) : null}
-    </NavLink>
+    </RouterLink>
   );
 }
 
+/**
+ * Resuelve qué ítem de navegación corresponde a una ruta, con la regla del
+ * **prefijo más largo**.
+ *
+ * Marcar activo por prefijo simple basta mientras ningún módulo cuelgue de
+ * otro: `/movimientos/123` debe encender "Movimientos". Pero "Captura rápida"
+ * vive en `/movimientos/captura-recepcion`, y el prefijo simple encendía los
+ * dos a la vez. Aquí gana el ítem cuyo href es el prefijo más específico de la
+ * ruta actual — que es siempre el módulo en el que realmente está el usuario.
+ *
+ * Devuelve el href ganador, o `null` si la ruta no pertenece a ningún ítem.
+ */
+export function hrefActivo(pathname: string, hrefs: string[]): string | null {
+  let ganador: string | null = null;
+  for (const href of hrefs) {
+    const coincide = pathname === href || pathname.startsWith(`${href}/`);
+    if (coincide && (ganador === null || href.length > ganador.length)) {
+      ganador = href;
+    }
+  }
+  return ganador;
+}
+
 export function Sidebar({ groups, onNavigate, collapsed = false, className }: SidebarProps) {
+  const { pathname } = useLocation();
+  // Un solo ítem encendido por ruta: el del prefijo más específico. Sin esto,
+  // un módulo que cuelga de otro (Captura rápida bajo /movimientos) encendería
+  // también a su padre.
+  const activo = hrefActivo(
+    pathname,
+    groups.flatMap((grupo) => grupo.items.map((item) => item.href)),
+  );
+
   return (
     <nav
       className={cn("sidebar", collapsed && "sidebar--collapsed", className)}
@@ -238,6 +298,7 @@ export function Sidebar({ groups, onNavigate, collapsed = false, className }: Si
               key={item.href}
               item={item}
               collapsed={collapsed}
+              activo={item.href === activo}
               onNavigate={onNavigate}
             />
           ))}

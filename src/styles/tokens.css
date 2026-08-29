@@ -77,6 +77,15 @@
   --text-xl--lh: 1.75rem;
   --text-2xl: 1.75rem;
   --text-2xl--lh: 2.25rem;
+  --text-3xl: 2.125rem;
+  --text-3xl--lh: 2.5rem;
+
+  /* Interletraje — los títulos se cierran, los micro-textos se abren */
+  --tracking-tight: -0.022em;
+  --tracking-snug: -0.012em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-caps: 0.06em;
 
   --fw-regular: 400;
   --fw-medium: 500;
@@ -88,10 +97,29 @@
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
+  --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+  --space-20: 5rem;
+
+  /* Ritmo de página — el aire es el separador principal del sistema (DESIGN §3.3).
+     Se adapta por breakpoint en responsive.css; nunca se hardcodea un padding
+     de página en un componente. */
+  --page-padding-x: var(--space-8);
+  --page-padding-y: var(--space-8);
+  --page-gap: var(--space-8);
+  --section-gap: var(--space-6);
+  --stack-gap: var(--space-4);
+
+  /* Zonas seguras del dispositivo (notch, barra de gestos, ventana Tauri).
+     Siempre se suman al padding del shell — nunca se asume 0. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -119,12 +147,17 @@
   --size-sm: 2rem;
   --size-md: 2.5rem;
   --size-lg: 3rem;
-  --width-sidebar: 16rem;
+  --width-sidebar: 15rem;
   --width-sidebar-compact: 4rem;
-  --width-max-content: 72rem;
+  --width-max-content: 78rem;
+  --width-prose: 46rem;
+  --control-height-sm: 1.75rem;
+  --control-height: 2.125rem;
+  --control-height-lg: 2.5rem;
+  --tap-target: 2.75rem;
   --width-form: 36rem;
   --width-detail-column: 18rem;
-  --topbar-height: 3.5rem;
+  --topbar-height: 3rem;
 
   --bp-sm: 40rem;
   --bp-md: 48rem;
@@ -137,8 +170,14 @@
   --z-tooltip: 250;
   --z-toast: 300;
 
+  --duration-instant: 90ms;
   --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 380ms;
+  --duration-page: 260ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --transition:
     background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard),
     color 150ms var(--ease-standard), opacity 150ms var(--ease-standard),
@@ -146,6 +185,8 @@
   --transition-elevate:
     background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard),
     box-shadow 180ms var(--ease-standard), transform 180ms var(--ease-standard);
+
+  --transition-transform: transform var(--duration-base) var(--ease-out);
 
   --focus-ring-width: 2px;
   --focus-ring-color: var(--color-blue-300);

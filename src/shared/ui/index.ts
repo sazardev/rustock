@@ -1,3 +1,5 @@
+export { AvisoSistema } from "./AvisoSistema";
+
 export { Icon, ICON_MAP } from "./Icon";
 export type { IconName, IconProps } from "./Icon";
 
@@ -24,6 +26,18 @@ export type { FieldProps } from "./Field";
 
 export { Input } from "./Input";
 export type { InputProps } from "./Input";
+
+export { PasswordInput } from "./PasswordInput";
+export type { PasswordInputProps } from "./PasswordInput";
+
+export { AuthShell } from "./AuthShell";
+export type { AuthShellProps } from "./AuthShell";
+
+export { DatePicker } from "./DatePicker";
+export type { DatePickerProps } from "./DatePicker";
+
+export { TimePicker, ColumnasHora } from "./TimePicker";
+export type { TimePickerProps, ColumnasHoraProps } from "./TimePicker";
 
 export { Select } from "./Select";
 export type { SelectProps, SelectOption } from "./Select";
@@ -81,6 +95,7 @@ export type { LogoMarkProps } from "./LogoMark";
 
 export {
   AlertsIndicator,
+  TopbarScan,
   TopbarUser,
   Breadcrumbs,
   Sidebar,
@@ -89,6 +104,7 @@ export {
 } from "./Chrome";
 export type {
   AlertsIndicatorProps,
+  TopbarScanProps,
   TopbarUserProps,
   BreadcrumbsProps,
   SidebarItem,

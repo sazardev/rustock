@@ -7,7 +7,7 @@ import { PATH } from "../app/route-paths";
 import { Seo } from "../shared/seo";
 import * as backend from "../shared/backend";
 import { useSession } from "../shared/session";
-import { Brand, Button, Card, ErrorPanel, Field, Input, Link, Text } from "../shared/ui";
+import { AuthShell, Button, ErrorPanel, Field, Input, Link, PasswordInput } from "../shared/ui";
 
 const esquema = z
   .object({
@@ -61,92 +61,74 @@ export function BootstrapAdminPage() {
         title="Configurar administrador — Rustock"
         description="Primer arranque de Rustock: crea el administrador y toma el control de tu almacén."
       />
-      <div className="auth-shell">
-        <div className="auth-shell__panel">
-          <div className="auth-shell__brand">
-            <Brand name="Rustock" href={PATH.login} />
-          </div>
-          <Card title="Configurar el administrador">
-            <Card.Body>
-              <Text as="p" size="sm" color="muted" className="mb-4">
-                Crea el usuario administrador inicial de esta instalación. Si ya existe uno, este
-                formulario no hace nada e inicia sesión con las credenciales indicadas.
-              </Text>
-              <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <Field
-                  label="Usuario"
-                  htmlFor="nombre_usuario"
-                  required
-                  error={errors.nombre_usuario?.message}
-                >
-                  <Input
-                    id="nombre_usuario"
-                    autoComplete="username"
-                    {...register("nombre_usuario")}
-                  />
-                </Field>
-                <Field
-                  label="Nombre completo"
-                  htmlFor="nombre_completo"
-                  required
-                  error={errors.nombre_completo?.message}
-                >
-                  <Input id="nombre_completo" {...register("nombre_completo")} />
-                </Field>
-                <Field
-                  label="Contraseña"
-                  htmlFor="password"
-                  required
-                  error={errors.password?.message}
-                >
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    {...register("password")}
-                  />
-                </Field>
-                <Field
-                  label="Confirmar contraseña"
-                  htmlFor="confirmar_password"
-                  required
-                  error={errors.confirmar_password?.message}
-                >
-                  <Input
-                    id="confirmar_password"
-                    type="password"
-                    autoComplete="new-password"
-                    {...register("confirmar_password")}
-                  />
-                </Field>
+      <AuthShell
+        marcaHref={PATH.landing}
+        titulo="Configurar el administrador"
+        descripcion="Crea el usuario administrador de esta instalación. Si ya existe uno, este formulario no lo altera e inicia sesión con las credenciales indicadas."
+        pie={<Link href={PATH.login}>Volver a iniciar sesión</Link>}
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="form-stack" noValidate>
+          <Field
+            label="Usuario"
+            htmlFor="nombre_usuario"
+            required
+            error={errors.nombre_usuario?.message}
+          >
+            <Input
+              id="nombre_usuario"
+              autoComplete="username"
+              autoFocus
+              {...register("nombre_usuario")}
+            />
+          </Field>
 
-                {error ? (
-                  <ErrorPanel title="No se pudo crear el administrador" className="mt-4">
-                    {error}
-                  </ErrorPanel>
-                ) : null}
+          <Field
+            label="Nombre completo"
+            htmlFor="nombre_completo"
+            required
+            error={errors.nombre_completo?.message}
+          >
+            <Input id="nombre_completo" autoComplete="name" {...register("nombre_completo")} />
+          </Field>
 
-                <div className="mt-6">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={isSubmitting}
-                    className="w-full"
-                  >
-                    {isSubmitting ? "Creando…" : "Crear administrador e ingresar"}
-                  </Button>
-                </div>
-              </form>
-            </Card.Body>
-          </Card>
+          <Field
+            label="Contraseña"
+            htmlFor="password"
+            required
+            help="Mínimo 8 caracteres."
+            error={errors.password?.message}
+          >
+            <PasswordInput id="password" autoComplete="new-password" {...register("password")} />
+          </Field>
 
-          <div className="mt-4 text-center">
-            <Text as="p" size="sm" color="muted">
-              <Link href={PATH.login}>Volver a iniciar sesión</Link>
-            </Text>
-          </div>
-        </div>
-      </div>
+          <Field
+            label="Confirmar contraseña"
+            htmlFor="confirmar_password"
+            required
+            error={errors.confirmar_password?.message}
+          >
+            <PasswordInput
+              id="confirmar_password"
+              autoComplete="new-password"
+              {...register("confirmar_password")}
+            />
+          </Field>
+
+          {error ? (
+            <ErrorPanel title="No se pudo crear el administrador">{error}</ErrorPanel>
+          ) : null}
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting ? "Creando…" : "Crear administrador e ingresar"}
+          </Button>
+        </form>
+      </AuthShell>
     </>
   );
 }

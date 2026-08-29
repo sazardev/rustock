@@ -1,3 +1,41 @@
+/* ============ Ritmo adaptativo ============
+ * El aire de la página no lo decide cada pantalla: se redefine aquí, una
+ * sola vez, y todas las páginas lo heredan por token (DESIGN §3.3). En
+ * pantallas pequeñas el contenido gana ancho; en grandes, respiro. */
+@media (max-width: 47.99rem) {
+  :root {
+    --page-padding-x: var(--space-4);
+    --page-padding-y: var(--space-5);
+    --page-gap: var(--space-5);
+    --section-gap: var(--space-4);
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  :root {
+    --page-padding-x: var(--space-6);
+    --page-padding-y: var(--space-6);
+    --page-gap: var(--space-6);
+  }
+}
+
+@media (min-width: 96rem) {
+  :root {
+    --page-padding-x: var(--space-12);
+    --page-padding-y: var(--space-10);
+    --page-gap: var(--space-10);
+  }
+}
+
+/* Entrada gruesa (dedo, lápiz): todo lo pulsable alcanza el destino mínimo
+   recomendado, sin cambiar la densidad en escritorio (DESIGN §10). */
+@media (pointer: coarse) {
+  :root {
+    --control-height: 2.5rem;
+    --control-height-sm: 2.125rem;
+  }
+}
+
 .show-sm,
 .show-md,
 .show-lg,

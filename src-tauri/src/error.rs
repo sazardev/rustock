@@ -47,6 +47,9 @@ pub enum AppError {
     #[error("No se puede desactivar {0} porque tiene saldo > 0")]
     DesactivarConSaldo(&'static str),
 
+    #[error("Regla de negocio '{regla}': {detalle}")]
+    ReglaIncumplida { regla: String, detalle: String },
+
     #[error("La ubicación '{0}' supera su capacidad máxima")]
     CapacidadExcedida(String),
 

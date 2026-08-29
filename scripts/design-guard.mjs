@@ -41,7 +41,11 @@ const SHADOW_RE = /box-shadow:\s*([^;]+)/g;
 const GRADIENT_RE = /(linear|radial|conic)-gradient\s*\(/;
 const FILTER_BLUR_RE = /(?<!backdrop-)filter\s*:\s*[^;]*blur\s*\(/;
 const BACKDROP_BLUR_RE = /backdrop-filter\s*:\s*[^;]*blur\s*\(/;
-const NATIVE_DIALOG_RE = /\b(alert|confirm|prompt)\s*\(/;
+// Ventanas nativas de bloqueo: `alert(...)`, `confirm(...)`, `prompt(...)` y
+// sus formas `window.*`. Se excluyen los métodos homónimos de otros objetos
+// (p. ej. `evento.prompt()` del evento de instalación PWA), que no abren una
+// ventana modal del navegador.
+const NATIVE_DIALOG_RE = /(?<![.\w$])(alert|confirm|prompt)\s*\(|\bwindow\.(alert|confirm|prompt)\s*\(/;
 const FONT_RE = /font-family\s*:\s*[^;]+/g;
 const LUCIDE_IMPORT_RE = /from\s+["']lucide-react["']/;
 const COLOR_LITERAL_RE =

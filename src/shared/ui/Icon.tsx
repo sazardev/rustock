@@ -13,9 +13,11 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  CloudOff,
   Copy,
   Download,
   Eye,
+  EyeOff,
   FileText,
   Filter,
   FolderTree,
@@ -32,6 +34,7 @@ import {
   Maximize2,
   Menu,
   MessageSquare,
+  MonitorDown,
   Minimize2,
   Move,
   Package,
@@ -45,6 +48,7 @@ import {
   RotateCw,
   Ruler,
   Scan,
+  ScanLine,
   ScanBarcode,
   Search,
   Settings,
@@ -127,6 +131,14 @@ export const ICON_MAP = {
   alambre: Box,
   /** Modo caminar del 3D (Footprints de Lucide, §6.13). */
   caminar: Footprints,
+  /** Sin conexión con el servidor (CloudOff de Lucide, §6.13). */
+  sinConexion: CloudOff,
+  /** Instalar Rustock como aplicación del dispositivo (MonitorDown, §6.13). */
+  instalar: MonitorDown,
+  /** Ocultar un valor sensible — contraparte de `ver` (EyeOff de Lucide, §6.13). */
+  ocultar: EyeOff,
+  /** Captura guiada por lectura sucesiva (ScanLine de Lucide, §6.13). */
+  escanear: ScanLine,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;

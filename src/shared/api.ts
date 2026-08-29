@@ -39,13 +39,59 @@ export async function invoke<T>(command: string, args?: Record<string, unknown>)
   return webInvoke<T>(command, args ?? {});
 }
 
+/**
+ * Token de la sesión del navegador (SPEC §4.1).
+ *
+ * En modo navegador pueden estar conectadas varias personas a la vez desde
+ * equipos distintos, así que la sesión no puede vivir en el proceso del
+ * backend: cada cliente presenta su token en cada petición y el servidor
+ * resuelve con él a quién atribuir la acción.
+ *
+ * Se guarda en `sessionStorage` y no en `localStorage` a propósito: la sesión
+ * dura lo que dura la pestaña. Cerrarla cierra la sesión, que es lo que espera
+ * quien trabaja en un equipo compartido del almacén.
+ */
+const CLAVE_SESION = "rustock.sesion";
+const CABECERA_SESION = "x-rustock-sesion";
+
+function leerToken(): string | null {
+  try {
+    return window.sessionStorage.getItem(CLAVE_SESION);
+  } catch {
+    // Almacenamiento no disponible (modo privado estricto): la sesión vive
+    // solo en memoria durante esta carga de página.
+    return tokenEnMemoria;
+  }
+}
+
+let tokenEnMemoria: string | null = null;
+
+function guardarToken(token: string | null): void {
+  tokenEnMemoria = token;
+  try {
+    if (token === null) window.sessionStorage.removeItem(CLAVE_SESION);
+    else window.sessionStorage.setItem(CLAVE_SESION, token);
+  } catch {
+    // Se conserva en memoria; ver `leerToken`.
+  }
+}
+
+/** Olvida la sesión local. La llama `logout` tras cerrarla en el backend. */
+export function olvidarSesion(): void {
+  guardarToken(null);
+}
+
 /** Despacho de comandos vía el servidor HTTP local (modo navegador). */
 async function webInvoke<T>(command: string, args: Record<string, unknown>): Promise<T> {
+  const token = leerToken();
   let response: Response;
   try {
     response = await fetch(`${API_BASE}/${command}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { [CABECERA_SESION]: token } : {}),
+      },
       body: JSON.stringify(args),
     });
   } catch {
@@ -53,7 +99,17 @@ async function webInvoke<T>(command: string, args: Record<string, unknown>): Pro
       `No se pudo conectar con el backend local en ${API_BASE}. ¿Está corriendo la app (npm run tauri dev)?`,
     );
   }
-  const payload = (await response.json()) as { ok: boolean; data?: unknown; error?: string };
+  const payload = (await response.json()) as {
+    ok: boolean;
+    data?: unknown;
+    error?: string;
+    sesion?: string;
+  };
+  // El backend emite el token al abrir sesión; a partir de ahí lo presenta
+  // este cliente en cada petición.
+  if (payload.sesion) {
+    guardarToken(payload.sesion);
+  }
   if (!payload.ok) {
     throw new Error(payload.error ?? "Error desconocido del backend.");
   }

@@ -19,6 +19,7 @@
    - 3.6 Alturas, anchos y medidas
    - 3.7 Densidad y jerarquía visual
    - 3.8 Zonas de estado / color semántico
+   - 3.9 Movimiento
 4. [Layout de la aplicación](#4-layout-de-la-aplicación)
    - 4.1 Estructura general
    - 4.2 Barra superior
@@ -37,6 +38,7 @@
    - 6.2 Botones
    - 6.3 Enlaces
    - 6.4 Campos de formulario (input, select, textarea, fecha)
+   - 6.4.1 Controles con panel propio (select, fecha, hora)
    - 6.5 Tablas y listados
    - 6.6 Tarjetas y paneles
    - 6.7 Insignias y etiquetas
@@ -48,6 +50,7 @@
    - 6.13 Iconografía
 7. [Patrones de página](#7-patrones-de-página)
    - 7.1 Página de listado
+   - 7.1.1 Pantallas de acceso (login y alta del administrador)
    - 7.2 Página de detalle (ver)
    - 7.3 Página de creación (nuevo)
    - 7.4 Página de edición
@@ -68,6 +71,11 @@
    - 9.4 Prohibiciones
 10. [Accesibilidad](#10-accesibilidad)
 11. [Checklist de calidad visual](#11-checklist-de-calidad-visual)
+12. [Multiplataforma y aplicación instalable](#12-multiplataforma-y-aplicación-instalable)
+    - 12.1 Zonas seguras
+    - 12.2 Superposición de controles de ventana
+    - 12.3 Service worker y arranque
+    - 12.4 Avisos de plataforma
 
 ---
 
@@ -75,15 +83,20 @@
 
 Rustock es una herramienta de trabajo: **precisa, moderna y con carácter**. El diseño no compite con los datos; los ordena con elegancia y les da un escenario a la altura de la operación que representan.
 
-La identidad se llama **"Rust & Iron"**: superficies claras y cálidas en toda la aplicación — incluida la navegación —, y un acento de óxido (`rust`) que marca exactamente lo que importa: la acción principal, el elemento activo, el dato que cambia. Todo lo demás se queda en calma. La escala `iron` (superficies oscuras) queda reservada para el landing y bloques de énfasis puntuales; la navegación del sistema ya no es una caja oscura, sino un lienzo ligero con la misma calma que el contenido.
+La identidad se llama **"Rust & Iron"**: superficies claras y cálidas en toda la aplicación — incluida la navegación —, y un acento de óxido (`rust`) que marca exactamente lo que importa: **la acción principal, el foco y los enlaces**. Todo lo demás se queda en calma. La escala `iron` (superficies oscuras) queda reservada para el landing y bloques de énfasis puntuales.
 
-- **Contraste con propósito, sin peso innecesario** — la barra lateral comparte el mismo lienzo claro que el contenido, separada solo por un borde de 1px (`--color-gray-200`). "Dónde navego" se distingue de "qué estoy viendo" por jerarquía tipográfica y el acento en el ítem activo, no por una caja oscura pesada.
+El principio rector es la **economía de chrome**: la interfaz aporta la menor cantidad posible de marco. Lo que se ve en pantalla es el dato; los bordes, las cajas y las sombras solo aparecen cuando comunican una capa real. Una pantalla de Rustock debe poder leerse como un documento — títulos, secciones y tablas — no como una rejilla de recuadros.
+
+- **El aire es el separador** — dos bloques se separan con espacio (`--section-gap`, `--page-gap`), no con un borde ni una caja. Un borde solo aparece cuando dos superficies distintas se tocan (cabecera de tabla, franja de filtros) o cuando algo es pulsable y se levanta del lienzo.
+- **Profundidad por superficie, no por línea** — la navegación es un lienzo *recesado* (`--color-gray-50`) frente al contenido en blanco (`--color-surface`). La jerarquía la marca el escalón de superficie; no hace falta un borde para anunciarla.
+- **El acento no pinta superficies** — el óxido viste la acción primaria, el anillo de foco, los enlaces y la fila seleccionada. Nunca un hover, nunca un elemento de navegación activo, nunca una cabecera. Lo activo se marca con un neutro más contrastado (`--color-gray-200` + texto `--color-gray-900`), que es más legible y no gasta la única señal fuerte del sistema.
 - **Redondeado con precisión** — esquinas suaves (`--radius-md`/`--radius-lg`) en todos los componentes, pero comedidas: ni agresivas ni infantiles. La curva es una firma, no un capricho.
 - **Elevación deliberada, nunca decorativa** — se permite una **sombra suave, difusa y de tinte cálido** (§3.5) para separar capas (tarjetas, menús, toasts) de su fondo. La sombra siempre comunica jerarquía real (esto flota sobre esto); nunca se usa para "decorar".
 - **Un acento, una función** — el óxido `--color-blue-500` (escala Rust) se reserva exclusivamente para: acción primaria, elemento activo, foco y enlaces. Si algo no es la acción principal ni un enlace, no lleva el acento.
 - **Tipografía como sistema, no como decoración** — una sola familia para interfaz (**Geist Sans**) y una sola familia mono para datos (**Geist Mono**), de la misma fundición, con métricas armónicas entre sí. Los números tabulares se alinean siempre en columna.
 - **Con foco en el dato** — códigos, SKU, cantidades y fechas técnicas se muestran en mono con cifras tabulares; son el protagonista visual de cada pantalla.
-- **Microdetalle sin ruido** — transiciones cortas, un leve desplazamiento vertical al pasar el cursor sobre tarjetas y filas, un resplandor sutil en el elemento activo. Elegancia hecha de detalles casi imperceptibles, no de efectos.
+- **Microdetalle sin ruido** — transiciones cortas, un leve desplazamiento vertical al entrar en una ruta o al apuntar un mosaico pulsable, un hundimiento mínimo al pulsar. Elegancia hecha de detalles casi imperceptibles, no de efectos. El movimiento es constante y barato: **todo cambio de estado se interpola**, ninguno salta.
+- **La misma app en cualquier dispositivo** — el layout no tiene una "versión móvil" aparte: la densidad, el aire y el tamaño de los destinos táctiles se derivan de tokens que cambian por breakpoint y por tipo de puntero. Las zonas seguras del dispositivo (notch, barra de gestos, controles de ventana) se respetan en todo el shell.
 - **Cero modales** — cada acción (ver, crear, editar, eliminar, aprobar, anular) vive en **su propia página**. No existen ventanas emergentes, diálogos superpuestos ni confirmaciones flotantes.
 
 ### 1.1 Filosofía de profesionalismo
@@ -104,7 +117,7 @@ La "Filosofía de profesionalismo" es parte integral de la identidad visual: cua
 
 ## 2. Principios no negociables
 
-1. **Cero modales, cero popovers, cero tooltips de bloqueo, cero confirmaciones flotantes.** Toda decisión que modifique datos ocurre en una página dedicada con URL propia.
+1. **Cero modales, cero confirmaciones flotantes.** Toda decisión que modifique datos ocurre en una página dedicada con URL propia. La única superposición permitida es el **panel de un control de formulario** (lista del `Select`, calendario, reloj) y el panel de búsqueda global: no bloquean la página, pertenecen al control que los abrió y no mutan datos por sí mismos (§6.4.1).
 2. **Esquinas suaves.** El `border-radius` usa exclusivamente los tokens de radio (§3.4): `--radius-sm/md/lg/xl/full`. Ningún componente usa esquinas a 0 ni radio arbitrario.
 3. **Elevación solo con los tokens de sombra.** `box-shadow` se usa **exclusivamente** con `--shadow-xs/sm/md/lg` (§3.5); ninguna sombra literal, ningún efecto 3D, ningún `filter: blur` decorativo. El **único** uso permitido de `backdrop-filter` es el desenfoque de cristal en la barra superior al hacer scroll (§4.2) — en ningún otro lugar.
 4. **Cero gradientes.** El color es plano en toda superficie; la profundidad se logra con `--shadow-*`, no con degradados.
@@ -241,12 +254,15 @@ Una sola pareja tipográfica, de la misma fundición, para que UI y datos compar
 
 | Token | Tamaño | Línea-alto | Peso | Tracking | Uso |
 |---|---|---|---|---|---|
-| `--text-xs` | `0.75rem` | `1rem` | 400 | `0` | Metadatos, códigos de pie, labels de campos |
-| `--text-sm` | `0.875rem` | `1.25rem` | 400 | `0` | Cuerpo secundario, celdas de tabla |
-| `--text-base` | `1rem` | `1.5rem` | 400 | `0` | Cuerpo principal |
-| `--text-lg` | `1.125rem` | `1.625rem` | 600 | `-0.01em` | Subtítulos de panel |
-| `--text-xl` | `1.375rem` | `1.75rem` | 600 | `-0.015em` | Títulos de página |
-| `--text-2xl` | `1.75rem` | `2.25rem` | 700 | `-0.02em` | Títulos de sección grandes |
+| `--text-xs` | `0.75rem` | `1rem` | 400–500 | `--tracking-normal` | Metadatos, cabeceras de tabla, labels auxiliares |
+| `--text-sm` | `0.875rem` | `1.25rem` | 400 | `--tracking-normal` | **Cuerpo por defecto de la aplicación**: celdas, campos, navegación |
+| `--text-base` | `1rem` | `1.5rem` | 400–600 | `--tracking-snug` | Títulos de sección (`h3`), texto de lectura larga |
+| `--text-lg` | `1.125rem` | `1.625rem` | 600 | `--tracking-snug` | Títulos de panel (`h2`) |
+| `--text-xl` | `1.375rem` | `1.75rem` | 600 | `--tracking-tight` | Título de página en pantallas pequeñas |
+| `--text-2xl` | `1.75rem` | `2.25rem` | 600 | `--tracking-tight` | **Título de página** (`h1`) |
+| `--text-3xl` | `2.125rem` | `2.5rem` | 600 | `--tracking-tight` | Cifras destacadas y titulares del landing |
+
+**Tokens de interletraje:** `--tracking-tight` (`-0.022em`, titulares), `--tracking-snug` (`-0.012em`, subtítulos), `--tracking-normal` (`0`, cuerpo), `--tracking-wide` / `--tracking-caps` (micro-texto que necesita respirar). Nunca se escribe un valor literal de `letter-spacing`.
 
 **Reglas tipográficas:**
 - Cuerpo y títulos → Geist Sans.
@@ -254,7 +270,10 @@ Una sola pareja tipográfica, de la misma fundición, para que UI y datos compar
 - Todo número mostrado en mono usa cifras tabulares (`font-variant-numeric: tabular-nums`) para que las columnas de cantidades alineen perfectamente entre filas.
 - Los títulos (`--text-lg` en adelante) llevan un tracking negativo sutil — nunca perceptible como "apretado", solo más afilado.
 - Los códigos (SKU, ubicación, lote, número de movimiento) se muestran **siempre** en mono, con `--text-sm`.
-- Los títulos usan color `--color-gray-800`; el cuerpo `--color-gray-600`; los metadatos `--color-gray-500`.
+- Los títulos usan color `--color-gray-900`; el cuerpo `--color-gray-700`; los metadatos `--color-gray-500`.
+- **El peso máximo de la interfaz es `--fw-semibold` (600).** El 700 queda reservado al landing. Un título no necesita gritar: lo distingue el tamaño y el color, no la negrita.
+- El cuerpo por defecto del documento es `--text-sm`: es la densidad que permite ver una operación completa sin desplazarse, y la que usan todas las herramientas de trabajo del sector. Los bloques de lectura larga (ayuda, manual) suben a `--text-base`.
+- Las cifras tabulares están activas en `body`: cualquier columna numérica alinea sin depender de la clase del componente.
 - Sin font-weight por debajo de 400 ni por encima de 700 en UI.
 
 ### 3.3 Espaciado
@@ -268,14 +287,27 @@ Escala base 4px, declarada en múltiplos:
 | `--space-2` | `0.5rem` (8px) | Gap interno de botones, celdas |
 | `--space-3` | `0.75rem` (12px) | Padding de inputs, badges |
 | `--space-4` | `1rem` (16px) | Padding de tarjetas, gaps de formularios |
+| `--space-5` | `1.25rem` (20px) | Ritmo de página en pantallas pequeñas |
 | `--space-6` | `1.5rem` (24px) | Gaps entre paneles, padding de página |
 | `--space-8` | `2rem` (32px) | Separación entre secciones |
+| `--space-10` | `2.5rem` (40px) | Ritmo de página en pantallas muy anchas |
 | `--space-12` | `3rem` (48px) | Espaciado de bloques grandes |
 | `--space-16` | `4rem` (64px) | Márgenes de página |
+| `--space-20` | `5rem` (80px) | Bandas del landing |
+
+**Ritmo de página (tokens derivados).** Ninguna página declara su propio padding ni sus propios márgenes entre secciones: los hereda de estos cuatro tokens, que `responsive.css` redefine una sola vez por breakpoint.
+
+| Token | Uso |
+|---|---|
+| `--page-padding-x` / `--page-padding-y` | Padding del lienzo de contenido, de la barra de filtros y de la barra superior |
+| `--page-gap` | Salto entre el encabezado de página y su contenido |
+| `--section-gap` | Salto entre secciones hermanas de una misma página |
+| `--stack-gap` | Salto entre elementos dentro de una sección |
 
 Reglas:
 - El grid de layout usa múltiplos de 8 para anchos; múltiplos de 4 para espaciados internos.
-- Dos niveles de contenido adyacentes se separan con `--space-4`; bloques lógicos con `--space-6` o más.
+- **Una página nunca declara su propio margen entre bloques**: el lienzo (`.content__inner > * + *`) aplica `--section-gap` a todos los hermanos y `--page-gap` después del encabezado. Escribir `mt-*` entre secciones es un defecto.
+- Las zonas seguras del dispositivo (`--safe-top/right/bottom/left`) se suman siempre al padding del shell con `max()`; nunca se asume que valen cero.
 
 ### 3.4 Bordes y radio
 
@@ -306,7 +338,7 @@ La elevación es un lenguaje deliberado: cada nivel de sombra corresponde a una 
 | `--shadow-md` | `0 6px 16px -4px rgba(21, 15, 11, 0.12), 0 2px 4px -2px rgba(21, 15, 11, 0.06)` | Tarjetas en hover, filas seleccionadas, dropdowns |
 | `--shadow-lg` | `0 16px 32px -8px rgba(21, 15, 11, 0.16), 0 4px 8px -4px rgba(21, 15, 11, 0.07)` | Toasts, menús flotantes de bajo compromiso (búsqueda global) |
 | `--shadow-focus-ring` | `0 0 0 2px var(--color-white), 0 0 0 4px var(--color-blue-300)` | Anillo de foco de dos capas sobre cualquier fondo |
-| `--shadow-glow-primary` | `0 0 0 1px rgba(183, 65, 14, 0.18), 0 6px 16px -2px rgba(183, 65, 14, 0.25)` | Ítem activo del sidebar, botón primario en hover |
+| `--shadow-glow-primary` | `0 0 0 1px rgba(183, 65, 14, 0.18), 0 6px 16px -2px rgba(183, 65, 14, 0.25)` | Reservado para énfasis puntual del landing. **No se usa en la aplicación**: ni el ítem activo del sidebar ni el botón primario llevan resplandor |
 | `--topbar-scroll-bg` | `rgba(255, 255, 255, 0.85)` | Fondo de la barra superior al hacer scroll (única concesión de transparencia, §4.2) |
 | `--scrim-overlay` | `rgba(21, 15, 11, 0.4)` | Velo de superposición del nav móvil |
 
@@ -317,7 +349,7 @@ La elevación es un lenguaje deliberado: cada nivel de sombra corresponde a una 
 **Reglas:**
 - `box-shadow` **solo** con estos tokens. Prohibido cualquier valor de sombra literal o `box-shadow` negro puro.
 - Cada componente declara **un** nivel de sombra en reposo y, como máximo, **un** nivel superior en hover/activo (nunca salta más de un nivel).
-- Los elementos que viven "en el flujo" de la página sin jerarquía especial (celdas de tabla, texto, badges) **no** llevan sombra.
+- Los elementos que viven "en el flujo" de la página sin jerarquía especial (celdas de tabla, texto, badges, tarjetas de sección, tablas) **no** llevan sombra. En la aplicación solo elevan: los mosaicos pulsables en hover, los toasts, el panel de búsqueda global, los tooltips y el drawer móvil.
 - `backdrop-filter: blur(8px)` está permitido **únicamente** en la barra superior cuando el contenido hace scroll debajo de ella (§4.2); en cualquier otro lugar queda prohibido.
 - Sin gradientes en ningún caso: la profundidad es sombra + superficie, nunca degradado de color.
 
@@ -327,14 +359,23 @@ La elevación es un lenguaje deliberado: cada nivel de sombra corresponde a una 
 |---|---|---|
 | `--size-xs` | `1.5rem` (24px) | Iconos pequeños |
 | `--size-sm` | `2rem` (32px) | Botones compactos, iconos |
-| `--size-md` | `2.5rem` (40px) | **Altura estándar de controles** (input, botón, select) |
-| `--size-lg` | `3rem` (48px) | Controles grandes (búsqueda principal, acciones principales) |
-| `--width-sidebar` | `16rem` (256px) | Barra lateral |
-| `--width-max-content` | `72rem` (1152px) | Ancho máximo del área de contenido |
+| `--size-md` | `2.5rem` (40px) | Medidas de bloque (avatares grandes, iconos de estado vacío) |
+| `--size-lg` | `3rem` (48px) | Medidas de bloque grandes |
+| `--control-height-sm` | `1.75rem` (28px) | Controles compactos (`btn--sm`, acciones de fila) |
+| `--control-height` | `2.125rem` (34px) | **Altura estándar de controles**: botones, acciones de la barra superior, ítems de navegación |
+| `--control-height-lg` | `2.5rem` (40px) | Campos de formulario (input, select, textarea) |
+| `--tap-target` | `2.75rem` (44px) | Destino táctil mínimo (drawer móvil, listas en pantalla táctil) |
+| `--topbar-height` | `3rem` (48px) | Barra superior |
+| `--width-sidebar` | `15rem` (240px) | Barra lateral |
+| `--width-sidebar-compact` | `4rem` (64px) | Barra lateral en modo compacto |
+| `--width-max-content` | `78rem` (1248px) | Ancho máximo del área de contenido |
+| `--width-prose` | `46rem` (736px) | Ancho máximo de un párrafo de lectura |
 | `--width-form` | `36rem` (576px) | Ancho máximo de formularios de una columna |
 | `--width-detail-column` | `18rem` (288px) | Columna de metadatos en detalle |
 
-Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No se mezclan alturas de controles en la misma fila.
+Reglas:
+- La altura estándar de los controles de acción es `--control-height`; la de los campos de formulario es `--control-height-lg`. No se mezclan alturas distintas en la misma fila.
+- Con puntero grueso (`@media (pointer: coarse)`) `--control-height` y `--control-height-sm` crecen automáticamente: la misma hoja de estilos sirve para ratón y para dedo, sin componentes duplicados.
 
 ### 3.7 Densidad y jerarquía visual
 
@@ -349,6 +390,27 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 - `danger` → anulado, merma, error, eliminar.
 - `info` → información, enlaces, ayudas (comparte hue con `signal`).
 - Los estados **nunca** se comunican solo con color: siempre acompañan un ícono y/o texto (ver §10 Accesibilidad).
+
+### 3.9 Movimiento
+
+El movimiento no decora: **explica continuidad**. Su trabajo es que un cambio de estado o de ruta se lea como una transformación de lo que ya estaba, no como un salto a otra pantalla.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--duration-instant` | `90ms` | Hover y `:active` de ítems de navegación, filas y botones |
+| `--duration-fast` | `150ms` | Cambios de color, borde y opacidad de controles |
+| `--duration-base` | `220ms` | Entradas de elementos: toasts, avisos, drawer, colapso del sidebar |
+| `--duration-page` | `260ms` | Entrada del lienzo al cambiar de ruta |
+| `--duration-slow` | `380ms` | Entrada escalonada de los grupos de navegación |
+| `--ease-standard` | `cubic-bezier(0.2, 0, 0, 1)` | Curva por defecto de transiciones de estado |
+| `--ease-out` | `cubic-bezier(0.16, 1, 0.3, 1)` | Curva de entrada: rápida al aparecer, suave al asentarse |
+| `--ease-in-out` | `cubic-bezier(0.65, 0, 0.35, 1)` | Movimientos que van y vuelven |
+
+**Reglas:**
+- Cada navegación anima el lienzo una sola vez (`.page-enter`, aplicado por `AppShell` con la ruta como clave). Un cambio de filtro **no** reanima nada: solo cambia la URL, no la página.
+- La animación nunca es el canal principal de una información: `prefers-reduced-motion: reduce` desactiva globalmente animaciones y transiciones, y la interfaz sigue siendo completa y legible.
+- Nada se mueve más de 8px ni dura más de 400ms. No hay rebotes, ni rotaciones decorativas, ni escalas mayores a 1.
+- El único desplazamiento en hover permitido es el de un mosaico pulsable (`-2px`). Los botones no se desplazan: se hunden `scale(0.975)` al pulsarse.
 
 ---
 
@@ -367,22 +429,28 @@ Regla: la altura estándar de **todos** los controles es `--size-md` (40px). No 
 └──────────────┴─────────────────────────────────────────────┘
 ```
 
-- **Barra superior**: fija, altura `--topbar-height` (56px), fondo `--color-white`, sin borde en reposo (se funde con el contenido). Al hacer scroll, adopta `backdrop-filter: blur(8px)` y `background: rgba(255,255,255,0.85)` con `--shadow-xs` — el único uso de blur permitido en toda la interfaz.
-- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-white`, borde derecho `1px --color-gray-200`. Comparte el lienzo claro con el contenido; ancla la navegación por jerarquía tipográfica, no por contraste de superficie. Items redondeados (`--radius-lg`); el activo usa `--color-blue-500` con texto blanco y `--shadow-glow-primary`.
-- **Área de contenido**: fondo `--color-surface-muted`, scroll vertical, padding `--space-8`, ancho máximo `--width-max-content` centrado.
+- **Barra superior**: fija, altura `--topbar-height` (48px), fondo `--color-surface`, sin borde en reposo (se funde con el contenido). Al hacer scroll, adopta `backdrop-filter: blur(12px)` sobre `--topbar-scroll-bg` con una hairline inferior — el único uso de blur permitido en toda la interfaz.
+- **Sidebar**: fija, ancho `--width-sidebar`, fondo `--color-gray-50` — un lienzo **recesado** frente al contenido. **No lleva borde derecho**: el escalón de superficie ya declara la separación, y una línea encima sería redundante.
+- **Área de contenido**: fondo `--color-surface` (blanco), scroll vertical, padding `--page-padding-*`, ancho máximo `--width-max-content` centrado.
 - La barra superior y la sidebar **no** flotan sobre el contenido: ocupan su propio espacio (nada de overlay ni scroll separado sobre ellas en desktop).
 - El sidebar ocupa **todo el alto de la ventana** (de arriba a abajo); la barra superior **no** cruza por encima de él — solo cubre el ancho del área de contenido, a la derecha del sidebar (patrón de grid: `"sidebar topbar" / "sidebar content"`, no `"topbar topbar" / "sidebar content"`).
 
 ### 4.2 Barra superior
 
+La marca no vive aquí: vive en la cabecera del sidebar, donde ancla la navegación. La barra superior es **solo orientación y acceso**, y por eso está casi vacía.
+
 Contenido (de izquierda a derecha):
-1. **Marca Rustock** (logo de 32px: caja de almacén en tonos de óxido sin fondo — `LogoMark` — + palabra en Geist Sans semibold `--color-gray-800`). Es un enlace a `/`.
-2. **Breadcrumbs** del nivel actual (ver §4.5).
-3. **Búsqueda global** (input píldora con ícono, mono para resultados) — ver §6.10.
+1. **Botón de navegación** (solo en móvil: abre el drawer).
+2. **Breadcrumbs** del nivel actual (ver §4.5), con los controles de historial atrás/adelante.
+3. **Búsqueda global** (disparador del command palette, `Ctrl+K`) — ver §6.10.
 4. **Indicador de alertas activas** (contador en insignia `--color-danger-500`, enlace a página de alertas).
-5. **Usuario actual** (avatar circular + nombre + rol, enlace a su página de perfil).
+5. **Usuario actual** (avatar circular, enlace a su página de perfil).
+
+Las acciones de la barra (alertas, usuario, historial) comparten **un solo lenguaje**: cuadrado de `--control-height`, sin fondo ni borde en reposo, fondo `--color-gray-100` y texto `--color-gray-900` al apuntarlas. Ninguna lleva acento de color en reposo.
 
 Al hacer scroll en el contenido, la barra adopta el efecto de cristal descrito en §4.1: es la única concesión de transparencia de todo el sistema, y su función es puramente de legibilidad (separar el contenido que se desliza debajo).
+
+Cuando la aplicación corre con superposición de controles de ventana (PWA instalada o ventana Tauri sin decoración), la barra superior se convierte en la **zona de arrastre** de la ventana y reserva el área de los botones nativos vía `env(titlebar-area-*)`; sus controles quedan marcados como `no-drag` (ver §12).
 
 ### 4.3 Barra lateral de navegación
 
@@ -415,18 +483,21 @@ Al hacer scroll en el contenido, la barra adopta el efecto de cristal descrito e
   - Configuración
 
 Reglas:
-- El sidebar es **claro** (`--color-white`), separado del contenido por un borde derecho `1px --color-gray-200`. Títulos de grupo en `--text-xs` mayúsculas `--color-gray-400`, separados por `--space-6`.
-- Los ítems inactivos usan texto `--color-gray-600`; el icono hereda el mismo color.
-- El ítem activo usa fondo `--color-blue-500`, texto blanco, radio `--radius-lg` y `--shadow-glow-primary` (un resplandor sutil de la propia acción, no una sombra genérica) — el único acento de color fuerte en todo el sidebar.
-- Hover de un ítem inactivo: fondo `--color-gray-100`, texto `--color-gray-900` — sin sombra, solo cambio de superficie.
+- El sidebar es un lienzo **recesado** (`--color-gray-50`) sobre el contenido blanco, **sin borde derecho**. Títulos de grupo en `--text-xs`, peso medio, `--color-gray-400`, en caja normal — no en mayúsculas: un rótulo de grupo no necesita gritar.
+- Los ítems inactivos usan texto `--color-gray-600` y el icono `--color-gray-400`: el icono acompaña, no compite con la palabra.
+- **El ítem activo no lleva acento de color.** Usa fondo `--color-gray-200`, texto `--color-gray-900` y peso medio: es el mismo lenguaje que el hover, un escalón más marcado. El óxido queda íntegro para la acción primaria y el foco (§1).
+- Hover de un ítem inactivo: fondo `--color-gray-100`, texto `--color-gray-900` — sin sombra, solo cambio de superficie, en `--duration-instant`.
+- Alto de ítem `--control-height`, radio `--radius-md`, gap interno `--space-2`. Los ítems de un mismo grupo casi se tocan (1px); los grupos se separan con `--space-4`.
 - Cada ítem es un **enlace real** (no un botón).
-- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda con su propia marca en el encabezado, misma superficie clara `--color-white`.
+- El control de colapso vive en el borde derecho del propio drawer y **aparece al apuntar la navegación** (o al recibir foco de teclado): en reposo no hay ningún control flotando sobre el lienzo.
+- En móvil, la navegación se presenta como **drawer** deslizante desde la izquierda (máx. 84vw) con elevación `--shadow-lg` y velo `--scrim-overlay`. Ahí los ítems crecen a `--tap-target` y a `--text-base`: el drawer se maneja con el pulgar, no con un cursor.
 
 ### 4.4 Área de contenido
 
-- Fondo `--color-surface-muted`, padding uniforme `--space-8`.
+- Fondo `--color-surface` (blanco), padding `--page-padding-y` / `--page-padding-x`, más las zonas seguras del dispositivo.
 - Contenido máximo `--width-max-content`, centrado con `margin: 0 auto`.
-- Las páginas se componen de bloques: encabezado de página + contenido, cada tarjeta/panel se apoya sobre el fondo muted con `--shadow-sm` para separarse visualmente sin necesidad de bordes gruesos.
+- Las páginas se componen de bloques en flujo — encabezado de página, avisos, secciones, paginación — **sin envoltorio propio y sin márgenes propios**: el lienzo aplica `--section-gap` entre hermanos y `--page-gap` tras el encabezado (§3.3).
+- El lienzo se anima una vez por navegación (`.page-enter`, §3.9) y reserva `--space-16` de aire al final para que la última fila de una tabla nunca quede pegada al borde inferior de la ventana.
 
 ### 4.5 Migas de pan (breadcrumbs)
 
@@ -558,27 +629,29 @@ Para un recurso genérico `recurso`:
 
 ### 6.2 Botones
 
-**Estructura:** fondo liso, radio `--radius-md`, borde 1px, texto `--text-sm`, padding `0 --space-4`, alto `--size-md`. Icono opcional de 16px a la izquierda.
+**Estructura:** fondo liso, radio `--radius-md`, borde 1px, texto `--text-sm` peso medio, padding `0 --space-3`, alto `--control-height`. Icono opcional de 16px a la izquierda. **Ningún botón lleva sombra**: la jerarquía la marca el relleno, no la elevación.
 
-| Variante | Fondo | Borde | Texto | Sombra en reposo | Uso |
-|---|---|---|---|---|---|
-| `primary` | `--color-blue-500` | transparente | blanco | `--shadow-xs` | Acción principal de la página |
-| `secondary` | `--color-white` | `--color-gray-300` | `--color-gray-700` | ninguna | Acción secundaria / cancelar |
-| `danger` | `--color-danger-500` | transparente | blanco | `--shadow-xs` | Eliminar, anular, merma |
-| `ghost` | transparente | transparente | `--color-blue-600` | ninguna | Acciones de bajo énfasis en tablas |
-| `link` | transparente | sin borde | `--color-blue-600` | ninguna | Enlace con apariencia de botón |
+| Variante | Fondo | Borde | Texto | Uso |
+|---|---|---|---|---|
+| `primary` | `--color-blue-500` | transparente | blanco | Acción principal de la página |
+| `secondary` | `--color-surface` | `--color-gray-200` | `--color-gray-700` | Acción secundaria / cancelar |
+| `danger` | `--color-danger-500` | transparente | blanco | Eliminar, anular, merma |
+| `ghost` | transparente | transparente | `--color-gray-600` | Acciones de fila y de bajo énfasis |
+| `link` | transparente | sin borde | `--color-blue-500` | Enlace con apariencia de botón |
+
+La variante `ghost` es **neutra en reposo**: no gasta acento en una acción terciaria. El color solo aparece bajo el cursor.
 
 **Estados:**
-- `hover`: `primary` → fondo `--color-blue-600` + `--shadow-glow-primary`; `secondary` → fondo `--color-gray-100`; `danger` → fondo `--color-danger-600` + `--shadow-sm`; `ghost` → fondo `--color-blue-50`. El hover es **solo de superficie y elevación**: el botón **nunca se desplaza** y su texto **nunca cambia de color** (la variante `link` es la única excepción, porque se comporta como un enlace).
+- `hover`: `primary` → `--color-blue-600`; `secondary` → fondo `--color-gray-100` + borde `--color-gray-300`; `danger` → `--color-danger-600`; `ghost` → fondo `--color-gray-100` y texto `--color-gray-900`. El hover es **solo de superficie**: el botón nunca se desplaza y su texto nunca cambia de color (salvo `ghost`, que pasa de gris medio a gris fuerte, y `link`).
 - `focus`: `--shadow-focus-ring` (anillo de dos capas, §3.5), sin desplazamiento.
-- `disabled`: opacidad `0.5`, cursor `not-allowed`, sin estados hover ni sombra.
-- `active` (presionado): vuelve a su sombra de reposo (efecto de "presión" real, sin desplazamiento).
+- `disabled`: opacidad `0.45`, cursor `not-allowed`, sin estados hover.
+- `active` (presionado): `transform: scale(0.975)` en `--duration-instant`. Es la única confirmación física del sistema y es idéntica con ratón y con dedo.
 
 **Reglas:**
 - Una página tiene **un solo** botón `primary` (la acción principal).
 - Las acciones destructivas **solo** usan `danger` y viven en la página de confirmación de eliminación/anulación.
 - Los botones dentro de tablas se muestran como `ghost`/`link` (acciones ligeras); las acciones fuertes viven en la página de detalle.
-- El botón `primary` puede presentarse en píldora (`--radius-full`) cuando es el CTA principal de una página de listado.
+- Los botones de icono usan `--radius-md`, no píldora: la forma de un botón es siempre la misma, cambie o no su contenido.
 - El texto del botón **nunca** cambia de color ni se subraya en hover en ninguna variante (salvo `link`). Esto aplica también a `ButtonLink`: al renderizar un `<a>`, su estilo de hover propio tiene prioridad sobre el `a:hover` global (§6.3) para conservar el color del texto — p. ej. blanco sobre `primary`/`danger`.
 
 ### 6.3 Enlaces
@@ -590,14 +663,14 @@ Para un recurso genérico `recurso`:
 ### 6.4 Campos de formulario (input, select, textarea, fecha)
 
 **Estructura común:**
-- Alto `--size-md`, fondo `--color-white`, radio `--radius-md`, borde `1px --color-gray-300`, texto `--text-base` (`--text-sm` en listas densas), padding `0 --space-3`.
-- **Label** `--text-sm` `--color-gray-600`, con `--space-1` de separación.
+- Alto `--control-height-lg`, fondo `--color-surface`, radio `--radius-md`, borde `1px --color-gray-200`, texto `--text-sm`, padding `0 --space-3`.
+- **Label** `--text-sm` peso medio `--color-gray-700`, con `--space-1` de separación.
 - **Mensaje de ayuda** `--text-xs` `--color-gray-500` bajo el campo.
 - **Mensaje de error** `--text-xs` `--color-danger-600` con ícono.
 
 **Estados:**
-- `default` → borde `--color-gray-300`, sin sombra.
-- `hover` → borde `--color-gray-400`.
+- `default` → borde `--color-gray-200`, sin sombra.
+- `hover` → borde `--color-gray-300`.
 - `focus` → borde `--color-blue-500` + `--shadow-focus-ring`.
 - `error` → borde `--color-danger-500` + mensaje de error.
 - `disabled` → fondo `--color-gray-100`, borde `--color-gray-200`, opacidad 0.6.
@@ -608,20 +681,49 @@ Para un recurso genérico `recurso`:
 - **Select**: mismo estilo; la flecha es un ícono propio, no una pseudo-flecha del navegador.
 - **Date**: se usan pickers propios, estilo plano y redondeado con `--shadow-sm`, sin calendario flotante que ocupe la pantalla; la selección de fecha se abre en un panel en línea dentro del formulario.
 - **Número/cantidad**: texto mono con cifras tabulares, alineado a la derecha cuando representa cantidad.
-- **Textarea**: `--text-base`, min-height `--size-lg`, padding `--space-3`.
+- **Textarea**: `--text-sm`, min-height `--space-16`, padding vertical `--space-2`, redimensionable solo en vertical.
+
+### 6.4.1 Controles con panel propio (select, fecha, hora)
+
+El menú de un `<select>`, el calendario de un `<input type="date">` y la rueda de un `<input type="time">` son el único fragmento de interfaz que el navegador no deja vestir: tipografía, colores, densidad e idioma los decide el sistema operativo, y cambian entre Linux, Windows, macOS, Android e iOS. En una aplicación cuya identidad es la consistencia absoluta, eso es un agujero.
+
+Rustock los sustituye por tres controles propios — `Select`, `DatePicker`, `TimePicker` — construidos con los mismos tokens que el resto del sistema.
+
+**El control nativo no desaparece.** Queda oculto (fuera de vista y fuera del orden de tabulación, nunca con `display: none`) como **fuente de verdad**:
+
+- Conserva el valor en el formato que espera el backend (`value` del select, ISO en fecha y hora).
+- Mantiene intacto el registro de `react-hook-form`: `{...register()}`, `reset()` y `setValue()` siguen funcionando sin que la página sepa nada del panel.
+- Mantiene el envío nativo del formulario y el autocompletado del navegador.
+- En el `Select`, además, es la fuente de la **lista de opciones**: el panel se construye leyendo sus `<option>`, vengan de la prop `options` o de `children`.
+
+El panel visible es una capa de presentación sobre un control real, no un reemplazo.
+
+**El desvío vive en `Input`, no en las páginas.** `<Input type="date">`, `type="time"` y `type="datetime-local"` se enrutan solos a `DatePicker` / `TimePicker`. Así ninguna pantalla puede olvidarse y acabar mostrando el control del sistema operativo.
+
+**Reglas del panel flotante** (`.panel-flotante`):
+- Anclado al control que lo abrió, con posición fija recalculada al desplazar o redimensionar la ventana; se voltea hacia arriba cuando no cabe debajo.
+- No bloquea la página: no hay velo, el resto sigue visible y utilizable.
+- Se cierra con `Escape` o al pulsar fuera, y **devuelve el foco al disparador**.
+- **Un panel flotante nunca abre otro dentro.** Por eso el calendario de `datetime-local` incrusta las columnas de hora en línea (`ColumnasHora`) en vez de abrir el `TimePicker`.
+- El disparador usa `role="combobox"` con `aria-expanded` / `aria-controls`; la lista usa `role="listbox"` con `aria-activedescendant`. Teclado completo: flechas, `Home`/`End`, `Enter`, `Escape`, `Tab` y salto por escritura.
+- Con puntero grueso los destinos del panel crecen a `--tap-target`.
 
 ### 6.5 Tablas y listados
 
+Una tabla **no es una caja**: es texto alineado sobre el lienzo. No lleva marco exterior, ni fondo propio, ni sombra, ni esquinas redondeadas. Lo único que dibuja son las hairlines que guían el ojo por las filas.
+
 **Estructura:**
-- Contenedor con fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, `--shadow-sm`.
-- **Header**: `--text-xs` mayúsculas, `--color-gray-500`, fondo `--color-gray-50`, fila con borde inferior `--color-gray-200`.
-- **Filas**: `--text-sm`; borde inferior `1px --color-gray-100`.
-- **Hover de fila**: fondo `--color-blue-50`.
+- Sin contenedor visible: la tabla se apoya directamente sobre el lienzo de la página.
+- **Header**: `--text-xs` peso medio en caja normal (**nunca mayúsculas**), `--color-gray-500`, fondo `--color-surface`, borde inferior `1px --color-gray-200`.
+- **Cabecera fija — solo en la tabla virtualizada.** `.table-wrap` declara `overflow-x: auto` para el desbordamiento horizontal, y por especificación eso hace que `overflow-y` compute a `auto`: ese contenedor pasa a ser el *scrollport* de cualquier `position: sticky` de su interior. En la tabla normal ese contenedor no tiene scroll vertical propio (crece con su contenido), así que una cabecera pegajosa ahí no se ancla al lienzo — se queda flotando sobre las filas. Solo `.table-wrap--virtual` tiene scroll vertical propio y ahí la cabecera sí se fija (`top: 0`). **No se debe reintroducir `sticky` en `.table th` sin quitar antes el `overflow` del contenedor.**
+- **Filas**: `--text-sm`, texto `--color-gray-700`; borde inferior `1px --color-gray-100`.
+- **Hover de fila**: fondo `--color-gray-50` — **neutro**. El acento de óxido no se gasta en un hover.
 - **Fila clickeable**: la fila navega al detalle (cursor pointer).
-- **Selección múltiple** (cuando aplica): checkbox redondeado a la izquierda; las filas seleccionadas se marcan con fondo `--color-blue-50` y borde izquierdo 2px `--color-blue-500`.
+- **Selección múltiple** (cuando aplica): checkbox a la izquierda; las filas seleccionadas se marcan con fondo `--color-blue-50` y borde izquierdo 2px `--color-blue-500` — esa sí es una decisión del usuario y merece el acento.
 
 **Columna de acciones:**
 - Iconos `ghost`: ver, editar, eliminar (solo si el usuario tiene permiso).
+- Las acciones están **siempre presentes**, atenuadas al 65%, y ganan opacidad completa cuando la fila recibe cursor o foco. Con puntero grueso se muestran siempre al 100%: en una pantalla táctil no existe el hover, y una acción que solo aparece al pasar el ratón es una acción invisible.
 - Cada acción navega a su página dedicada (ver §5).
 
 **Reglas:**
@@ -632,27 +734,34 @@ Para un recurso genérico `recurso`:
 
 ### 6.6 Tarjetas y paneles
 
-- Fondo `--color-white`, borde `1px --color-gray-200`, radio `--radius-lg`, padding `--space-4`, sin sombra en reposo (el borde de 1px ya separa la capa — plano, estilo Linear/Notion).
-- Título del panel: `--text-lg`, `--color-gray-800`, con borde inferior `--color-gray-200` opcional.
-- Las tarjetas interactivas (ej. tarjetas de resumen clickeables en el dashboard) suben a `--shadow-md` y se desplazan `-2px` en hover — la sombra aparece solo como respuesta a la interacción, nunca en reposo.
-- Los paneles pueden ser "secciones" de una página de detalle (ej. "Datos generales", "Saldo por lote", "Historial de movimientos").
+Por defecto una `Card` **no es una caja**: es una **sección del documento**, separada de sus hermanas por aire y presentada por su título. Sin fondo, sin borde, sin padding, sin sombra. La caja se reserva para lo que de verdad se levanta del lienzo.
+
+| Variante | Aspecto | Uso |
+|---|---|---|
+| por defecto | transparente, sin borde ni padding | Secciones de una página ("Datos generales", "Saldo por lote", "Historial") |
+| `muted` | `--color-surface-muted` + borde `1px --color-gray-200` + padding `--space-4` | Bloques de contexto, notas y resúmenes que acompañan sin interrumpir |
+| `interactive` | `--color-surface` + borde `1px --color-gray-200` + padding `--space-4` | Mosaicos pulsables que llevan a otra página |
+
+- Título de sección: `--text-base` semibold `--color-gray-900`, con `--space-3` de aire debajo y **sin borde inferior** — el espacio ya separa el título de su contenido.
+- Solo la variante `interactive` eleva: sube a `--shadow-md` y se desplaza `-2px` en hover, y vuelve a `--shadow-xs` al pulsarse. La sombra aparece únicamente como respuesta a la interacción, nunca en reposo.
 
 ### 6.7 Insignias y etiquetas
 
-- Fondo tintado + texto tintado (ver tabla 3.1), padding `0 --space-2`, alto `--size-xs`, `--text-xs`, radio `--radius-full` (píldora), borde `1px` del mismo matiz.
+- Fondo tintado + texto tintado (ver tabla 3.1), padding `0 --space-2`, alto `--size-xs`, `--text-xs`, radio `--radius-sm`, **sin borde**: la superficie tintada ya declara el estado y el contorno solo añadiría ruido en una columna de veinte filas.
 - Se usan para estados: `Aprobado`, `Pendiente`, `Anulado`, `Borrador`, `Entrada`, `Salida`, `Stock bajo`, `Vence pronto`.
 - Ícono pequeño opcional (12px) cuando refuerza el estado.
 
 ### 6.8 Encabezados de página
 
-El breadcrumb de la barra superior ya identifica la página — un título y una
-descripción repitiendo lo mismo debajo de él son ruido puro, no jerarquía.
-`PageHeader` ya no renderiza texto visible: el `title` se mantiene como `h1`
-oculto (`sr-only`) solo para accesibilidad/lectores de pantalla, y `description`
-no se usa. Lo único visible del bloque, si existe, son las `actions`
-(alineadas a la derecha) — para listados esas acciones viven en el toolbar
-(§7.1), no aquí; `PageHeader` con acciones se reserva para páginas de
-detalle/formulario con botones que no son "crear" (Editar, Eliminar, Volver).
+Cada página abre con su **bloque de título**, como un documento. No es una repetición del breadcrumb: el breadcrumb es *chrome* de navegación —desaparece en móvil y vive fuera del lienzo—, mientras que el título es el ancla de lectura de la página y el punto de referencia al volver de una ruta hija.
+
+**Estructura:**
+- `h1` visible en `--text-2xl` semibold `--color-gray-900`, con `--tracking-tight` (`--text-xl` en móvil).
+- `description` opcional: una línea en `--text-sm` `--color-gray-500`, acotada a `--width-prose`, que explica qué administra la página.
+- `actions` alineadas a la derecha en la misma línea; en móvil el bloque se apila y la acción principal ocupa el ancho completo — es el destino del pulgar.
+- Tras el bloque, el lienzo aplica `--page-gap` (§3.3): el encabezado nunca declara su propio margen.
+
+Para listados, la acción de "crear" vive en la barra de filtros pegajosa (§7.1) y no se duplica aquí.
 
 ### 6.9 Acciones de fila y de página
 
@@ -786,6 +895,16 @@ Reglas:
 - Los filtros/orden/búsqueda viven en la URL.
 - El "Nuevo" navega a `/recursos/nuevo`.
 - Cada fila navega a `/recursos/:id`.
+
+### 7.1.1 Pantallas de acceso (login y alta del administrador)
+
+Sin tarjeta y sin caja: una columna estrecha (`22rem`) centrada sobre el lienzo blanco. En esta pantalla no existe ninguna otra tarea que pueda competir con el formulario, así que no hace falta encerrarlo en un recuadro para señalarlo — encerrarlo solo añadiría un borde que no separa nada.
+
+Composición, de arriba a abajo: marca (enlace al landing) · título `h1` · una línea de descripción · formulario en `.form-stack` · panel de error si lo hay · acción principal a ancho completo (`size="lg"`) · pie con la otra ruta de acceso, separado por una hairline.
+
+- El aire entre campos lo pone `.form-stack`, nunca un margen en cada `Field`.
+- Las contraseñas usan `PasswordInput`: campo con interruptor de visibilidad, porque escribir a ciegas es la causa más común de un acceso fallido, sobre todo en un teclado táctil de almacén.
+- El primer campo recibe el foco al montar.
 
 ### 7.2 Página de detalle (ver)
 
@@ -968,6 +1087,13 @@ Cada flujo es **completo dentro de la navegación**: no hay paso intermedio que 
 Antes de dar una pantalla por terminada, debe cumplir:
 - [ ] Radio suave en todos los elementos visibles (tokens `--radius-sm/md/lg/xl/full`, nunca 0).
 - [ ] Sombras solo de los tokens `--shadow-*`; sin gradientes, sin blur fuera de la barra superior.
+- [ ] Ninguna sombra en reposo: solo elevan mosaicos pulsables en hover, toasts, palette, tooltips y drawer.
+- [ ] El acento de óxido aparece **solo** en acción primaria, foco, enlaces y fila seleccionada — nunca en un hover ni en la navegación activa.
+- [ ] Ninguna sección declara márgenes propios: el ritmo lo pone el lienzo (`--section-gap` / `--page-gap`).
+- [ ] Bloque de título visible en toda página (`PageHeader` con `title` y, cuando aporte, `description`).
+- [ ] Zonas seguras del dispositivo respetadas con `max(..., var(--safe-*))` en todo elemento pegado a un borde.
+- [ ] Destinos táctiles de al menos `--tap-target` con puntero grueso; ninguna acción depende del hover para ser descubierta.
+- [ ] Todo cambio de estado transiciona con un token de `--duration-*` y funciona igual con `prefers-reduced-motion`.
 - [ ] Colores solo de la paleta/tokens; `ink` y `signal` usados únicamente en sus roles definidos.
 - [ ] Fuentes solo Geist Sans / Geist Mono (con sus fallbacks declarados).
 - [ ] Códigos/SKU/cantidades en mono con cifras tabulares.
@@ -977,6 +1103,8 @@ Antes de dar una pantalla por terminada, debe cumplir:
 - [ ] Un solo botón primario por página.
 - [ ] Estados vacíos presentes (sin datos / sin resultados).
 - [ ] Errores bajo los campos y panel de error, sin alertas nativas.
+- [ ] Ningún control del sistema operativo a la vista: los desplegables, fechas y horas usan los controles propios (§6.4.1).
+- [ ] Todo panel flotante se cierra con Escape y devuelve el foco a su disparador.
 - [ ] Foco visible en todos los controles (`--shadow-focus-ring`).
 - [ ] Contraste AA verificado, incluyendo el ítem activo del sidebar.
 - [ ] Sin emojis en ningún texto o mensaje (tolerancia cero).
@@ -985,5 +1113,49 @@ Antes de dar una pantalla por terminada, debe cumplir:
 - [ ] Tono profesional en todo el copy (sin informalidad ni lúdica).
 
 ---
+
+## 12. Multiplataforma y aplicación instalable
+
+Rustock se usa en tres sitios: una ventana nativa (Tauri), un navegador de escritorio y un teléfono o tableta en el piso del almacén. **No hay tres diseños.** Hay uno, cuyas medidas se derivan de tokens que cambian por breakpoint y por tipo de puntero (§3.3, §3.6), de modo que la misma hoja de estilos sirve a los tres sin componentes duplicados ni ramas de código por dispositivo.
+
+### 12.1 Zonas seguras
+
+Todo elemento pegado a un borde de la ventana — barra superior, sidebar, contenido, barra de filtros, toasts, skip-link — suma la zona segura correspondiente con `max()`:
+
+```css
+padding-right: max(var(--page-padding-x), var(--safe-right));
+```
+
+Nunca se asume que `env(safe-area-inset-*)` vale cero: en un teléfono con notch, en una tableta con barra de gestos o en una ventana sin decoración, vale algo.
+
+### 12.2 Superposición de controles de ventana
+
+Con `display-mode: window-controls-overlay` (PWA instalada o ventana Tauri sin decoración) la barra superior pasa a ser la barra de título del sistema:
+
+- Reserva el área nativa con `env(titlebar-area-x)` / `env(titlebar-area-height)`.
+- La barra completa es zona de arrastre (`-webkit-app-region: drag`); sus enlaces, botones y campos quedan marcados `no-drag`.
+
+### 12.3 Service worker y arranque
+
+El service worker (`src/pwa/sw-template.js`, materializado en `dist/sw.js` por el plugin `rustock-pwa` de `vite.config.ts`) solo existe en build de producción fuera de Tauri. Sus reglas son innegociables:
+
+- **El API de negocio nunca se cachea.** El backend Rust vive en otro origen (`127.0.0.1:1421`) y el worker no lo intercepta: los datos que se muestran son siempre datos vivos del backend (STACK.md).
+- **Solo se precachea el shell de arranque**: HTML, el chunk de entrada y sus importaciones estáticas, hojas de estilo, fuentes e iconos. Los fragmentos de cada ruta se guardan la primera vez que se visitan — instalar la aplicación no descarga el producto entero.
+- **Navegación**: red primero, shell cacheado como red de seguridad. Un despliegue nuevo se ve al instante; una caída de red no deja la pantalla en blanco.
+- **Estáticos con hash**: caché primero. Son inmutables, así que la aplicación arranca sin tocar la red.
+
+### 12.4 Avisos de plataforma
+
+Dos hechos del entorno — y solo dos — se comunican al usuario, en la **franja de avisos** que vive en el flujo del lienzo, encima del contenido de la ruta (`AvisoSistema`):
+
+| Aviso | Tono | Acción |
+|---|---|---|
+| Sin conexión con el servidor | `warning` | Ninguna: informa que los datos son los últimos cargados y que no se guardará nada hasta recuperar la conexión |
+| Hay una versión nueva lista | `info` | "Actualizar ahora" — activa el worker en espera y recarga |
+
+Reglas:
+- La franja **no flota**: no es un modal, no es un popover, no tapa nada y no exige respuesta (§5.1).
+- **Una versión nueva nunca se activa sola.** Espera a que la persona lo acepte, para no recargar la aplicación a mitad de un movimiento sin guardar.
+- La invitación a **instalar** Rustock no interrumpe: vive en Configuración › Aplicación, una página que la persona abre por decisión propia.
 
 *Fin del DESIGN — Rustock v0.3 "Rust & Iron". Este documento es la única fuente de verdad del aspecto y la experiencia de la interfaz.*

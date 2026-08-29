@@ -23,6 +23,7 @@ import { mensajeError } from "../shared/format";
 import { usePreferencias } from "../shared/preferencias";
 import { useTema } from "../shared/tema";
 import { PATH } from "../app/route-paths";
+import { usePwa } from "../shared/pwa";
 import {
   Button,
   ButtonLink,
@@ -719,7 +720,53 @@ export function ConfiguracionPage() {
           )}
         </Card.Body>
       </Card>
+
+      <AplicacionCard />
     </>
+  );
+}
+
+/**
+ * Instalación de Rustock como aplicación del dispositivo. La invitación vive
+ * aquí — en una página que la persona abre por decisión propia — y no como
+ * un banner que interrumpe la operación (DESIGN §5.1).
+ */
+function AplicacionCard() {
+  const instalable = usePwa((s) => s.instalable);
+  const instalada = usePwa((s) => s.instalada);
+  const instalar = usePwa((s) => s.instalar);
+
+  return (
+    <Card title="Aplicación" className="mt-6">
+      <Card.Body>
+        {instalada ? (
+          <p className="text-sm text-gray-500">
+            Rustock ya está instalado en este dispositivo: se abre en su propia ventana, arranca sin
+            esperar a la red y conserva la sesión entre usos.
+          </p>
+        ) : instalable ? (
+          <div className="flex items-center gap-4 flex-wrap">
+            <p className="text-sm text-gray-500 flex-1">
+              Instale Rustock en este dispositivo para abrirlo en su propia ventana, con arranque
+              inmediato y sin la barra del navegador.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              icon="instalar"
+              onClick={() => void instalar()}
+            >
+              Instalar Rustock
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Este navegador no ofrece la instalación de Rustock como aplicación. En Chrome o Edge
+            aparecerá aquí un botón para instalarla en el dispositivo.
+          </p>
+        )}
+      </Card.Body>
+    </Card>
   );
 }
 

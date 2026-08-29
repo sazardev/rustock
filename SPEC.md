@@ -842,7 +842,145 @@ Todas estas consultas son filtrables/ordenables/buscables/paginables (§15).
 
 - El sistema acepta entrada por código de barras (producto, caja, ubicación si están etiquetados).
 - Al escanear un código desconocido, muestra error y sugiere búsqueda manual.
-- El escaneo nunca crea datos por sí solo; siempre alimenta el formulario del movimiento.
+- **El escaneo nunca crea ni modifica datos por sí solo.** Resuelve el código, deja constancia de la lectura y ofrece a dónde ir; toda escritura ocurre después, en el formulario de su propia página y con su propio permiso.
+
+#### 14.3.1 Orígenes de lectura
+
+Dos, con el mismo comando detrás:
+
+- **Lector de mano** (`TECLADO`): se comporta como un teclado. No requiere driver ni configuración.
+- **Cámara** (`CAMARA`): se enciende solo a petición explícita de la persona, nunca al abrir la pantalla, y se apaga al salir de ella.
+
+**El lector funciona en cualquier pantalla.** No hay que ir antes a ninguna página: la aplicación escucha el teclado en todo el documento y reconoce la ráfaga del lector por su ritmo. Se trabaja con una caja en las manos, no navegando.
+
+**Cómo se distingue del tecleo humano.** Un lector emite entre 5 y 20 ms por carácter con regularidad de máquina; una persona, incluso rápida, tarda 100-200 ms y con ritmo irregular. Con el umbral en **40 ms de media** y un mínimo de **3 caracteres** los dos casos no se solapan (verificado en `scripts/verificar-escaner.mjs` con ritmos reales, incluida una mecanógrafa muy rápida y una tecla mantenida).
+
+**Cuándo NO se interviene:** si el foco está en un campo de texto. Ahí el lector escribe en el campo, que es lo que la persona quiere si acaba de hacer clic en él — y así nunca se le roba una pulsación a quien está escribiendo de verdad.
+
+**Quién se queda con el código.** Manda la pantalla visible: si hay una de captura o de conteo abierta, el código va a ella, porque sabe mejor que nadie qué significa ahí. Si ninguna lo reclama, se resuelve y se navega a la acción principal que propone el backend (§14.3.6).
+
+**Acuse de recibo.** Toda lectura por cámara confirma con un pitido y una vibración: agudo si resolvió, grave si no. En el piso nadie mira la pantalla mientras escanea, y sin confirmación audible se vuelve a pasar el código "por si acaso", generando duplicados.
+
+#### 14.3.2 Resolución
+
+Un código se resuelve contra el catálogo en este orden, y gana el primero que coincida: código de barras de producto → SKU → código de ubicación → número de lote → código de caja.
+
+**Una sola puerta de entrada.** El comando `escanear` es la **única** forma de resolver un código: no existe ninguna que lo haga sin dejar rastro. Cualquier pantalla que lea un código aparece en el panel — por construcción, no por disciplina.
+
+#### 14.3.3 Permisos
+
+| Permiso | Quién | Para qué |
+|---|---|---|
+| `escaneo:usar` | ADMIN, GERENTE, ENCARGADO_ALMACEN, OPERADOR | Ejecutar una lectura |
+| `escaneo:ver` | ADMIN, GERENTE | Leer el registro de escaneos |
+
+El LECTOR no tiene ninguno de los dos: `escaneo:usar` es una acción de piso y `escaneo:ver` es auditoría. Ambos se deniegan **explícitamente**, porque la regla general de su rol (`accion == "ver"`) se los concedería sin querer.
+
+#### 14.3.4 Registro de escaneos (`eventos_escaneo`)
+
+Toda lectura deja una fila, **incluidas las que fallan**. Un código que nadie logra resolver es una etiqueta rota o mal impresa; una racha de denegados es alguien operando fuera de su rol. Ninguna de las dos señales existiría si solo se registraran los aciertos.
+
+**Desenlaces:** `RESUELTO` · `NO_ENCONTRADO` · `DENEGADO`.
+
+**Atributos:** `id`, `codigo`, `codigo_normalizado`, `resultado`, `motivo`, `tipo_entidad`, `entidad_id`, `entidad_etiqueta`, `origen`, `formato`, `proposito`, `ruta`, `usuario_id`, `rol_codigo`, `ubicacion_contexto_id`, `latitud`, `longitud`, `dispositivo`, `duracion_ms`, `tenant`, `hora_local`, `dia_semana`, `created_at`.
+
+Reglas:
+
+- **El intento denegado se registra antes de devolver el error.** Sería el evento más interesante de vigilar y, si el permiso cortara antes, el único que no quedaría escrito.
+- **`rol_codigo` es una copia del momento, no una referencia.** Si mañana cambia el rol del usuario, el registro debe seguir diciendo con qué permiso actuó entonces.
+- El sistema devuelve en cada lectura los **fallos consecutivos** del usuario en los últimos 10 minutos, para poder avisar de una etiqueta ilegible antes de que la persona insista diez veces.
+
+#### 14.3.5 Etiquetas imprimibles
+
+Rustock imprime lo que después va a leer. **El código impreso es exactamente el código con el que `resolver_escaneo` encuentra la entidad** (§14.3.2): por eso la generación vive en Rust junto a la resolución — si el formato lo decidiera el frontend, nada garantizaría que lo impreso y lo buscado coincidan.
+
+**Qué se imprime en cada tipo:**
+
+| Tipo | Código impreso |
+|---|---|
+| PRODUCTO | Su código de barras comercial si lo tiene; si no, el SKU |
+| UBICACION | Su código |
+| LOTE | Su número |
+| CAJA | Su código |
+
+Una entidad sin código imprimible **no se ofrece** para etiquetar: una etiqueta sin código no se puede escanear, y ofrecerla solo llevaría a gastar papel.
+
+**Simbologías:**
+
+- **Code128** por defecto: es la simbología lineal que cualquier lector de mano lee sin configurar nada. Admite ASCII imprimible (32–126). Lleva siempre el código en texto legible debajo — cuando la etiqueta se raya y el lector falla, alguien tiene que poder teclearlo.
+- **QR** para etiquetas pequeñas, códigos largos o códigos con caracteres que Code128 no admite (acentos, eñes). Corrección de errores media (15%).
+
+**Legibilidad.** El sistema devuelve el ancho de la barra estrecha en milímetros (`modulo_mm`) y avisa cuando cae por debajo de **0,25 mm** (mínimo seguro a 203 dpi) o de **0,19 mm** (por debajo, casi ningún lector lee). Es el fallo operativo más caro de esta función: un código largo en una etiqueta pequeña produce cien etiquetas que no leen, y el error solo se descubre cuando ya están pegadas en las cajas. Por eso se avisa **antes** de imprimir.
+
+**Disposiciones:** hoja A4 con varias etiquetas por página, y rollo con una por página para impresora térmica. Las medidas van en milímetros reales, de modo que imprimir al 100 % da el tamaño físico pedido.
+
+#### 14.3.8 Formatos de salida y conexión con impresoras
+
+Un almacén no imprime de una sola forma, y hay que tolerarlas todas.
+
+| Formato | Para qué | Quién lo entiende |
+|---|---|---|
+| **SVG** | Ver en pantalla e imprimir desde el navegador | Cualquier navegador |
+| **PDF** | El denominador común: cualquier impresora y cualquier sistema, además archivable y enviable por correo | Todos, incluidos los drivers propios de Dymo y Brother |
+| **ZPL** | Envío en crudo a térmica, sin driver ni diálogo de impresión | Zebra y la mayoría de las genéricas (Honeywell, TSC, Godex) |
+| **EPL** | Igual que ZPL, para modelos antiguos y térmicas económicas | Zebra/Eltron antiguas y muchas genéricas |
+| **PNG** | Pegar la etiqueta en otro sistema | Todo |
+
+Reglas:
+
+- **El PDF se genera a mano en Rust** con las fuentes base del formato (Helvetica y Courier, presentes en todo lector desde 1993). No incrusta tipografías ni añade una dependencia de terceros, y el resultado es determinista.
+- **ZPL y EPL dejan que la impresora dibuje el código** (`^BC`/`^BQ` en ZPL) en vez de mandarle una imagen: sale más nítido —la impresora dibuja sobre su rejilla real de puntos— y el trabajo pesa cientos de bytes en lugar de megas.
+- **La resolución (dpi) es obligatoria en ZPL y EPL**, que miden en puntos y no en milímetros. Con el valor equivocado la etiqueta sale de otro tamaño: 50 mm son 400 puntos a 203 dpi y 591 a 300 dpi.
+- Los caracteres de control de ZPL (`^`, `~`) se sustituyen antes de enviar: un código que los contenga rompería el trabajo.
+- **El PNG lo rasteriza el frontend** desde el SVG con un lienzo. Es presentación pura y el navegador ya trae el motor; traer una librería de imagen a Rust por un botón sería una dependencia desproporcionada.
+
+**Impresión directa por red.** Prácticamente toda térmica de etiquetas acepta trabajos en crudo por TCP en el **puerto 9100** (estándar de facto heredado de HP JetDirect). Rustock envía ahí el ZPL o el EPL:
+
+- Sin driver, sin instalar nada en el equipo del operador.
+- Sin pasar por el diálogo del navegador, **que reescala y estrecha las barras** — la causa más común de que una etiqueta impresa no se lea.
+- Igual desde un teléfono del almacén que desde el servidor.
+
+Se rechaza enviar PDF o SVG por ese puerto: una térmica imprimiría el código fuente como texto y gastaría la etiqueta.
+
+Lo que **no** cubre esta vía: impresoras USB atadas a un equipo concreto, y las de protocolo propio (Dymo, Brother). Para esas el camino es el **PDF a tamaño real**, que su propio driver imprime sin reescalar.
+
+`probar_impresora` comprueba que el puerto responde sin gastar etiqueta. Solo dice eso: una térmica sin papel o con el cabezal levantado acepta la conexión igualmente.
+
+#### 14.3.9 Dónde se imprime desde
+
+Etiquetar no es un módulo aparte al que haya que ir: es una acción sobre algo que ya se tiene delante. Por eso el punto de partida es siempre el registro, no la pantalla de etiquetas:
+
+| Desde dónde | Cómo |
+|---|---|
+| Ficha de producto, ubicación, lote o caja | Botón **Etiqueta** en las acciones de la ficha |
+| Resultado de un escaneo | Acción **Imprimir etiqueta** — cubre el caso más común: el código costó leerlo y hay que reponerlo |
+| Pantalla de etiquetas | Selección manual, para tandas grandes |
+
+Todos llevan a `/etiquetas?tipo=<TIPO>&ids=<a,b,c>`, que **genera la vista previa sola** al llegar con una selección: quien pulsó "Etiqueta" en una ficha ya dijo lo que quería, y pedirle además que pulse "Generar" es un paso de más.
+
+**Los ajustes se recuerdan** en el equipo (simbología, tamaño, disposición, resolución y dirección de la impresora). Se guardan por equipo y no por persona a propósito: la impresora está físicamente al lado del equipo desde el que se imprime, y el mismo operador usa una distinta según el muelle en el que esté. Recordarlo por persona sería recordarlo mal.
+
+**Permisos.** Imprimir la etiqueta de algo exige poder **verlo** (`producto:ver`, `ubicacion:ver`, `lote:ver`, `caja:ver`): no es una acción nueva sobre la entidad, es una forma de leerla.
+
+#### 14.3.6 Acciones desde la lectura
+
+Al resolver un código, el sistema devuelve **qué se puede hacer ahora**. Las decide el backend, no la pantalla: es el único que sabe qué existe, qué permisos tiene quien escanea y a qué ruta lleva cada acción. Si las decidiera el frontend, acabaría ofreciendo acciones que luego se deniegan.
+
+El `proposito` de la lectura decide cuál es la **acción principal**: `CONSULTA` sugiere ver la ficha, `CAPTURA` sugiere registrar el movimiento, `INVENTARIO` sugiere contar.
+
+**Código desconocido.** La única acción posible es darlo de alta, y lleva al formulario de creación **con el código precargado**. Esto no contradice §14.3: el escaneo sigue sin crear nada por sí solo — crea una persona, en un formulario, con su propio permiso. Solo se ofrece el alta de los tipos que esa persona puede crear.
+
+#### 14.3.7 Panel de escaneos
+
+Auditoría, no operación: exige `escaneo:ver` (GERENTE y ADMIN). Responde tres preguntas concretas:
+
+| Pregunta | Cómo se responde |
+|---|---|
+| ¿Qué etiquetas hay que reimprimir? | Códigos que fallan **más de una vez**. Un fallo suelto es un tropiezo; lo que señala una etiqueta rota es la repetición. Se muestra cuántas personas distintas tropezaron: si son varias, el problema es de la etiqueta y no de quien escanea. |
+| ¿Quién opera fuera de su rol? | Intentos `DENEGADO` agrupados por persona, con el rol con el que actuó. |
+| ¿Cuándo se opera de verdad? | Volumen por hora local, con las 24 horas siempre presentes. |
+
+Además: acierto global, reparto entre cámara y lector de mano, tiempo medio de resolución y actividad por persona. **Todo el cálculo vive en Rust**; la interfaz no deriva ni una métrica (STACK.md).
 
 ### 14.4 Fechas y zona horaria
 
@@ -1173,3 +1311,47 @@ Documentadas para no romper el modelo cuando se implementen:
 ---
 
 *Fin del SPEC — Rustock v0.1. Este documento es la única fuente de verdad de la lógica de negocio.*
+
+---
+
+## 16. Reglas de negocio configurables
+
+El almacén de cada cliente tiene restricciones que no caben en el modelo general: un rack que no aguanta más de 800 kg, un pasillo de refrigerados donde no puede entrar química, una zona de picking donde cada ubicación admite un solo SKU. Codificarlas en Rust obligaría a recompilar por cliente; dejarlas fuera obliga a confiar en que nadie se equivoque.
+
+### 16.1 Anatomía de una regla
+
+Una regla es **una frase con tres partes**:
+
+> En **el RACK-A1** (dónde), el peso total no puede pasar de **800 kg** (qué), y si se pasa **no se aprueba el movimiento** (severidad).
+
+**Dónde — ámbito.** `ALMACEN` · `ZONA` · `PASILLO` · `RACK` · `SECCION` · `UBICACION`. Con elemento concreto o sin él: sin elemento, la regla vale para **todos** los de ese nivel («ninguna ubicación admite más de un SKU» es una sola fila).
+
+**Qué — tipo:**
+
+| Tipo | Limita |
+|---|---|
+| `PESO_MAXIMO` | Kilos acumulados en el ámbito |
+| `CANTIDAD_MAXIMA` | Unidades acumuladas |
+| `VOLUMEN_MAXIMO` | Volumen acumulado |
+| `PRODUCTOS_DISTINTOS_MAXIMO` | Cuántos SKU conviven; con valor 1 fuerza homogeneidad |
+| `CATEGORIA_PROHIBIDA` | Una categoría que no entra |
+| `CATEGORIA_EXCLUSIVA` | Solo esa categoría entra |
+| `PRODUCTO_PROHIBIDO` | Un producto concreto que no entra |
+| `REQUIERE_LOTE` | Nada entra sin lote, aunque el producto no lo exija |
+| `PROHIBIR_VENCIDO` | Ningún lote vencido entra, ni en un ajuste |
+
+**Severidad.** `BLOQUEA` detiene el movimiento; `ADVIERTE` deja pasar y registra — sirve para estrenar una regla sin frenar la operación mientras se comprueba que está bien puesta.
+
+### 16.2 Cómo se evalúan
+
+- **Se evalúa el estado resultante, no el actual.** La pregunta no es «¿el rack está por debajo de 800 kg?» sino «¿seguiría estándolo *después* de meter esto?». Comprobar el estado actual dejaría entrar siempre la última caja, que es justo la que rompe el límite.
+- **La regla del ámbito superior alcanza a todo lo que cuelga de él.** Una regla de zona protege sus racks y ubicaciones sin repetirla. Sin esto habría que escribirla ubicación por ubicación, y la primera que se olvidara sería el agujero.
+- **Se evalúan en la aprobación y dentro de la misma transacción** que mueve el saldo. Comprobarlas antes dejaría una ventana en la que otro movimiento aprobado en paralelo llenaría el rack entre la comprobación y el apunte.
+- **Una regla que no puede evaluarse avisa en vez de callar.** Si un tope de peso encuentra un producto sin peso unitario, lo dice y deja pasar: una protección que el cliente cree tener y no tiene debe decirse en voz alta, pero no puede frenar la operación por un dato que falta en el catálogo.
+- **El mensaje del cliente gana** sobre el que redacta el sistema: sabe explicar su propia regla mejor que una frase genérica.
+
+`simular_reglas` evalúa una línea **antes** de registrarla, para avisar mientras se llena el formulario en vez de dejar que la persona termine el movimiento y descubra al aprobar que no cabía.
+
+### 16.3 Permisos
+
+`regla:ver` lo tienen todos los roles salvo LECTOR — hace falta para que la interfaz explique por qué se bloqueó un movimiento. `regla:crear`, `regla:editar` y `regla:eliminar` son de GERENTE y ADMIN: las restricciones de la operación las define quien responde de ella.
