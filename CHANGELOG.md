@@ -4,6 +4,86 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [Unreleased]
+
+### Bug Fixes
+
+- **backend:** Elimina campo costo_unitario duplicado en tests
+
+- **backend:** Valida coherencia tipo/sub_tipo y corrige índices de auditoría en DBs existentes
+
+- **backend:** Sincroniza correlativo de movimientos y valida proveedor/cliente inactivo
+
+- **auditoria:** Corrige 42 hallazgos de auditoria integral — a11y, tokens, negocio, datos y perf
+
+- **auditoria:** Cierra cabos sueltos — denormaliza almacen_id, bloquea controla_lote, cajas historial, inventario eliminar, contraste y warnings
+
+- **app:** Auditoria E2E en Chrome — 7 correcciones de backend y frontend
+
+- **mapa:** Auditoria profunda 2D/3D — WebGL, accesibilidad, params y trazabilidad
+
+- **backend:** Cierra brechas de seguridad y consistencia de negocio
+
+- **movimientos:** Restringe edición al creador en la UI
+
+
+### Chore
+
+- **opencode:** Registra micro-agentes especializados + small_model haiku
+
+- **opencode:** Instala MCP chrome-devtools en repo y global
+
+
+### Documentación
+
+- Regenera CHANGELOG.md anclado al tag v0.3.0
+
+- **agents:** Sincroniza AGENTS.md con stack real y pipeline actual
+
+
+### Estilo
+
+- **backend:** Aplica cargo fmt sobre commands.rs y query.rs
+
+
+### Features
+
+- Initial commit
+
+- **backend:** Completa catalogos del SPEC y avanza reglas de movimientos
+
+- **backend:** Completa movimientos, comentarios, trazabilidad, alertas y reportes del SPEC
+
+- **frontend:** Conecta login, dashboard, alertas, reportes y movimientos al backend real
+
+- **frontend:** Conecta los catálogos al backend real con CRUD completo en Almacén y Producto
+
+- Conecta inventario físico al backend y cierra la conexión frontend-backend completa
+
+- **backend:** Agrega script de datos de ejemplo para explorar la app
+
+- Expone la lógica de negocio real por HTTP para que Rustock funcione en un navegador normal
+
+- Completa la experiencia de Rustock con catalogos, configuracion, reportes, ayuda, temas, command palette y tracking total
+
+- Agrega script de arranque en un solo comando (dev.sh / npm run dev:web)
+
+- Mapas 2D/3D de almacén, entidad Pasillo y navegación completa de catálogos físicos
+
+- **seo:** Sitemap, robots, llms y JSON-LD base + ajuste tipografico fallback
+
+- **landing:** Pule landing a nivel obsesivo — dolores, confianza y stack
+
+- **mapa:** Modo construcción con colisiones, 3D inmersivo y experiencia Blender
+
+- **frontend:** Conecta UI a las correcciones de negocio del backend
+
+- **manual:** Agrega Manual del Cliente con capítulos y glosario
+
+- **docs:** New module
+
+- **rustock:** Rediseño minimal, PWA, escáner, etiquetas y motor de reglas
+
 ## [0.3.0] - 2026-08-10
 
 ### Bug Fixes
