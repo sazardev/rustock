@@ -997,6 +997,489 @@ const CH_CONTAINER: ManualCapitulo = {
   ],
 };
 
+const CH_TREE: ManualCapitulo = {
+  id: "m02-arbol",
+  titulo: "The physical tree and its simplification",
+  icono: "almacen",
+  resumen: "How each node hangs, and why uniqueness is per warehouse.",
+  terminosClave: ["almacen", "zona", "rack", "seccion", "ubicacion-bin", "caja", "pasillo"],
+  relacionados: ["m02-almacen", "m02-ubicacion"],
+  secciones: [
+    {
+      titulo: "Strict hierarchy",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Warehouse → Zone → Rack → Section → Location → Container. The aisle is an optional organisational level inside a zone.",
+        },
+        {
+          tipo: "tabla",
+          cabeceras: ["Rule", "Detail"],
+          filas: [
+            ["A single parent", "Every node has exactly one warehouse root."],
+            [
+              "Simplification",
+              "A location can hang from a zone, a rack or a section (in the same warehouse).",
+            ],
+            [
+              "Uniqueness per warehouse",
+              "Zone/rack/section/location: the code is unique across the WHOLE warehouse.",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "ArbolAlmacen.tsx on the warehouse detail shows a navigable Zone→Rack→Section→Location tree.",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_MAP2D: ManualCapitulo = {
+  id: "m02-mapa2d",
+  titulo: "2D map — build mode",
+  icono: "ubicacion",
+  resumen: "A real geometric plan: every element is a rectangle with collisions.",
+  paraQueSirve: "To prototype the warehouse’s real shape before loading stock.",
+  cuandoUsarlo: "When setting up or reorganising a warehouse.",
+  terminosClave: ["almacen", "zona", "pasillo", "rack", "ubicacion-bin"],
+  relacionados: ["m02-mapa3d", "m02-asistente"],
+  secciones: [
+    {
+      titulo: "Real geometry (SPEC 14.8)",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Everything positioned occupies a rectangle (pos_x, pos_y, ancho, profundidad). A location is a fixed-size bin; zones, aisles and racks are resizable.",
+            "An element with no position is not on the plan.",
+            "An inactive one frees its floor space.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Matrix of forbidden overlaps",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Pair", "Forbidden"],
+          filas: [
+            ["Same type with itself", "Yes: zone↔zone, aisle↔aisle, rack↔rack, location↔location."],
+            ["Aisle ↔ rack", "Yes"],
+            ["Aisle ↔ location", "Yes (an aisle is transit space)."],
+            ["Rack ↔ location", "Yes"],
+            ["A zone containing its children", "Allowed, never blocked."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Touching along an edge is valid (AABB with strict inequality).",
+            "Validated on every mutation. The rejection names both: \"The rack 'RACK-01' overlaps the aisle 'PAS-01'\".",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Canvas tools in 2D",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Mode via the URL ?modo=construir. Toolbar: Select / Zone / Aisle / Rack + Grid (step 10, Alt disables snapping) + Rotate 90°.",
+            "Dragging shows a red ghost, and the drop is blocked with a toast if the matrix forbids it.",
+            "Create by drawing: a green/red preview with live dimensions. The suggested code is the first free one (Z-04, PAS-07). Transactional, with no hard-coded code.",
+            "Keyboard: Esc deselects, arrows move, Enter selects, double click navigates, Ctrl+Z / Ctrl+Shift+Z.",
+          ],
+        },
+        {
+          tipo: "enlaces",
+          items: [
+            { etiqueta: "Open a warehouse’s 2D map", href: "/almacenes/1/mapa" },
+            { etiqueta: "Base layout assistant", href: "/almacenes/1/mapa/asistente" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_MAP3D: ManualCapitulo = {
+  id: "m02-mapa3d",
+  titulo: "Immersive 3D map (Blender/Figma style)",
+  icono: "ubicacion",
+  resumen:
+    "A fullscreen editor across the whole window: orbit, multiple selection, duplicate, walk.",
+  paraQueSirve:
+    "To understand volumes, heights and proximity; to work with the power of a 3D editor.",
+  terminosClave: ["mapa-3d", "almacen"],
+  relacionados: ["m02-mapa2d", "m02-asistente"],
+  secciones: [
+    {
+      titulo: "Immersive layout",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "The .mapa3d-full container is fixed inset 0 at z-index 210 (responsive, filling the whole window). The canvas is absolute inset-0; frameloop demand (61 FPS) / always while auto-rotating.",
+            "Floating UI: a top bar in two pills (surface + shadow-lg) plus a scrollable node panel on the left. The bar uses pointer-events none so it does not block orbiting.",
+            'A prior WebGL check (tieneWebGL): with no GPU or driver → a clear ErrorPanel, "The 3D map requires WebGL", with a link to the 2D one.',
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Controls and selection",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Action", "How"],
+          filas: [
+            [
+              "Orbit",
+              "Drag the background (OrbitControls, demand, damping 0.08, 61 FPS). Inertia via enableDamping.",
+            ],
+            [
+              "Move a node",
+              "Drag the prism: a ray onto the horizontal plane at pos_z (keeping the height), snapping at step 10, a green/red ghost (emissive) plus obstacles in dim red.",
+            ],
+            [
+              "Multiple selection",
+              "Shift+click toggles the group (grupoIds). Dragging any member moves the whole group by the same delta (grabbed by a member), with all-or-nothing validation if one collides.",
+            ],
+            [
+              "Undo/Redo",
+              "The use-historial-mapa hook (50, kind mover/creacion/grupo). Buttons + Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y. A blocked drop is not recorded.",
+            ],
+            [
+              "Visual hint",
+              "A green hint on the floor (y=0.16) plus obstacles glowing dim red during the gesture; not 2D’s dense heatmap. A live green/red signal.",
+            ],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Blender-style shortcuts",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Shortcut", "Effect"],
+          filas: [
+            [
+              "Arrows",
+              "Nudge the selection or group by grid steps (all-or-nothing blocking, with a toast if it would collide).",
+            ],
+            ["R", "Rotate 90° around the centre."],
+            ["F", "Focus the selection (frame selected, keeping the camera direction)."],
+            [
+              "Shift+D",
+              "Duplicate into the nearest free gap (posicionLibreCercana), inheriting the zone and staying selected; Ctrl+Z undoes it.",
+            ],
+            ["Z", "Wireframe view."],
+            ["Esc", "Exit walking and reframe; clears the group and the selection."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Camera presets: Isometric / Plan (top-down) / Front (centroYDistancia, encuadrarTodo).",
+            'A coordinate HUD chip in mono, "x · y", over the node being dragged.',
+            "Walking mode: the camera sits at 1.7 eye height, WASD moves camera and target along the view direction, dragging looks around; Esc exits and reframes.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_ASSISTANT: ManualCapitulo = {
+  id: "m02-asistente",
+  titulo: "Base layout assistant",
+  icono: "zona",
+  resumen: "Prototype an empty warehouse in seconds and generate geometry with no overlaps.",
+  terminosClave: ["almacen", "zona", "pasillo", "rack"],
+  relacionados: ["m02-mapa2d", "m02-mapa3d"],
+  secciones: [
+    {
+      titulo: "How it works",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Route /almacenes/:id/mapa/asistente. Only while the warehouse has no active zones.",
+            "Form: zone dimensions, 1–12 aisles, 1–20 racks per block, with a live SVG preview.",
+            "On generating: a containing zone plus alternating columns [rack block | aisle], margins 20/gap 10, guaranteed free of overlaps.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Recommended flow: Assistant → adjust in 2D → check the heights in 3D → load catalogues and stock.",
+          tono: "success",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_PRODUCT: ManualCapitulo = {
+  id: "m03-producto",
+  titulo: "Products (SKUs)",
+  icono: "producto",
+  resumen: "The catalogue at the heart: with no products there are no movements.",
+  paraQueSirve: "To register each item with rules that prevent mistakes.",
+  terminosClave: [
+    "producto-sku",
+    "uom",
+    "uom-base",
+    "categoria",
+    "codigo-barras",
+    "stock-minimo",
+    "stock-maximo",
+    "lote",
+  ],
+  relacionados: ["m01-uom", "m03-lote", "m04-entradas"],
+  secciones: [
+    {
+      titulo: "Attributes and rules",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            [
+              "sku",
+              "Unique, upper case, trimmed, no spaces, normalised, immutable. Changeable only by a role with an explicit permission, and it leaves a trail.",
+            ],
+            ["nombre", "Required, human-readable."],
+            ["descripcion", "Optional, free text."],
+            ["categoria_id", "Optional, a tree with no cycles; NULL = no category."],
+            ["uom_base_id", "Required, an active UOM. Immutable after creation."],
+            [
+              "uom_venta_id / uom_compra_id",
+              "Optional, alternative UOMs with a conversion factor (e.g. BOX 10×PZA).",
+            ],
+            [
+              "codigo_barras",
+              "Optional, unique if present; scanner reading takes exact priority over q.",
+            ],
+            ["peso_unitario (kg)", "Optional, numeric; informational."],
+            ["volumen_unitario (m³)", "Optional, numeric; informational."],
+            [
+              "stock_minimo",
+              "Optional (base UOM); raises the low-stock alert if the sum is ≤ the minimum.",
+            ],
+            [
+              "stock_maximo",
+              "Optional (base UOM); raises the over-maximum alert if > the maximum.",
+            ],
+            ["controla_lote", "If true, EVERY movement requires a lot, without exception."],
+            [
+              "controla_vencimiento",
+              "If true, it implies controla_lote and requires fecha_vencimiento on the lot and on any inbound movement with a new lot.",
+            ],
+            ["perecedero", "If true, it turns on FEFO for outbound movements."],
+            [
+              "activo",
+              "Defaults to true; an inactive one takes no new inbound or outbound movements, only queries and authorised regularisation adjustments (which require a permission).",
+            ],
+            [
+              "id / created_at / updated_at / created_by / updated_by",
+              "Automatic/audit, immutable.",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The SKU and the base UOM are locked after creation. The UOM is validated as active on create and edit; a UOM in use cannot be deactivated. An inactive product: authorised regularisation only.",
+          tono: "warning",
+        },
+      ],
+    },
+    {
+      titulo: "In the app",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "List /productos (SKU, name, Lot/Expiry/Perishable badges, status), detail with stock by location/lot, category and suppliers, new /productos/nuevo and edit /productos/:id/editar (the SKU and base UOM are locked), delete deactivates with a confirmation. Quick create from movements.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_LOT: ManualCapitulo = {
+  id: "m03-lote",
+  titulo: "Lots",
+  icono: "lote",
+  resumen: "Origin and expiry per product. The basis of traceability and FEFO.",
+  terminosClave: ["lote", "vencimiento", "fefo", "fifo", "trazabilidad"],
+  relacionados: ["m03-producto", "m04-fifo", "m04-salidas"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["numero", "Text, unique within the product, immutable after creation."],
+            ["producto_id", "Required; the selector filters to products that track lots only."],
+            ["fecha_fabricacion", "Optional, the manufacturing date."],
+            [
+              "fecha_vencimiento",
+              "Optional; required if the product tracks expiry (when creating the lot and on every inbound movement with a new lot).",
+            ],
+            ["origen", "Free text, e.g. a supplier or internal."],
+            ["notas", "Optional, free text."],
+            ["id / created_at / updated_at / created_by / updated_by", "Automatic/audit."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "It only makes sense if the product tracks lots; the number is unique per product.",
+            "List /lotes (number, product, expiry, origin, 20 per page), detail, new /lotes/nuevo (the number is immutable, the product filtered), edit /lotes/:id/editar (dates/origin/notes only); lots are not deleted (no delete action).",
+            "An expired lot cannot go out to a customer or as a supplier return; only as shrinkage or a negative adjustment (hard rule 8.6). Lots are listed filtered by product in the movement and count forms.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Use the 30/60/90-day expiries reports and the Lot expiring soon alert (with the configurable dias_aviso threshold) to rotate in time and avoid shrinkage.",
+          tono: "success",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_CATEGORY: ManualCapitulo = {
+  id: "m03-categoria",
+  titulo: "Categories",
+  icono: "categoria",
+  resumen: "A tree hierarchy for classifying products and filtering reports.",
+  terminosClave: ["categoria", "producto-sku"],
+  relacionados: ["m03-producto", "m06-reportes"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["nombre", "Unique, required."],
+            ["parent_id", "Optional; NULL = root (move to the root with parent_id: null)."],
+            ["descripcion", "Optional, free text."],
+            ["activo", "Defaults to true."],
+            ["id / created_at / updated_at / created_by / updated_by", "Automatic/audit."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Real cycle detection walks the ancestors (not just whether a parent exists).",
+            "With children or products it cannot be deleted; only deactivated (logical delete).",
+            "Routes: /categorias (list), /categorias/nuevo, /categorias/:id, /categorias/:id/editar, /categorias/:id/eliminar (deactivates).",
+            "The Current stock report can be filtered by category.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_SUPPLIER_CUSTOMER: ManualCapitulo = {
+  id: "m03-proveedor-cliente",
+  titulo: "Suppliers and customers",
+  icono: "proveedor",
+  resumen: "The source of purchases and the destination of dispatches.",
+  terminosClave: ["proveedor", "cliente", "entrada", "salida", "trazabilidad"],
+  relacionados: ["m04-entradas", "m04-salidas"],
+  secciones: [
+    {
+      titulo: "Common attributes",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique, immutable."],
+            ["nombre", "Required."],
+            ["contacto_* + direccion", "Optional."],
+            ["activo", "Defaults to true. An inactive one is unusable."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "The supplier appears on PURCHASE and SUPPLIER_RETURN inbound movements; the customer on CUSTOMER outbound movements.",
+            "Routes: /proveedores* and /clientes*. Reports by supplier/customer.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_BRANCH: ManualCapitulo = {
+  id: "m03-sucursal",
+  titulo: "Branches and the company",
+  icono: "ubicacion",
+  resumen: "Company settings (country, tax details, contact, logo, files) and operating points.",
+  terminosClave: ["sucursal", "almacen"],
+  relacionados: ["m00-personalizacion"],
+  secciones: [
+    {
+      titulo: "Company settings",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "The configuracion_empresa table holds a single row id=default with defaults: zone America/Lima, format DD_MMM_YYYY, 30 warning days, requires approval 1.",
+            "Fields at /configuracion: basic details, country/city/address, tax details, contact, lat/long coordinates, time zone, date format, warning days, default minimum stock, approval policy, global theme.",
+            "Location and map: lat/long + Detect my location + an OSM iframe + Open in Google Maps.",
+            "Logo and documents: LOGO replaces the previous one (≤2 MB) and DOCUMENT (≤10 MB), as BLOBs in SQLite, base64.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Branches",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "The Sucursal record has full CRUD (unique code, validated coordinates). Permission configuracion:ver/editar.",
+            "Routes: /sucursales, /sucursales/nuevo, /sucursales/:id, edit, delete.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Bulk import",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Route /configuracion/importar: CSV of catalogues. It validates row by row and reports a ResultadoImportacion.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 const TRADUCIDOS: ManualCapitulo[] = [
   CH_VISION,
   CH_INSTALL,
@@ -1012,6 +1495,15 @@ const TRADUCIDOS: ManualCapitulo[] = [
   CH_SECTION,
   CH_LOCATION,
   CH_CONTAINER,
+  CH_TREE,
+  CH_MAP2D,
+  CH_MAP3D,
+  CH_ASSISTANT,
+  CH_PRODUCT,
+  CH_LOT,
+  CH_CATEGORY,
+  CH_SUPPLIER_CUSTOMER,
+  CH_BRANCH,
 ];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
