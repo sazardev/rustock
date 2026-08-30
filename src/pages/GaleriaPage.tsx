@@ -27,6 +27,7 @@ import {
   useToast,
 } from "../shared/ui";
 import type { TableColumn, TableSort } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 interface Producto {
   id: string;
@@ -43,6 +44,7 @@ const PRODUCTOS: Producto[] = [
 ];
 
 function DemoBotones() {
+  const t = useT();
   const { toast } = useToast();
   const demo = (msg: string) => () => toast(`Acción de ejemplo: ${msg}`, "default");
 
@@ -69,10 +71,15 @@ function DemoBotones() {
       <Button variant="primary" size="lg" onClick={demo("Grande")}>
         Grande
       </Button>
-      <Button variant="primary" icon="agregar" onClick={demo("Con icono")}>
+      <Button variant="primary" icon="agregar" onClick={demo(t.galeria.conIcono)}>
         Con icono
       </Button>
-      <Button variant="ghost" size="icon" aria-label="Acción con icono" onClick={demo("Icono")}>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={t.galeria.accionConIcono}
+        onClick={demo("Icono")}
+      >
         <Icon name="ver" size={16} aria-hidden="true" />
       </Button>
       <Button variant="secondary" disabled>
@@ -141,31 +148,36 @@ function DemoTipografia() {
 }
 
 function DemoCampos() {
+  const t = useT();
   const [checked, setChecked] = useState(false);
   const [radio, setRadio] = useState("a");
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-      <Field label="Nombre del almacén" required htmlFor="demo-nombre">
+      <Field label={t.galeria.nombreAlmacen} required htmlFor="demo-nombre">
         <Input id="demo-nombre" placeholder="Almacén Central" />
       </Field>
-      <Field label="Código" help="Código único alfanumérico" htmlFor="demo-codigo">
+      <Field label="Código" help={t.galeria.codigoUnico} htmlFor="demo-codigo">
         <Input id="demo-codigo" code placeholder="ALM-###" />
       </Field>
       <Field label="Cantidad" htmlFor="demo-cantidad">
         <Input id="demo-cantidad" number placeholder="0" />
       </Field>
       <Field label="Estado" htmlFor="demo-estado">
-        <Select id="demo-estado" placeholder="Seleccione un estado">
+        <Select id="demo-estado" placeholder={t.galeria.seleccioneEstado}>
           <option value="activo">Activo</option>
           <option value="mantenimiento">Mantenimiento</option>
         </Select>
       </Field>
-      <Field label="Cantidad con error" error="El valor debe ser mayor a 0" htmlFor="demo-error">
+      <Field
+        label={t.galeria.cantidadConError}
+        error={t.galeria.valorMayorQueCero}
+        htmlFor="demo-error"
+      >
         <Input id="demo-error" number defaultValue="0" aria-invalid="true" />
       </Field>
       <Field label="Observaciones" htmlFor="demo-notas">
-        <Textarea id="demo-notas" placeholder="Notas internas del registro" />
+        <Textarea id="demo-notas" placeholder={t.galeria.notasInternas} />
       </Field>
       <div className="flex flex-wrap items-center gap-6">
         <label className="checkbox">
@@ -197,6 +209,7 @@ function DemoCampos() {
 }
 
 function DemoTabla() {
+  const t = useT();
   const { toast } = useToast();
   const [sort, setSort] = useState<TableSort | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -269,7 +282,7 @@ function DemoTabla() {
           </Button>
         </>
       )}
-      emptyTitle="No hay productos"
+      emptyTitle={t.galeria.sinProductos}
     />
   );
 }
@@ -289,6 +302,7 @@ function DemoPaginacion() {
 }
 
 function DemoEstados() {
+  const t = useT();
   const { toast } = useToast();
   return (
     <div className="flex flex-col gap-6">
@@ -304,26 +318,26 @@ function DemoEstados() {
       </div>
       <EmptyState
         icon="stock"
-        title="No hay productos todavía"
-        description="Cree el primer producto para comenzar a operar."
+        title={t.galeria.sinProductosLargo}
+        description={t.galeria.creePrimerProducto}
         action={
           <Button
             variant="primary"
             size="sm"
             icon="agregar"
-            onClick={() => toast("Creación de producto iniciada", "default")}
+            onClick={() => toast(t.galeria.toasts.creacionIniciada, "default")}
           >
             Crear producto
           </Button>
         }
       />
       <ErrorPanel
-        title="Saldo insuficiente"
+        title={t.galeria.saldoInsuficiente}
         action={
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => toast("Consultando saldo de RACK-A1-N2-P3", "default")}
+            onClick={() => toast(t.galeria.toasts.consultandoSaldo, "default")}
           >
             Revisar saldo
           </Button>
@@ -336,17 +350,18 @@ function DemoEstados() {
 }
 
 function DemoTarjetas() {
+  const t = useT();
   const { toast } = useToast();
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
       <Card
-        title="Datos generales"
+        title={t.galeria.datosGenerales}
         actions={
           <Button
             variant="ghost"
             size="sm"
             icon="editar"
-            onClick={() => toast("Editando datos generales", "default")}
+            onClick={() => toast(t.galeria.toasts.editandoDatos, "default")}
           >
             Editar
           </Button>
@@ -366,21 +381,21 @@ function DemoTarjetas() {
           <Button
             variant="secondary"
             icon="ver"
-            onClick={() => toast("Abriendo detalle", "default")}
+            onClick={() => toast(t.galeria.toasts.abriendoDetalle, "default")}
           >
             Ver detalle
           </Button>
           <Button
             variant="secondary"
             icon="editar"
-            onClick={() => toast("Abriendo edición", "default")}
+            onClick={() => toast(t.galeria.toasts.abriendoEdicion, "default")}
           >
             Editar registro
           </Button>
           <Button
             variant="ghost"
             icon="eliminar"
-            onClick={() => toast("Confirmación de borrado", "error")}
+            onClick={() => toast(t.galeria.toasts.confirmacionBorrado, "error")}
           >
             Eliminar
           </Button>
@@ -391,6 +406,7 @@ function DemoTarjetas() {
 }
 
 function DemoFiltros() {
+  const t = useT();
   const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [zona, setZona] = useState("");
@@ -437,8 +453,8 @@ function DemoFiltros() {
         ) : null}
       </FilterChips>
       <div className="w-full max-w-md">
-        <Field label="Búsqueda global">
-          <Search placeholder="Buscar en todo Rustock" aria-label="Búsqueda global" />
+        <Field label={t.galeria.busquedaGlobal}>
+          <Search placeholder={t.shell.buscarGlobal} aria-label={t.galeria.busquedaGlobal} />
         </Field>
       </div>
     </div>
@@ -446,19 +462,20 @@ function DemoFiltros() {
 }
 
 function DemoToast() {
+  const t = useT();
   const { toast } = useToast();
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <Button variant="primary" onClick={() => toast("Movimiento aprobado", "success")}>
+      <Button
+        variant="primary"
+        onClick={() => toast(t.galeria.toasts.movimientoAprobado, "success")}
+      >
         Notificación de éxito
       </Button>
-      <Button
-        variant="secondary"
-        onClick={() => toast("No se pudo guardar: campo obligatorio faltante", "error")}
-      >
+      <Button variant="secondary" onClick={() => toast(t.galeria.toasts.campoFaltante, "error")}>
         Notificación de error
       </Button>
-      <Button variant="ghost" onClick={() => toast("Cambios guardados", "default")}>
+      <Button variant="ghost" onClick={() => toast(t.galeria.toasts.cambiosGuardados, "default")}>
         Notificación neutra
       </Button>
     </div>
@@ -630,89 +647,59 @@ function ShowcaseSection({ id, title, description, children }: ShowcaseSectionPr
 }
 
 export function GaleriaPage() {
+  const t = useT();
   return (
     <>
-      <PageHeader
-        title="Sistema de diseño"
-        description="Galería de componentes del design system Rustock."
-      />
+      <PageHeader title={t.galeria.titulo} description={t.galeria.descripcion} />
 
-      <ShowcaseSection
-        id="iconos"
-        title="Iconografía"
-        description="Set oficial de iconos con semántica canónica."
-      >
+      <ShowcaseSection id="iconos" title="Iconografía" description={t.galeria.iconosDesc}>
         <DemoIconos />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="paleta"
-        title="Paleta de colores"
-        description="Tokens de color declarados en el sistema de diseño."
-      >
+      <ShowcaseSection id="paleta" title={t.galeria.colores} description={t.galeria.coloresDesc}>
         <DemoPaleta />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="sombras"
-        title="Sombras y elevación"
-        description="Elevación deliberada, nunca decorativa."
-      >
+      <ShowcaseSection id="sombras" title="Sombras y elevación" description={t.galeria.sombrasDesc}>
         <DemoSombras />
       </ShowcaseSection>
 
       <ShowcaseSection
         id="tipografia"
-        title="Tipografía"
-        description="Open Sans para la interfaz y JetBrains Mono para códigos, con cifras tabulares."
+        title={t.galeria.tipografia}
+        description={t.galeria.tipografiaDesc}
       >
         <DemoTipografia />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="botones"
-        title="Botones"
-        description="Variantes, tamaños y estados de los botones."
-      >
+      <ShowcaseSection id="botones" title={t.galeria.botones} description={t.galeria.botonesDesc}>
         <DemoBotones />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="campos"
-        title="Campos de formulario"
-        description="Inputs, textareas, checks y radios con sus estados."
-      >
+      <ShowcaseSection id="campos" title={t.galeria.campos} description={t.galeria.camposDesc}>
         <DemoCampos />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="tablas"
-        title="Tablas"
-        description="Columnas ordenables, celdas mono y acciones por fila."
-      >
+      <ShowcaseSection id="tablas" title={t.galeria.tablas} description={t.galeria.tablasDesc}>
         <DemoTabla />
       </ShowcaseSection>
 
       <ShowcaseSection
         id="paginacion"
-        title="Paginación"
-        description="Controles de paginación con resumen de registros."
+        title={t.galeria.paginacion}
+        description={t.galeria.paginacionDesc}
       >
         <DemoPaginacion />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="estados"
-        title="Estados vacíos y carga"
-        description="Skeletons, empty states y paneles de error."
-      >
+      <ShowcaseSection id="estados" title={t.galeria.estados} description={t.galeria.estadosDesc}>
         <DemoEstados />
       </ShowcaseSection>
 
       <ShowcaseSection
         id="insignias"
         title="Insignias y etiquetas"
-        description="Estados con fondo tintado, borde y texto semántico."
+        description={t.galeria.badgesDesc}
       >
         <DemoBadges />
       </ShowcaseSection>
@@ -720,24 +707,16 @@ export function GaleriaPage() {
       <ShowcaseSection
         id="tarjetas"
         title="Tarjetas y paneles"
-        description="Paneles con encabezado y detalle en grid."
+        description={t.galeria.tarjetasDesc}
       >
         <DemoTarjetas />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="filtros"
-        title="Búsqueda y filtros"
-        description="Barra de filtros con chips removibles."
-      >
+      <ShowcaseSection id="filtros" title="Búsqueda y filtros" description={t.galeria.filtrosDesc}>
         <DemoFiltros />
       </ShowcaseSection>
 
-      <ShowcaseSection
-        id="toast"
-        title="Notificaciones"
-        description="Toasts transitorios para feedback de mutaciones."
-      >
+      <ShowcaseSection id="toast" title="Notificaciones" description={t.galeria.avisosDesc}>
         <DemoToast />
       </ShowcaseSection>
 
