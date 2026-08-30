@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router";
 import { type SeoConfig, seoParaRuta } from "./seo-config";
+import { traducir, useT } from "./i18n";
 
 const SEO_JSONLD_ID = "seo-jsonld";
 
@@ -141,7 +142,8 @@ export interface SeoProps extends Partial<SeoConfig> {
  */
 export function Seo(props: SeoProps) {
   const location = useLocation();
-  const base = props.config ?? seoParaRuta(location.pathname);
+  const t = useT();
+  const base = props.config ?? seoParaRuta(location.pathname, t);
 
   const merged = useSeoMerged(base, props);
 
@@ -176,7 +178,8 @@ function useSeoMerged(base: SeoConfig, props: SeoProps): SeoConfig {
  */
 export function useSeo(config: Partial<SeoConfig> & { title: string; description: string }): void {
   const location = useLocation();
-  const base = seoParaRuta(location.pathname);
+  const t = useT();
+  const base = seoParaRuta(location.pathname, t);
   // `config` es un objeto nuevo cada render; extraemos primitivos para deps estables.
   const { title, description, canonical, robots, keywords, ogType, ogImage, jsonLd } = config;
   useEffect(() => {
@@ -200,9 +203,10 @@ export function useSeo(config: Partial<SeoConfig> & { title: string; description
  */
 export function SeoManager(): null {
   const location = useLocation();
+  const t = useT();
   useEffect(() => {
-    aplicarSeo(seoParaRuta(location.pathname));
-  }, [location.pathname]);
+    aplicarSeo(seoParaRuta(location.pathname, t));
+  }, [location.pathname, t]);
   return null;
 }
 
@@ -239,8 +243,7 @@ export function jsonLdSoftwareApplication(): object {
     name: "Rustock",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Windows, macOS, Linux",
-    description:
-      "WMS self-hosted todo en uno: stock en tiempo real, lotes con FIFO/FEFO, trazabilidad inmutable y sin nube.",
+    description: traducir().seo.aplicacionDesc,
     url: "https://rustock.app",
     image: "https://rustock.app/og-image.png",
     offers: {

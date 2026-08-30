@@ -1928,6 +1928,53 @@ export const en: Diccionario = {
   },
 
   seo: {
+    gestionDe: (p) => `Managing ${p.entidad} in your warehouse.`,
+    noEncontradaDesc:
+      "The page you are looking for does not exist or was moved. Go back to the dashboard or the help.",
+    landingTitulo: "Rustock — self-hosted WMS for full control of your warehouse",
+    landingDesc:
+      "An all-in-one self-hosted WMS: real-time stock, lots with FIFO/FEFO, immutable traceability and no cloud. One installation, one SQLite file. Your warehouse under control.",
+    landingKeywords:
+      "wms, warehouse management, inventory control, stock, stocktake, lots, FIFO, FEFO, traceability, stock card, self-hosted, rustock",
+    ayudaIndexTitulo: "Rustock Help — 26 guides to master your warehouse",
+    ayudaIndexDesc:
+      "Complete Rustock documentation: 26 guides by module, 6 business processes, first steps and a 46-term glossary. Everything the app does, exactly as it works.",
+    ayudaIndexKeywords: "rustock help, wms documentation, inventory guide, warehouse manual",
+    glosarioTitulo: "Rustock Glossary — 46 warehouse and logistics terms",
+    glosarioDesc:
+      "Rustock’s domain glossary: SKU, lot, FIFO, FEFO, location, balance, movement, stocktake and 40 more terms, linked from every guide.",
+    glosarioKeywords: "wms glossary, warehouse terms, SKU, lot, FIFO, FEFO, inventory",
+    galeriaTitulo: "Gallery — Rustock’s Rust & Iron design system",
+    galeriaDesc:
+      "Components, tokens and patterns of Rustock’s Rust & Iron design system. A visual reference of the product, no smoke: what you see is what there is.",
+    loginDescLarga:
+      "Sign in to your Rustock warehouse. Self-hosted inventory management: stock, movements, lots and traceability on your own infrastructure.",
+    adminDescLarga:
+      "Rustock’s first run: create the administrator account and take control of your warehouse. No cloud, no waiting.",
+    ayudaGenericaTitulo: "Help — Rustock",
+    ayudaGenericaDesc: "Rustock guides: learn to run your warehouse with full control.",
+    reporteGenerico: "Report",
+    reporteGenericoDesc: "Warehouse analysis and reports, filterable and exportable.",
+    aplicacionDesc:
+      "An all-in-one self-hosted WMS: real-time stock, lots with FIFO/FEFO, immutable traceability and no cloud.",
+    ayudaModulo: (p) => `${p.titulo} — Rustock Help`,
+    conMarca: (p) => `${p.titulo} — Rustock`,
+    privadas: {
+      dashboard:
+        "Your warehouse indicators: SKUs, units, alerts, today’s movements and inventory accuracy.",
+      movimientos:
+        "Inbound, outbound, transfers and stock adjustments with immutable traceability.",
+      inventario:
+        "Count sessions: full, cycle, blind count and double count with measured accuracy.",
+      alertas: "Low stock, expiries and pending movements to resolve.",
+      reportes:
+        "Current stock, movements, expiries, stock card, accuracy and audit — filterable and exportable.",
+      historial:
+        "Full tracking: what was done, when, by whom and from where. Deep analysis of system use.",
+      usuarios: "Management of users, roles and granular permissions.",
+      perfil: "Your details, preferences and password change.",
+      configuracion: "Company, branches, parameters, files and system preferences.",
+    },
     loginTitulo: "Sign in — Rustock",
     loginDesc:
       "Access your Rustock warehouse. Self-hosted WMS: stock, lots and traceability on your own infrastructure.",

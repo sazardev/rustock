@@ -2020,6 +2020,52 @@ export const es = {
 
   // ============ Metadatos de página (SEO) ============
   seo: {
+    gestionDe: (p: { entidad: string }) => `Gestión de ${p.entidad} en tu almacén.`,
+    noEncontradaDesc:
+      "La página que buscas no existe o fue movida. Vuelve al dashboard o a la ayuda.",
+    landingTitulo: "Rustock — WMS self-hosted para control total de tu almacén",
+    landingDesc:
+      "WMS self-hosted todo en uno: stock en tiempo real, lotes con FIFO/FEFO, trazabilidad inmutable y sin nube. Una instalación, un archivo SQLite. Tu almacén bajo control.",
+    landingKeywords:
+      "wms, sga, gestión de almacén, control de inventario, stock, inventario físico, lotes, FIFO, FEFO, trazabilidad, kardex, self-hosted, rustock",
+    ayudaIndexTitulo: "Ayuda de Rustock — 26 guías para dominar tu almacén",
+    ayudaIndexDesc:
+      "Documentación completa de Rustock: 26 guías por módulo, 6 procesos de negocio, primeros pasos y glosario de 46 términos. Todo lo que hace la app, tal cual funciona.",
+    ayudaIndexKeywords: "ayuda rustock, documentación wms, guía inventario, manual almacén",
+    glosarioTitulo: "Glosario de Rustock — 46 términos de almacén y logística",
+    glosarioDesc:
+      "Glosario del dominio de Rustock: SKU, lote, FIFO, FEFO, ubicación, saldo, movimiento, inventario físico y 40 términos más, enlazados desde cada guía.",
+    glosarioKeywords: "glosario wms, términos almacén, SKU, lote, FIFO, FEFO, inventario",
+    galeriaTitulo: "Galería — Sistema de diseño Rust & Iron de Rustock",
+    galeriaDesc:
+      "Componentes, tokens y patrones del sistema de diseño Rust & Iron de Rustock. Una referencia visual del producto, sin humo: lo que ves es lo que hay.",
+    loginDescLarga:
+      "Accede a tu almacén Rustock. Gestión self-hosted de inventario: stock, movimientos, lotes y trazabilidad en tu infraestructura.",
+    adminDescLarga:
+      "Primer arranque de Rustock: crea el usuario administrador y toma el control de tu almacén. Sin nube, sin esperas.",
+    ayudaGenericaTitulo: "Ayuda — Rustock",
+    ayudaGenericaDesc: "Guías de Rustock: aprende a operar tu almacén con control total.",
+    reporteGenerico: "Reporte",
+    reporteGenericoDesc: "Análisis y reportes del almacén, filtrables y exportables.",
+    aplicacionDesc:
+      "WMS self-hosted todo en uno: stock en tiempo real, lotes con FIFO/FEFO, trazabilidad inmutable y sin nube.",
+    ayudaModulo: (p: { titulo: string }) => `${p.titulo} — Ayuda de Rustock`,
+    conMarca: (p: { titulo: string }) => `${p.titulo} — Rustock`,
+    privadas: {
+      dashboard:
+        "Indicadores de tu almacén: SKUs, unidades, alertas, movimientos de hoy y precisión de inventario.",
+      movimientos: "Entradas, salidas, traslados y ajustes de stock con trazabilidad inmutable.",
+      inventario:
+        "Sesiones de conteo: completo, cíclico, conteo ciego y doble conteo con precisión medida.",
+      alertas: "Stock bajo, vencimientos y movimientos pendientes por resolver.",
+      reportes:
+        "Stock actual, movimientos, vencimientos, kardex, precisión y auditoría — filtrables y exportables.",
+      historial:
+        "Tracking total: qué se hizo, cuándo, quién y desde dónde. Análisis profundo del uso del sistema.",
+      usuarios: "Gestión de usuarios, roles y permisos granulares.",
+      perfil: "Tus datos, preferencias y cambio de contraseña.",
+      configuracion: "Empresa, sucursales, parámetros, archivos y preferencias del sistema.",
+    },
     loginTitulo: "Iniciar sesión — Rustock",
     loginDesc:
       "Accede a tu almacén Rustock. WMS self-hosted: stock, lotes y trazabilidad en tu infraestructura.",
