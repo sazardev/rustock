@@ -26,6 +26,7 @@ import { Card, Link, Table, type TableColumn, Text } from "../shared/ui";
 import { AlmacenRef, LoteRef, UbicacionRef } from "../shared/refs";
 import { almacenMapa } from "../app/route-paths";
 import { useT } from "../shared/i18n";
+import { formatearNumero } from "../shared/format";
 
 /** Resuelve el almacén de una ubicación caminando el árbol (SPEC §3.13) —
  * mismo criterio que `ReporteStockPage.tsx:almacenDeUbicacion`. */
@@ -150,7 +151,7 @@ export function ProductoUbicacionesCard({ row }: { row: Producto }) {
       key: "cantidad",
       header: t.comun.cantidad,
       num: true,
-      render: (f) => f.cantidad.toLocaleString(),
+      render: (f) => formatearNumero(f.cantidad),
     },
     {
       key: "mapa",

@@ -714,6 +714,20 @@ export const en: Diccionario = {
       "no-encontrado": "Not found",
     },
     acciones: {
+      stock: "Current stock",
+      movimientos: "Movements",
+      entradas: "Inbound",
+      salidas: "Outbound",
+      "mermas-ajustes": "Shrinkage and adjustments",
+      vencimientos: "Expiries",
+      kardex: "Stock card",
+      precision: "Accuracy",
+      auditoria: "Audit",
+      usuarios: "Users",
+      glosario: "Glossary",
+      importar: "Import",
+      password: "Password",
+      asistente: "Assistant",
       nuevo: "New",
       editar: "Edit",
       eliminar: "Delete",
@@ -1006,6 +1020,7 @@ export const en: Diccionario = {
     },
 
     vencimientos: {
+      lotesUnidades: (p) => `${p.lotes} lots / ${p.unidades} units`,
       titulo: "Expiries",
       descripcion:
         "Expired lots and lots expiring soon, classified into a single report by range (SPEC §16.2).",
@@ -1653,6 +1668,13 @@ export const en: Diccionario = {
   },
 
   palette: {
+    resultados: (p) => `${p.total} results`,
+    navegar: "navigate",
+    abrirAtajo: "open",
+    sinResultadosPara: (p) => `No results for “${p.consulta}”`,
+    abriendoGuia: (p) => `Opening the Help guide: ${p.titulo}`,
+    ayudaDesactivadaLarga:
+      "The Help guides are turned off in search: enable them in My profile to get suggestions for processes, modules and the glossary.",
     recientes: "Recent",
     sinCoincidencias: "No matches",
     cerrarBusqueda: "Close search",
@@ -1908,6 +1930,8 @@ export const en: Diccionario = {
   },
 
   movimientoAcciones: {
+    aprobarNumero: (p) => `Approve movement ${p.numero}`,
+    anularNumero: (p) => `Cancel movement ${p.numero}`,
     aprobarTitulo: "Approve movement",
     aprobarAviso:
       "Approving executes the lines atomically: this is the only moment a movement changes the balance of its locations.",
@@ -1933,6 +1957,7 @@ export const en: Diccionario = {
   },
 
   inventarioPagina: {
+    anularNumero: (p) => `Cancel session ${p.numero}`,
     nuevaSesion: "New session",
     todosLosEstados: "All statuses",
     titulo: "Stocktake",

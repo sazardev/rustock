@@ -50,7 +50,7 @@ export function MovimientoAprobarPage() {
   return (
     <>
       <PageHeader
-        title={`Aprobar movimiento ${movimiento.numero}`}
+        title={t.movimientoAcciones.aprobarNumero({ numero: movimiento.numero })}
         description={t.movimientoAcciones.aprobarAviso}
       />
 
@@ -60,7 +60,7 @@ export function MovimientoAprobarPage() {
             items={[
               { label: t.campos.numero, value: movimiento.numero, code: true },
               { label: t.comun.tipo, value: t.dominio.tipoMovimiento[movimiento.tipo] },
-              { label: t.campos.subTipo, value: movimiento.sub_tipo, code: true },
+              { label: t.campos.subTipo, value: t.dominio.subTipoMovimiento[movimiento.sub_tipo] },
               {
                 label: t.movimientoAcciones.estadoActual,
                 value: t.dominio.estadoMovimiento[movimiento.estado],
@@ -97,7 +97,7 @@ export function MovimientoAprobarPage() {
         >
           {aprobarMut.isPending ? "Aprobando…" : t.movimientoAcciones.aprobarTitulo}
         </Button>
-        <Link href={movimientoDetalle(movimientoId)}>Cancelar</Link>
+        <Link href={movimientoDetalle(movimientoId)}>{t.comun.cancelar}</Link>
       </div>
     </>
   );

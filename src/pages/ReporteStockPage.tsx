@@ -38,7 +38,7 @@ import {
 } from "../shared/ui";
 import { LoteRef, ProductoRef, UbicacionRef } from "../shared/refs";
 import { catalogoDetalle, PATH } from "../app/route-paths";
-import { mensajeError } from "../shared/format";
+import { formatearFechaCorta, formatearNumero, mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 interface FilaProducto {
@@ -258,19 +258,25 @@ export function ReporteStockPage() {
       key: "unidades",
       header: t.reportes.columnas.unidades,
       num: true,
-      render: (f) => f.unidades.toLocaleString(),
+      render: (f) => formatearNumero(f.unidades),
     },
     {
       key: "minimo",
       header: t.reportes.columnas.minimo,
       num: true,
-      render: (f) => productoPorId.get(f.producto_id)?.stock_minimo?.toLocaleString() ?? "—",
+      render: (f) => {
+        const min = productoPorId.get(f.producto_id)?.stock_minimo;
+        return min === null || min === undefined ? "—" : formatearNumero(min);
+      },
     },
     {
       key: "maximo",
       header: t.reportes.columnas.maximo,
       num: true,
-      render: (f) => productoPorId.get(f.producto_id)?.stock_maximo?.toLocaleString() ?? "—",
+      render: (f) => {
+        const max = productoPorId.get(f.producto_id)?.stock_maximo;
+        return max === null || max === undefined ? "—" : formatearNumero(max);
+      },
     },
     {
       key: "estado_stock",
@@ -318,12 +324,12 @@ export function ReporteStockPage() {
       key: "cantidad",
       header: t.comun.cantidad,
       num: true,
-      render: (s) => s.cantidad.toLocaleString(),
+      render: (s) => formatearNumero(s.cantidad),
     },
     {
       key: "updated_at",
       header: t.reportes.columnas.actualizado,
-      render: (s) => new Date(s.updated_at).toLocaleDateString(),
+      render: (s) => formatearFechaCorta(s.updated_at),
     },
   ];
 
@@ -351,12 +357,12 @@ export function ReporteStockPage() {
               items={[
                 {
                   label: t.reportes.columnas.productos,
-                  value: productosConStock.toLocaleString(),
+                  value: formatearNumero(productosConStock),
                   code: true,
                 },
                 {
                   label: t.reportes.stock.unidadesTotales,
-                  value: totalUnidades.toLocaleString(),
+                  value: formatearNumero(totalUnidades),
                   code: true,
                 },
               ]}
@@ -369,12 +375,12 @@ export function ReporteStockPage() {
               items={[
                 {
                   label: t.reportes.columnas.ubicaciones,
-                  value: ubicacionesConStock.toLocaleString(),
+                  value: formatearNumero(ubicacionesConStock),
                   code: true,
                 },
                 {
                   label: t.reportes.stock.filasDeStock,
-                  value: filtrados.length.toLocaleString(),
+                  value: formatearNumero(filtrados.length),
                   code: true,
                 },
               ]}

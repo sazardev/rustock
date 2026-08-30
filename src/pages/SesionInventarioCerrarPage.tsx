@@ -150,7 +150,7 @@ export function SesionInventarioCerrarPage() {
         >
           {cerrarMut.isPending ? "Cerrando…" : t.cierreInventario.titulo}
         </Button>
-        <Link href={sesionInventarioDetalle(sesionId)}>Cancelar</Link>
+        <Link href={sesionInventarioDetalle(sesionId)}>{t.comun.cancelar}</Link>
       </div>
     </>
   );

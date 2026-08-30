@@ -33,6 +33,7 @@ import {
   ESTADO_MOVIMIENTO_TONE,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
+  formatearNumero,
   mensajeError,
 } from "../shared/format";
 import { useSession } from "../shared/session";
@@ -85,7 +86,7 @@ export function MovimientoDetallePage() {
       key: "cantidad",
       header: t.comun.cantidad,
       num: true,
-      render: (l) => l.cantidad.toLocaleString(),
+      render: (l) => formatearNumero(l.cantidad),
     },
     {
       key: "origen_ubicacion_id",

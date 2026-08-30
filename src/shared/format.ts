@@ -81,6 +81,17 @@ export function formatearFecha(iso: string | null): string {
   return construirFecha(d, opcionesFecha(), true);
 }
 
+/**
+ * Número con los separadores del idioma activo.
+ *
+ * `toLocaleString()` sin argumentos usa el idioma del *navegador*, no el que
+ * la persona eligió en Rustock: con la app en castellano y Chrome en inglés
+ * salía «13,500» donde toca «13.500».
+ */
+export function formatearNumero(valor: number): string {
+  return valor.toLocaleString(localeDe());
+}
+
 export function formatearFechaCorta(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);

@@ -22,7 +22,12 @@ import {
 } from "../shared/ui";
 import { ClienteRef, ProveedorRef } from "../shared/refs";
 import { movimientoDetalle, PATH } from "../app/route-paths";
-import { ESTADO_MOVIMIENTO_TONE, formatearFecha, mensajeError } from "../shared/format";
+import {
+  ESTADO_MOVIMIENTO_TONE,
+  formatearFecha,
+  formatearNumero,
+  mensajeError,
+} from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 export interface ConfigReporteTipo {
@@ -335,7 +340,7 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
                     t.dominio.subTipoMovimiento[
                       fila.key as keyof typeof t.dominio.subTipoMovimiento
                     ] ?? fila.key,
-                  value: fila.count.toLocaleString(),
+                  value: formatearNumero(fila.count),
                   code: true,
                 }))}
               />

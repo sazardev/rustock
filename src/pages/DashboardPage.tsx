@@ -18,6 +18,7 @@ import {
   TIPO_MOVIMIENTO_ICON,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
+  formatearNumero,
   mensajeError,
 } from "../shared/format";
 
@@ -77,12 +78,12 @@ export function DashboardPage() {
     ? [
         {
           label: t.dashboard.skusActivos,
-          value: resumen.total_skus_activos.toLocaleString(),
+          value: formatearNumero(resumen.total_skus_activos),
           code: true,
         },
         {
           label: t.dashboard.unidadesTotales,
-          value: resumen.total_unidades.toLocaleString(),
+          value: formatearNumero(resumen.total_unidades),
           code: true,
         },
         {
@@ -95,12 +96,12 @@ export function DashboardPage() {
         },
         {
           label: t.dashboard.alertasActivas,
-          value: resumen.alertas_activas.toLocaleString(),
+          value: formatearNumero(resumen.alertas_activas),
           code: true,
         },
         {
           label: t.dashboard.movimientosHoy,
-          value: `${resumen.movimientos_hoy.toLocaleString()} (E:${resumen.movimientos_hoy_por_tipo.entradas} S:${resumen.movimientos_hoy_por_tipo.salidas} T:${resumen.movimientos_hoy_por_tipo.traslados} A:${resumen.movimientos_hoy_por_tipo.ajustes})`,
+          value: `${formatearNumero(resumen.movimientos_hoy)} (E:${resumen.movimientos_hoy_por_tipo.entradas} S:${resumen.movimientos_hoy_por_tipo.salidas} T:${resumen.movimientos_hoy_por_tipo.traslados} A:${resumen.movimientos_hoy_por_tipo.ajustes})`,
           code: true,
         },
         {
@@ -124,7 +125,7 @@ export function DashboardPage() {
         { label: t.dashboard.tasaMerma, value: `${kpis.tasa_merma_pct.toFixed(2)}%`, code: true },
         {
           label: t.dashboard.lotesVencidos,
-          value: kpis.lotes_vencidos_sin_dar_de_baja.toLocaleString(),
+          value: formatearNumero(kpis.lotes_vencidos_sin_dar_de_baja),
           code: true,
         },
         {

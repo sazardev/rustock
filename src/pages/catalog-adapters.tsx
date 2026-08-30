@@ -76,7 +76,7 @@ import type {
 } from "../shared/types";
 import { Badge, type DetailItem, type IconName, type TableColumn } from "../shared/ui";
 import { catalogoEditar, catalogoEliminar, catalogoLista } from "../app/route-paths";
-import { formatearFecha, formatearFechaCorta } from "../shared/format";
+import { formatearFecha, formatearFechaCorta, formatearNumero } from "../shared/format";
 
 export interface CatalogAdapter<T extends { id: string }> {
   titulo: string;
@@ -192,7 +192,10 @@ function ubicacionAdapter(t: Diccionario): CatalogAdapter<Ubicacion> {
         key: "capacidad_maxima",
         header: t.campos.capacidadMaxima,
         num: true,
-        render: (r) => r.capacidad_maxima?.toLocaleString() ?? "—",
+        render: (r) =>
+          r.capacidad_maxima === null || r.capacidad_maxima === undefined
+            ? "—"
+            : formatearNumero(r.capacidad_maxima),
       },
       { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
     ],
@@ -200,7 +203,13 @@ function ubicacionAdapter(t: Diccionario): CatalogAdapter<Ubicacion> {
       { label: t.campos.codigo, value: r.codigo, code: true },
       { label: t.campos.nombre, value: r.nombre ?? "—" },
       { label: t.campos.tipo, value: r.tipo },
-      { label: t.campos.capacidadMaxima, value: r.capacidad_maxima?.toLocaleString() ?? "—" },
+      {
+        label: t.campos.capacidadMaxima,
+        value:
+          r.capacidad_maxima === null || r.capacidad_maxima === undefined
+            ? "—"
+            : formatearNumero(r.capacidad_maxima),
+      },
       ...filasPosicion(r, t),
       { label: t.campos.creado, value: formatearFecha(r.created_at) },
     ],

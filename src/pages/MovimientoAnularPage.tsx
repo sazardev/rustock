@@ -49,7 +49,7 @@ export function MovimientoAnularPage() {
   return (
     <>
       <PageHeader
-        title={`Anular movimiento ${movimiento.numero}`}
+        title={t.movimientoAcciones.anularNumero({ numero: movimiento.numero })}
         description={t.movimientoAcciones.anularAviso}
       />
 
@@ -59,7 +59,7 @@ export function MovimientoAnularPage() {
             items={[
               { label: t.campos.numero, value: movimiento.numero, code: true },
               { label: t.comun.tipo, value: t.dominio.tipoMovimiento[movimiento.tipo] },
-              { label: t.campos.subTipo, value: movimiento.sub_tipo, code: true },
+              { label: t.campos.subTipo, value: t.dominio.subTipoMovimiento[movimiento.sub_tipo] },
               {
                 label: t.movimientoAcciones.estadoActual,
                 value: t.dominio.estadoMovimiento[movimiento.estado],
@@ -91,7 +91,7 @@ export function MovimientoAnularPage() {
         >
           {anularMut.isPending ? "Anulando…" : t.movimientoAcciones.anularTitulo}
         </Button>
-        <Link href={movimientoDetalle(movimientoId)}>Cancelar</Link>
+        <Link href={movimientoDetalle(movimientoId)}>{t.comun.cancelar}</Link>
       </div>
     </>
   );

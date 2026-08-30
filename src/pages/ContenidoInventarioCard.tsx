@@ -12,6 +12,7 @@ import { esPaginado, type Pasillo, type Rack, type Ubicacion, type Zona } from "
 import { Card, Table, type TableColumn, Text } from "../shared/ui";
 import { LoteRef, ProductoRef, UbicacionRef } from "../shared/refs";
 import { useT } from "../shared/i18n";
+import { formatearNumero } from "../shared/format";
 
 type TipoContenido = "zona" | "pasillo" | "rack" | "ubicacion";
 
@@ -122,7 +123,7 @@ export function ContenidoInventarioCard({ tipo, row }: Props) {
       key: "cantidad",
       header: t.comun.cantidad,
       num: true,
-      render: (f) => f.cantidad.toLocaleString(),
+      render: (f) => formatearNumero(f.cantidad),
     },
   ];
 

@@ -47,7 +47,7 @@ export function SesionInventarioEliminarPage() {
   return (
     <>
       <PageHeader
-        title={`Anular sesión ${sesion.numero}`}
+        title={t.inventarioPagina.anularNumero({ numero: sesion.numero })}
         description={t.inventarioPagina.avisoAnular}
       />
 
@@ -56,7 +56,10 @@ export function SesionInventarioEliminarPage() {
           <DetailList
             items={[
               { label: t.campos.numero, value: sesion.numero, code: true },
-              { label: t.comun.tipo, value: sesion.tipo },
+              {
+                label: t.comun.tipo,
+                value: t.dominio.tipoSesion[sesion.tipo],
+              },
               { label: t.inventarioPagina.estadoActual, value: sesion.estado },
             ]}
           />
@@ -85,7 +88,7 @@ export function SesionInventarioEliminarPage() {
         >
           {anularMut.isPending ? "Anulando…" : t.inventarioPagina.anular}
         </Button>
-        <Link href={sesionInventarioDetalle(sesionId)}>Cancelar</Link>
+        <Link href={sesionInventarioDetalle(sesionId)}>{t.comun.cancelar}</Link>
       </div>
     </>
   );

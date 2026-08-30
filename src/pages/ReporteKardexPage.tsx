@@ -14,7 +14,12 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import { PATH, reporteKardexProducto } from "../app/route-paths";
-import { TIPO_MOVIMIENTO_TONE, formatearFecha, mensajeError } from "../shared/format";
+import {
+  TIPO_MOVIMIENTO_TONE,
+  formatearFecha,
+  formatearNumero,
+  mensajeError,
+} from "../shared/format";
 
 export function ReporteKardexPage() {
   const t = useT();
@@ -52,19 +57,19 @@ export function ReporteKardexPage() {
       key: "entrada",
       header: t.reportes.kardex.entrada,
       num: true,
-      render: (l) => (l.entrada > 0 ? l.entrada.toLocaleString() : "—"),
+      render: (l) => (l.entrada > 0 ? formatearNumero(l.entrada) : "—"),
     },
     {
       key: "salida",
       header: t.reportes.kardex.salida,
       num: true,
-      render: (l) => (l.salida > 0 ? l.salida.toLocaleString() : "—"),
+      render: (l) => (l.salida > 0 ? formatearNumero(l.salida) : "—"),
     },
     {
       key: "saldo_acumulado",
       header: t.reportes.kardex.saldoAcumulado,
       num: true,
-      render: (l) => l.saldo_acumulado.toLocaleString(),
+      render: (l) => formatearNumero(l.saldo_acumulado),
     },
   ];
 

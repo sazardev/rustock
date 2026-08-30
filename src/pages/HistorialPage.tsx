@@ -20,7 +20,7 @@ import {
   type IconName,
   Icon,
 } from "../shared/ui";
-import { formatearFecha, mensajeError } from "../shared/format";
+import { formatearFecha, formatearNumero, mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 const PAGE_SIZE = 50;
@@ -87,7 +87,7 @@ function BarrasHorizontales({ filas, max }: { filas: BarraDato[]; max: number })
             <div className="chart-row__track">
               <div className="chart-row__fill" style={{ width: `${pct}%` }} />
             </div>
-            <span className="font-mono text-xs text-gray-600">{fila.valor.toLocaleString()}</span>
+            <span className="font-mono text-xs text-gray-600">{formatearNumero(fila.valor)}</span>
           </div>
         );
       })}
@@ -395,15 +395,15 @@ export function HistorialPage() {
 
       {resumen ? (
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-          <KpiCard titulo="Eventos" valor={resumen.total_eventos.toLocaleString()} />
+          <KpiCard titulo="Eventos" valor={formatearNumero(resumen.total_eventos)} />
           <KpiCard
             titulo="Vistas"
-            valor={resumen.total_vistas.toLocaleString()}
+            valor={formatearNumero(resumen.total_vistas)}
             detalle={t.historial.paginasVisitadas}
           />
           <KpiCard
             titulo="Operaciones"
-            valor={resumen.total_operaciones.toLocaleString()}
+            valor={formatearNumero(resumen.total_operaciones)}
             detalle={`${resumen.escrituras} escrituras · ${resumen.lecturas} lecturas`}
           />
           <KpiCard
@@ -413,7 +413,7 @@ export function HistorialPage() {
           />
           <KpiCard
             titulo={t.historial.usuariosActivos}
-            valor={resumen.usuarios_activos.toLocaleString()}
+            valor={formatearNumero(resumen.usuarios_activos)}
           />
           <KpiCard
             titulo={t.historial.duracionMedia}

@@ -383,11 +383,11 @@ export function CommandPalette() {
       grupo: fila.grupo,
       href: fila.href,
     });
-    const esAyuda = fila.grupo === "Ayuda" || fila.href.startsWith("/ayuda");
+    const esAyuda = fila.href.startsWith("/ayuda");
     cerrar();
     navigate(fila.href);
     if (esAyuda) {
-      toast(`Abriendo guía de Ayuda: ${fila.titulo}`, "success");
+      toast(t.palette.abriendoGuia({ titulo: fila.titulo }), "success");
     }
   }
 
@@ -561,14 +561,11 @@ export function CommandPalette() {
               {!buscando && !datosQuery.isPending && sinResultados ? (
                 <>
                   <span className="palette__estado-titulo">
-                    Sin resultados para &quot;{consultaActiva}&quot;
+                    {t.palette.sinResultadosPara({ consulta: consultaActiva })}
                   </span>
                   <span className="palette__estado-texto">{t.comun.pruebaConSku}</span>
                   {!ayudaEnPalette ? (
-                    <span className="palette__estado-texto">
-                      Las guías de Ayuda están desactivadas en la búsqueda: actívalas en Mi perfil
-                      para obtener sugerencias de procesos, módulos y glosario.
-                    </span>
+                    <span className="palette__estado-texto">{t.palette.ayudaDesactivadaLarga}</span>
                   ) : null}
                 </>
               ) : null}
@@ -583,7 +580,7 @@ export function CommandPalette() {
           <span className="palette__footer-cuenta">
             {hayResultados ? (
               <>
-                {listaPlana.length} resultados
+                {t.palette.resultados({ total: listaPlana.length })}
                 <span className="palette__footer-desglose">
                   {grupos.map((g) => `${g.filas.length} ${g.titulo.toLowerCase()}`).join(" · ")}
                 </span>
@@ -595,9 +592,9 @@ export function CommandPalette() {
           <span className="palette__footer-atajos">
             <kbd className="kbd">↑</kbd>
             <kbd className="kbd">↓</kbd>
-            <span>navegar</span>
+            <span>{t.palette.navegar}</span>
             <kbd className="kbd">Enter</kbd>
-            <span>abrir</span>
+            <span>{t.palette.abrirAtajo}</span>
           </span>
         </div>
       </div>

@@ -38,6 +38,7 @@ import {
   TIPO_MOVIMIENTO_ICON,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
+  formatearNumero,
   mensajeError,
 } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
@@ -490,7 +491,7 @@ export function ReporteMovimientosPage() {
               <DetailList
                 items={TIPOS.map((tipo) => ({
                   label: t.dominio.tipoMovimiento[tipo],
-                  value: conteoPorTipo(tipo).toLocaleString(),
+                  value: formatearNumero(conteoPorTipo(tipo)),
                   code: true,
                 }))}
               />

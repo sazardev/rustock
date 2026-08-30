@@ -17,7 +17,7 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import { PATH } from "../app/route-paths";
-import { mensajeError } from "../shared/format";
+import { formatearNumero, mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 const TIPOS: TipoMovimiento[] = ["ENTRADA", "SALIDA", "TRASLADO", "AJUSTE", "CONSUMO"];
@@ -93,7 +93,7 @@ export function ReporteUsuariosPage() {
       key: "total",
       header: t.reportes.usuarios.movimientos,
       num: true,
-      render: (f) => f.total.toLocaleString(),
+      render: (f) => formatearNumero(f.total),
     },
     {
       key: "pct",

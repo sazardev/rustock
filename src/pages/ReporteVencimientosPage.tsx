@@ -15,7 +15,7 @@ import {
 } from "../shared/ui";
 import { useT, type Diccionario } from "../shared/i18n";
 import { PATH } from "../app/route-paths";
-import { formatearFechaCorta, mensajeError } from "../shared/format";
+import { formatearFechaCorta, formatearNumero, mensajeError } from "../shared/format";
 
 type RangoId = "vencidos" | "proximos_30" | "proximos_60" | "proximos_90";
 
@@ -42,7 +42,7 @@ function columnasDe(t: Diccionario): Array<TableColumn<LotePorVencer>> {
       key: "cantidad",
       header: t.comun.cantidad,
       num: true,
-      render: (l) => l.cantidad.toLocaleString(),
+      render: (l) => formatearNumero(l.cantidad),
     },
     {
       key: "vencido",
@@ -72,7 +72,10 @@ export function ReporteVencimientosPage() {
   const resumenItems = buckets
     ? rangosDe(t).map(({ id, titulo }) => ({
         label: titulo,
-        value: `${buckets[id].total_lotes.toLocaleString()} lotes / ${buckets[id].total_unidades.toLocaleString()} unidades`,
+        value: t.reportes.vencimientos.lotesUnidades({
+          lotes: formatearNumero(buckets[id].total_lotes),
+          unidades: formatearNumero(buckets[id].total_unidades),
+        }),
       }))
     : [];
 

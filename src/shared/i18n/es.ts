@@ -746,6 +746,20 @@ export const es = {
       "no-encontrado": "No encontrado",
     },
     acciones: {
+      stock: "Stock actual",
+      movimientos: "Movimientos",
+      entradas: "Entradas",
+      salidas: "Salidas",
+      "mermas-ajustes": "Mermas y ajustes",
+      vencimientos: "Vencimientos",
+      kardex: "Kardex",
+      precision: "Precisión",
+      auditoria: "Auditoría",
+      usuarios: "Usuarios",
+      glosario: "Glosario",
+      importar: "Importar",
+      password: "Contraseña",
+      asistente: "Asistente",
       nuevo: "Nuevo",
       editar: "Editar",
       eliminar: "Eliminar",
@@ -1044,6 +1058,8 @@ export const es = {
     },
 
     vencimientos: {
+      lotesUnidades: (p: { lotes: string; unidades: string }) =>
+        `${p.lotes} lotes / ${p.unidades} unidades`,
       titulo: "Vencimientos",
       descripcion:
         "Lotes vencidos o próximos a vencer, clasificados en un solo reporte por rango (SPEC §16.2).",
@@ -1714,6 +1730,13 @@ export const es = {
 
   // ============ Command palette ============
   palette: {
+    resultados: (p: { total: number }) => `${p.total} resultados`,
+    navegar: "navegar",
+    abrirAtajo: "abrir",
+    sinResultadosPara: (p: { consulta: string }) => `Sin resultados para «${p.consulta}»`,
+    abriendoGuia: (p: { titulo: string }) => `Abriendo guía de Ayuda: ${p.titulo}`,
+    ayudaDesactivadaLarga:
+      "Las guías de Ayuda están desactivadas en la búsqueda: actívalas en Mi perfil para obtener sugerencias de procesos, módulos y glosario.",
     recientes: "Recientes",
     sinCoincidencias: "Sin coincidencias",
     cerrarBusqueda: "Cerrar búsqueda",
@@ -1983,6 +2006,8 @@ export const es = {
 
   // ============ Acciones sobre un movimiento ============
   movimientoAcciones: {
+    aprobarNumero: (p: { numero: string }) => `Aprobar movimiento ${p.numero}`,
+    anularNumero: (p: { numero: string }) => `Anular movimiento ${p.numero}`,
     aprobarTitulo: "Aprobar movimiento",
     aprobarAviso:
       "Al aprobar se ejecutan las líneas de forma atómica: este es el único momento en que un movimiento altera el saldo de sus ubicaciones.",
@@ -2009,6 +2034,7 @@ export const es = {
 
   // ============ Inventario (listado y anulación) ============
   inventarioPagina: {
+    anularNumero: (p: { numero: string }) => `Anular sesión ${p.numero}`,
     nuevaSesion: "Nueva sesión",
     todosLosEstados: "Todos los estados",
     titulo: "Inventario físico",
