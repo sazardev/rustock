@@ -1869,6 +1869,8 @@ export const es = {
 
   // ============ Conteos de inventario ============
   conteos: {
+    soloEnCurso: (p: { estado: string }) =>
+      `Solo se pueden registrar conteos mientras la sesión está En curso. Estado actual: ${p.estado}.`,
     titulo: "Registrar conteos",
     descripcion: "Captura el conteo físico por ubicación, producto y lote.",
     noAdmite: "Esta sesión no admite conteos",

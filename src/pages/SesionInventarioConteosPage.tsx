@@ -177,8 +177,8 @@ export function SesionInventarioConteosPage() {
 
       {sesion && !puedeContar ? (
         <ErrorPanel title={t.conteos.noAdmite}>
-          Solo se pueden registrar conteos mientras la sesión está EN_CURSO. Estado actual:{" "}
-          {sesion.estado}. <Link href={sesionInventarioDetalle(sesionId)}>Volver a la sesión</Link>.
+          {t.conteos.soloEnCurso({ estado: t.dominio.estadoSesion[sesion.estado] })}{" "}
+          <Link href={sesionInventarioDetalle(sesionId)}>{t.comun.volverALaSesion}</Link>.
         </ErrorPanel>
       ) : null}
 

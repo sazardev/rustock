@@ -1803,6 +1803,8 @@ export const en: Diccionario = {
   },
 
   conteos: {
+    soloEnCurso: (p) =>
+      `Counts can only be recorded while the session is In progress. Current status: ${p.estado}.`,
     titulo: "Record counts",
     descripcion: "Record the physical count by location, product and lot.",
     noAdmite: "This session does not accept counts",
