@@ -366,6 +366,14 @@ for (const name of iconNames) {
 // ---------------------------------------------------------------------------
 // 4. Cero modales (DESIGN §5.1)
 // ---------------------------------------------------------------------------
+/** Vacía el contenido de las cadenas para que solo quede el código. */
+function sinCadenas(texto) {
+  return texto
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+    .replace(/`(?:[^`\\$]|\\.|\$(?!\{))*`/g, "``");
+}
+
 const MODAL_PATTERNS = [
   { re: /from\s+["'][^"']*dialog[^"']*["']/i, msg: `import de Dialog` },
   { re: /from\s+["'][^"']*\/dialog[^"']*["']/i, msg: `import de dialog` },
@@ -380,13 +388,17 @@ const MODAL_PATTERNS = [
   {
     re: /(?<![.\w$])(alert|confirm|prompt)\s*\(|\bwindow\.(alert|confirm|prompt)\s*\(/,
     msg: `alert/confirm/prompt (modal nativo)`,
+    // Solo el código cuenta: «la alerta (SPEC §17.1)» dentro de una cadena
+    // traducida es prosa, no una llamada.
+    soloCodigo: true,
   },
 ];
 for (const rel of srcFiles) {
   const src = read(rel);
   if (!src) continue;
-  for (const { re, msg } of MODAL_PATTERNS) {
-    if (re.test(src)) {
+  const srcSinCadenas = sinCadenas(src);
+  for (const { re, msg, soloCodigo } of MODAL_PATTERNS) {
+    if (re.test(soloCodigo ? srcSinCadenas : src)) {
       // allow alert/confirm in scripts (no UI) — only flag src/
       push(
         "CRÍTICO",

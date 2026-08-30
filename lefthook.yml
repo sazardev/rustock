@@ -27,6 +27,9 @@ pre-commit:
     route-guard:
       glob: "src/app/**/*.{ts,tsx}"
       run: node scripts/route-guard.mjs
+    i18n-guard:
+      glob: "src/pages/{ayuda,manual}/*-contenido.*.ts"
+      run: node scripts/i18n-guard.mjs
     rust-format:
       root: "src-tauri/"
       glob: "*.rs"
@@ -49,6 +52,8 @@ pre-push:
       run: node scripts/design-guard.mjs
     route-guard-all:
       run: node scripts/route-guard.mjs
+    i18n-guard-all:
+      run: node scripts/i18n-guard.mjs
     rust-fmt-check:
       root: "src-tauri/"
       run: cargo fmt --all -- --check

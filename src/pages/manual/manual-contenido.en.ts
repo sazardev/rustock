@@ -2,9 +2,10 @@
 /**
  * Customer Manual content, in English.
  *
- * TRANSLATION IN PROGRESS. The manual is 52 chapters of long-form prose,
- * translated part by part. Until a part is done, its Spanish text is served:
- * that is visible and documented here, not a silent gap.
+ * The 50 chapters are translated. The parts array is still assembled from the
+ * Spanish structure so the two languages cannot drift apart: if a chapter is
+ * added there and not here, it shows up in Spanish instead of disappearing,
+ * and the id check in the tests catches it.
  */
 import { PATH } from "../../app/route-paths";
 import { MANUAL_PARTES_ES } from "./manual-contenido.es";
@@ -219,12 +220,7 @@ const CH_INSTALL: ManualCapitulo = {
   ],
 };
 
-/**
- * Chapters already translated, by id. The parts array is assembled from the
- * Spanish structure and each chapter is swapped for its English version when
- * one exists — so the manual is never half-built while the translation
- * advances chapter by chapter.
- */
+/** The English chapters, by id. */
 
 const CH_ROLES: ManualCapitulo = {
   id: "m00-roles",
@@ -2512,6 +2508,452 @@ const CH_P_SHRINKAGE: ManualCapitulo = {
   ],
 };
 
+const CH_QUERY: ManualCapitulo = {
+  id: "m08-consulta",
+  titulo: "Universal query (SPEC 15)",
+  icono: "buscar",
+  resumen:
+    "Every listing is filterable, sortable, searchable, pageable, selectable, aggregatable and exportable.",
+  terminosClave: ["consulta-universal", "producto-sku", "codigo-barras"],
+  relacionados: ["m06-reportes", "m08-trazabilidad"],
+  secciones: [
+    {
+      titulo: "Parameters and combinations",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Parameter", "Description", "Example"],
+          filas: [
+            [
+              "page / page_size",
+              "1-indexed pagination; max 200; -1 = everything up to a cap.",
+              "page=2&page_size=50",
+            ],
+            [
+              "sort",
+              "field ascending, -field descending; multiple allowed.",
+              "sort=producto.nombre,-created_at",
+            ],
+            ["q", "Free text, case-insensitive; SKU/barcode take priority.", "q=REF- screw"],
+            [
+              "filters",
+              "Repeatable field:operator:value; filter_logic AND/OR.",
+              "producto.categoria_id:eq:ID",
+            ],
+            ["fields", "Projection: those fields only.", "fields=codigo,nombre"],
+            [
+              "group_by + aggregations",
+              "Aggregation: sum, count, avg, min, max.",
+              "group_by=tipo&aggregations=count(*)",
+            ],
+            [
+              "export",
+              "true, or csv/json; it ignores pagination and requires the export permission.",
+              "export=csv",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Every parameter is combinable: filter + search + sort + group in a single request.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Filter operators",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Operator", "Meaning", "Example"],
+          filas: [
+            ["eq", "equals", "estado:eq:APROBADO"],
+            ["neq", "not equal", "activo:neq:false"],
+            ["gt / gte", "greater / greater or equal", "cantidad:gt:10"],
+            ["lt / lte", "less / less or equal", "fecha:lt:2026-01-01"],
+            ["in / nin", "in list / not in list", "tipo:in:ENTRADA,SALIDA"],
+            ["contains", "contains", "nombre:contains:tower"],
+            ["starts / ends", "starts with / ends with", "sku:starts:REF-"],
+            ["between", "between", "fecha:between:2026-01-01,2026-01-31"],
+            ["is_null / not_null", "is null / is not null", "lote_id:is_null:true"],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Dates in ISO 8601, interpreted in the configured zone.",
+            "The ResourceSchema allowlist: a column outside the list → a FiltroInvalido error, with the value parameterised.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Responses and performance",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Collection: { data[], meta{total, page, page_size, total_pages, has_next, has_prev} }. Aggregation: { groups[{key, count, sum_cantidad…}], meta }.",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Every field used in filters/sort/group_by is indexed (instant).",
+            "Balances are materialised for instant stock queries.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Deep links and the URL",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Filters/sorting/search/pagination live in the query params: sharing the URL reproduces the exact state.",
+            "Saved filters persist and apply the whole set.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_TRACEABILITY: ManualCapitulo = {
+  id: "m08-trazabilidad",
+  titulo: "History and traceability",
+  icono: "historial",
+  resumen: "Timelines and the 5 queries any auditor will ask you for.",
+  terminosClave: ["trazabilidad", "lote", "movimiento", "kardex"],
+  relacionados: ["m08-consulta", "m06-historial"],
+  secciones: [
+    {
+      titulo: "Timelines",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Of what", "What it returns"],
+          filas: [
+            ["Product", "Every chronological movement that affected it."],
+            [
+              "Location",
+              "Which products/lots passed through, when, with which movement and author; the current balance.",
+            ],
+            ["Movement", "Created/approved/cancelled by, the history and the reversing movement."],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "The 5 traceability queries (SPEC 13.4)",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Question", "How"],
+          filas: [
+            ["Where is lot X right now?", "donde_esta_lote → locations + quantities."],
+            [
+              "Where did the unit dispatched today come from?",
+              "origen_de_salida → outbound → source inbound/transfer.",
+            ],
+            ["Who touched product Y last week?", "movimientos_de_producto_en_rango + the authors."],
+            ["How much expires in 30 days?", "lotes_por_vencer + stock."],
+            ["Where has container Z been?", "historial_caja → transfers."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "All of them filterable/sortable/searchable/pageable (15). Implemented in repo/trazabilidad.rs.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_COMMENTS: ManualCapitulo = {
+  id: "m08-comentarios",
+  titulo: "Comments",
+  icono: "comentario",
+  resumen: "Notes anchored to any record, with a history and hiding instead of deletion.",
+  terminosClave: ["auditoria"],
+  relacionados: ["m04-modelo", "m08-trazabilidad"],
+  secciones: [
+    {
+      titulo: "Model and rules",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            [
+              "entidad / entidad_id",
+              "Product, movement, location, lot, session, supplier, customer, container…",
+            ],
+            ["usuario_id / texto / created_at", "Author, required, date."],
+            [
+              "editado / oculto",
+              "Editing keeps the previous version in comentario_historial; hiding sets oculto_by/at.",
+            ],
+            ["allow", "Requires view permission on the record plus comentario:crear."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "You can comment on an approved movement or an inventory session.",
+            "They are not deleted; only hidden. Visible to anyone with view permission.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The comments panel on MovimientoDetallePage and SesionInventarioDetallePage: a list plus a form at the foot (no modal).",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_CROSS_CUTTING: ManualCapitulo = {
+  id: "m08-transversales",
+  titulo: "Cross-cutting rules",
+  icono: "alerta",
+  resumen:
+    "Integrity, a balance that never goes negative, barcodes, dates, logical delete, concurrency and normalisation.",
+  terminosClave: ["desactivar", "codigo-barras", "saldo"],
+  relacionados: ["m01-stock", "m08-consulta"],
+  secciones: [
+    {
+      titulo: "Integrity and balances",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Referential integrity: no orphans; a record with history is deactivated, one without history allows a physical delete with confirmation and an audit entry.",
+            "The balance never goes negative: atomic validation on approval; a clear error with the location, what is available and what was attempted.",
+            "The balance is derived 100% from approved movements; no figure exists without something behind it.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Barcodes and the scanner",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "It accepts labelled products, containers and locations if they have a code. Unknown → an error plus a search suggestion.",
+            "It never creates data on its own; it feeds the form.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Dates and time zone",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Stored in UTC, displayed in the configured zone.",
+            "fecha_movimiento (the fact) ≠ created_at (the record).",
+            "Daily and monthly reports use the configured zone as the boundary.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Deletion, concurrency and normalisation",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Logical delete via activo/estado; the history is never purged automatically.",
+            "Concurrency: atomic balance validation; a second operation either sees the new balance or fails. An IN_PROGRESS session blocks manual adjustments.",
+            "Naming: codigo/sku normalised to upper case and trimmed, unique per context. Search is case-insensitive and tolerant of accents.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_SHORTCUTS: ManualCapitulo = {
+  id: "m08-atajos",
+  titulo: "Shortcuts, search and zero modals",
+  icono: "buscar",
+  resumen: "A design that demands one page per action: no modals, everything deep-linked.",
+  terminosClave: ["consulta-universal"],
+  relacionados: ["m00-personalizacion", "m08-consulta"],
+  secciones: [
+    {
+      titulo: "Zero modals (DESIGN 5)",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "There are no modals, popovers, blocking tooltips, drawers or floating confirms, and no alert/confirm/prompt.",
+            "View/create/edit/delete are pages with their own URL: /resources, /resources/nuevo, /resources/:id, /resources/:id/editar, /resources/:id/eliminar.",
+            "Delete/cancel/approve/close live on their own confirmation page with the consequences spelled out and a danger button enabled only when it is both possible and authorised.",
+            "Every identifiable value is a link to its detail. On save: new→detail+toast; edit→detail; cancel→the parent.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The Ctrl+K palette is pure navigation (a floating panel), not an editing modal: that is why it coexists with the rule.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Search everything (Ctrl+K)",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Fuzzy multi-term matching with domain synonyms, a boost from history and intent, and multi-column relevance.",
+            "Static commands: Pages (NAV_GROUPS + profile/glossary/10 reports), Actions (gated by role), Help (26 guides + 46 terms), Manual (50 chapters + the glossary). Live data via the Rust buscar command (permissioned, 250 ms debounce, q≥2).",
+            "The q search on listings (15.4): case-insensitive, SKU/barcode take priority, and with several terms all must match.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_CHECKLIST: ManualCapitulo = {
+  id: "m08-checklist",
+  titulo: "The non-negotiable checklist (SPEC 19)",
+  icono: "aprobar",
+  resumen: "14 rules that make your inventory auditable.",
+  terminosClave: ["movimiento", "saldo", "auditoria"],
+  relacionados: ["m04-modelo", "m08-transversales"],
+  secciones: [
+    {
+      titulo: "The 14",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Every change to stock goes through a movement with a type, a reason and an author.",
+            "No balance is ever left negative.",
+            "An approved movement is immutable; cancelling generates the reverse (it never undoes).",
+            "Every listing is filterable/sortable/searchable/pageable/selectable.",
+            "Every listing has aggregations and export.",
+            "Queryable fields are indexed for performance.",
+            "Every change is recorded in the audit (who/what/when/where).",
+            "Records with history are deactivated, not deleted.",
+            "Products that track lots require a lot on every movement.",
+            "Expired lots never go out to a customer; only shrinkage or an adjustment.",
+            "Accuracy is measured, reported and queryable.",
+            "Dates carry a time zone; fecha_movimiento ≠ created_at.",
+            "The balance is derived from movements: no figure without something behind it.",
+            "The permission matrix applies to every operation without exception.",
+            "Blind counting hides balances from the counter while it is on.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "If any of them fails, fix the process before loading more stock. That is the difference between an inventory you can believe and one you cannot.",
+          tono: "success",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_ROADMAP: ManualCapitulo = {
+  id: "m08-extensiones",
+  titulo: "Out of scope (SPEC 20) and the roadmap",
+  icono: "ayuda",
+  resumen:
+    "What Rustock deliberately does not do today, and what will not break the model when it arrives.",
+  relacionados: ["m08-checklist"],
+  secciones: [
+    {
+      titulo: "8 documented extensions (out of scope for v1)",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Extension", "Status today"],
+          filas: [
+            [
+              "Reservations / committed stock",
+              "The field is ready; available = recorded in v1. No real reservations.",
+            ],
+            [
+              "Orders (sales/purchase orders)",
+              "They would group lines and generate movements; they do not yet exist as a record.",
+            ],
+            [
+              "Multiple roles per user",
+              "Exactly one role per user; in future, several roles plus fine-grained permissions per resource.",
+            ],
+            [
+              "Optional integrations",
+              "Scanner hardware, QR, alert emails as optional plugins, always the owner’s choice.",
+            ],
+            [
+              "Full multi-site",
+              "Inter-warehouse transfers are already modelled (two linked movements); valuation and consolidated reports are missing.",
+            ],
+            [
+              "Inventory valuation",
+              "A configurable method (average, FIFO, last cost). Today there is no valuation; physical stock only.",
+            ],
+            [
+              "Public external API",
+              "The same universal query standard (15) for external consumers, not yet exposed.",
+            ],
+            [
+              "Access auditing (who saw what)",
+              "Today only what changes data is audited (create/edit/approve/cancel/run) plus denied attempts (403). Read auditing (who saw what) is left for the future.",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Everything in this manual is what you can already operate today, verified against executable code and 121 tests. Nothing in this table will break the model when it is implemented.",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_FULL_GLOSSARY: ManualCapitulo = {
+  id: "m08-glosario",
+  titulo: "Full glossary",
+  icono: "ayuda",
+  resumen: "50 terms with an operational definition and a direct anchor for links.",
+  terminosClave: ["producto-sku"],
+  relacionados: ["m01-glosario"],
+  secciones: [
+    {
+      titulo: "How to use this glossary",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Every term has a stable id (e.g. saldo, fefo, movimiento-inverso) usable as an anchor, /manual/m08-glosario#saldo. The manual’s guides link here via terminosClave.",
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The definitions are aligned to SPEC 2 and to the real implementation (the types in domain). No jargon from outside the domain.",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
 const TRADUCIDOS: ManualCapitulo[] = [
   CH_VISION,
   CH_INSTALL,
@@ -2557,6 +2999,14 @@ const TRADUCIDOS: ManualCapitulo[] = [
   CH_P_STOCKTAKE,
   CH_P_RETURN,
   CH_P_SHRINKAGE,
+  CH_QUERY,
+  CH_TRACEABILITY,
+  CH_COMMENTS,
+  CH_CROSS_CUTTING,
+  CH_SHORTCUTS,
+  CH_CHECKLIST,
+  CH_ROADMAP,
+  CH_FULL_GLOSSARY,
 ];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
