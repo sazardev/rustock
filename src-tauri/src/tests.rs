@@ -6,7 +6,7 @@ use crate::db::DbState;
 use crate::domain::catalogo::*;
 use crate::domain::inventario::*;
 use crate::domain::movimiento::*;
-use crate::domain::seguridad::{NuevoUsuario, RegistrarVista};
+use crate::domain::seguridad::{EditarUsuario, NuevoUsuario, RegistrarVista};
 use crate::repo;
 
 fn setup() -> std::sync::Arc<DbState> {
@@ -4405,7 +4405,7 @@ fn gestion_usuario_editar_desactivar_reactivar() {
     let editado = repo::seguridad::editar_usuario(
         &conn,
         &id,
-        &crate::domain::seguridad::EditarUsuario {
+        &EditarUsuario {
             nombre_completo: Some("Juan Pérez".into()),
             email: Some(None), // limpiar email
             rol_id: Some(id_rol(&conn, "LECTOR")),
@@ -4481,6 +4481,57 @@ fn gestion_usuario_no_se_auto_desactiva_ni_desactiva_ultimo_admin() {
         )
         .unwrap();
     assert_eq!(admin_activos, 1);
+}
+
+#[test]
+fn no_se_puede_degradar_de_rol_al_ultimo_admin() {
+    let db = setup();
+    let conn = db.conn();
+    let admin_id = id_admin(&conn);
+    let lector = id_rol(&conn, "LECTOR");
+
+    // Con un solo administrador activo, cambiarle el rol lo deja fuera de la
+    // administración y la instalación sin nadie que pueda reponerla: es la
+    // misma pérdida que impide `desactivar_usuario`, por otra puerta.
+    assert!(matches!(
+        repo::seguridad::editar_usuario(
+            &conn,
+            &admin_id,
+            &EditarUsuario {
+                nombre_completo: None,
+                email: None,
+                rol_id: Some(lector.clone()),
+            },
+            &admin_id,
+        ),
+        Err(crate::error::AppError::UltimoAdmin)
+    ));
+
+    // Con un segundo administrador activo, la degradación sí procede.
+    let segundo = repo::seguridad::crear_usuario(
+        &conn,
+        &NuevoUsuario {
+            nombre_usuario: "admin_relevo".into(),
+            nombre_completo: "Admin Relevo".into(),
+            email: None,
+            password: "pass12345".into(),
+            rol_id: id_rol(&conn, "ADMIN"),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("segundo admin");
+    let degradado = repo::seguridad::editar_usuario(
+        &conn,
+        &admin_id,
+        &EditarUsuario {
+            nombre_completo: None,
+            email: None,
+            rol_id: Some(lector.clone()),
+        },
+        &segundo.id,
+    )
+    .expect("degradar con relevo disponible");
+    assert_eq!(degradado.rol_id, lector);
 }
 
 #[test]

@@ -728,7 +728,7 @@ export const MANUAL_PARTES_ES: ManualParte[] = [
                 items: [
                   "Listado en /usuarios con filtro por estado y paginación; detalle muestra actividad reciente vía listar_historial con nombre resuelto.",
                   "Nuevo: /usuarios/nuevo; editar: /usuarios/:id/editar (nombre_usuario inmutable, SKU-style).",
-                  "Eliminar: /usuarios/:id/eliminar desactiva (no borra) con protecciones: no autodesactivarse, no desactivar al último ADMIN activo (error UltimoAdmin).",
+                  "Eliminar: /usuarios/:id/eliminar desactiva (no borra) con protecciones: no autodesactivarse, no desactivar al último ADMIN activo, y tampoco quitarle el rol ADMIN por edición (error UltimoAdmin en ambos casos: el sistema no puede quedarse sin administración).",
                   "Cambiar password propia en /perfil (verifica actual, error PasswordActualIncorrecta) o reset por admin en /usuarios/:id/password.",
                   "Sesión única en memoria (un proceso, un usuario a la vez): login/logout/quien_soy. Sin sesión todo exige autenticación (puede resuelve a NoAutenticado).",
                 ],

@@ -29,7 +29,7 @@ pub enum AppError {
     #[error("La contraseña actual no coincide")]
     PasswordActualIncorrecta,
 
-    #[error("No se puede desactivar al último administrador activo")]
+    #[error("El sistema quedaría sin ningún administrador activo")]
     UltimoAdmin,
 
     #[error("El motivo es obligatorio (mínimo 3 caracteres)")]

@@ -119,6 +119,7 @@ export const en: Diccionario = {
     no: "No",
     activo: "Active",
     inactivo: "Inactive",
+    reactivar: "Reactivate",
     cargando: "Loading…",
     sinDatos: "No data",
     opcional: "Optional",
@@ -1857,6 +1858,7 @@ export const en: Diccionario = {
     nombreCompleto: "Full name",
     ultimoAcceso: "Last sign-in",
     actividadReciente: "Recent activity",
+    tuCuenta: "Your account",
     noSePudoActividad: "Could not load the activity",
     sinActividad: "No activity recorded",
     sinActividadDesc: "This account has not performed any operations yet.",
@@ -2490,7 +2492,8 @@ export const en: Diccionario = {
     CAMPO_REQUERIDO: (p) => `A required value is missing: ${p.campo}.`,
     CAMPO_INVALIDO: (p) => `Invalid value: ${p.campo}.`,
     PASSWORD_ACTUAL_INCORRECTA: () => "The current password does not match.",
-    ULTIMO_ADMIN: () => "The last active administrator cannot be deactivated.",
+    ULTIMO_ADMIN: () =>
+      "That would leave the system with no active administrator: deactivate or change the role only when another administrator exists.",
     MOTIVO_REQUERIDO: () => "A reason is required (at least 3 characters).",
     LOTE_VENCIDO: (p) =>
       `Lot ${p.lote} has expired: it cannot be issued to a customer or returned to the supplier.`,

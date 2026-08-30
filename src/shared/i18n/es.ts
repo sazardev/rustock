@@ -124,6 +124,7 @@ export const es = {
     no: "No",
     activo: "Activo",
     inactivo: "Inactivo",
+    reactivar: "Reactivar",
     cargando: "Cargando…",
     sinDatos: "Sin datos",
     opcional: "Opcional",
@@ -1928,6 +1929,7 @@ export const es = {
     nombreCompleto: "Nombre completo",
     ultimoAcceso: "Último acceso",
     actividadReciente: "Actividad reciente",
+    tuCuenta: "Tu cuenta",
     noSePudoActividad: "No se pudo cargar la actividad",
     sinActividad: "Sin actividad registrada",
     sinActividadDesc: "Esta cuenta aún no ha ejecutado operaciones.",
@@ -2579,7 +2581,8 @@ export const es = {
     CAMPO_REQUERIDO: (p: { campo: string }) => `Falta un dato obligatorio: ${p.campo}.`,
     CAMPO_INVALIDO: (p: { campo: string }) => `Valor no válido: ${p.campo}.`,
     PASSWORD_ACTUAL_INCORRECTA: () => "La contraseña actual no coincide.",
-    ULTIMO_ADMIN: () => "No se puede desactivar al último administrador activo.",
+    ULTIMO_ADMIN: () =>
+      "El sistema quedaría sin ningún administrador activo: desactiva o cambia de rol solo cuando haya otro administrador.",
     MOTIVO_REQUERIDO: () => "El motivo es obligatorio (mínimo 3 caracteres).",
     LOTE_VENCIDO: (p: { lote: string }) =>
       `El lote ${p.lote} está vencido: no puede salir a cliente ni devolverse al proveedor.`,

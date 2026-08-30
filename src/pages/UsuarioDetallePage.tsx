@@ -110,7 +110,7 @@ export function UsuarioDetallePage() {
                 </ButtonLink>
               ) : (
                 <ButtonLink variant="primary" href={`${PATH.usuarios}/${usuario.id}/eliminar`}>
-                  Reactivar
+                  {t.comun.reactivar}
                 </ButtonLink>
               )}
             </>
@@ -137,13 +137,13 @@ export function UsuarioDetallePage() {
           />
           <div className="mt-2">
             {usuario.activo ? (
-              <Badge tone="success">Activo</Badge>
+              <Badge tone="success">{t.comun.activo}</Badge>
             ) : (
-              <Badge tone="danger">Inactivo</Badge>
+              <Badge tone="danger">{t.comun.inactivo}</Badge>
             )}
             {esMiCuenta ? (
               <Badge tone="info" className="ml-2">
-                Tu cuenta
+                {t.usuarioDetalle.tuCuenta}
               </Badge>
             ) : null}
           </div>

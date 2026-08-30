@@ -400,7 +400,7 @@ const CH_ROLES: ManualCapitulo = {
           items: [
             "The list at /usuarios has a status filter and pagination; the detail shows recent activity via listar_historial with the name resolved.",
             "New: /usuarios/nuevo; edit: /usuarios/:id/editar (the username is immutable, SKU-style).",
-            "Delete: /usuarios/:id/eliminar deactivates (it does not delete) with safeguards: you cannot deactivate yourself, nor the last active ADMIN (the UltimoAdmin error).",
+            "Delete: /usuarios/:id/eliminar deactivates (it does not delete) with safeguards: you cannot deactivate yourself, nor the last active ADMIN, nor strip that ADMIN of the role by editing it (the UltimoAdmin error in both cases: the system cannot be left with no administration).",
             "Change your own password at /perfil (it checks the current one, the PasswordActualIncorrecta error) or have an admin reset it at /usuarios/:id/password.",
             "A single in-memory session (one process, one user at a time): login/logout/quien_soy. Without a session everything requires authentication (puede resolves to NoAutenticado).",
           ],

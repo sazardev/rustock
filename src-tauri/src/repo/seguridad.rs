@@ -276,6 +276,17 @@ pub fn editar_usuario(
     cambios.validar()?;
     puede(conn, Some(actor), "usuario", "editar")?;
     usuario_existe(conn, id)?;
+    // Quitarle el rol ADMIN al último administrador activo deja la instalación
+    // sin nadie que pueda gestionar usuarios ni permisos, y sin forma de
+    // recuperarla desde la aplicación: es el mismo daño que `desactivar_usuario`
+    // ya impide, solo que entrando por la puerta del cambio de rol.
+    if let Some(rol_nuevo) = cambios.rol_id.as_ref()
+        && es_admin_activo(conn, id)?
+        && !es_rol_admin(conn, rol_nuevo)?
+        && admin_activos(conn)? <= 1
+    {
+        return Err(AppError::UltimoAdmin);
+    }
     let antes = obtener_usuario(conn, id)?.expect("existe (usuario_existe ya validó)");
     let ts = ahora();
     conn.execute(
@@ -309,6 +320,29 @@ pub fn editar_usuario(
     Ok(despues)
 }
 
+/// ¿El usuario está activo y tiene el rol ADMIN?
+fn es_admin_activo(conn: &Connection, id: &str) -> AppResult<bool> {
+    conn.query_row(
+        "SELECT EXISTS (
+            SELECT 1 FROM usuarios u JOIN roles r ON r.id = u.rol_id
+            WHERE u.id = ?1 AND r.codigo = 'ADMIN' AND u.activo = 1
+         )",
+        [id],
+        |r| r.get(0),
+    )
+    .map_err(AppError::from)
+}
+
+/// ¿El rol indicado es el de administración?
+fn es_rol_admin(conn: &Connection, rol_id: &str) -> AppResult<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM roles WHERE id = ?1 AND codigo = 'ADMIN')",
+        [rol_id],
+        |r| r.get(0),
+    )
+    .map_err(AppError::from)
+}
+
 /// Cantidad de administradores activos (rol ADMIN).
 fn admin_activos(conn: &Connection) -> AppResult<i64> {
     conn.query_row(
@@ -332,17 +366,7 @@ pub fn desactivar_usuario(conn: &Connection, id: &str, actor: &str) -> AppResult
             "no puedes desactivarte a ti mismo".into(),
         ));
     }
-    let es_admin: bool = conn
-        .query_row(
-            "SELECT EXISTS (
-                SELECT 1 FROM usuarios u JOIN roles r ON r.id = u.rol_id
-                WHERE u.id = ?1 AND r.codigo = 'ADMIN' AND u.activo = 1
-             )",
-            [id],
-            |r| r.get(0),
-        )
-        .map_err(AppError::from)?;
-    if es_admin && admin_activos(conn)? <= 1 {
+    if es_admin_activo(conn, id)? && admin_activos(conn)? <= 1 {
         return Err(AppError::UltimoAdmin);
     }
     conn.execute(

@@ -1760,7 +1760,7 @@ const MODULO_USUARIOS: AyudaModulo = {
             "Nuevo usuario (solo ADMIN): usuario, nombre completo, email, rol y contraseña de al menos 8 caracteres.",
             "Detalle: datos de la cuenta y actividad reciente (eventos de auditoría del usuario).",
             "Editar usuario (solo ADMIN): nombre completo, email y rol. El nombre de usuario es inmutable.",
-            "Desactivar / reactivar usuario (solo ADMIN): la página de confirmación explica las consecuencias. No puedes desactivar tu propia cuenta ni al último administrador activo.",
+            "Desactivar / reactivar usuario (solo ADMIN): la página de confirmación explica las consecuencias. No puedes desactivar tu propia cuenta ni al último administrador activo, ni cambiarle el rol si es el último: el sistema quedaría sin administración.",
             "Cambiar contraseña (solo ADMIN, desde el detalle): asigna una nueva contraseña sin conocer la anterior.",
           ],
         },

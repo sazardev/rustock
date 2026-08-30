@@ -1762,7 +1762,7 @@ const MODULE_USERS: AyudaModulo = {
             "New user (ADMIN only): username, full name, email, role and a password of at least 8 characters.",
             "Detail: account data and recent activity (the user’s audit events).",
             "Edit user (ADMIN only): full name, email and role. The username is immutable.",
-            "Deactivate / reactivate user (ADMIN only): the confirmation page explains the consequences. You cannot deactivate your own account or the last active administrator.",
+            "Deactivate / reactivate user (ADMIN only): the confirmation page explains the consequences. You cannot deactivate your own account or the last active administrator, nor change that administrator's role: the system would be left with no administration.",
             "Change password (ADMIN only, from the detail): sets a new password without knowing the previous one.",
           ],
         },
