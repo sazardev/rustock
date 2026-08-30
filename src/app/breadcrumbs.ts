@@ -18,34 +18,11 @@ export interface CrumbSegment {
  * Mapa de ruta -> breadcrumb. El orden importa: se matchea por prefijo de segmento.
  * Cada entrada indica el label de la sección y (opcionalmente) sus sub-rutas.
  */
-const CRUMB_MAP: CrumbSegment[] = [
-  { segment: "movimientos", label: "Movimientos" },
-  { segment: "inventario", label: "Inventario físico" },
-  { segment: "alertas", label: "Alertas" },
-  { segment: "reportes", label: "Reportes" },
-  { segment: "historial", label: "Historial de actividad" },
-  { segment: "usuarios", label: "Usuarios y roles" },
-  { segment: "configuracion", label: "Configuración" },
-  { segment: "galeria", label: "Galería de diseño" },
-  { segment: "manual", label: "Manual" },
-  { segment: "ayuda", label: "Ayuda" },
-  { segment: "acceso-no-permitido", label: "Sin acceso" },
-  { segment: "no-encontrado", label: "No encontrado" },
-];
-
-/** Labels para sub-rutas de acción (editar/eliminar/nuevo). */
-const ACTION_LABELS: Record<string, string> = {
-  nuevo: "Nuevo",
-  editar: "Editar",
-  eliminar: "Eliminar",
-  aprobar: "Aprobar",
-  anular: "Anular",
-  cerrar: "Cerrar",
-  conteos: "Registrar conteos",
-  mapa: "Mapa",
-  "mapa-3d": "Mapa 3D",
-  imprimir: "Imprimir",
-};
+/** Secciones fijas de la aplicación. El segmento de la URL no se traduce
+ *  (SPEC §17.4); lo que cambia es cómo se llama en pantalla. */
+function crumbMap(t: Diccionario): CrumbSegment[] {
+  return Object.entries(t.migas.secciones).map(([segment, label]) => ({ segment, label }));
+}
 
 /**
  * Deriva la lista de crumbs a partir del pathname actual.
@@ -69,7 +46,7 @@ export function crumbsFromPath(pathname: string, t: Diccionario): Crumb[] {
   let matched = false;
 
   // Sección conocida (CRUMB_MAP) o catálogo.
-  const section = CRUMB_MAP.find((s) => s.segment === first);
+  const section = crumbMap(t).find((s) => s.segment === first);
   const catalogos = catalogosDe(t);
   const isCatalog = first in catalogos;
 
@@ -95,7 +72,7 @@ export function crumbsFromPath(pathname: string, t: Diccionario): Crumb[] {
       if (rest.length >= 2) {
         const action = rest[1];
         crumbs.push({
-          label: ACTION_LABELS[action] ?? action,
+          label: (t.migas.acciones as Record<string, string>)[action] ?? action,
           href: action ? undefined : undefined,
         });
       }
@@ -106,13 +83,15 @@ export function crumbsFromPath(pathname: string, t: Diccionario): Crumb[] {
     if (first === "manual" && rest.length >= 1) {
       const capId = rest[0];
       const titulo = tituloManual(capId);
-      crumbs.push({ label: titulo ?? ACTION_LABELS[capId] ?? legible(capId) });
+      crumbs.push({
+        label: titulo ?? (t.migas.acciones as Record<string, string>)[capId] ?? legible(capId),
+      });
       return crumbs;
     }
 
     // /seccion/accion  (ej. /movimientos/nuevo, /inventario/nuevo)
     const action = rest[0];
-    crumbs.push({ label: ACTION_LABELS[action] ?? action });
+    crumbs.push({ label: (t.migas.acciones as Record<string, string>)[action] ?? action });
     return crumbs;
   }
 

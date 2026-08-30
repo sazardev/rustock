@@ -18,7 +18,7 @@ import type { AmbitoRegla, NuevaRegla, SeveridadRegla, TipoRegla } from "../shar
 import { esPaginado } from "../shared/types";
 import { mensajeError } from "../shared/format";
 import { PATH } from "../app/route-paths";
-import { AMBITO_LABEL, TIPO_LABEL, UNIDAD_TIPO } from "./ReglasPage";
+import { useT } from "../shared/i18n";
 import {
   Button,
   ButtonLink,
@@ -100,6 +100,7 @@ const VACIA: NuevaRegla = {
  * "límite en kg" bajo una prohibición de categoría solo genera dudas.
  */
 export function ReglaFormPage() {
+  const t = useT();
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -203,21 +204,21 @@ export function ReglaFormPage() {
     setValores((previo) => ({ ...previo, [clave]: valor }));
   }
 
-  const unidad = UNIDAD_TIPO[valores.tipo] ?? "";
+  const unidad = t.reglas.unidades[valores.tipo as keyof typeof t.reglas.unidades] ?? "";
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? "Editar regla" : "Nueva regla"}
-        description="Una regla es una frase con tres partes: dónde aplica, qué limita, y qué pasa si se incumple."
+        title={esEdicion ? t.reglas.editar : t.reglas.nueva}
+        description={t.reglas.editarDesc}
         actions={
           <ButtonLink variant="secondary" href={PATH.reglas}>
-            Volver
+            {t.comun.volver}
           </ButtonLink>
         }
       />
 
-      {error ? <ErrorPanel title="No se pudo guardar">{error}</ErrorPanel> : null}
+      {error ? <ErrorPanel title={t.reglas.noSePudoGuardar}>{error}</ErrorPanel> : null}
 
       <form
         onSubmit={(e) => {
@@ -236,15 +237,10 @@ export function ReglaFormPage() {
           });
         }}
       >
-        <Card title="Identificación">
+        <Card title={t.reglas.identificacion}>
           <Card.Body>
             <div className="form-grid">
-              <Field
-                label="Código"
-                htmlFor="codigo"
-                required
-                help="Corto y único, como RACK-A1-PESO."
-              >
+              <Field label={t.campos.codigo} htmlFor="codigo" required help={t.reglas.codigoAyuda}>
                 <Input
                   id="codigo"
                   code
@@ -252,14 +248,18 @@ export function ReglaFormPage() {
                   onChange={(e) => set("codigo", e.target.value)}
                 />
               </Field>
-              <Field label="Nombre" htmlFor="nombre" required>
+              <Field label={t.campos.nombre} htmlFor="nombre" required>
                 <Input
                   id="nombre"
                   value={valores.nombre}
                   onChange={(e) => set("nombre", e.target.value)}
                 />
               </Field>
-              <Field label="Descripción" htmlFor="descripcion" className="form-grid__span-2">
+              <Field
+                label={t.campos.descripcion}
+                htmlFor="descripcion"
+                className="form-grid__span-2"
+              >
                 <Textarea
                   id="descripcion"
                   value={valores.descripcion ?? ""}
@@ -270,14 +270,10 @@ export function ReglaFormPage() {
           </Card.Body>
         </Card>
 
-        <Card title="Dónde aplica" className="mt-6">
+        <Card title={t.reglas.dondeAplica} className="mt-6">
           <Card.Body>
             <div className="form-grid">
-              <Field
-                label="Nivel"
-                htmlFor="ambito"
-                help="Una regla del nivel superior alcanza a todo lo que cuelga de él."
-              >
+              <Field label={t.reglas.nivel} htmlFor="ambito" help={t.reglas.nivelAyuda}>
                 <Select
                   id="ambito"
                   value={valores.ambito}
@@ -287,24 +283,20 @@ export function ReglaFormPage() {
                     set("ambito_id", null);
                   }}
                 >
-                  {AMBITOS.map((a) => (
-                    <option key={a} value={a}>
-                      {AMBITO_LABEL[a]}
+                  {AMBITOS.map((ambito) => (
+                    <option key={ambito} value={ambito}>
+                      {t.reglas.ambitos[ambito]}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field
-                label="Elemento"
-                htmlFor="ambito_id"
-                help="Déjalo en blanco para que la regla valga para todos."
-              >
+              <Field label={t.reglas.elemento} htmlFor="ambito_id" help={t.reglas.elementoAyuda}>
                 <Select
                   id="ambito_id"
                   value={valores.ambito_id ?? ""}
                   onChange={(e) => set("ambito_id", e.target.value || null)}
                 >
-                  <option value="">Todos</option>
+                  <option value="">{t.comun.todos}</option>
                   {candidatos.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.etiqueta}
@@ -316,25 +308,25 @@ export function ReglaFormPage() {
           </Card.Body>
         </Card>
 
-        <Card title="Qué limita" className="mt-6">
+        <Card title={t.reglas.queLimita} className="mt-6">
           <Card.Body>
             <div className="form-grid">
-              <Field label="Tipo" htmlFor="tipo">
+              <Field label={t.comun.tipo} htmlFor="tipo">
                 <Select
                   id="tipo"
                   value={valores.tipo}
                   onChange={(e) => set("tipo", e.target.value as TipoRegla)}
                 >
-                  {TIPOS.map((t) => (
-                    <option key={t} value={t}>
-                      {TIPO_LABEL[t]}
+                  {TIPOS.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {t.reglas.tipos[tipo]}
                     </option>
                   ))}
                 </Select>
               </Field>
 
               {CON_VALOR.has(valores.tipo) ? (
-                <Field label={`Límite (${unidad})`} htmlFor="valor" required>
+                <Field label={t.reglas.limite({ unidad })} htmlFor="valor" required>
                   <Input
                     id="valor"
                     number
@@ -345,11 +337,11 @@ export function ReglaFormPage() {
               ) : null}
 
               {CON_CATEGORIA.has(valores.tipo) ? (
-                <Field label="Categoría" htmlFor="referencia" required>
+                <Field label={t.campos.categoria} htmlFor="referencia" required>
                   <Select
                     id="referencia"
                     value={valores.valor_referencia ?? ""}
-                    placeholder="Elige una categoría"
+                    placeholder={t.reglas.elegirCategoria}
                     onChange={(e) => set("valor_referencia", e.target.value || null)}
                   >
                     {filas<{ id: string; nombre: string }>(categorias).map((c) => (
@@ -362,11 +354,11 @@ export function ReglaFormPage() {
               ) : null}
 
               {CON_PRODUCTO.has(valores.tipo) ? (
-                <Field label="Producto" htmlFor="referencia" required>
+                <Field label={t.campos.producto} htmlFor="referencia" required>
                   <Select
                     id="referencia"
                     value={valores.valor_referencia ?? ""}
-                    placeholder="Elige un producto"
+                    placeholder={t.reglas.elegirProducto}
                     onChange={(e) => set("valor_referencia", e.target.value || null)}
                   >
                     {filas<{ id: string; sku: string; nombre: string }>(productos).map((p) => (
@@ -381,48 +373,40 @@ export function ReglaFormPage() {
           </Card.Body>
         </Card>
 
-        <Card title="Qué pasa si se incumple" className="mt-6">
+        <Card title={t.reglas.quePasaSiSeIncumple} className="mt-6">
           <Card.Body>
             <div className="form-grid">
-              <Field
-                label="Severidad"
-                htmlFor="severidad"
-                help="«Solo avisa» sirve para estrenar una regla sin frenar la operación."
-              >
+              <Field label={t.reglas.severidad} htmlFor="severidad" help={t.reglas.severidadAyuda}>
                 <Select
                   id="severidad"
                   value={valores.severidad}
                   onChange={(e) => set("severidad", e.target.value as SeveridadRegla)}
                 >
-                  <option value="BLOQUEA">No deja pasar el movimiento</option>
-                  <option value="ADVIERTE">Solo avisa y deja pasar</option>
+                  <option value="BLOQUEA">{t.reglas.bloqueaOpcion}</option>
+                  <option value="ADVIERTE">{t.reglas.adviertOpcion}</option>
                 </Select>
               </Field>
-              <Field
-                label="Estado"
-                htmlFor="activa"
-                help="Una regla apagada se conserva pero no se evalúa."
-              >
+              <Field label={t.comun.estado} htmlFor="activa" help={t.reglas.estadoAyuda}>
                 <Select
                   id="activa"
                   value={valores.activa ? "1" : "0"}
                   onChange={(e) => set("activa", e.target.value === "1")}
                 >
-                  <option value="1">Activa</option>
-                  <option value="0">Apagada</option>
+                  <option value="1">{t.reglas.activa}</option>
+                  <option value="0">{t.reglas.apagada}</option>
                 </Select>
               </Field>
               <Field
-                label="Mensaje propio"
+                label={t.reglas.mensajePropio}
                 htmlFor="mensaje"
                 className="form-grid__span-2"
-                help="Lo que verá quien intente el movimiento. Si lo dejas en blanco, Rustock redacta uno."
+                help={t.reglas.mensajeAyuda}
               >
                 <Input
                   id="mensaje"
                   value={valores.mensaje ?? ""}
                   onChange={(e) => set("mensaje", e.target.value)}
-                  placeholder="En este rack no entra química."
+                  placeholder={t.reglas.mensajeMarcador}
                 />
               </Field>
             </div>
@@ -431,10 +415,10 @@ export function ReglaFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={guardar.isPending}>
-            {guardar.isPending ? "Guardando…" : "Guardar regla"}
+            {guardar.isPending ? t.comun.guardando : t.reglas.guardarRegla}
           </Button>
           <ButtonLink variant="secondary" href={PATH.reglas}>
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
           {esEdicion ? (
             <Button
@@ -443,13 +427,13 @@ export function ReglaFormPage() {
               disabled={borrar.isPending}
               onClick={() => borrar.mutate()}
             >
-              Eliminar
+              {t.comun.eliminar}
             </Button>
           ) : null}
         </FormActions>
       </form>
 
-      <Card title="Ejemplos" className="mt-6">
+      <Card title={t.reglas.ejemplos} className="mt-6">
         <Card.Body>
           <ul className="reglas__ejemplos">
             <li>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useT } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { Controller, useFieldArray, useForm, useWatch, type Control } from "react-hook-form";
@@ -155,6 +156,7 @@ function useCatalogosBasicos() {
 }
 
 function LoteSelect({ productoId, ...rest }: { productoId: string } & Record<string, unknown>) {
+  const t = useT();
   const lotesQuery = useQuery({
     queryKey: ["lotes", "por-producto", productoId],
     queryFn: () => listarLotes({ filters: [`producto_id:eq:${productoId}`], page_size: 200 }),
@@ -163,7 +165,7 @@ function LoteSelect({ productoId, ...rest }: { productoId: string } & Record<str
   const lotes = lotesQuery.data && esPaginado(lotesQuery.data) ? lotesQuery.data.data : [];
 
   return (
-    <Select aria-label="Lote" placeholder="Selecciona un lote" {...rest}>
+    <Select aria-label="Lote" placeholder={t.movForm.seleccionaLote} {...rest}>
       {lotes.map((l) => (
         <option key={l.id} value={l.id}>
           {l.numero}
@@ -195,20 +197,25 @@ function LineaFields({
   onRemove,
   canRemove,
 }: LineaFieldsProps) {
+  const t = useT();
   const productoId = useWatch({ control, name: `lineas.${index}.producto_id` });
   const producto = productos.find((p) => p.id === productoId);
 
   return (
     <div className="mb-4 rounded-md border border-gray-200 p-4">
       <FormGrid columns={2}>
-        <Field label="Producto" required>
+        <Field label={t.campos.producto} required>
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <Controller
                 control={control}
                 name={`lineas.${index}.producto_id`}
                 render={({ field }) => (
-                  <Select {...field} aria-label="Producto" placeholder="Selecciona un producto">
+                  <Select
+                    {...field}
+                    aria-label={t.campos.producto}
+                    placeholder={t.movForm.seleccionaProducto}
+                  >
                     {productos.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.sku} — {p.nombre}
@@ -241,7 +248,7 @@ function LineaFields({
           </Field>
         ) : null}
 
-        <Field label="Cantidad" required>
+        <Field label={t.comun.cantidad} required>
           <Controller
             control={control}
             name={`lineas.${index}.cantidad`}
@@ -250,7 +257,7 @@ function LineaFields({
         </Field>
 
         {requiereOrigen(tipo, subTipo) ? (
-          <Field label="Ubicación origen" required>
+          <Field label={t.movForm.ubicacionOrigen} required>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <Controller
@@ -259,8 +266,8 @@ function LineaFields({
                   render={({ field }) => (
                     <Select
                       {...field}
-                      aria-label="Ubicación origen"
-                      placeholder="Selecciona origen"
+                      aria-label={t.movForm.ubicacionOrigen}
+                      placeholder={t.movForm.seleccionaOrigen}
                     >
                       {ubicaciones.map((u) => (
                         <option key={u.id} value={u.id}>
@@ -279,7 +286,7 @@ function LineaFields({
         ) : null}
 
         {requiereDestino(tipo, subTipo) ? (
-          <Field label="Ubicación destino" required>
+          <Field label={t.movForm.ubicacionDestino} required>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <Controller
@@ -288,8 +295,8 @@ function LineaFields({
                   render={({ field }) => (
                     <Select
                       {...field}
-                      aria-label="Ubicación destino"
-                      placeholder="Selecciona destino"
+                      aria-label={t.movForm.ubicacionDestino}
+                      placeholder={t.movForm.seleccionaDestino}
                     >
                       {ubicaciones.map((u) => (
                         <option key={u.id} value={u.id}>
@@ -326,6 +333,7 @@ function SugerenciaFifoFefo({
   productos: Producto[];
   onSugerido: (lineas: FormValues["lineas"]) => void;
 }) {
+  const t = useT();
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -357,10 +365,10 @@ function SugerenciaFifoFefo({
     <Card muted className="mb-4">
       <Card.Body>
         <FormGrid columns={2}>
-          <Field label="Producto a despachar">
+          <Field label={t.movForm.productoADespachar}>
             <Select
-              aria-label="Producto a despachar"
-              placeholder="Selecciona un producto"
+              aria-label={t.movForm.productoADespachar}
+              placeholder={t.movForm.seleccionaProducto}
               value={productoId}
               onChange={(e) => setProductoId(e.target.value)}
             >
@@ -371,7 +379,7 @@ function SugerenciaFifoFefo({
               ))}
             </Select>
           </Field>
-          <Field label="Cantidad total">
+          <Field label={t.movForm.cantidadTotal}>
             <Input
               type="number"
               min="0"
@@ -383,7 +391,7 @@ function SugerenciaFifoFefo({
           </Field>
         </FormGrid>
         {error ? (
-          <ErrorPanel title="No se pudo sugerir" className="mt-2">
+          <ErrorPanel title={t.movForm.errores.noSePudoSugerir} className="mt-2">
             {error}
           </ErrorPanel>
         ) : null}
@@ -417,6 +425,7 @@ export function MovimientoGenericoForm({
   movimientoInicial?: Movimiento;
   lineasIniciales?: LineaMovimiento[];
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -559,20 +568,20 @@ export function MovimientoGenericoForm({
   function onSubmit(valores: FormValues) {
     setError(null);
     if (!esEdicion && !valores.sub_tipo) {
-      setError("Selecciona un sub-tipo de movimiento.");
+      setError(t.movForm.errores.subTipoRequerido);
       return;
     }
     if (
       REQUIERE_MOTIVO.includes(valores.sub_tipo as SubTipoMovimiento) &&
       valores.motivo.trim().length < 3
     ) {
-      setError("El motivo es obligatorio (mínimo 3 caracteres) para este tipo de movimiento.");
+      setError(t.movForm.errores.motivoRequerido);
       return;
     }
     for (const linea of valores.lineas) {
       const producto = productosPorId.get(linea.producto_id);
       if (!producto) {
-        setError("Todas las líneas deben tener un producto seleccionado.");
+        setError(t.movForm.errores.productoEnTodas);
         return;
       }
       if (producto.controla_lote && !linea.lote_id) {
@@ -580,11 +589,11 @@ export function MovimientoGenericoForm({
         return;
       }
       if (requiereOrigen(tipo, valores.sub_tipo) && !linea.origen_ubicacion_id) {
-        setError("Selecciona la ubicación de origen en cada línea.");
+        setError(t.movForm.errores.origenEnTodas);
         return;
       }
       if (requiereDestino(tipo, valores.sub_tipo) && !linea.destino_ubicacion_id) {
-        setError("Selecciona la ubicación de destino en cada línea.");
+        setError(t.movForm.errores.destinoEnTodas);
         return;
       }
     }
@@ -596,14 +605,14 @@ export function MovimientoGenericoForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
-      <Card title="Datos del movimiento">
+      <Card title={t.movForm.datosDelMovimiento}>
         <Card.Body>
           <FormGrid columns={2}>
-            <Field label="Sub-tipo" required>
+            <Field label={t.movForm.subTipo} required>
               <Select
                 {...register("sub_tipo")}
-                aria-label="Sub-tipo"
-                placeholder="Selecciona"
+                aria-label={t.movForm.subTipo}
+                placeholder={t.movForm.selecciona}
                 disabled={esEdicion}
               >
                 {subTipoOpciones.map((o) => (
@@ -613,21 +622,21 @@ export function MovimientoGenericoForm({
                 ))}
               </Select>
             </Field>
-            <Field label="Documento de referencia">
+            <Field label={t.movForm.documentoReferencia}>
               <Input
                 {...register("documento_referencia")}
-                placeholder="N.º de OC, guía, factura…"
+                placeholder={t.movForm.documentoMarcador}
               />
             </Field>
 
             {REQUIERE_PROVEEDOR.includes(subTipo as SubTipoMovimiento) ? (
-              <Field label="Proveedor">
+              <Field label={t.catalogos.proveedorSingular}>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       {...register("proveedor_id")}
-                      aria-label="Proveedor"
-                      placeholder="Selecciona"
+                      aria-label={t.catalogos.proveedorSingular}
+                      placeholder={t.movForm.selecciona}
                     >
                       {proveedores.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -646,13 +655,13 @@ export function MovimientoGenericoForm({
             ) : null}
 
             {REQUIERE_CLIENTE.includes(subTipo as SubTipoMovimiento) ? (
-              <Field label="Cliente">
+              <Field label={t.catalogos.clienteSingular}>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       {...register("cliente_id")}
-                      aria-label="Cliente"
-                      placeholder="Selecciona"
+                      aria-label={t.catalogos.clienteSingular}
+                      placeholder={t.movForm.selecciona}
                     >
                       {clientes.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -670,15 +679,18 @@ export function MovimientoGenericoForm({
               </Field>
             ) : null}
 
-            <Field label="Fecha del movimiento">
+            <Field label={t.movForm.fechaDelMovimiento}>
               <Input {...register("fecha_movimiento")} type="datetime-local" />
             </Field>
 
-            <Field label="Motivo" required={REQUIERE_MOTIVO.includes(subTipo as SubTipoMovimiento)}>
-              <Input {...register("motivo")} placeholder="Motivo de la operación" />
+            <Field
+              label={t.movForm.motivo}
+              required={REQUIERE_MOTIVO.includes(subTipo as SubTipoMovimiento)}
+            >
+              <Input {...register("motivo")} placeholder={t.movForm.motivoDeLaOperacion} />
             </Field>
           </FormGrid>
-          <Field label="Notas">
+          <Field label={t.comun.notas}>
             <Textarea {...register("notas")} rows={2} />
           </Field>
         </Card.Body>
@@ -688,12 +700,12 @@ export function MovimientoGenericoForm({
         <SugerenciaFifoFefo control={control} productos={productos} onSugerido={replace} />
       ) : null}
 
-      <Card title="Líneas">
+      <Card title={t.movForm.lineas}>
         <Card.Body>
           {error ? (
             <ErrorPanel
               title={
-                esEdicion ? "No se pudo guardar el movimiento" : "No se pudo crear el movimiento"
+                esEdicion ? t.movForm.errores.noSePudoGuardar : t.movForm.errores.noSePudoCrear
               }
               className="mb-4"
             >
@@ -729,7 +741,7 @@ export function MovimientoGenericoForm({
         <div className="mb-4">
           <Checkbox
             id="aprobar-al-crear"
-            label={esEdicion ? "Aprobar de inmediato al guardar" : "Crear y aprobar de inmediato"}
+            label={esEdicion ? t.movForm.aprobarAlGuardar : t.movForm.crearYAprobar}
             checked={aprobarAlCrear}
             onChange={(e) => setAprobarAlCrear(e.target.checked)}
           />
@@ -741,7 +753,11 @@ export function MovimientoGenericoForm({
 
       <FormActions>
         <Button type="submit" variant="primary" disabled={guardarMut.isPending}>
-          {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear movimiento"}
+          {guardarMut.isPending
+            ? t.comun.guardando
+            : esEdicion
+              ? t.movForm.guardarCambios
+              : t.movForm.crearMovimiento}
         </Button>
         <ButtonLink
           variant="secondary"
@@ -777,6 +793,7 @@ export function TrasladoForm({
   linea?: LineaMovimiento;
   lineaInicial?: LineaMovimiento;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -904,31 +921,35 @@ export function TrasladoForm({
           return;
         }
         if (valores.origen_ubicacion_id === valores.destino_ubicacion_id) {
-          setError("El origen y el destino no pueden ser la misma ubicación.");
+          setError(t.movForm.errores.mismaUbicacion);
           return;
         }
         guardarMut.mutate(valores);
       })}
       noValidate
     >
-      <Card title="Traslado">
+      <Card title={t.dominio.tipoMovimiento.TRASLADO}>
         <Card.Body>
           {error ? (
             <ErrorPanel
-              title={esEdicion ? "No se pudo guardar el traslado" : "No se pudo crear el traslado"}
+              title={
+                esEdicion
+                  ? t.movForm.errores.noSePudoGuardarTraslado
+                  : t.movForm.errores.noSePudoCrearTraslado
+              }
               className="mb-4"
             >
               {error}
             </ErrorPanel>
           ) : null}
           <FormGrid columns={2}>
-            <Field label="Producto" required>
+            <Field label={t.campos.producto} required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
                     {...register("producto_id")}
-                    aria-label="Producto"
-                    placeholder="Selecciona"
+                    aria-label={t.campos.producto}
+                    placeholder={t.movForm.selecciona}
                   >
                     {productos.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -958,19 +979,19 @@ export function TrasladoForm({
                 </div>
               </Field>
             ) : null}
-            <Field label="Cantidad" required>
+            <Field label={t.comun.cantidad} required>
               <Input {...register("cantidad")} type="number" min="0" step="1" number />
             </Field>
-            <Field label="Documento de referencia">
+            <Field label={t.movForm.documentoReferencia}>
               <Input {...register("documento_referencia")} />
             </Field>
-            <Field label="Ubicación origen" required>
+            <Field label={t.movForm.ubicacionOrigen} required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
                     {...register("origen_ubicacion_id")}
-                    aria-label="Ubicación origen"
-                    placeholder="Selecciona"
+                    aria-label={t.movForm.ubicacionOrigen}
+                    placeholder={t.movForm.selecciona}
                   >
                     {ubicaciones.map((u) => (
                       <option key={u.id} value={u.id}>
@@ -986,13 +1007,13 @@ export function TrasladoForm({
                 ) : null}
               </div>
             </Field>
-            <Field label="Ubicación destino" required>
+            <Field label={t.movForm.ubicacionDestino} required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
                     {...register("destino_ubicacion_id")}
-                    aria-label="Ubicación destino"
-                    placeholder="Selecciona"
+                    aria-label={t.movForm.ubicacionDestino}
+                    placeholder={t.movForm.selecciona}
                   >
                     {ubicaciones.map((u) => (
                       <option key={u.id} value={u.id}>
@@ -1012,7 +1033,7 @@ export function TrasladoForm({
               </div>
             </Field>
           </FormGrid>
-          <Field label="Notas">
+          <Field label={t.comun.notas}>
             <Textarea {...register("notas")} rows={2} />
           </Field>
         </Card.Body>
@@ -1021,7 +1042,7 @@ export function TrasladoForm({
         <div className="mb-4">
           <Checkbox
             id="aprobar-traslado"
-            label={esEdicion ? "Aprobar de inmediato al guardar" : "Crear y aprobar de inmediato"}
+            label={esEdicion ? t.movForm.aprobarAlGuardar : t.movForm.crearYAprobar}
             checked={aprobarAlCrear}
             onChange={(e) => setAprobarAlCrear(e.target.checked)}
           />
@@ -1032,7 +1053,11 @@ export function TrasladoForm({
       ) : null}
       <FormActions>
         <Button type="submit" variant="primary" disabled={guardarMut.isPending}>
-          {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear traslado"}
+          {guardarMut.isPending
+            ? t.comun.guardando
+            : esEdicion
+              ? t.movForm.guardarCambios
+              : t.movForm.crearTraslado}
         </Button>
         <ButtonLink
           variant="secondary"
