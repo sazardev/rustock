@@ -14,8 +14,9 @@
  */
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
-  AYUDA_GRUPOS,
-  GLOSARIO,
+  ayudaGrupos,
+  glosario,
+  type TerminoGlosario,
   textoModulo,
   type AyudaBloque,
   type AyudaModulo,
@@ -23,6 +24,7 @@ import {
 } from "./ayuda-data";
 import { ayudaModulo, PATH } from "../../app/route-paths";
 import { useLocation } from "react-router";
+import { useIdioma, type Idioma } from "../../shared/i18n";
 import {
   Badge,
   ButtonLink,
@@ -164,21 +166,22 @@ function Seccion({ seccion }: { seccion: AyudaSeccion }) {
   );
 }
 
-function buscarModulo(id: string): { grupo: string; modulo: AyudaModulo } | null {
-  for (const grupo of AYUDA_GRUPOS) {
+function buscarModulo(id: string, idioma: Idioma): { grupo: string; modulo: AyudaModulo } | null {
+  for (const grupo of ayudaGrupos(idioma)) {
     const modulo = grupo.modulos.find((m) => m.id === id);
     if (modulo) return { grupo: grupo.titulo, modulo };
   }
   return null;
 }
 
-function terminoGlosario(id: string): string | null {
-  return GLOSARIO.find((t) => t.id === id)?.termino ?? null;
+function terminoGlosario(id: string, idioma: Idioma): string | null {
+  return glosario(idioma).find((termino) => termino.id === id)?.termino ?? null;
 }
 
 /** Barra de módulos del mismo grupo para navegar entre guías. */
 function ModulosDelGrupo({ grupo, actualId }: { grupo: string; actualId: string }) {
-  const grupoEncontrado = AYUDA_GRUPOS.find((g) => g.titulo === grupo);
+  const idioma = useIdioma((estado) => estado.idioma);
+  const grupoEncontrado = ayudaGrupos(idioma).find((g) => g.titulo === grupo);
   if (!grupoEncontrado) return null;
   return (
     <div className="flex flex-wrap gap-2">
@@ -230,9 +233,10 @@ function TarjetaContexto({ modulo }: { modulo: AyudaModulo }) {
 
 /** Sección automática de términos del glosario que la guía usa. */
 function TerminosDelModulo({ modulo }: { modulo: AyudaModulo }) {
+  const idioma = useIdioma((estado) => estado.idioma);
   if (!modulo.terminosClave || modulo.terminosClave.length === 0) return null;
   const terminos = modulo.terminosClave
-    .map((id) => ({ id, termino: terminoGlosario(id) }))
+    .map((id) => ({ id, termino: terminoGlosario(id, idioma) }))
     .filter((t) => t.termino !== null) as Array<{ id: string; termino: string }>;
   if (terminos.length === 0) return null;
   return (
@@ -256,10 +260,11 @@ function TerminosDelModulo({ modulo }: { modulo: AyudaModulo }) {
 
 /** Sección automática de guías relacionadas (módulos y procesos). */
 function RelacionadosDelModulo({ modulo }: { modulo: AyudaModulo }) {
+  const idioma = useIdioma((estado) => estado.idioma);
   if (!modulo.relacionados || modulo.relacionados.length === 0) return null;
   const guias = modulo.relacionados
     .map((id) => {
-      const encontrado = buscarModulo(id);
+      const encontrado = buscarModulo(id, idioma);
       return encontrado
         ? { id, titulo: encontrado.modulo.titulo, icono: encontrado.modulo.icono }
         : null;
@@ -308,31 +313,36 @@ function GuiaCard({ modulo }: { modulo: AyudaModulo }) {
 }
 
 export function AyudaIndexPage() {
+  const idioma = useIdioma((estado) => estado.idioma);
   const [busqueda, setBusqueda] = useState("");
 
   const modulosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return AYUDA_GRUPOS;
-    return AYUDA_GRUPOS.map((grupo) => ({
-      ...grupo,
-      modulos: grupo.modulos.filter(
-        (m) => m.titulo.toLowerCase().includes(q) || textoModulo(m).includes(q),
-      ),
-    })).filter((grupo) => grupo.modulos.length > 0);
-  }, [busqueda]);
+    const grupos = ayudaGrupos(idioma);
+    if (!q) return grupos;
+    return grupos
+      .map((grupo) => ({
+        ...grupo,
+        modulos: grupo.modulos.filter(
+          (m) => m.titulo.toLowerCase().includes(q) || textoModulo(m).includes(q),
+        ),
+      }))
+      .filter((grupo) => grupo.modulos.length > 0);
+  }, [busqueda, idioma]);
 
   const glosarioFiltrado = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
+    const terminos = glosario(idioma);
     if (!q) {
-      return GLOSARIO;
+      return terminos;
     }
-    return GLOSARIO.filter(
-      (t) =>
-        t.termino.toLowerCase().includes(q) ||
-        t.definicion.toLowerCase().includes(q) ||
-        t.id.includes(q),
+    return terminos.filter(
+      (termino) =>
+        termino.termino.toLowerCase().includes(q) ||
+        termino.definicion.toLowerCase().includes(q) ||
+        termino.id.includes(q),
     );
-  }, [busqueda]);
+  }, [busqueda, idioma]);
 
   const hayBusqueda = busqueda.trim().length > 0;
   const hayModulos = modulosFiltrados.length > 0;
@@ -443,7 +453,8 @@ export function AyudaIndexPage() {
 }
 
 export function AyudaModulePage({ id }: { id: string }) {
-  const encontrado = buscarModulo(id);
+  const idioma = useIdioma((estado) => estado.idioma);
+  const encontrado = buscarModulo(id, idioma);
 
   if (!encontrado) {
     return (
@@ -499,6 +510,7 @@ export function AyudaModulePage({ id }: { id: string }) {
 }
 
 export function AyudaGlosarioPage() {
+  const idioma = useIdioma((estado) => estado.idioma);
   const location = useLocation();
 
   // Deep-link a un término (/ayuda/glosario#saldo): React Router no hace
@@ -513,15 +525,15 @@ export function AyudaGlosarioPage() {
   }, [location.hash]);
 
   const porLetra = useMemo(() => {
-    const mapa = new Map<string, typeof GLOSARIO>();
-    for (const termino of GLOSARIO) {
+    const mapa = new Map<string, TerminoGlosario[]>();
+    for (const termino of glosario(idioma)) {
       const letra = termino.termino.charAt(0).toUpperCase();
       const grupo = mapa.get(letra) ?? [];
       grupo.push(termino);
       mapa.set(letra, grupo);
     }
     return [...mapa.entries()].toSorted((a, b) => a[0].localeCompare(b[0]));
-  }, []);
+  }, [idioma]);
 
   return (
     <>

@@ -16,8 +16,8 @@ import type { IconName } from "../ui";
 import type { Diccionario } from "../i18n";
 import { itemsDeNav } from "../../app/nav";
 import { PATH, ayudaModulo, catalogoNuevo } from "../../app/route-paths";
-import { AYUDA_GRUPOS, GLOSARIO, textoModulo } from "../../pages/ayuda/ayuda-data";
-import { MANUAL_GLOSARIO, MANUAL_PARTES, textoManual } from "../../pages/manual/manual-data";
+import { ayudaGrupos, glosario, textoModulo } from "../../pages/ayuda/ayuda-data";
+import { manualGlosario, manualPartes, textoManual } from "../../pages/manual/manual-data";
 
 /**
  * Clave estable del grupo. No es lo que se muestra: la etiqueta visible sale
@@ -336,24 +336,26 @@ function acciones(rolCodigo: string | undefined, t: Diccionario): ComandoPalette
 
 /** Ayuda: guías de módulo + procesos del negocio + términos del glosario. */
 function palabrasAyuda(t: Diccionario): ComandoPalette[] {
-  const modulos: ComandoPalette[] = AYUDA_GRUPOS.flatMap((g) => g.modulos).map((m) => ({
-    id: `ayuda:${m.id}`,
-    titulo: m.titulo,
-    subtitulo: t.palette.guiaDeUso({ resumen: m.resumen }),
-    icono: m.icono,
-    grupo: "ayuda",
-    href: ayudaModulo(m.id),
-    keywords: [
-      m.resumen,
-      m.paraQueSirve ?? "",
-      m.cuandoUsarlo ?? "",
-      textoModulo(m),
-      (m.terminosClave ?? []).join(" "),
-    ]
-      .filter(Boolean)
-      .join(" "),
-  }));
-  const glosario: ComandoPalette[] = GLOSARIO.map((termino) => ({
+  const modulos: ComandoPalette[] = ayudaGrupos(t.idioma)
+    .flatMap((g) => g.modulos)
+    .map((m) => ({
+      id: `ayuda:${m.id}`,
+      titulo: m.titulo,
+      subtitulo: t.palette.guiaDeUso({ resumen: m.resumen }),
+      icono: m.icono,
+      grupo: "ayuda",
+      href: ayudaModulo(m.id),
+      keywords: [
+        m.resumen,
+        m.paraQueSirve ?? "",
+        m.cuandoUsarlo ?? "",
+        textoModulo(m),
+        (m.terminosClave ?? []).join(" "),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }));
+  const terminos: ComandoPalette[] = glosario(t.idioma).map((termino) => ({
     id: `glosario:${termino.id}`,
     titulo: termino.termino,
     subtitulo: termino.definicion,
@@ -362,13 +364,14 @@ function palabrasAyuda(t: Diccionario): ComandoPalette[] {
     href: `${PATH.ayudaGlosario}#${termino.id}`,
     keywords: termino.definicion,
   }));
-  return [...modulos, ...glosario];
+  return [...modulos, ...terminos];
 }
 
 /** Manual: capítulos + glosario (indexado igual que Ayuda, pero grupo Manual). */
 function palabrasManual(t: Diccionario): ComandoPalette[] {
-  const capitulos: ComandoPalette[] = MANUAL_PARTES.flatMap((parte) => parte.capitulos).map(
-    (c) => ({
+  const capitulos: ComandoPalette[] = manualPartes(t.idioma)
+    .flatMap((parte) => parte.capitulos)
+    .map((c) => ({
       id: `manual:${c.id}`,
       titulo: c.titulo,
       subtitulo: t.palette.delManual({ resumen: c.resumen }),
@@ -384,9 +387,8 @@ function palabrasManual(t: Diccionario): ComandoPalette[] {
       ]
         .filter(Boolean)
         .join(" "),
-    }),
-  );
-  const glosario: ComandoPalette[] = MANUAL_GLOSARIO.map((termino) => ({
+    }));
+  const terminos: ComandoPalette[] = manualGlosario(t.idioma).map((termino) => ({
     id: `manual-glosario:${termino.id}`,
     titulo: termino.termino,
     subtitulo: termino.definicion,
@@ -404,7 +406,7 @@ function palabrasManual(t: Diccionario): ComandoPalette[] {
     href: "/manual/imprimir",
     keywords: t.palette.imprimirManualKeywords,
   };
-  return [...capitulos, ...glosario, imprimir];
+  return [...capitulos, ...terminos, imprimir];
 }
 
 /** Comandos estáticos completos, filtrados por el rol de la sesión. */

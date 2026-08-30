@@ -10,7 +10,13 @@
  */
 import type { Diccionario } from "./es";
 
+import type { Idioma } from "./idioma";
+
 export const en: Diccionario = {
+  /** El propio diccionario dice qué lengua es: así, quien tiene `t` puede
+   *  elegir el contenido largo (manual, ayuda) sin pedir el idioma aparte. */
+  idioma: "en" as Idioma,
+
   comun: {
     guardar: "Save",
     guardando: "Saving…",

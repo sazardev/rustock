@@ -1,6 +1,6 @@
 import { catalogosDe } from "../pages/catalogs";
-import type { Diccionario } from "../shared/i18n";
-import { MANUAL_PARTES } from "../pages/manual/manual-data";
+import { idiomaActual, type Diccionario, type Idioma } from "../shared/i18n";
+import { manualPartes } from "../pages/manual/manual-data";
 
 export interface Crumb {
   label: string;
@@ -82,7 +82,7 @@ export function crumbsFromPath(pathname: string, t: Diccionario): Crumb[] {
     // Manual: /manual/:id → usa título real del capítulo si existe
     if (first === "manual" && rest.length >= 1) {
       const capId = rest[0];
-      const titulo = tituloManual(capId);
+      const titulo = tituloManual(capId, idiomaActual());
       crumbs.push({
         label: titulo ?? (t.migas.acciones as Record<string, string>)[capId] ?? legible(capId),
       });
@@ -117,8 +117,8 @@ function crumbDetalleCatalogo(slug: string, id: string, t: Diccionario): Crumb |
   return { label: `${cfg.singular} ${id.slice(0, 8)}`, href: `/${slug}/${id}` };
 }
 
-function tituloManual(id: string): string | null {
-  for (const parte of MANUAL_PARTES) {
+function tituloManual(id: string, idioma: Idioma): string | null {
+  for (const parte of manualPartes(idioma)) {
     const cap = parte.capitulos.find((c) => c.id === id);
     if (cap) return cap.titulo;
   }

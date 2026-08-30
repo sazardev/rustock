@@ -13,8 +13,9 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import {
-  MANUAL_GLOSARIO,
-  MANUAL_PARTES,
+  manualGlosario,
+  manualPartes,
+  type TerminoManual,
   textoManual,
   type ManualBloque,
   type ManualCapitulo,
@@ -22,6 +23,7 @@ import {
 } from "./manual-data";
 import { Link } from "../../shared/ui/Link";
 import { PATH } from "../../app/route-paths";
+import { useIdioma, type Idioma } from "../../shared/i18n";
 import {
   Badge,
   Button,
@@ -40,16 +42,19 @@ function manualHref(id: string): string {
   return `/manual/${id}`;
 }
 
-function buscarCapitulo(id: string): { parte: string; capitulo: ManualCapitulo } | null {
-  for (const parte of MANUAL_PARTES) {
+function buscarCapitulo(
+  id: string,
+  idioma: Idioma,
+): { parte: string; capitulo: ManualCapitulo } | null {
+  for (const parte of manualPartes(idioma)) {
     const cap = parte.capitulos.find((c) => c.id === id);
     if (cap) return { parte: parte.titulo, capitulo: cap };
   }
   return null;
 }
 
-function terminoDeGlosario(id: string): string | null {
-  return MANUAL_GLOSARIO.find((t) => t.id === id)?.termino ?? null;
+function terminoDeGlosario(id: string, idioma: Idioma): string | null {
+  return manualGlosario(idioma).find((t) => t.id === id)?.termino ?? null;
 }
 
 function EnlaceManual({ href, children }: { href: string; children: ReactNode }) {
@@ -209,9 +214,10 @@ function TarjetaContexto({ cap }: { cap: ManualCapitulo }) {
 }
 
 function Terminos({ cap }: { cap: ManualCapitulo }) {
+  const idioma = useIdioma((estado) => estado.idioma);
   if (!cap.terminosClave || cap.terminosClave.length === 0) return null;
   const terminos = cap.terminosClave
-    .map((id) => ({ id, termino: terminoDeGlosario(id) }))
+    .map((id) => ({ id, termino: terminoDeGlosario(id, idioma) }))
     .filter((t) => t.termino !== null) as Array<{ id: string; termino: string }>;
   if (terminos.length === 0) return null;
   return (
@@ -234,10 +240,11 @@ function Terminos({ cap }: { cap: ManualCapitulo }) {
 }
 
 function Relacionados({ cap }: { cap: ManualCapitulo }) {
+  const idioma = useIdioma((estado) => estado.idioma);
   if (!cap.relacionados || cap.relacionados.length === 0) return null;
   const guias = cap.relacionados
     .map((id) => {
-      const enc = buscarCapitulo(id);
+      const enc = buscarCapitulo(id, idioma);
       return enc ? { id, titulo: enc.capitulo.titulo, icono: enc.capitulo.icono } : null;
     })
     .filter((g) => g !== null) as Array<{ id: string; titulo: string; icono: IconName }>;
@@ -259,7 +266,8 @@ function Relacionados({ cap }: { cap: ManualCapitulo }) {
 }
 
 function CapitulosDeParte({ parteTitulo, actualId }: { parteTitulo: string; actualId: string }) {
-  const parte = MANUAL_PARTES.find((p) => p.titulo === parteTitulo);
+  const idioma = useIdioma((estado) => estado.idioma);
+  const parte = manualPartes(idioma).find((p) => p.titulo === parteTitulo);
   if (!parte) return null;
   return (
     <div className="flex flex-wrap gap-2">
@@ -306,40 +314,43 @@ function GuiaCardManual({ cap }: { cap: ManualCapitulo }) {
 // ÍNDICE
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualIndexPage() {
+  const idioma = useIdioma((estado) => estado.idioma);
   const [q, setQ] = useState("");
 
   const partesFiltradas = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return MANUAL_PARTES;
-    return MANUAL_PARTES.map((parte) => ({
-      ...parte,
-      capitulos: parte.capitulos.filter(
-        (c) => c.titulo.toLowerCase().includes(s) || textoManual(c).includes(s),
-      ),
-    })).filter((p) => p.capitulos.length > 0);
-  }, [q]);
+    if (!s) return manualPartes(idioma);
+    return manualPartes(idioma)
+      .map((parte) => ({
+        ...parte,
+        capitulos: parte.capitulos.filter(
+          (c) => c.titulo.toLowerCase().includes(s) || textoManual(c).includes(s),
+        ),
+      }))
+      .filter((p) => p.capitulos.length > 0);
+  }, [q, idioma]);
 
   const glosarioFiltrado = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return MANUAL_GLOSARIO;
-    return MANUAL_GLOSARIO.filter(
+    if (!s) return manualGlosario(idioma);
+    return manualGlosario(idioma).filter(
       (t) =>
         t.termino.toLowerCase().includes(s) ||
         t.definicion.toLowerCase().includes(s) ||
         t.id.includes(s),
     );
-  }, [q]);
+  }, [q, idioma]);
 
   const hayBusqueda = q.trim().length > 0;
   const hayCapitulos = partesFiltradas.length > 0;
   const hayGlosario = glosarioFiltrado.length > 0;
-  const totalCapitulos = MANUAL_PARTES.reduce((acc, p) => acc + p.capitulos.length, 0);
+  const totalCapitulos = manualPartes(idioma).reduce((acc, p) => acc + p.capitulos.length, 0);
 
   return (
     <>
       <PageHeader
         title="Manual del Cliente — Rustock"
-        description={`Guía completa de la lógica de negocio: ${MANUAL_PARTES.length} partes, ${totalCapitulos} capítulos y ${MANUAL_GLOSARIO.length} términos. Todo lo que tu operación puede hacer, especificado y verificable.`}
+        description={`Guía completa de la lógica de negocio: ${manualPartes(idioma).length} partes, ${totalCapitulos} capítulos y ${manualGlosario(idioma).length} términos. Todo lo que tu operación puede hacer, especificado y verificable.`}
         actions={
           <div className="flex gap-2">
             <ButtonLink variant="primary" icon="ayuda" href="/manual/imprimir">
@@ -512,7 +523,8 @@ export function ManualIndexPage() {
 // CAPÍTULO
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualCapituloPage({ id }: { id: string }) {
-  const enc = buscarCapitulo(id);
+  const idioma = useIdioma((estado) => estado.idioma);
+  const enc = buscarCapitulo(id, idioma);
 
   if (!enc) {
     return (
@@ -596,6 +608,7 @@ export function ManualCapituloPage({ id }: { id: string }) {
 // GLOSARIO
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualGlosarioPage() {
+  const idioma = useIdioma((estado) => estado.idioma);
   const location = useLocation();
 
   useEffect(() => {
@@ -608,15 +621,15 @@ export function ManualGlosarioPage() {
   }, [location.hash]);
 
   const porLetra = useMemo(() => {
-    const mapa = new Map<string, typeof MANUAL_GLOSARIO>();
-    for (const t of MANUAL_GLOSARIO) {
+    const mapa = new Map<string, TerminoManual[]>();
+    for (const t of manualGlosario(idioma)) {
       const letra = t.termino.charAt(0).toUpperCase();
       const g = mapa.get(letra) ?? [];
       g.push(t);
       mapa.set(letra, g);
     }
     return [...mapa.entries()].toSorted((a, b) => a[0].localeCompare(b[0]));
-  }, []);
+  }, [idioma]);
 
   return (
     <>
@@ -680,7 +693,8 @@ export function ManualGlosarioPage() {
 // Un solo documento con todo el manual, optimizado para PDF vía Ctrl+P.
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualPrintPage() {
-  const totalCapitulos = MANUAL_PARTES.reduce((acc, p) => acc + p.capitulos.length, 0);
+  const idioma = useIdioma((estado) => estado.idioma);
+  const totalCapitulos = manualPartes(idioma).reduce((acc, p) => acc + p.capitulos.length, 0);
   const fecha = new Date().toLocaleDateString("es-ES", {
     day: "2-digit",
     month: "long",
@@ -721,8 +735,8 @@ export function ManualPrintPage() {
         <div className="manual-print__meta">
           <Text size="sm" color="muted">
             Versión <strong>v0.3.0</strong> · Alineado a SPEC.md (19 reglas no negociables),
-            DESIGN.md (Rust &amp; Iron) y código ejecutable · {MANUAL_PARTES.length} partes ·{" "}
-            {totalCapitulos} capítulos · {MANUAL_GLOSARIO.length} términos
+            DESIGN.md (Rust &amp; Iron) y código ejecutable · {manualPartes(idioma).length} partes ·{" "}
+            {totalCapitulos} capítulos · {manualGlosario(idioma).length} términos
           </Text>
           <Text size="xs" color="muted">
             Generado el {fecha} · Imprime con Ctrl+P → “Guardar como PDF” · Papel A4, márgenes
@@ -741,7 +755,7 @@ export function ManualPrintPage() {
       <div className="manual-print__indice">
         <h2 className="manual-print__h2">Índice</h2>
         <ol className="manual-print__toc">
-          {MANUAL_PARTES.map((parte, idx) => (
+          {manualPartes(idioma).map((parte, idx) => (
             <li key={parte.titulo} className="manual-print__toc-parte">
               <span className="manual-print__toc-parte-titulo">
                 {idx} · {parte.titulo}
@@ -764,7 +778,7 @@ export function ManualPrintPage() {
             <ol className="manual-print__toc-capitulos">
               <li>
                 <a href="#print-glosario" className="manual-print__toc-link">
-                  Glosario completo — {MANUAL_GLOSARIO.length} términos
+                  Glosario completo — {manualGlosario(idioma).length} términos
                 </a>
               </li>
             </ol>
@@ -777,7 +791,7 @@ export function ManualPrintPage() {
       </div>
 
       {/* Contenido completo */}
-      {MANUAL_PARTES.map((parte) => (
+      {manualPartes(idioma).map((parte) => (
         <section key={parte.titulo} className="manual-print__parte">
           <div className="manual-print__parte-header">
             <Text size="xs" color="muted" className="manual-print__parte-kicker">
@@ -825,7 +839,7 @@ export function ManualPrintPage() {
                 <div className="manual-print__terminos">
                   <Text size="xs" color="muted">
                     Términos:{" "}
-                    {cap.terminosClave.map((id) => terminoDeGlosario(id) ?? id).join(" · ")}
+                    {cap.terminosClave.map((id) => terminoDeGlosario(id, idioma) ?? id).join(" · ")}
                   </Text>
                 </div>
               ) : null}
@@ -834,7 +848,7 @@ export function ManualPrintPage() {
                   <Text size="xs" color="muted">
                     Relacionado:{" "}
                     {cap.relacionados
-                      .map((id) => buscarCapitulo(id)?.capitulo.titulo ?? id)
+                      .map((id) => buscarCapitulo(id, idioma)?.capitulo.titulo ?? id)
                       .join(" · ")}
                   </Text>
                 </div>
@@ -846,34 +860,37 @@ export function ManualPrintPage() {
 
       {/* Glosario */}
       <section id="print-glosario" className="manual-print__parte manual-print__glosario">
-        <h2 className="manual-print__h2">Glosario — {MANUAL_GLOSARIO.length} términos</h2>
+        <h2 className="manual-print__h2">Glosario — {manualGlosario(idioma).length} términos</h2>
         <Text size="sm" color="muted" className="mb-4 block">
           Definiciones operativas con referencia cruzada desde cada capítulo. Cada término tiene
           ancla estable (ej. #saldo) y se usa en Ctrl+K.
         </Text>
         <div className="manual-print__glosario-grid">
-          {MANUAL_GLOSARIO.toSorted((a, b) => a.termino.localeCompare(b.termino)).map((t) => (
-            <div key={t.id} id={`print-glosario-${t.id}`} className="manual-print__glosario-item">
-              <Text size="sm" weight="medium" className="font-mono">
-                {t.termino}
-              </Text>
-              <Text size="sm" color="muted">
-                {t.definicion}
-              </Text>
-              <Text size="xs" color="muted" className="font-mono">
-                #{t.id}
-              </Text>
-            </div>
-          ))}
+          {manualGlosario(idioma)
+            .toSorted((a, b) => a.termino.localeCompare(b.termino))
+            .map((t) => (
+              <div key={t.id} id={`print-glosario-${t.id}`} className="manual-print__glosario-item">
+                <Text size="sm" weight="medium" className="font-mono">
+                  {t.termino}
+                </Text>
+                <Text size="sm" color="muted">
+                  {t.definicion}
+                </Text>
+                <Text size="xs" color="muted" className="font-mono">
+                  #{t.id}
+                </Text>
+              </div>
+            ))}
         </div>
       </section>
 
       {/* Pie */}
       <div className="manual-print__pie">
         <Text size="xs" color="muted">
-          Rustock v0.3.0 · Manual del Cliente · {MANUAL_PARTES.length} partes · {totalCapitulos}{" "}
-          capítulos · {MANUAL_GLOSARIO.length} términos · Generado {fecha} · SPEC.md + código
-          verificable · Impreso desde {typeof window !== "undefined" ? window.location.origin : ""}
+          Rustock v0.3.0 · Manual del Cliente · {manualPartes(idioma).length} partes ·{" "}
+          {totalCapitulos} capítulos · {manualGlosario(idioma).length} términos · Generado {fecha} ·
+          SPEC.md + código verificable · Impreso desde{" "}
+          {typeof window !== "undefined" ? window.location.origin : ""}
           /manual/imprimir
         </Text>
       </div>

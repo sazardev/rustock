@@ -11,7 +11,13 @@
  * corresponda en vez de rellenar huecos en un orden impuesto por el castellano.
  */
 
+import type { Idioma } from "./idioma";
+
 export const es = {
+  /** El propio diccionario dice qué lengua es: así, quien tiene `t` puede
+   *  elegir el contenido largo (manual, ayuda) sin pedir el idioma aparte. */
+  idioma: "es" as Idioma,
+
   // ============ Transversal ============
   comun: {
     guardar: "Guardar",
@@ -2426,4 +2432,8 @@ type ComoEs<T> = T extends (...args: infer A) => string
     ? string
     : { [K in keyof T]: ComoEs<T[K]> };
 
-export type Diccionario = ComoEs<typeof es>;
+/**
+ * `idioma` no se ensancha: es el código de la lengua, no texto traducible, y
+ * quien tiene el diccionario lo usa para elegir el contenido largo.
+ */
+export type Diccionario = Omit<ComoEs<typeof es>, "idioma"> & { idioma: Idioma };

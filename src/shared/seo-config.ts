@@ -1,4 +1,4 @@
-import { AYUDA_GRUPOS } from "../pages/ayuda/ayuda-data";
+import { ayudaGrupos } from "../pages/ayuda/ayuda-data";
 import type { Diccionario } from "./i18n";
 
 const BASE_URL = "https://rustock.app";
@@ -126,21 +126,23 @@ function seoPrivadas(t: Diccionario): Record<string, SeoConfig> {
 // Mapa de ayudas — se genera desde la fuente de verdad
 function seoAyudaModulos(t: Diccionario): Record<string, SeoConfig> {
   return Object.fromEntries(
-    AYUDA_GRUPOS.flatMap((grupo) => grupo.modulos).map((modulo) => {
-      const path = `/ayuda/${modulo.id}`;
-      return [
-        path,
-        {
-          title: t.seo.ayudaModulo({ titulo: modulo.titulo }),
-          description: modulo.resumen,
-          canonical: canonical(path),
-          robots: "index, follow, max-image-preview:large",
-          ogType: "article" as const,
-          ogImage: OG_IMAGE,
-          keywords: (modulo.terminosClave ?? []).join(", "),
-        } satisfies SeoConfig,
-      ];
-    }),
+    ayudaGrupos(t.idioma)
+      .flatMap((grupo) => grupo.modulos)
+      .map((modulo) => {
+        const path = `/ayuda/${modulo.id}`;
+        return [
+          path,
+          {
+            title: t.seo.ayudaModulo({ titulo: modulo.titulo }),
+            description: modulo.resumen,
+            canonical: canonical(path),
+            robots: "index, follow, max-image-preview:large",
+            ogType: "article" as const,
+            ogImage: OG_IMAGE,
+            keywords: (modulo.terminosClave ?? []).join(", "),
+          } satisfies SeoConfig,
+        ];
+      }),
   );
 }
 

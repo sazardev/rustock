@@ -7,8 +7,8 @@ import { ForbiddenPage } from "../pages/ForbiddenPage";
 import { LandingPage } from "../pages/LandingPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
-import { AYUDA_GRUPOS } from "../pages/ayuda/ayuda-data";
-import { MANUAL_PARTES } from "../pages/manual/manual-data";
+import { idsDeGuias } from "../pages/ayuda/ayuda-data";
+import { idsDeCapitulos } from "../pages/manual/manual-data";
 import {
   SLUGS_CATALOGO,
   CatalogDetailRoute,
@@ -245,21 +245,19 @@ export const router = createBrowserRouter([
           { path: "historial", element: <HistorialPage /> },
           { path: "ayuda", element: <AyudaIndexPage /> },
           { path: "ayuda/glosario", element: <AyudaGlosarioPage /> },
-          ...AYUDA_GRUPOS.flatMap((g) => g.modulos).map((mod) => ({
-            path: `ayuda/${mod.id}`,
-            element: <AyudaModulePage id={mod.id} />,
+          ...idsDeGuias().map((id) => ({
+            path: `ayuda/${id}`,
+            element: <AyudaModulePage id={id} />,
           })),
           { path: "manual", element: <ManualIndexPage /> },
           { path: "manual/imprimir", element: <ManualPrintPage /> },
           { path: "manual/m08-glosario", element: <ManualGlosarioPage /> },
-          ...MANUAL_PARTES.flatMap((parte) =>
-            parte.capitulos
-              .filter((cap) => cap.id !== "m08-glosario")
-              .map((cap) => ({
-                path: `manual/${cap.id}`,
-                element: <ManualCapituloPage id={cap.id} />,
-              })),
-          ),
+          ...idsDeCapitulos()
+            .filter((id) => id !== "m08-glosario")
+            .map((id) => ({
+              path: `manual/${id}`,
+              element: <ManualCapituloPage id={id} />,
+            })),
           { path: "usuarios", element: <UsuariosPage /> },
           { path: "usuarios/nuevo", element: <UsuarioFormPage /> },
           { path: "usuarios/:id", element: <UsuarioDetallePage /> },
