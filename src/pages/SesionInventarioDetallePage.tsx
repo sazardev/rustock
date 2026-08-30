@@ -63,7 +63,7 @@ export function SesionInventarioDetallePage() {
     onSuccess: (sesionIniciada) => {
       queryClient.setQueryData(["sesion-inventario", sesionId], sesionIniciada);
       queryClient.invalidateQueries({ queryKey: ["sesiones-inventario"] });
-      toast("Sesión iniciada: ya puedes registrar conteos.", "success");
+      toast(t.sesionInventario.iniciada, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
@@ -71,34 +71,71 @@ export function SesionInventarioDetallePage() {
   const conteoColumns: Array<TableColumn<Conteo>> = [
     {
       key: "ubicacion_id",
-      header: "Ubicación",
+      header: t.campos.ubicacion,
       render: (c) => <UbicacionRef id={c.ubicacion_id} />,
     },
-    { key: "producto_id", header: "Producto", render: (c) => <ProductoRef id={c.producto_id} /> },
+    {
+      key: "producto_id",
+      header: t.campos.producto,
+      render: (c) => <ProductoRef id={c.producto_id} />,
+    },
     {
       key: "lote_id",
-      header: "Lote",
+      header: t.campos.lote,
       render: (c) => (c.lote_id ? <LoteRef id={c.lote_id} /> : "—"),
     },
-    { key: "cantidad_contada", header: "Cantidad", num: true, render: (c) => c.cantidad_contada },
-    { key: "conteo_numero", header: "N.º conteo", num: true, render: (c) => c.conteo_numero },
-    { key: "timestamp", header: "Cuándo", render: (c) => formatearFecha(c.timestamp) },
-    { key: "nota", header: "Nota", render: (c) => c.nota ?? "—" },
+    {
+      key: "cantidad_contada",
+      header: t.comun.cantidad,
+      num: true,
+      render: (c) => c.cantidad_contada,
+    },
+    {
+      key: "conteo_numero",
+      header: t.sesionInventario.nroConteo,
+      num: true,
+      render: (c) => c.conteo_numero,
+    },
+    {
+      key: "timestamp",
+      header: t.sesionInventario.cuando,
+      render: (c) => formatearFecha(c.timestamp),
+    },
+    { key: "nota", header: t.sesionInventario.nota, render: (c) => c.nota ?? "—" },
   ];
 
   const diferenciaColumns: Array<TableColumn<DiferenciaInventario>> = [
     {
       key: "ubicacion_id",
-      header: "Ubicación",
+      header: t.campos.ubicacion,
       render: (d) => <UbicacionRef id={d.ubicacion_id} />,
     },
-    { key: "producto_id", header: "Producto", render: (d) => <ProductoRef id={d.producto_id} /> },
-    { key: "saldo_sistema", header: "Saldo sistema", num: true, render: (d) => d.saldo_sistema },
-    { key: "cantidad_contada", header: "Contado", num: true, render: (d) => d.cantidad_contada },
-    { key: "diferencia", header: "Diferencia", num: true, render: (d) => d.diferencia },
+    {
+      key: "producto_id",
+      header: t.campos.producto,
+      render: (d) => <ProductoRef id={d.producto_id} />,
+    },
+    {
+      key: "saldo_sistema",
+      header: t.sesionInventario.saldoSistema,
+      num: true,
+      render: (d) => d.saldo_sistema,
+    },
+    {
+      key: "cantidad_contada",
+      header: t.sesionInventario.contado,
+      num: true,
+      render: (d) => d.cantidad_contada,
+    },
+    {
+      key: "diferencia",
+      header: t.sesionInventario.diferencia,
+      num: true,
+      render: (d) => d.diferencia,
+    },
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (d) => (
         <Badge tone={TIPO_DIFERENCIA_TONE[d.tipo]}>{t.dominio.tipoDiferencia[d.tipo]}</Badge>
       ),
@@ -106,13 +143,13 @@ export function SesionInventarioDetallePage() {
   ];
 
   if (sesionQuery.isLoading) {
-    return <PageHeader title="Sesión de inventario" description="Cargando…" />;
+    return <PageHeader title={t.sesionInventario.titulo} description={t.comun.cargando} />;
   }
 
   if (!sesion) {
     return (
-      <ErrorPanel title="Sesión no encontrada">
-        <Link href={PATH.inventario}>Volver al listado</Link>
+      <ErrorPanel title={t.sesionInventario.noEncontrada}>
+        <Link href={PATH.inventario}>{t.listado.volverAlListado}</Link>
       </ErrorPanel>
     );
   }
@@ -134,10 +171,10 @@ export function SesionInventarioDetallePage() {
                 icon="agregar"
                 href={sesionInventarioConteos(sesionId)}
               >
-                Registrar conteos
+                {t.sesionInventario.registrarConteos}
               </ButtonLink>
               <ButtonLink variant="primary" icon="cerrar" href={sesionInventarioCerrar(sesionId)}>
-                Cerrar sesión
+                {t.sesionInventario.cerrar}
               </ButtonLink>
             </div>
           ) : sesion.estado === "PLANEADA" ? (
@@ -147,34 +184,50 @@ export function SesionInventarioDetallePage() {
               onClick={() => iniciarMut.mutate()}
               disabled={iniciarMut.isPending}
             >
-              {iniciarMut.isPending ? "Iniciando…" : "Iniciar sesión"}
+              {iniciarMut.isPending ? t.sesionInventario.iniciando : t.sesionInventario.iniciar}
             </Button>
           ) : undefined
         }
       />
 
       {sesionQuery.error ? (
-        <ErrorPanel title="No se pudo cargar la sesión">
+        <ErrorPanel title={t.sesionInventario.noSePudoCargar}>
           {mensajeError(sesionQuery.error)}
         </ErrorPanel>
       ) : null}
 
-      <Card title="Resumen">
+      <Card title={t.sesionInventario.resumen}>
         <Card.Body>
           <DetailList
             items={[
-              { label: "Tipo", value: sesion.tipo === "COMPLETO" ? "Completo" : "Cíclico" },
-              { label: "Almacén", value: <AlmacenRef id={sesion.almacen_id} /> },
-              { label: "Alcance", value: sesion.alcance ?? "—" },
-              { label: "Responsable", value: sesion.responsable_id ?? "—", code: true },
-              { label: "Conteo ciego", value: sesion.conteo_ciego ? "Sí" : "No" },
-              { label: "Exige doble conteo", value: sesion.exige_doble_conteo ? "Sí" : "No" },
-              { label: "Fecha de inicio", value: formatearFecha(sesion.fecha_inicio) },
-              { label: "Fecha de fin", value: formatearFecha(sesion.fecha_fin) },
-              { label: "Creado por", value: sesion.created_by, code: true },
-              { label: "Creado", value: formatearFecha(sesion.created_at) },
-              { label: "Cerrado por", value: sesion.closed_by ?? "—", code: true },
-              { label: "Cerrado", value: formatearFecha(sesion.closed_at) },
+              {
+                label: t.comun.tipo,
+                value:
+                  sesion.tipo === "COMPLETO"
+                    ? t.sesionInventario.completo
+                    : t.sesionInventario.ciclico,
+              },
+              { label: t.campos.almacen, value: <AlmacenRef id={sesion.almacen_id} /> },
+              { label: t.sesionInventario.alcance, value: sesion.alcance ?? "—" },
+              {
+                label: t.sesionInventario.responsable,
+                value: sesion.responsable_id ?? "—",
+                code: true,
+              },
+              {
+                label: t.sesionInventario.conteoCiego,
+                value: sesion.conteo_ciego ? t.comun.si : t.comun.no,
+              },
+              {
+                label: t.sesionInventario.exigeDobleConteo,
+                value: sesion.exige_doble_conteo ? t.comun.si : t.comun.no,
+              },
+              { label: t.sesionInventario.fechaInicio, value: formatearFecha(sesion.fecha_inicio) },
+              { label: t.sesionInventario.fechaFin, value: formatearFecha(sesion.fecha_fin) },
+              { label: t.sesionInventario.creadoPor, value: sesion.created_by, code: true },
+              { label: t.sesionInventario.creado, value: formatearFecha(sesion.created_at) },
+              { label: t.sesionInventario.cerradoPor, value: sesion.closed_by ?? "—", code: true },
+              { label: t.sesionInventario.cerrado, value: formatearFecha(sesion.closed_at) },
             ]}
           />
         </Card.Body>
@@ -182,22 +235,22 @@ export function SesionInventarioDetallePage() {
 
       {sesion.estado === "CERRADA" && precisionQuery.data ? (
         <div className="mt-6">
-          <Card title="Precisión de la sesión">
+          <Card title={t.sesionInventario.precision}>
             <Card.Body>
               <DetailList
                 items={[
                   {
-                    label: "Precisión por SKU",
+                    label: t.sesionInventario.precisionSku,
                     value: `${precisionQuery.data.precision_sku.toFixed(1)}% (${precisionQuery.data.skus_exactos}/${precisionQuery.data.skus_contados})`,
                     code: true,
                   },
                   {
-                    label: "Precisión por cantidad",
+                    label: t.sesionInventario.precisionCantidad,
                     value: `${precisionQuery.data.precision_cantidad.toFixed(1)}% (${precisionQuery.data.unidades_correctas}/${precisionQuery.data.unidades_contadas})`,
                     code: true,
                   },
                   {
-                    label: "Exactitud por ubicación",
+                    label: t.sesionInventario.exactitudUbicacion,
                     value: `${precisionQuery.data.exactitud_ubicacion.toFixed(1)}% (${precisionQuery.data.ubicaciones_exactas}/${precisionQuery.data.ubicaciones_contadas})`,
                     code: true,
                   },
@@ -209,27 +262,27 @@ export function SesionInventarioDetallePage() {
       ) : null}
 
       <div className="mt-6">
-        <Card title="Conteos registrados">
+        <Card title={t.sesionInventario.conteos}>
           <Table
             columns={conteoColumns}
             rows={conteosQuery.data ?? []}
             rowKey={(c) => c.id}
             loading={conteosQuery.isLoading}
-            emptyTitle="Sin conteos todavía"
-            emptyDescription="Registra conteos para esta sesión desde su página dedicada."
+            emptyTitle={t.sesionInventario.sinConteos}
+            emptyDescription={t.sesionInventario.sinConteosDesc}
           />
         </Card>
       </div>
 
       <div className="mt-6">
-        <Card title="Diferencias">
+        <Card title={t.sesionInventario.diferencias}>
           <Table
             columns={diferenciaColumns}
             rows={diferenciasQuery.data ?? []}
             rowKey={(d) => `${d.ubicacion_id}-${d.producto_id}-${d.lote_id ?? ""}`}
             loading={diferenciasQuery.isLoading}
-            emptyTitle="Sin diferencias"
-            emptyDescription="Las diferencias aparecen al comparar los conteos contra el saldo del sistema."
+            emptyTitle={t.sesionInventario.sinDiferencias}
+            emptyDescription={t.sesionInventario.sinDiferenciasDesc}
           />
         </Card>
       </div>

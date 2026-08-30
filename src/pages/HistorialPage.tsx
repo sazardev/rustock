@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listarHistorial, listarUsuarios, metricasActividad } from "../shared/backend";
 import type { EventoAuditoria } from "../shared/audit";
 import { esPaginado } from "../shared/types";
+import { useT } from "../shared/i18n";
 import {
   Badge,
   Card,
@@ -95,6 +96,7 @@ function BarrasHorizontales({ filas, max }: { filas: BarraDato[]; max: number })
 }
 
 export function HistorialPage() {
+  const t = useT();
   // Filtros de periodo (métricas) + filtros de la tabla de eventos.
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
@@ -275,10 +277,10 @@ export function HistorialPage() {
 
   return (
     <>
-      <PageHeader title="Centro de actividad" />
+      <PageHeader title={t.historial.titulo} />
 
       {error ? (
-        <ErrorPanel title="No se pudo cargar la actividad">{mensajeError(error)}</ErrorPanel>
+        <ErrorPanel title={t.historial.noSePudoCargar}>{mensajeError(error)}</ErrorPanel>
       ) : null}
 
       <FilterBar
@@ -314,7 +316,7 @@ export function HistorialPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por usuario"
+            aria-label={t.historial.filtrarUsuario}
             value={usuarioId}
             onChange={(e) => {
               setUsuarioId(e.target.value);
@@ -331,24 +333,24 @@ export function HistorialPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por tipo de evento"
+            aria-label={t.historial.filtrarEvento}
             value={tipoEvento}
             onChange={(e) => {
               setTipoEvento(e.target.value);
               setPage(1);
             }}
           >
-            <option value="">Todos los tipos</option>
-            {TIPOS_EVENTO.map((t) => (
-              <option key={t} value={t}>
-                {t === "VISTA" ? "Vistas de página" : "Comandos del backend"}
+            <option value="">{t.reportes.todosTipos}</option>
+            {TIPOS_EVENTO.map((evento) => (
+              <option key={evento} value={evento}>
+                {evento === "VISTA" ? t.historial.vistasDePagina : t.historial.comandosBackend}
               </option>
             ))}
           </Select>
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por módulo"
+            aria-label={t.historial.filtrarModulo}
             value={modulo}
             onChange={(e) => {
               setModulo(e.target.value);
@@ -365,7 +367,7 @@ export function HistorialPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por resultado"
+            aria-label={t.historial.filtrarResultado}
             value={resultado}
             onChange={(e) => {
               setResultado(e.target.value);
@@ -380,7 +382,7 @@ export function HistorialPage() {
         <FilterField grow>
           <Input
             type="search"
-            aria-label="Buscar comando"
+            aria-label={t.historial.buscarComando}
             placeholder="Comando (ej. aprobar_movimiento)"
             value={comando}
             onChange={(e) => {
@@ -397,7 +399,7 @@ export function HistorialPage() {
           <KpiCard
             titulo="Vistas"
             valor={resumen.total_vistas.toLocaleString()}
-            detalle="páginas visitadas"
+            detalle={t.historial.paginasVisitadas}
           />
           <KpiCard
             titulo="Operaciones"
@@ -405,13 +407,16 @@ export function HistorialPage() {
             detalle={`${resumen.escrituras} escrituras · ${resumen.lecturas} lecturas`}
           />
           <KpiCard
-            titulo="Tasa de éxito"
+            titulo={t.historial.tasaExito}
             valor={`${resumen.tasa_exito.toFixed(1)}%`}
             detalle={`${resumen.errores} errores`}
           />
-          <KpiCard titulo="Usuarios activos" valor={resumen.usuarios_activos.toLocaleString()} />
           <KpiCard
-            titulo="Duración media"
+            titulo={t.historial.usuariosActivos}
+            valor={resumen.usuarios_activos.toLocaleString()}
+          />
+          <KpiCard
+            titulo={t.historial.duracionMedia}
             valor={formatoDuracion(resumen.duracion_vista_promedio_ms)}
             detalle="por vista"
           />
@@ -420,7 +425,7 @@ export function HistorialPage() {
 
       {metricas && metricas.insights.length > 0 ? (
         <div className="mt-6">
-          <Card title="Perspectiva del periodo">
+          <Card title={t.historial.perspectiva}>
             <Card.Body>
               <ul className="list-none p-0">
                 {metricas.insights.map((insight) => (
@@ -444,7 +449,7 @@ export function HistorialPage() {
       ) : null}
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card title="Vistas por módulo">
+        <Card title={t.historial.vistasPorModulo}>
           <Card.Body>
             <BarrasHorizontales
               filas={(metricas?.por_modulo ?? []).map((m) => ({
@@ -455,7 +460,7 @@ export function HistorialPage() {
             />
           </Card.Body>
         </Card>
-        <Card title="Actividad por día">
+        <Card title={t.historial.actividadPorDia}>
           <Card.Body>
             {metricas && metricas.por_dia.length > 0 ? (
               <div
@@ -483,7 +488,7 @@ export function HistorialPage() {
             )}
           </Card.Body>
         </Card>
-        <Card title="Actividad por hora del día">
+        <Card title={t.historial.actividadPorHora}>
           <Card.Body>
             {metricas && metricas.por_hora.length > 0 ? (
               <div
@@ -519,7 +524,7 @@ export function HistorialPage() {
             )}
           </Card.Body>
         </Card>
-        <Card title="Actividad por día de la semana">
+        <Card title={t.historial.actividadPorDiaSemana}>
           <Card.Body>
             {metricas && metricas.por_dia_semana.length > 0 ? (
               <div
@@ -555,18 +560,18 @@ export function HistorialPage() {
             )}
           </Card.Body>
         </Card>
-        <Card title="Usuarios más activos">
+        <Card title={t.historial.usuariosMasActivos}>
           <Card.Body>
             <BarrasHorizontales
               filas={(metricas?.por_usuario ?? []).map((u) => ({
-                etiqueta: u.usuario_id ?? "sin sesión",
+                etiqueta: u.usuario_id ?? t.historial.sinSesion,
                 valor: u.vistas + u.operaciones,
               }))}
               max={maxUsuario}
             />
           </Card.Body>
         </Card>
-        <Card title="Procesos de negocio">
+        <Card title={t.historial.procesosNegocio}>
           <Card.Body>
             <BarrasHorizontales
               filas={(metricas?.por_proceso ?? []).map((p) => ({
@@ -580,7 +585,7 @@ export function HistorialPage() {
       </div>
 
       <div className="mt-6">
-        <Card title="Rutas más visitadas">
+        <Card title={t.historial.rutasMasVisitadas}>
           <Card.Body>
             <BarrasHorizontales
               filas={(metricas?.top_rutas ?? []).map((r) => ({
@@ -594,14 +599,14 @@ export function HistorialPage() {
       </div>
 
       <div className="mt-6">
-        <Card title="Registro de eventos">
+        <Card title={t.historial.registroEventos}>
           <Table
             columns={columns}
             rows={eventos}
             rowKey={(e) => String(e.id)}
             loading={tablaQuery.isLoading}
-            emptyTitle="Sin actividad registrada"
-            emptyDescription="Los eventos aparecerán aquí en cuanto se usen módulos o comandos."
+            emptyTitle={t.historial.sinActividad}
+            emptyDescription={t.historial.sinActividadDesc}
           />
           {listado && listado.meta.total > 0 ? (
             <Pagination

@@ -40,6 +40,7 @@ import {
   zonaContenedoraDePunto,
 } from "./mapa-geometria";
 import { snapshotDe, useHistorialMapa, type EntradaHistorial } from "./use-historial-mapa";
+import { useT, type Diccionario } from "../shared/i18n";
 
 // DESIGN §7: Zona/Rack/Sección comparten ícono (LayoutGrid), aquí mapeado a "zona".
 const ICONO_NODO: Record<TipoNodo, "zona" | "ubicacion"> = {
@@ -55,39 +56,28 @@ const TAM_TIRADOR = 9;
 type Herramienta = "seleccionar" | "zona" | "pasillo" | "rack";
 type Esquina = "nw" | "ne" | "sw" | "se";
 
-const HERRAMIENTAS: {
+/** Las herramientas del modo construcción, en el idioma activo. */
+function herramientasDe(t: Diccionario): {
   id: Herramienta;
   etiqueta: string;
   icono: Parameters<typeof Icon>[0]["name"];
   ayuda: string;
-}[] = [
-  {
-    id: "seleccionar",
-    etiqueta: "Seleccionar",
-    icono: "ver",
-    ayuda: "Arrastra para mover; tira de una esquina para redimensionar.",
-  },
-  {
-    id: "zona",
-    etiqueta: "Zona",
-    icono: "zona",
-    ayuda: "Arrastra sobre el lienzo para dibujar una zona nueva.",
-  },
-  {
-    id: "pasillo",
-    etiqueta: "Pasillo",
-    icono: "ordenar",
-    ayuda: "Dibuja el pasillo dentro de una zona: es espacio de tránsito, nada puede solaparlo.",
-  },
-  {
-    id: "rack",
-    etiqueta: "Rack",
-    icono: "producto",
-    ayuda: "Dibuja el rack dentro de una zona, sin pisar pasillos ni otros racks.",
-  },
-];
+}[] {
+  return [
+    {
+      id: "seleccionar",
+      etiqueta: t.mapa.seleccionar,
+      icono: "ver",
+      ayuda: t.mapa.arrastrarRedimensionar,
+    },
+    { id: "zona", etiqueta: t.mapa.zona, icono: "zona", ayuda: t.mapa.dibujaZonaNueva },
+    { id: "pasillo", etiqueta: t.mapa.pasillo, icono: "ordenar", ayuda: t.mapa.dibujaPasillo },
+    { id: "rack", etiqueta: t.mapa.rack, icono: "producto", ayuda: t.mapa.dibujaRack },
+  ];
+}
 
 export function AlmacenMapaPage() {
+  const t = useT();
   const { id: almacenId } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const resaltarId = searchParams.get("resaltar");
@@ -120,10 +110,7 @@ export function AlmacenMapaPage() {
         nodoId: creado.id,
         codigo: creado.codigo,
       });
-      toast(
-        `Creado ${creado.codigo}: ya está en el lienzo, muévelo o redimensiónalo a gusto.`,
-        "success",
-      );
+      toast(t.mapa.creado({ codigo: creado.codigo }), "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
@@ -160,7 +147,7 @@ export function AlmacenMapaPage() {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ["mapa-almacen"] });
-      toast(`Creación deshecha: ${vars.codigo || "elemento"} desactivado.`, "success");
+      toast(t.mapa.creacionDeshecha({ codigo: vars.codigo || t.mapa.elemento }), "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
@@ -177,7 +164,7 @@ export function AlmacenMapaPage() {
         ancho: e.antes.ancho,
         profundidad: e.antes.profundidad,
       });
-      toast("Cambio deshecho.", "success");
+      toast(t.mapa.cambioDeshecho, "success");
       return;
     }
     if (e.kind !== "creacion") return; // el 2D no genera entradas grupales
@@ -195,7 +182,7 @@ export function AlmacenMapaPage() {
       ancho: e.despues.ancho,
       profundidad: e.despues.profundidad,
     });
-    toast("Cambio rehecho.", "success");
+    toast(t.mapa.cambioRehecho, "success");
   }
 
   // Ctrl/Cmd+Z deshace, Ctrl/Cmd+Shift+Z o Ctrl+Y rehace (fuera de campos).
@@ -246,7 +233,7 @@ export function AlmacenMapaPage() {
         nodos.filter((n): n is NodoMapa & { tipo: "zona" } => n.tipo === "zona"),
       );
       if (!zonaId) {
-        toast("Dibuja dentro de una zona: los pasillos y racks pertenecen a su zona.", "error");
+        toast(t.mapa.dibujaDentroDeZona, "error");
         return;
       }
     }
@@ -265,7 +252,7 @@ export function AlmacenMapaPage() {
     return null;
   }
 
-  const ayudaActual = HERRAMIENTAS.find((h) => h.id === herramienta)?.ayuda ?? "";
+  const ayudaActual = herramientasDe(t).find((h) => h.id === herramienta)?.ayuda ?? "";
   const hayZonas = nodos.some((n) => n.tipo === "zona");
 
   /** Rota 90° el nodo seleccionado alrededor de su centro y guarda si el
@@ -283,7 +270,7 @@ export function AlmacenMapaPage() {
     };
     const choque = primerChoque(n.tipo, n.id, nuevo, otrosParaChoque(nodos));
     if (choque) {
-      toast(`No cabe girado: se solaparía con ${choque}.`, "error");
+      toast(t.mapa.noCabeGirado({ choque }), "error");
       return;
     }
     aplicarPosicion(
@@ -317,12 +304,8 @@ export function AlmacenMapaPage() {
   return (
     <>
       <PageHeader
-        title={almacenQ.data ? `Mapa — ${almacenQ.data.codigo}` : "Mapa del almacén"}
-        description={
-          construir
-            ? "Modo construcción: dibuja zonas, pasillos y racks; nada puede solaparse."
-            : "Arrastra zonas, racks y ubicaciones para posicionarlos. Haz clic para ver el detalle."
-        }
+        title={almacenQ.data ? t.mapa.conCodigo({ codigo: almacenQ.data.codigo }) : t.mapa.titulo}
+        description={construir ? t.mapa.modoConstruccion : t.mapa.descripcion}
         actions={
           <>
             <Button
@@ -331,7 +314,7 @@ export function AlmacenMapaPage() {
               disabled={!hist.puedeDeshacer || moverMut.isPending || desactivarMut.isPending}
               onClick={deshacer}
             >
-              Deshacer
+              {t.mapa.deshacer}
             </Button>
             <Button
               variant="ghost"
@@ -339,24 +322,24 @@ export function AlmacenMapaPage() {
               disabled={!hist.puedeRehacer || moverMut.isPending}
               onClick={rehacer}
             >
-              Rehacer
+              {t.mapa.rehacer}
             </Button>
             <Button
               variant={construir ? "primary" : "secondary"}
               icon="editar"
               onClick={alternarConstruccion}
             >
-              {construir ? "Terminar construcción" : "Construir"}
+              {construir ? t.mapa.terminarConstruccion : t.mapa.construir}
             </Button>
             <ButtonLink variant="ghost" icon="ubicacion" href={almacenMapa3D(almacenId)}>
-              Ver mapa 3D
+              {t.mapa.verMapa3D}
             </ButtonLink>
           </>
         }
       />
       {construir ? (
-        <div className="mapa-toolbar" role="toolbar" aria-label="Herramientas de construcción">
-          {HERRAMIENTAS.map((h) => (
+        <div className="mapa-toolbar" role="toolbar" aria-label={t.mapa.herramientas}>
+          {herramientasDe(t).map((h) => (
             <button
               key={h.id}
               type="button"
@@ -376,7 +359,7 @@ export function AlmacenMapaPage() {
             aria-pressed={rejilla}
           >
             <Icon name="cuadricula" size={16} />
-            <span>Rejilla</span>
+            <span>{t.mapa.rejilla}</span>
           </button>
           <button
             type="button"
@@ -387,7 +370,7 @@ export function AlmacenMapaPage() {
             }}
           >
             <Icon name="rotar" size={16} />
-            <span>Rotar 90°</span>
+            <span>{t.mapa.rotar}</span>
           </button>
           {hayZonas ? null : (
             <ButtonLink
@@ -395,25 +378,25 @@ export function AlmacenMapaPage() {
               icon="agregar"
               href={almacenMapaAsistente(almacenId ?? "")}
             >
-              Generar layout base
+              {t.mapa.generarLayout}
             </ButtonLink>
           )}
           <span className="mapa-toolbar__ayuda">{ayudaActual}</span>
         </div>
       ) : null}
-      <Card title="Mapa 2D">
+      <Card title={t.mapa.mapa2D}>
         <Card.Body>
           {cargando ? (
             <Text as="p" size="sm" color="muted">
-              Cargando estructura…
+              {t.mapa.cargandoEstructura}
             </Text>
           ) : nodos.length === 0 && !construir ? (
             <Text as="p" size="sm" color="muted">
-              Este almacén aún no tiene zonas, racks o ubicaciones para mostrar en el mapa.
+              {t.mapa.sinEstructura}
             </Text>
           ) : nodos.length === 0 && construir ? (
             <Text as="p" size="sm" color="muted">
-              Lienzo vacío: activa la herramienta Zona y dibuja el contorno del almacén.
+              {t.mapa.lienzoVacio}
             </Text>
           ) : (
             <MapaCanvas

@@ -76,31 +76,39 @@ export function DashboardPage() {
   const kpiItems = resumen
     ? [
         { label: "SKUs activos", value: resumen.total_skus_activos.toLocaleString(), code: true },
-        { label: "Unidades totales", value: resumen.total_unidades.toLocaleString(), code: true },
         {
-          label: "Valor del inventario",
+          label: t.dashboard.unidadesTotales,
+          value: resumen.total_unidades.toLocaleString(),
+          code: true,
+        },
+        {
+          label: t.dashboard.valorInventario,
           value: resumen.valor_inventario.toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }),
           code: true,
         },
-        { label: "Alertas activas", value: resumen.alertas_activas.toLocaleString(), code: true },
         {
-          label: "Movimientos de hoy",
+          label: t.dashboard.alertasActivas,
+          value: resumen.alertas_activas.toLocaleString(),
+          code: true,
+        },
+        {
+          label: t.dashboard.movimientosHoy,
           value: `${resumen.movimientos_hoy.toLocaleString()} (E:${resumen.movimientos_hoy_por_tipo.entradas} S:${resumen.movimientos_hoy_por_tipo.salidas} T:${resumen.movimientos_hoy_por_tipo.traslados} A:${resumen.movimientos_hoy_por_tipo.ajustes})`,
           code: true,
         },
         {
-          label: "Precisión (última sesión)",
+          label: t.dashboard.precisionUltima,
           value:
             resumen.precision_sku_ultima_sesion !== null
               ? `${resumen.precision_sku_ultima_sesion.toFixed(1)}%`
-              : "Sin sesiones cerradas",
+              : t.dashboard.sinSesionesCerradas,
           code: resumen.precision_sku_ultima_sesion !== null,
         },
         {
-          label: "Ocupación de ubicaciones",
+          label: t.dashboard.ocupacion,
           value: `${resumen.ocupacion_pct.toFixed(1)}% (${resumen.ubicaciones_con_stock}/${resumen.ubicaciones_totales})`,
           code: true,
         },
@@ -109,45 +117,45 @@ export function DashboardPage() {
 
   const kpiGeneralItems = kpis
     ? [
-        { label: "Tasa de merma", value: `${kpis.tasa_merma_pct.toFixed(2)}%`, code: true },
+        { label: t.dashboard.tasaMerma, value: `${kpis.tasa_merma_pct.toFixed(2)}%`, code: true },
         {
-          label: "Lotes vencidos sin dar de baja",
+          label: t.dashboard.lotesVencidos,
           value: kpis.lotes_vencidos_sin_dar_de_baja.toLocaleString(),
           code: true,
         },
         {
-          label: "Rotación de stock (30 días)",
+          label: t.dashboard.rotacion,
           value: kpis.rotacion_stock_30d.toFixed(2),
           code: true,
         },
         {
-          label: "Días de cobertura",
+          label: t.dashboard.diasCobertura,
           value:
-            kpis.dias_cobertura !== null ? kpis.dias_cobertura.toFixed(1) : "Sin salidas recientes",
+            kpis.dias_cobertura !== null ? kpis.dias_cobertura.toFixed(1) : t.dashboard.sinSalidas,
           code: kpis.dias_cobertura !== null,
         },
         {
-          label: "Antigüedad promedio del stock",
+          label: t.dashboard.antiguedad,
           value:
             kpis.antiguedad_stock_dias !== null
               ? `${kpis.antiguedad_stock_dias.toFixed(1)} días`
-              : "Sin stock",
+              : t.dashboard.sinStock,
           code: kpis.antiguedad_stock_dias !== null,
         },
         {
-          label: "Precisión por cantidad (última sesión)",
+          label: t.dashboard.precisionCantidad,
           value:
             kpis.precision_cantidad_ultima_sesion !== null
               ? `${kpis.precision_cantidad_ultima_sesion.toFixed(1)}%`
-              : "Sin sesiones cerradas",
+              : t.dashboard.sinSesionesCerradas,
           code: kpis.precision_cantidad_ultima_sesion !== null,
         },
         {
-          label: "Exactitud por ubicación (última sesión)",
+          label: t.dashboard.exactitudUbicacion,
           value:
             kpis.exactitud_ubicacion_ultima_sesion !== null
               ? `${kpis.exactitud_ubicacion_ultima_sesion.toFixed(1)}%`
-              : "Sin sesiones cerradas",
+              : t.dashboard.sinSesionesCerradas,
           code: kpis.exactitud_ubicacion_ultima_sesion !== null,
         },
       ]
@@ -168,10 +176,10 @@ export function DashboardPage() {
       />
 
       {error ? (
-        <ErrorPanel title="No se pudieron cargar los indicadores">{mensajeError(error)}</ErrorPanel>
+        <ErrorPanel title={t.dashboard.noSePudoCargar}>{mensajeError(error)}</ErrorPanel>
       ) : null}
 
-      <Card title="Indicadores clave">
+      <Card title={t.dashboard.indicadoresClave}>
         <Card.Body>
           {dashboardQuery.isLoading ? (
             <p className="text-base text-gray-500">Cargando…</p>
@@ -182,17 +190,17 @@ export function DashboardPage() {
       </Card>
 
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card title="Movimientos recientes">
+        <Card title={t.dashboard.movimientosRecientes}>
           <Table
             columns={columns}
             rows={movimientos}
             rowKey={(m) => m.id}
             loading={movimientosQuery.isLoading}
-            emptyTitle="Sin movimientos todavía"
-            emptyDescription="Los últimos movimientos se muestran aquí una vez que exista historial."
+            emptyTitle={t.dashboard.sinMovimientos}
+            emptyDescription={t.dashboard.sinMovimientosDesc}
           />
         </Card>
-        <Card title="Indicadores adicionales">
+        <Card title={t.dashboard.indicadoresAdicionales}>
           <Card.Body>
             {kpisQuery.isLoading ? (
               <p className="text-base text-gray-500">Cargando…</p>

@@ -7,6 +7,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { movimientoDetalle, PATH } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { useCapturaEscaneo } from "../shared/useEscanerGlobal";
+import { useT } from "../shared/i18n";
 import {
   Badge,
   Button,
@@ -69,15 +70,8 @@ function lineaValida(l: LineaCaptura): boolean {
   return Boolean(l.producto_id && Number(l.cantidad) > 0 && l.ubicacion_id);
 }
 
-const ETAPA_HINT: Record<Etapa, string> = {
-  producto: "Escanea el producto (SKU o código de barras).",
-  lote: "El producto controla lote: escanea el número de lote.",
-  cantidad: "Escribe la cantidad y pulsa Enter.",
-  ubicacion: "Escanea la ubicación.",
-  listo: "Pulsa Enter o «Agregar línea» para incorporar la línea.",
-};
-
 export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
+  const t = useT();
   const esRecepcion = modo === "recepcion";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -131,7 +125,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
     }
     if (res.tipo === "LOTE") {
       if (!controlaLoteActual) {
-        setError("Este producto no controla lote: el lote no aplica.");
+        setError(t.captura.sinLote);
         return;
       }
       fijar({ lote_id: res.id, lote_etiqueta: res.etiqueta });
@@ -145,12 +139,12 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
       setEtapa("listo");
       return;
     }
-    setError("Las cajas no se usan en captura rápida: escanea la ubicación.");
+    setError(t.captura.sinCajas);
   }
 
   function agregarLinea() {
     if (!lineaValida(linea)) {
-      setError("Completa producto, cantidad y ubicación antes de agregar la línea.");
+      setError(t.captura.completaLinea);
       return;
     }
     setLineas((prev) => [...prev, linea]);
@@ -188,7 +182,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
     if (etapa === "cantidad") {
       const n = Number(valor);
       if (!(n > 0)) {
-        setError("La cantidad debe ser un número mayor que 0.");
+        setError(t.captura.cantidadInvalida);
         return;
       }
       fijar({ cantidad: valor });
@@ -260,15 +254,20 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
   const columnas: Array<TableColumn<LineaCaptura>> = [
     {
       key: "producto_etiqueta",
-      header: "Producto",
+      header: t.campos.producto,
       code: true,
       render: (l) => l.producto_etiqueta,
     },
-    { key: "lote_etiqueta", header: "Lote", code: true, render: (l) => l.lote_etiqueta || "—" },
-    { key: "cantidad", header: "Cantidad", num: true, render: (l) => l.cantidad },
+    {
+      key: "lote_etiqueta",
+      header: t.campos.lote,
+      code: true,
+      render: (l) => l.lote_etiqueta || "—",
+    },
+    { key: "cantidad", header: t.comun.cantidad, num: true, render: (l) => l.cantidad },
     {
       key: "ubicacion_etiqueta",
-      header: esRecepcion ? "Destino" : "Origen",
+      header: esRecepcion ? t.captura.destino : t.captura.origen,
       code: true,
       render: (l) => l.ubicacion_etiqueta,
     },
@@ -277,33 +276,29 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
   return (
     <>
       <PageHeader
-        title={esRecepcion ? "Recepción rápida" : "Despacho rápido"}
-        description={
-          esRecepcion
-            ? "Captura una entrada escaneando producto, lote y ubicación. Enter avanza de campo."
-            : "Captura una salida escaneando producto, lote y ubicación de origen. Enter avanza de campo."
-        }
+        title={esRecepcion ? t.captura.recepcion : t.captura.despacho}
+        description={esRecepcion ? t.captura.recepcionDesc : t.captura.despachoDesc}
         actions={
           <ButtonLink
             variant="secondary"
             href={esRecepcion ? "/movimientos/captura-despacho" : "/movimientos/captura-recepcion"}
           >
-            {esRecepcion ? "Ir a despacho rápido" : "Ir a recepción rápida"}
+            {esRecepcion ? t.captura.irADespacho : t.captura.irARecepcion}
           </ButtonLink>
         }
       />
 
-      <Card title="Línea actual">
+      <Card title={t.captura.lineaActual}>
         <Card.Body>
           {error ? (
-            <ErrorPanel title="Captura" className="mb-4">
+            <ErrorPanel title={t.captura.tituloError} className="mb-4">
               {error}
             </ErrorPanel>
           ) : null}
           <div className="mb-4 grid gap-2 sm:grid-cols-2">
             <div className="flex items-center gap-2">
               <Text size="sm" color="muted" as="span" className="min-w-24">
-                Producto
+                {t.campos.producto}
               </Text>
               {linea.producto_etiqueta ? (
                 <Badge tone="info">{linea.producto_etiqueta}</Badge>
@@ -315,7 +310,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
             </div>
             <div className="flex items-center gap-2">
               <Text size="sm" color="muted" as="span" className="min-w-24">
-                Lote
+                {t.campos.lote}
               </Text>
               {linea.lote_etiqueta ? (
                 <Badge tone="neutral">{linea.lote_etiqueta}</Badge>
@@ -327,7 +322,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
             </div>
             <div className="flex items-center gap-2">
               <Text size="sm" color="muted" as="span" className="min-w-24">
-                Cantidad
+                {t.comun.cantidad}
               </Text>
               <Text size="sm" as="span">
                 {linea.cantidad || "—"}
@@ -347,7 +342,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
             </div>
           </div>
 
-          <Field label="Escanea o escribe" htmlFor="scan" help={ETAPA_HINT[etapa]}>
+          <Field label={t.captura.escaneaOEscribe} htmlFor="scan" help={t.captura.pistas[etapa]}>
             <input
               id="scan"
               ref={scanRef}
@@ -361,7 +356,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
                   void onEnter();
                 }
               }}
-              placeholder="Escáner o teclado…"
+              placeholder={t.captura.marcador}
               autoComplete="off"
             />
           </Field>
@@ -369,13 +364,13 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
       </Card>
 
       <div className="mt-6">
-        <Card title={`Líneas capturadas (${totalLineas})`}>
+        <Card title={t.captura.lineasCapturadas({ total: totalLineas })}>
           <Table
             columns={columnas}
             rows={lineas}
             rowKey={(l) => l.key}
-            emptyTitle="Sin líneas todavía"
-            emptyDescription="Escanea producto → lote → cantidad → ubicación para ir llenando esta captura."
+            emptyTitle={t.captura.sinLineas}
+            emptyDescription={t.captura.sinLineasDesc}
             actions={(l) => (
               <Button
                 type="button"
@@ -384,7 +379,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
                 icon="eliminar"
                 onClick={() => quitarLinea(l.key)}
               >
-                Quitar
+                {t.captura.quitar}
               </Button>
             )}
           />
@@ -399,7 +394,7 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
           disabled={!lineaValida(linea)}
           onClick={agregarLinea}
         >
-          Agregar línea
+          {t.captura.agregarLinea}
         </Button>
         <Button
           type="button"
@@ -408,12 +403,12 @@ export function CapturaRapidaPage({ modo }: { modo: ModoCaptura }) {
           onClick={() => guardarMut.mutate(lineaValida(linea) ? [...lineas, linea] : lineas)}
         >
           {guardarMut.isPending
-            ? "Guardando…"
-            : `Guardar ${esRecepcion ? "entrada" : "salida"} (${totalLineas} ${
-                totalLineas === 1 ? "línea" : "líneas"
-              })`}
+            ? t.comun.guardando
+            : esRecepcion
+              ? t.captura.guardarEntrada({ total: totalLineas })
+              : t.captura.guardarSalida({ total: totalLineas })}
         </Button>
-        <Link href={PATH.movimientos}>Cancelar</Link>
+        <Link href={PATH.movimientos}>{t.comun.cancelar}</Link>
       </div>
     </>
   );

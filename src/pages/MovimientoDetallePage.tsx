@@ -58,7 +58,7 @@ export function MovimientoDetallePage() {
     mutationFn: () => enviarAAprobacion(movimientoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movimiento", movimientoId] });
-      toast("Movimiento enviado a aprobación.", "success");
+      toast(t.movimientoDetalle.enviadoAAprobacion, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
@@ -91,54 +91,65 @@ export function MovimientoDetallePage() {
   ];
 
   if (movimientoQuery.isLoading) {
-    return <PageHeader title="Movimiento" description="Cargando…" />;
+    return <PageHeader title={t.movimientos.singular} description={t.comun.cargando} />;
   }
 
   if (!movimiento) {
     return (
-      <ErrorPanel title="Movimiento no encontrado">
-        No se encontró el movimiento solicitado.{" "}
-        <Link href={PATH.movimientos}>Volver al listado</Link>.
+      <ErrorPanel title={t.movimientoDetalle.noEncontrado}>
+        {t.listado.noSeEncontroRegistro}{" "}
+        <Link href={PATH.movimientos}>{t.listado.volverAlListado}</Link>.
       </ErrorPanel>
     );
   }
 
   const datosGenerales = [
-    { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
-    { label: "Sub-tipo", value: t.dominio.subTipoMovimiento[movimiento.sub_tipo], code: true },
-    { label: "Fecha del movimiento", value: formatearFecha(movimiento.fecha_movimiento) },
-    { label: "Documento de referencia", value: movimiento.documento_referencia ?? "—", code: true },
+    { label: t.comun.tipo, value: t.dominio.tipoMovimiento[movimiento.tipo] },
+    {
+      label: t.campos.subTipo,
+      value: t.dominio.subTipoMovimiento[movimiento.sub_tipo],
+      code: true,
+    },
+    {
+      label: t.movimientoDetalle.fechaMovimiento,
+      value: formatearFecha(movimiento.fecha_movimiento),
+    },
+    {
+      label: t.movimientoDetalle.documentoReferencia,
+      value: movimiento.documento_referencia ?? "—",
+      code: true,
+    },
     // Trazabilidad de contraparte (SPEC §6.4): de quién vino / a quién fue.
     ...(movimiento.proveedor_id
-      ? [{ label: "Proveedor", value: <ProveedorRef id={movimiento.proveedor_id} /> }]
+      ? [{ label: t.campos.proveedor, value: <ProveedorRef id={movimiento.proveedor_id} /> }]
       : []),
     ...(movimiento.cliente_id
-      ? [{ label: "Cliente", value: <ClienteRef id={movimiento.cliente_id} /> }]
+      ? [{ label: t.campos.cliente, value: <ClienteRef id={movimiento.cliente_id} /> }]
       : []),
     // Origen del ajuste (SPEC §11.5/§13.3): movimientos generados al cerrar
     // una sesión de inventario enlazan a esa sesión.
     ...(movimiento.sesion_inventario_id
       ? [
           {
-            label: "Sesión de inventario",
+            label: t.movimientoDetalle.sesionInventario,
             value: <SesionInventarioRef id={movimiento.sesion_inventario_id} />,
           },
         ]
       : []),
-    { label: "Motivo", value: movimiento.motivo ?? "—" },
-    { label: "Notas", value: movimiento.notas ?? "—" },
-    { label: "Creado por", value: <UsuarioNombre id={movimiento.created_by} /> },
-    { label: "Creado", value: formatearFecha(movimiento.created_at) },
+    { label: t.campos.motivo, value: movimiento.motivo ?? "—" },
+    { label: t.comun.notas, value: movimiento.notas ?? "—" },
+    { label: t.movimientoDetalle.creadoPor, value: <UsuarioNombre id={movimiento.created_by} /> },
+    { label: t.campos.creado, value: formatearFecha(movimiento.created_at) },
     {
-      label: "Aprobado por",
+      label: t.movimientoDetalle.aprobadoPor,
       value: movimiento.approved_by ? <UsuarioNombre id={movimiento.approved_by} /> : "—",
     },
-    { label: "Aprobado", value: formatearFecha(movimiento.approved_at) },
+    { label: t.movimientoDetalle.aprobado, value: formatearFecha(movimiento.approved_at) },
     {
-      label: "Anulado por",
+      label: t.movimientoDetalle.anuladoPor,
       value: movimiento.anulado_by ? <UsuarioNombre id={movimiento.anulado_by} /> : "—",
     },
-    { label: "Anulado", value: formatearFecha(movimiento.anulado_at) },
+    { label: t.movimientoDetalle.anulado, value: formatearFecha(movimiento.anulado_at) },
   ];
 
   return (
@@ -162,11 +173,11 @@ export function MovimientoDetallePage() {
               icon="agregar"
               href={`${PATH.movimientosNuevo}?tipo=${movimiento.tipo}&duplicarDe=${movimientoId}`}
             >
-              Duplicar
+              {t.movimientoDetalle.duplicar}
             </ButtonLink>
             {puedeEditar ? (
               <ButtonLink variant="secondary" icon="editar" href={movimientoEditar(movimientoId)}>
-                Editar
+                {t.comun.editar}
               </ButtonLink>
             ) : null}
             {movimiento.estado === "BORRADOR" ? (
@@ -176,17 +187,17 @@ export function MovimientoDetallePage() {
                 onClick={() => enviarMut.mutate()}
                 disabled={enviarMut.isPending}
               >
-                Enviar a aprobación
+                {t.movimientoDetalle.enviarAAprobacion}
               </Button>
             ) : null}
             {movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION" ? (
               <ButtonLink variant="primary" icon="aprobar" href={movimientoAprobar(movimientoId)}>
-                Aprobar
+                {t.movimientoDetalle.aprobar}
               </ButtonLink>
             ) : null}
             {movimiento.estado === "APROBADO" ? (
               <ButtonLink variant="danger" icon="anular" href={movimientoAnular(movimientoId)}>
-                Anular
+                {t.movimientoDetalle.anular}
               </ButtonLink>
             ) : null}
           </div>
@@ -194,9 +205,8 @@ export function MovimientoDetallePage() {
       />
 
       {movimiento.estado === "ANULADO" && movimiento.movimiento_inverso_id ? (
-        <ErrorPanel title="Movimiento anulado">
-          Este movimiento fue anulado. Se generó el movimiento inverso{" "}
-          <MovimientoRef id={movimiento.movimiento_inverso_id} />.
+        <ErrorPanel title={t.movimientoDetalle.panelAnulado}>
+          {t.movimientoDetalle.fueAnulado} <MovimientoRef id={movimiento.movimiento_inverso_id} />.
         </ErrorPanel>
       ) : null}
       {movimiento.estado !== "ANULADO" && movimiento.movimiento_inverso_id ? (
@@ -204,28 +214,30 @@ export function MovimientoDetallePage() {
         <Card muted>
           <Card.Body>
             <Text as="p" size="sm">
-              Este movimiento es el <strong>inverso</strong> de{" "}
-              <MovimientoRef id={movimiento.movimiento_inverso_id} />, generado automáticamente al
-              anular el movimiento original. Su efecto sobre el stock revierte la operación anulada.
+              {t.movimientoDetalle.esInversoPre}{" "}
+              <strong>{t.movimientoDetalle.esInversoFuerte}</strong>{" "}
+              {t.movimientoDetalle.esInversoMedio}{" "}
+              <MovimientoRef id={movimiento.movimiento_inverso_id} />
+              {t.movimientoDetalle.esInversoPost}
             </Text>
           </Card.Body>
         </Card>
       ) : null}
 
-      <Card title="Datos generales">
+      <Card title={t.movimientoDetalle.datosGenerales}>
         <Card.Body>
           <DetailList items={datosGenerales} />
         </Card.Body>
       </Card>
 
       <div className="mt-6">
-        <Card title="Líneas del movimiento">
+        <Card title={t.movimientoDetalle.lineas}>
           <Table
             columns={columns}
             rows={lineas}
             rowKey={(l) => l.id}
             loading={lineasQuery.isLoading}
-            emptyTitle="Sin líneas"
+            emptyTitle={t.movimientoDetalle.sinLineas}
           />
         </Card>
       </div>
