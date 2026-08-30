@@ -23,7 +23,7 @@ import {
 } from "./manual-data";
 import { Link } from "../../shared/ui/Link";
 import { PATH } from "../../app/route-paths";
-import { useIdioma, type Idioma } from "../../shared/i18n";
+import { useIdioma, useT, type Idioma } from "../../shared/i18n";
 import {
   Badge,
   Button,
@@ -179,6 +179,7 @@ function Seccion({ seccion }: { seccion: ManualSeccion }) {
 }
 
 function TarjetaContexto({ cap }: { cap: ManualCapitulo }) {
+  const t = useT();
   if (!cap.paraQueSirve && !cap.cuandoUsarlo) return null;
   return (
     <Card muted className="mt-6">
@@ -191,7 +192,7 @@ function TarjetaContexto({ cap }: { cap: ManualCapitulo }) {
             {cap.paraQueSirve ? (
               <>
                 <Text size="xs" color="muted" className="mb-1">
-                  PARA QUÉ SIRVE EN TU OPERACIÓN
+                  {t.docs.paraQueSirve}
                 </Text>
                 <Text as="p" size="sm" className="text-gray-700">
                   {cap.paraQueSirve}
@@ -214,6 +215,7 @@ function TarjetaContexto({ cap }: { cap: ManualCapitulo }) {
 }
 
 function Terminos({ cap }: { cap: ManualCapitulo }) {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   if (!cap.terminosClave || cap.terminosClave.length === 0) return null;
   const terminos = cap.terminosClave
@@ -221,7 +223,7 @@ function Terminos({ cap }: { cap: ManualCapitulo }) {
     .filter((t) => t.termino !== null) as Array<{ id: string; termino: string }>;
   if (terminos.length === 0) return null;
   return (
-    <Card title="Términos del glosario" className="mt-6">
+    <Card title={t.docs.terminosGlosario} className="mt-6">
       <Card.Body>
         <div className="flex flex-wrap gap-2">
           {terminos.map((t) => (
@@ -240,6 +242,7 @@ function Terminos({ cap }: { cap: ManualCapitulo }) {
 }
 
 function Relacionados({ cap }: { cap: ManualCapitulo }) {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   if (!cap.relacionados || cap.relacionados.length === 0) return null;
   const guias = cap.relacionados
@@ -250,7 +253,7 @@ function Relacionados({ cap }: { cap: ManualCapitulo }) {
     .filter((g) => g !== null) as Array<{ id: string; titulo: string; icono: IconName }>;
   if (guias.length === 0) return null;
   return (
-    <Card title="Capítulos relacionados" className="mt-6">
+    <Card title={t.docs.manual.capitulosRelacionados} className="mt-6">
       <Card.Body>
         <ul className="space-y-2">
           {guias.map((g) => (
@@ -287,6 +290,7 @@ function CapitulosDeParte({ parteTitulo, actualId }: { parteTitulo: string; actu
 }
 
 function GuiaCardManual({ cap }: { cap: ManualCapitulo }) {
+  const t = useT();
   return (
     <Link href={manualHref(cap.id)} className="ayuda-grid__card">
       <span className="ayuda-grid__icon" aria-hidden="true">
@@ -303,7 +307,7 @@ function GuiaCardManual({ cap }: { cap: ManualCapitulo }) {
       <span className="ayuda-grid__cta">
         <Icon name="ver" size={14} aria-hidden="true" />
         <Text as="span" size="xs">
-          Ver capítulo
+          {t.docs.manual.verCapitulo}
         </Text>
       </span>
     </Link>
@@ -314,6 +318,7 @@ function GuiaCardManual({ cap }: { cap: ManualCapitulo }) {
 // ÍNDICE
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualIndexPage() {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const [q, setQ] = useState("");
 
@@ -349,15 +354,19 @@ export function ManualIndexPage() {
   return (
     <>
       <PageHeader
-        title="Manual del Cliente — Rustock"
-        description={`Guía completa de la lógica de negocio: ${manualPartes(idioma).length} partes, ${totalCapitulos} capítulos y ${manualGlosario(idioma).length} términos. Todo lo que tu operación puede hacer, especificado y verificable.`}
+        title={t.docs.manual.titulo}
+        description={t.docs.manual.indiceDesc({
+          partes: manualPartes(idioma).length,
+          capitulos: totalCapitulos,
+          terminos: manualGlosario(idioma).length,
+        })}
         actions={
           <div className="flex gap-2">
             <ButtonLink variant="primary" icon="ayuda" href="/manual/imprimir">
-              Imprimir manual completo (PDF)
+              {t.docs.manual.imprimirCompleto}
             </ButtonLink>
             <ButtonLink variant="secondary" icon="ver" href="/manual/m08-glosario">
-              Glosario
+              {t.docs.manual.glosario}
             </ButtonLink>
           </div>
         }
@@ -371,39 +380,35 @@ export function ManualIndexPage() {
             </div>
             <div className="flex-1">
               <Text as="p" size="sm" color="muted" className="mb-1">
-                CÓMO USAR ESTE MANUAL
+                {t.docs.manual.comoUsar}
               </Text>
               <Text as="p" size="sm" className="text-gray-700">
-                Lee en orden (Parte 0→8) la primera vez. Luego usa el buscador, el índice por Partes
-                o Ctrl+K para saltar a cualquier capítulo. Cada capítulo enlaza a su glosario y a
-                capítulos relacionados. Todos los enlaces a la app son deep-links reales.
+                {t.docs.manual.comoUsarLargo}
               </Text>
             </div>
           </div>
         </Card.Body>
       </Card>
 
-      <Card className="mt-6" title="Versión imprimible — PDF completo">
+      <Card className="mt-6" title={t.docs.manual.imprimible}>
         <Card.Body>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Text size="sm" color="muted" className="flex-1">
-              Todo el manual en un solo documento A4, con portada, índice, {totalCapitulos}{" "}
-              capítulos y glosario. Optimizado para <strong>Guardar como PDF</strong> (Ctrl+P) con
-              gráficos y tablas.
+              {t.docs.manual.imprimibleLargo({ capitulos: totalCapitulos })}
             </Text>
             <div className="flex gap-2">
               <ButtonLink variant="primary" icon="ayuda" href="/manual/imprimir">
-                Abrir versión imprimible
+                {t.docs.manual.abrirImprimible}
               </ButtonLink>
               <ButtonLink variant="secondary" icon="exportar" href="/rustock-manual.pdf">
-                Descargar PDF
+                {t.docs.manual.descargarPdf}
               </ButtonLink>
             </div>
           </div>
           <Text size="xs" color="muted" className="mt-2 block">
-            En la página imprimible, pulsa <strong>Guardar como PDF</strong>. Activa “Gráficos de
-            fondo” y elige “Márgenes: mínimos” para un PDF idéntico al manual digital. O descarga el{" "}
-            <Link href="/rustock-manual.pdf">PDF pre-generado (v0.3.0, 59 páginas, 2.5 MB)</Link>.
+            {t.docs.manual.instruccionesPdfPre} <strong>{t.docs.manual.guardarComoPdf}</strong>
+            {t.docs.manual.instruccionesPdfPost}{" "}
+            <Link href="/rustock-manual.pdf">{t.docs.manual.pdfPreGenerado}</Link>.
           </Text>
         </Card.Body>
       </Card>
@@ -411,13 +416,13 @@ export function ManualIndexPage() {
       <Card className="mt-6">
         <Card.Body>
           <Search
-            aria-label="Buscar en el manual"
-            placeholder="Buscar capítulos, tablas y términos del glosario…"
+            aria-label={t.docs.manual.buscar}
+            placeholder={t.docs.manual.marcador}
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <Text as="p" size="xs" color="muted" className="mt-2">
-            Filtra al instante por título, resumen, tablas, pasos y definiciones.
+            {t.docs.manual.filtraAlInstante}
           </Text>
         </Card.Body>
       </Card>
@@ -427,11 +432,11 @@ export function ManualIndexPage() {
           <Card.Body>
             <EmptyState
               icon="buscar"
-              title="Sin resultados en el manual"
-              description="Prueba con otros términos o limpia la búsqueda."
+              title={t.docs.manual.sinResultados}
+              description={t.docs.manual.sinResultadosDesc}
               action={
                 <Button variant="secondary" icon="refrescar" onClick={() => setQ("")}>
-                  Limpiar búsqueda
+                  {t.docs.limpiarBusqueda}
                 </Button>
               }
             />
@@ -458,7 +463,7 @@ export function ManualIndexPage() {
       {!hayBusqueda ? (
         <section className="mt-8">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Glosario del manual
+            {t.docs.manual.glosarioDelManual}
           </h2>
           <div className="ayuda-grid">
             <Link href="/manual/m08-glosario" className="ayuda-grid__card">
@@ -467,17 +472,16 @@ export function ManualIndexPage() {
               </span>
               <span className="ayuda-grid__cuerpo">
                 <Text as="span" size="sm" weight="medium" className="ayuda-grid__titulo">
-                  Glosario completo — 50 términos
+                  {t.docs.manual.glosarioCompleto({ total: manualGlosario(idioma).length })}
                 </Text>
                 <Text as="span" size="xs" color="muted" className="ayuda-grid__resumen">
-                  Definición operativa de cada término con ancla directa para enlaces desde
-                  cualquier capítulo.
+                  {t.docs.manual.glosarioDesc}
                 </Text>
               </span>
               <span className="ayuda-grid__cta">
                 <Icon name="ver" size={14} aria-hidden="true" />
                 <Text as="span" size="xs">
-                  Ver glosario
+                  {t.docs.manual.verGlosario}
                 </Text>
               </span>
             </Link>
@@ -488,7 +492,7 @@ export function ManualIndexPage() {
       {hayBusqueda && hayGlosario ? (
         <div className="mt-8">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Términos del glosario que coinciden
+            {t.docs.terminosCoinciden}
           </h2>
           <Card>
             <Card.Body>
@@ -508,10 +512,10 @@ export function ManualIndexPage() {
       <Card muted className="mt-8">
         <Card.Body>
           <Text size="xs" color="muted">
-            Versión del manual: v0.3.0 · Alineado a SPEC.md (19 reglas no negociables), DESIGN.md
-            (Rust & Iron) y código ejecutable. Última verificación: Chrome MCP contra app viva. Para
-            el PDF completo, abre <Link href="/manual/imprimir">la versión imprimible</Link> y pulsa{" "}
-            <strong>Guardar como PDF</strong> (Ctrl+P).
+            {t.docs.manual.versionLarga}{" "}
+            <Link href="/manual/imprimir">{t.docs.manual.versionLargaMedio}</Link>{" "}
+            {t.docs.manual.versionLargaPost} <strong>{t.docs.manual.guardarComoPdf}</strong>{" "}
+            (Ctrl+P).
           </Text>
         </Card.Body>
       </Card>
@@ -523,18 +527,19 @@ export function ManualIndexPage() {
 // CAPÍTULO
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualCapituloPage({ id }: { id: string }) {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const enc = buscarCapitulo(id, idioma);
 
   if (!enc) {
     return (
       <>
-        <PageHeader title="Manual" description="Capítulo no encontrado." />
+        <PageHeader title={t.nav.manualCliente} description={t.docs.manual.capituloNoEncontrado} />
         <Card className="mt-6">
           <Card.Body>
             <Text as="p" size="sm" color="muted">
-              No existe un capítulo con ese identificador.{" "}
-              <Link href="/manual">Volver al índice del manual</Link>.
+              {t.docs.manual.capituloNoExiste}{" "}
+              <Link href="/manual">{t.docs.manual.volverAlIndice}</Link>.
             </Text>
           </Card.Body>
         </Card>
@@ -552,13 +557,13 @@ export function ManualCapituloPage({ id }: { id: string }) {
         actions={
           <div className="flex gap-2">
             <ButtonLink variant="secondary" icon="atras" href="/manual">
-              Índice
+              {t.docs.manual.indice}
             </ButtonLink>
             <ButtonLink variant="secondary" icon="ayuda" href="/manual/imprimir">
-              PDF completo
+              {t.docs.manual.pdfCompleto}
             </ButtonLink>
             <Button variant="secondary" icon="ayuda" onClick={() => window.print()}>
-              Imprimir
+              {t.docs.manual.imprimir}
             </Button>
           </div>
         }
@@ -589,13 +594,13 @@ export function ManualCapituloPage({ id }: { id: string }) {
         <Card.Body>
           <div className="flex flex-wrap gap-2">
             <ButtonLink variant="secondary" icon="atras" href="/manual">
-              Volver al índice
+              {t.docs.manual.volverAlIndiceCorto}
             </ButtonLink>
             <ButtonLink variant="secondary" icon="ayuda" href="/manual/m08-glosario">
-              Glosario
+              {t.docs.manual.glosario}
             </ButtonLink>
             <ButtonLink variant="secondary" icon="buscar" href={PATH.ayuda}>
-              Ayuda por módulos (26 guías)
+              {t.docs.manual.ayudaPorModulos}
             </ButtonLink>
           </div>
         </Card.Body>
@@ -608,6 +613,7 @@ export function ManualCapituloPage({ id }: { id: string }) {
 // GLOSARIO
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualGlosarioPage() {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const location = useLocation();
 
@@ -634,18 +640,18 @@ export function ManualGlosarioPage() {
   return (
     <>
       <PageHeader
-        title="Glosario del Manual — 50 términos"
-        description="Definiciones operativas de Rustock con ancla directa. Cada término es enlazable como /manual/m08-glosario#saldo."
+        title={t.docs.manual.glosarioTitulo({ total: manualGlosario(idioma).length })}
+        description={t.docs.manual.glosarioIntro}
         actions={
           <div className="flex gap-2">
             <ButtonLink variant="secondary" icon="atras" href="/manual">
-              Índice
+              {t.docs.manual.indice}
             </ButtonLink>
             <ButtonLink variant="secondary" icon="ayuda" href="/manual/imprimir">
-              PDF completo
+              {t.docs.manual.pdfCompleto}
             </ButtonLink>
             <Button variant="secondary" icon="ayuda" onClick={() => window.print()}>
-              Imprimir
+              {t.docs.manual.imprimir}
             </Button>
           </div>
         }
@@ -693,6 +699,7 @@ export function ManualGlosarioPage() {
 // Un solo documento con todo el manual, optimizado para PDF vía Ctrl+P.
 // ─────────────────────────────────────────────────────────────────────────────
 export function ManualPrintPage() {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const totalCapitulos = manualPartes(idioma).reduce((acc, p) => acc + p.capitulos.length, 0);
   const fecha = new Date().toLocaleDateString("es-ES", {
@@ -706,16 +713,16 @@ export function ManualPrintPage() {
       {/* Acciones solo en pantalla, ocultas en impresión */}
       <div className="no-print mb-6 flex flex-wrap gap-2">
         <Button icon="atras" variant="secondary" onClick={() => window.history.back()}>
-          Volver
+          {t.comun.volver}
         </Button>
         <ButtonLink icon="ver" variant="secondary" href="/manual">
-          Índice interactivo
+          {t.docs.manual.indiceInteractivo}
         </ButtonLink>
         <ButtonLink icon="exportar" variant="secondary" href="/rustock-manual.pdf">
-          Descargar PDF (2.5 MB)
+          {t.docs.manual.descargarPdfTam}
         </ButtonLink>
         <Button icon="ayuda" variant="primary" onClick={() => window.print()}>
-          Guardar como PDF
+          {t.docs.manual.guardarComoPdf}
         </Button>
       </div>
 
@@ -725,22 +732,23 @@ export function ManualPrintPage() {
           <Icon name="almacen" size={48} aria-hidden="true" />
         </div>
         <Text as="p" size="xs" color="muted" className="manual-print__eyebrow">
-          RUSTOCK — WMS SELF-HOSTED
+          {t.docs.manual.eyebrow}
         </Text>
-        <h1 className="manual-print__titulo">Manual del Cliente</h1>
+        <h1 className="manual-print__titulo">{t.docs.manual.portadaTitulo}</h1>
         <Text as="p" size="lg" color="muted" className="manual-print__subtitulo">
-          Guía completa de la lógica de negocio — todo lo que tu operación puede hacer, especificado
-          y verificable.
+          {t.docs.manual.portadaSubtitulo}
         </Text>
         <div className="manual-print__meta">
           <Text size="sm" color="muted">
-            Versión <strong>v0.3.0</strong> · Alineado a SPEC.md (19 reglas no negociables),
-            DESIGN.md (Rust &amp; Iron) y código ejecutable · {manualPartes(idioma).length} partes ·{" "}
-            {totalCapitulos} capítulos · {manualGlosario(idioma).length} términos
+            {t.docs.manual.portadaVersion} <strong>v0.3.0</strong>{" "}
+            {t.docs.manual.portadaMeta({
+              partes: manualPartes(idioma).length,
+              capitulos: totalCapitulos,
+              terminos: manualGlosario(idioma).length,
+            })}
           </Text>
           <Text size="xs" color="muted">
-            Generado el {fecha} · Imprime con Ctrl+P → “Guardar como PDF” · Papel A4, márgenes
-            mínimos
+            {t.docs.manual.portadaGenerado({ fecha })}
           </Text>
         </div>
         <div className="manual-print__badges">
@@ -785,8 +793,7 @@ export function ManualPrintPage() {
           </li>
         </ol>
         <Text size="xs" color="muted" className="mt-4 block">
-          Sugerencia: en el diálogo de impresión, activa “Gráficos de fondo” para conservar los
-          colores de tablas y badges, y elige “Márgenes: mínimos”.
+          {t.docs.manual.sugerenciaImpresion}
         </Text>
       </div>
 
@@ -860,10 +867,11 @@ export function ManualPrintPage() {
 
       {/* Glosario */}
       <section id="print-glosario" className="manual-print__parte manual-print__glosario">
-        <h2 className="manual-print__h2">Glosario — {manualGlosario(idioma).length} términos</h2>
+        <h2 className="manual-print__h2">
+          {t.docs.manual.glosarioImprimible({ total: manualGlosario(idioma).length })}
+        </h2>
         <Text size="sm" color="muted" className="mb-4 block">
-          Definiciones operativas con referencia cruzada desde cada capítulo. Cada término tiene
-          ancla estable (ej. #saldo) y se usa en Ctrl+K.
+          {t.docs.manual.glosarioImprimibleDesc}
         </Text>
         <div className="manual-print__glosario-grid">
           {manualGlosario(idioma)

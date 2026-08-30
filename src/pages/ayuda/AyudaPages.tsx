@@ -24,7 +24,7 @@ import {
 } from "./ayuda-data";
 import { ayudaModulo, PATH } from "../../app/route-paths";
 import { useLocation } from "react-router";
-import { useIdioma, type Idioma } from "../../shared/i18n";
+import { useIdioma, useT, type Idioma } from "../../shared/i18n";
 import {
   Badge,
   ButtonLink,
@@ -38,8 +38,6 @@ import {
   useToast,
   type IconName,
 } from "../../shared/ui";
-
-const TITULO_GLO = "Glosario de términos";
 
 /** Enlace desde una guía de Ayuda. Si apunta fuera de /ayuda (una página real
  *  de la app), confirma el destino con un toast breve antes de navegar, para
@@ -202,6 +200,7 @@ function ModulosDelGrupo({ grupo, actualId }: { grupo: string; actualId: string 
 
 /** Tarjeta destacada con el contexto de negocio de la guía (para qué sirve). */
 function TarjetaContexto({ modulo }: { modulo: AyudaModulo }) {
+  const t = useT();
   return (
     <Card muted className="mt-6">
       <Card.Body>
@@ -211,7 +210,7 @@ function TarjetaContexto({ modulo }: { modulo: AyudaModulo }) {
           </div>
           <div>
             <Text size="xs" color="muted" className="mb-1">
-              PARA QUÉ SIRVE EN TU OPERACIÓN
+              {t.docs.paraQueSirve}
             </Text>
             <Text as="p" size="sm" className="text-gray-700">
               {modulo.paraQueSirve}
@@ -219,7 +218,7 @@ function TarjetaContexto({ modulo }: { modulo: AyudaModulo }) {
             {modulo.cuandoUsarlo ? (
               <Text as="p" size="sm" color="muted" className="mt-2">
                 <Text as="span" weight="medium" className="text-gray-700">
-                  Cuándo usarlo:{" "}
+                  {t.docs.cuandoUsarlo}{" "}
                 </Text>
                 {modulo.cuandoUsarlo}
               </Text>
@@ -233,23 +232,24 @@ function TarjetaContexto({ modulo }: { modulo: AyudaModulo }) {
 
 /** Sección automática de términos del glosario que la guía usa. */
 function TerminosDelModulo({ modulo }: { modulo: AyudaModulo }) {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   if (!modulo.terminosClave || modulo.terminosClave.length === 0) return null;
   const terminos = modulo.terminosClave
     .map((id) => ({ id, termino: terminoGlosario(id, idioma) }))
-    .filter((t) => t.termino !== null) as Array<{ id: string; termino: string }>;
+    .filter((x) => x.termino !== null) as Array<{ id: string; termino: string }>;
   if (terminos.length === 0) return null;
   return (
-    <Card title="Términos del glosario" className="mt-6">
+    <Card title={t.docs.terminosGlosario} className="mt-6">
       <Card.Body>
         <div className="flex flex-wrap gap-2">
-          {terminos.map((t) => (
+          {terminos.map((termino) => (
             <Link
-              key={t.id}
-              href={`${PATH.ayudaGlosario}#${t.id}`}
-              ariaLabel={`Ver término ${t.termino} en el glosario`}
+              key={termino.id}
+              href={`${PATH.ayudaGlosario}#${termino.id}`}
+              ariaLabel={t.docs.verTermino({ termino: termino.termino })}
             >
-              <Badge tone="info">{t.termino}</Badge>
+              <Badge tone="info">{termino.termino}</Badge>
             </Link>
           ))}
         </div>
@@ -260,6 +260,7 @@ function TerminosDelModulo({ modulo }: { modulo: AyudaModulo }) {
 
 /** Sección automática de guías relacionadas (módulos y procesos). */
 function RelacionadosDelModulo({ modulo }: { modulo: AyudaModulo }) {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   if (!modulo.relacionados || modulo.relacionados.length === 0) return null;
   const guias = modulo.relacionados
@@ -272,7 +273,7 @@ function RelacionadosDelModulo({ modulo }: { modulo: AyudaModulo }) {
     .filter((g) => g !== null) as Array<{ id: string; titulo: string; icono: IconName }>;
   if (guias.length === 0) return null;
   return (
-    <Card title="Guías relacionadas" className="mt-6">
+    <Card title={t.docs.ayuda.guiasRelacionadas} className="mt-6">
       <Card.Body>
         <ul className="space-y-2">
           {guias.map((g) => (
@@ -289,6 +290,7 @@ function RelacionadosDelModulo({ modulo }: { modulo: AyudaModulo }) {
 
 /** Tarjeta de guía del índice: toda la tarjeta es un enlace (grid de documentación). */
 function GuiaCard({ modulo }: { modulo: AyudaModulo }) {
+  const t = useT();
   return (
     <Link href={ayudaModulo(modulo.id)} className="ayuda-grid__card">
       <span className="ayuda-grid__icon" aria-hidden="true">
@@ -305,7 +307,7 @@ function GuiaCard({ modulo }: { modulo: AyudaModulo }) {
       <span className="ayuda-grid__cta">
         <Icon name="ver" size={14} aria-hidden="true" />
         <Text as="span" size="xs">
-          Ver guía
+          {t.docs.ayuda.verGuia}
         </Text>
       </span>
     </Link>
@@ -313,6 +315,7 @@ function GuiaCard({ modulo }: { modulo: AyudaModulo }) {
 }
 
 export function AyudaIndexPage() {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const [busqueda, setBusqueda] = useState("");
 
@@ -350,21 +353,18 @@ export function AyudaIndexPage() {
 
   return (
     <>
-      <PageHeader
-        title="Ayuda"
-        description="Guía de uso de todos los módulos de Rustock: qué hace cada uno, sus acciones y sus pasos, más el glosario de términos."
-      />
+      <PageHeader title={t.docs.ayuda.titulo} description={t.docs.ayuda.descripcion} />
 
       <Card className="mt-6">
         <Card.Body>
           <Search
-            aria-label="Buscar en la ayuda"
-            placeholder="Buscar módulos, procesos y términos del glosario…"
+            aria-label={t.docs.ayuda.buscar}
+            placeholder={t.docs.ayuda.marcador}
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
           <Text as="p" size="xs" color="muted" className="mt-2">
-            Escribe para filtrar las guías y el glosario al instante.
+            {t.docs.ayuda.filtraAlInstante}
           </Text>
         </Card.Body>
       </Card>
@@ -374,11 +374,11 @@ export function AyudaIndexPage() {
           <Card.Body>
             <EmptyState
               icon="buscar"
-              title="Sin resultados en la ayuda"
-              description="No se encontró nada con esa búsqueda. Prueba con otros términos."
+              title={t.docs.ayuda.sinResultados}
+              description={t.docs.ayuda.sinResultadosDesc}
               action={
                 <ButtonLink variant="secondary" icon="refrescar" href={PATH.ayuda}>
-                  Limpiar búsqueda
+                  {t.docs.limpiarBusqueda}
                 </ButtonLink>
               }
             />
@@ -402,7 +402,7 @@ export function AyudaIndexPage() {
       {!hayBusqueda ? (
         <section className="mt-8">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            {TITULO_GLO}
+            {t.docs.ayuda.glosarioTitulo}
           </h2>
           <div className="ayuda-grid">
             <Link href={PATH.ayudaGlosario} className="ayuda-grid__card">
@@ -411,17 +411,16 @@ export function AyudaIndexPage() {
               </span>
               <span className="ayuda-grid__cuerpo">
                 <Text as="span" size="sm" weight="medium" className="ayuda-grid__titulo">
-                  Glosario de términos
+                  {t.docs.ayuda.glosarioTitulo}
                 </Text>
                 <Text as="span" size="xs" color="muted" className="ayuda-grid__resumen">
-                  Definición de los términos usados en la aplicación: SKU, UOM, lote, saldo,
-                  FEFO/FIFO, estados de movimiento y más.
+                  {t.docs.ayuda.glosarioDesc}
                 </Text>
               </span>
               <span className="ayuda-grid__cta">
                 <Icon name="ver" size={14} aria-hidden="true" />
                 <Text as="span" size="xs">
-                  Ver glosario
+                  {t.docs.ayuda.verGlosario}
                 </Text>
               </span>
             </Link>
@@ -432,7 +431,7 @@ export function AyudaIndexPage() {
       {hayBusqueda && hayGlosario ? (
         <div className="mt-8">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Términos del glosario que coinciden
+            {t.docs.terminosCoinciden}
           </h2>
           <Card>
             <Card.Body>
@@ -453,18 +452,19 @@ export function AyudaIndexPage() {
 }
 
 export function AyudaModulePage({ id }: { id: string }) {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const encontrado = buscarModulo(id, idioma);
 
   if (!encontrado) {
     return (
       <>
-        <PageHeader title="Ayuda" description="Módulo no encontrado." />
+        <PageHeader title={t.docs.ayuda.titulo} description={t.docs.ayuda.moduloNoEncontrado} />
         <Card className="mt-6">
           <Card.Body>
             <Text as="p" size="sm" color="muted">
-              No existe una guía para este módulo.{" "}
-              <Link href={PATH.ayuda}>Volver al índice de ayuda</Link>.
+              {t.docs.ayuda.moduloNoEncontrado}{" "}
+              <Link href={PATH.ayuda}>{t.docs.ayuda.volverAlIndice}</Link>.
             </Text>
           </Card.Body>
         </Card>
@@ -481,7 +481,7 @@ export function AyudaModulePage({ id }: { id: string }) {
         description={modulo.resumen}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.ayuda}>
-            Índice de ayuda
+            {t.docs.ayuda.indice}
           </ButtonLink>
         }
       />
@@ -510,6 +510,7 @@ export function AyudaModulePage({ id }: { id: string }) {
 }
 
 export function AyudaGlosarioPage() {
+  const t = useT();
   const idioma = useIdioma((estado) => estado.idioma);
   const location = useLocation();
 
@@ -538,11 +539,11 @@ export function AyudaGlosarioPage() {
   return (
     <>
       <PageHeader
-        title={TITULO_GLO}
-        description="Definiciones de los términos de Rustock: entidades, estados, políticas y conceptos."
+        title={t.docs.ayuda.glosarioTitulo}
+        description={t.docs.ayuda.glosarioIntro}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.ayuda}>
-            Índice de ayuda
+            {t.docs.ayuda.indice}
           </ButtonLink>
         }
       />

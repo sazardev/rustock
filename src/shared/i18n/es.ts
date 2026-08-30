@@ -2285,6 +2285,112 @@ export const es = {
     },
   },
 
+  // ============ Chrome de Ayuda y Manual ============
+  docs: {
+    paraQueSirve: "PARA QUÉ SIRVE EN TU OPERACIÓN",
+    cuandoUsarlo: "Cuándo usarlo:",
+    terminosGlosario: "Términos del glosario",
+    verTermino: (p: { termino: string }) => `Ver término ${p.termino} en el glosario`,
+    limpiarBusqueda: "Limpiar búsqueda",
+    terminosCoinciden: "Términos del glosario que coinciden",
+
+    ayuda: {
+      titulo: "Guía de uso",
+      descripcion:
+        "Guía de uso de todos los módulos de Rustock: qué hace cada uno, sus acciones y sus pasos, más el glosario de términos.",
+      buscar: "Buscar en la ayuda",
+      marcador: "Buscar módulos, procesos y términos del glosario…",
+      filtraAlInstante: "Escribe para filtrar las guías y el glosario al instante.",
+      guiasRelacionadas: "Guías relacionadas",
+      verGuia: "Ver guía",
+      sinResultados: "Sin resultados en la ayuda",
+      sinResultadosDesc: "No se encontró nada con esa búsqueda. Prueba con otros términos.",
+      moduloNoEncontrado: "Módulo no encontrado.",
+      volverAlIndice: "Volver al índice de ayuda",
+      indice: "Índice de ayuda",
+      glosarioTitulo: "Glosario de términos",
+      glosarioDesc:
+        "Definición de los términos usados en la aplicación: SKU, UOM, lote, saldo, FEFO/FIFO, estados de movimiento y más.",
+      glosarioIntro:
+        "Definiciones de los términos de Rustock: entidades, estados, políticas y conceptos.",
+      verGlosario: "Ver glosario",
+    },
+
+    manual: {
+      portadaMeta: (p: { partes: number; capitulos: number; terminos: number }) =>
+        `· Alineado a SPEC.md (19 reglas no negociables), DESIGN.md (Rust & Iron) y código ejecutable · ${p.partes} partes · ${p.capitulos} capítulos · ${p.terminos} términos`,
+      portadaGenerado: (p: { fecha: string }) =>
+        `Generado el ${p.fecha} · Imprime con Ctrl+P → «Guardar como PDF» · Papel A4, márgenes mínimos`,
+      indiceInteractivo: "Índice interactivo",
+      descargarPdfTam: "Descargar PDF (2.5 MB)",
+      eyebrow: "RUSTOCK — WMS SELF-HOSTED",
+      portadaTitulo: "Manual del Cliente",
+      portadaSubtitulo:
+        "Guía completa de la lógica de negocio — todo lo que tu operación puede hacer, especificado y verificable.",
+      portadaVersion: "Versión",
+      sugerenciaImpresion:
+        "Sugerencia: en el diálogo de impresión, activa «Gráficos de fondo» para conservar los colores de tablas y badges, y elige «Márgenes: mínimos».",
+      glosarioImprimible: (p: { total: number }) => `Glosario — ${p.total} términos`,
+      glosarioImprimibleDesc:
+        "Definiciones operativas con referencia cruzada desde cada capítulo. Cada término tiene ancla estable (ej. #saldo) y se usa en Ctrl+K.",
+      versionLarga:
+        "Versión del manual: v0.3.0 · Alineado a SPEC.md (19 reglas no negociables), DESIGN.md (Rust & Iron) y código ejecutable. Última verificación: Chrome MCP contra app viva. Para el PDF completo, abre",
+      versionLargaMedio: "la versión imprimible",
+      versionLargaPost: "y pulsa",
+      capituloNoExiste: "No existe un capítulo con ese identificador.",
+      ayudaPorModulos: "Ayuda por módulos (26 guías)",
+      glosario: "Glosario",
+      indiceDesc: (p: { partes: number; capitulos: number; terminos: number }) =>
+        `Guía completa de la lógica de negocio: ${p.partes} partes, ${p.capitulos} capítulos y ${p.terminos} términos. Todo lo que tu operación puede hacer, especificado y verificable.`,
+      comoUsarLargo:
+        "Lee en orden (Parte 0→8) la primera vez. Luego usa el buscador, el índice por Partes o Ctrl+K para saltar a cualquier capítulo. Cada capítulo enlaza a su glosario y a capítulos relacionados. Todos los enlaces a la app son deep-links reales.",
+      imprimibleLargo: (p: { capitulos: number }) =>
+        `Todo el manual en un solo documento A4, con portada, índice, ${p.capitulos} capítulos y glosario. Optimizado para Guardar como PDF (Ctrl+P) con gráficos y tablas.`,
+      instruccionesPdfPre: "En la página imprimible, pulsa",
+      instruccionesPdfPost:
+        ". Activa «Gráficos de fondo» y elige «Márgenes: mínimos» para un PDF idéntico al manual digital. O descarga el",
+      pieImprimible: (p: { partes: number; capitulos: number; terminos: number; fecha: string }) =>
+        `Rustock v0.3.0 · Manual del Cliente · ${p.partes} partes · ${p.capitulos} capítulos · ${p.terminos} términos · Generado ${p.fecha} · SPEC.md + código`,
+      portadaPie: (p: { partes: number; capitulos: number; terminos: number }) =>
+        `DESIGN.md (Rust & Iron) y código ejecutable · ${p.partes} partes · ${p.capitulos} capítulos · ${p.terminos} términos`,
+      titulo: "Manual del Cliente — Rustock",
+      buscar: "Buscar en el manual",
+      marcador: "Buscar capítulos, tablas y términos del glosario…",
+      filtraAlInstante: "Filtra al instante por título, resumen, tablas, pasos y definiciones.",
+      capitulosRelacionados: "Capítulos relacionados",
+      verCapitulo: "Ver capítulo",
+      sinResultados: "Sin resultados en el manual",
+      sinResultadosDesc: "Prueba con otros términos o limpia la búsqueda.",
+      capituloNoEncontrado: "Capítulo no encontrado.",
+      volverAlIndice: "Volver al índice del manual",
+      indice: "Índice",
+      volverAlIndiceCorto: "Volver al índice",
+      comoUsar: "CÓMO USAR ESTE MANUAL",
+      comoUsarTexto:
+        "Lee en orden (Parte 0→8) la primera vez. Luego usa el buscador, el índice por Partes o el command palette (Ctrl+K) para ir directo al capítulo que necesites.",
+      imprimible: "Versión imprimible — PDF completo",
+      imprimibleDesc: (p: { capitulos: number }) =>
+        `${p.capitulos} capítulos y glosario. Optimizado para Guardar como PDF (Ctrl+P) con gráficos de fondo activados.`,
+      abrirImprimible: "Abrir versión imprimible",
+      descargarPdf: "Descargar PDF",
+      pdfPreGenerado: "PDF pre-generado (v0.3.0, 59 páginas, 2.5 MB)",
+      imprimirCompleto: "Imprimir manual completo (PDF)",
+      pdfCompleto: "PDF completo",
+      imprimir: "Imprimir",
+      glosarioTitulo: (p: { total: number }) => `Glosario del Manual — ${p.total} términos`,
+      glosarioCompleto: (p: { total: number }) => `Glosario completo — ${p.total} términos`,
+      glosarioDelManual: "Glosario del manual",
+      glosarioIntro:
+        "Definiciones operativas de Rustock con ancla directa. Cada término es enlazable como /manual/m08-glosario#saldo.",
+      glosarioDesc:
+        "Definición operativa de cada término con ancla directa para enlaces desde cualquier capítulo.",
+      verGlosario: "Ver glosario",
+      version:
+        "Versión del manual: v0.3.0 · Alineado a SPEC.md (19 reglas no negociables), DESIGN.md (Rust & Iron) y código ejecutable",
+      guardarComoPdf: "Guardar como PDF",
+    },
+  },
+
   // ============ Errores del backend (SPEC §17.3) ============
   // La clave es el código estable que devuelve Rust; nunca cambia aunque se
   // reescriba el texto.

@@ -2207,6 +2207,110 @@ export const en: Diccionario = {
     },
   },
 
+  docs: {
+    paraQueSirve: "WHAT IT IS FOR IN YOUR OPERATION",
+    cuandoUsarlo: "When to use it:",
+    terminosGlosario: "Glossary terms",
+    verTermino: (p) => `See the term ${p.termino} in the glossary`,
+    limpiarBusqueda: "Clear the search",
+    terminosCoinciden: "Matching glossary terms",
+
+    ayuda: {
+      titulo: "User guide",
+      descripcion:
+        "A guide to every Rustock module: what each one does, its actions and its steps, plus the glossary of terms.",
+      buscar: "Search the help",
+      marcador: "Search modules, processes and glossary terms…",
+      filtraAlInstante: "Type to filter the guides and the glossary instantly.",
+      guiasRelacionadas: "Related guides",
+      verGuia: "See the guide",
+      sinResultados: "No results in the help",
+      sinResultadosDesc: "Nothing matched that search. Try other terms.",
+      moduloNoEncontrado: "Module not found.",
+      volverAlIndice: "Back to the help index",
+      indice: "Help index",
+      glosarioTitulo: "Glossary of terms",
+      glosarioDesc:
+        "Definitions of the terms used in the application: SKU, UOM, lot, balance, FEFO/FIFO, movement statuses and more.",
+      glosarioIntro: "Definitions of Rustock’s terms: records, statuses, policies and concepts.",
+      verGlosario: "See the glossary",
+    },
+
+    manual: {
+      portadaMeta: (p) =>
+        `· Aligned to SPEC.md (19 non-negotiable rules), DESIGN.md (Rust & Iron) and executable code · ${p.partes} parts · ${p.capitulos} chapters · ${p.terminos} terms`,
+      portadaGenerado: (p) =>
+        `Generated on ${p.fecha} · Print with Ctrl+P → “Save as PDF” · A4 paper, minimum margins`,
+      indiceInteractivo: "Interactive index",
+      descargarPdfTam: "Download the PDF (2.5 MB)",
+      eyebrow: "RUSTOCK — SELF-HOSTED WMS",
+      portadaTitulo: "Customer Manual",
+      portadaSubtitulo:
+        "A complete guide to the business logic — everything your operation can do, specified and verifiable.",
+      portadaVersion: "Version",
+      sugerenciaImpresion:
+        "Tip: in the print dialog, turn on “Background graphics” to keep the table and badge colours, and choose “Margins: minimum”.",
+      glosarioImprimible: (p) => `Glossary — ${p.total} terms`,
+      glosarioImprimibleDesc:
+        "Operational definitions cross-referenced from every chapter. Each term has a stable anchor (e.g. #saldo) and is used in Ctrl+K.",
+      versionLarga:
+        "Manual version: v0.3.0 · Aligned to SPEC.md (19 non-negotiable rules), DESIGN.md (Rust & Iron) and executable code. Last verified: Chrome MCP against the live app. For the full PDF, open",
+      versionLargaMedio: "the printable version",
+      versionLargaPost: "and press",
+      capituloNoExiste: "There is no chapter with that identifier.",
+      ayudaPorModulos: "Help by module (26 guides)",
+      glosario: "Glossary",
+      indiceDesc: (p) =>
+        `A complete guide to the business logic: ${p.partes} parts, ${p.capitulos} chapters and ${p.terminos} terms. Everything your operation can do, specified and verifiable.`,
+      comoUsarLargo:
+        "Read it in order (Part 0→8) the first time. After that, use the search, the index by Parts or Ctrl+K to jump to any chapter. Every chapter links to its glossary and to related chapters. All links into the app are real deep links.",
+      imprimibleLargo: (p) =>
+        `The whole manual in one A4 document, with a cover, an index, ${p.capitulos} chapters and the glossary. Optimised for Save as PDF (Ctrl+P) with graphics and tables.`,
+      instruccionesPdfPre: "On the printable page, press",
+      instruccionesPdfPost:
+        ". Turn on “Background graphics” and choose “Margins: minimum” for a PDF identical to the digital manual. Or download the",
+      pieImprimible: (p) =>
+        `Rustock v0.3.0 · Customer Manual · ${p.partes} parts · ${p.capitulos} chapters · ${p.terminos} terms · Generated ${p.fecha} · SPEC.md + code`,
+      portadaPie: (p) =>
+        `DESIGN.md (Rust & Iron) and executable code · ${p.partes} parts · ${p.capitulos} chapters · ${p.terminos} terms`,
+      titulo: "Customer Manual — Rustock",
+      buscar: "Search the manual",
+      marcador: "Search chapters, tables and glossary terms…",
+      filtraAlInstante: "Filters instantly by title, summary, tables, steps and definitions.",
+      capitulosRelacionados: "Related chapters",
+      verCapitulo: "See the chapter",
+      sinResultados: "No results in the manual",
+      sinResultadosDesc: "Try other terms or clear the search.",
+      capituloNoEncontrado: "Chapter not found.",
+      volverAlIndice: "Back to the manual index",
+      indice: "Index",
+      volverAlIndiceCorto: "Back to the index",
+      comoUsar: "HOW TO USE THIS MANUAL",
+      comoUsarTexto:
+        "Read it in order (Part 0→8) the first time. After that, use the search, the index by Parts or the command palette (Ctrl+K) to go straight to the chapter you need.",
+      imprimible: "Printable version — full PDF",
+      imprimibleDesc: (p) =>
+        `${p.capitulos} chapters and the glossary. Optimised for Save as PDF (Ctrl+P) with background graphics turned on.`,
+      abrirImprimible: "Open the printable version",
+      descargarPdf: "Download the PDF",
+      pdfPreGenerado: "Pre-generated PDF (v0.3.0, 59 pages, 2.5 MB)",
+      imprimirCompleto: "Print the full manual (PDF)",
+      pdfCompleto: "Full PDF",
+      imprimir: "Print",
+      glosarioTitulo: (p) => `Manual glossary — ${p.total} terms`,
+      glosarioCompleto: (p) => `Full glossary — ${p.total} terms`,
+      glosarioDelManual: "Manual glossary",
+      glosarioIntro:
+        "Rustock’s operational definitions with a direct anchor. Every term is linkable as /manual/m08-glosario#saldo.",
+      glosarioDesc:
+        "An operational definition of each term with a direct anchor for links from any chapter.",
+      verGlosario: "See the glossary",
+      version:
+        "Manual version: v0.3.0 · Aligned to SPEC.md (19 non-negotiable rules), DESIGN.md (Rust & Iron) and executable code",
+      guardarComoPdf: "Save as PDF",
+    },
+  },
+
   errores: {
     SALDO_INSUFICIENTE: (p) =>
       `Insufficient stock in ${p.ubicacion}: ${p.disponible} available, ${p.intentado} attempted.`,
