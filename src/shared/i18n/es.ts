@@ -1125,6 +1125,8 @@ export const es = {
 
   // ============ Configuración ============
   configuracion: {
+    gestionadaPorAdmin:
+      "La configuración de la empresa la gestiona el administrador. Tus preferencias personales están en",
     titulo: "Configuración",
     intro: "Parámetros de la instalación.",
     descripcion:

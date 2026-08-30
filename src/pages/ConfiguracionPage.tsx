@@ -328,8 +328,7 @@ export function ConfiguracionPage() {
       <>
         <PageHeader title={t.configuracion.titulo} description={t.configuracion.intro} />
         <ErrorPanel title={t.configuracion.sinPermiso}>
-          La configuración de la empresa la gestiona el administrador. Tus preferencias personales
-          están en{" "}
+          {t.configuracion.gestionadaPorAdmin}{" "}
           <ButtonLink variant="link" href={PATH.perfil}>
             {t.configuracion.miPerfil}
           </ButtonLink>

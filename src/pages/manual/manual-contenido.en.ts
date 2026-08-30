@@ -357,7 +357,7 @@ const CH_ROLES: ManualCapitulo = {
         {
           tipo: "nota",
           texto:
-            "The matrix is the default (SPEC 4.4); an ADMIN can fine-tune permissions per role in v2. The puedo(resource, action)→bool command queries the matrix without auditing, and is used to show or hide Create and the approve toggle.",
+            "The matrix is the default (SPEC 4.4); an ADMIN can fine-tune permissions per role in v2. The puedo(resource, action)→bool command queries the matrix without auditing; today the approve-immediately toggle uses it. The rest of the interface is not hidden by role: the matrix is enforced in the backend, which rejects with SIN_PERMISO.",
           tono: "info",
         },
       ],

@@ -1085,6 +1085,8 @@ export const en: Diccionario = {
   },
 
   configuracion: {
+    gestionadaPorAdmin:
+      "The company settings are managed by the administrator. Your personal preferences are in",
     titulo: "Settings",
     intro: "Installation parameters.",
     descripcion:

@@ -685,7 +685,7 @@ export const MANUAL_PARTES_ES: ManualParte[] = [
               {
                 tipo: "nota",
                 texto:
-                  "Matriz es valor por defecto (SPEC 4.4); ADMIN puede ajustar permisos finos por rol en v2. Comando puedo(recurso,accion)→bool consulta matriz sin auditar, usado para mostrar/ocultar Crear y aprobar toggle.",
+                  "Matriz es valor por defecto (SPEC 4.4); ADMIN puede ajustar permisos finos por rol en v2. Comando puedo(recurso,accion)→bool consulta la matriz sin auditar; hoy lo usa el toggle de aprobar de inmediato. El resto de la interfaz no se oculta por rol: la matriz se aplica en el backend, que rechaza con SIN_PERMISO.",
                 tono: "info",
               },
             ],
