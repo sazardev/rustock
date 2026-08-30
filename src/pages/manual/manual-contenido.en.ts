@@ -6,10 +6,275 @@
  * translated part by part. Until a part is done, its Spanish text is served:
  * that is visible and documented here, not a silent gap.
  */
+import { PATH } from "../../app/route-paths";
 import { MANUAL_PARTES_ES } from "./manual-contenido.es";
-import type { ManualParte, TerminoManual } from "./manual-tipos";
+import type { ManualCapitulo, ManualParte, TerminoManual } from "./manual-tipos";
 
-export const MANUAL_PARTES_EN: ManualParte[] = MANUAL_PARTES_ES;
+const CH_VISION: ManualCapitulo = {
+  id: "m00-vision",
+  titulo: "Rustock’s vision and principles",
+  icono: "ayuda",
+  resumen: "What Rustock is, what it solves, and which principles are not up for negotiation.",
+  paraQueSirve:
+    "To understand why Rustock exists and how it thinks about your inventory: accuracy, traceability and complete auditability.",
+  cuandoUsarlo: "On your first day with the system, to align your team on how the work is done.",
+  terminosClave: ["trazabilidad", "saldo", "movimiento", "auditoria"],
+  relacionados: ["m00-roles", "m08-checklist"],
+  secciones: [
+    {
+      titulo: "What Rustock is",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Rustock is a self-hosted, all-included mini-WMS so that one person or a small operation can manage what is stored, where it is, how much there is, who moves it, when and why it happened, and the complete history. It runs entirely on your infrastructure, with no external services or licences.",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "What: products, lots, quantities (base UOM).",
+            "Where: warehouse → zone → rack → section → location → container.",
+            "How much: materialised balances, minimums/maximums, capacity.",
+            "Who: users, 5 roles, granular resource:action permissions.",
+            "When: the fact’s movement date + created_at/approved_at + time zone.",
+            "Why: type/sub-type, reason ≥3, comments and reference document.",
+            "History: immutable traceability through approved movements.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "If something changes stock and does not go through a movement, it is outside the model. That is the auditability guarantee.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Goals of the domain",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Goal", "How it is measured"],
+          filas: [
+            ["Accuracy", "Exact SKUs / counted ×100, by quantity and by location (11.6)."],
+            [
+              "Full traceability",
+              "Every change has a single dated movement with an author and a reason.",
+            ],
+            ["Auditability", "Immutable who/what/when/where events; nothing is deleted."],
+            ["Universal search", "Every listing is filterable/sortable/searchable/pageable (15)."],
+            [
+              "Role-based control",
+              "Nobody does what their role does not allow; sensitive actions require an explicit permission.",
+            ],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Guiding principles",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "One movement, one fact: no change to stock by hand; always through the movement model (6).",
+            "The balance is derived: the sum of approved movements; never a magic figure with nothing behind it (5.2).",
+            "Nothing is destroyed: deactivating or cancelling never physically deletes something with history (14.5).",
+            "Everything queryable: without filters/sorting/search/pagination the endpoint does not exist (15.1).",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            'A negative balance is forbidden by a global invariant. Any operation that tries is rejected with an exact message: "Insufficient balance in RACK-A1-N2-P3: 5 available, 8 attempted".',
+          tono: "warning",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_INSTALL: ManualCapitulo = {
+  id: "m00-instalacion",
+  titulo: "Installation and getting started",
+  icono: "configuracion",
+  resumen: "Requirements, start-up modes, the first admin account and sample data.",
+  paraQueSirve:
+    "To get Rustock up in minutes, both on the desktop (Tauri) and in the browser (web mode with no window).",
+  cuandoUsarlo: "For the initial installation, or when you want a temporary database for testing.",
+  terminosClave: ["usuario", "rol"],
+  relacionados: ["m00-vision", "m00-roles"],
+  secciones: [
+    {
+      titulo: "Requirements",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Linux with Tauri v2 (WebKitGTK) for desktop mode, or any browser for web mode.",
+            "Node 26 + Rust 1.96 (edition 2024) if you build from source.",
+            "Default ports: Vite 6821 (frontend) and backend 1421 (local HTTP, configurable).",
+          ],
+        },
+        {
+          tipo: "tabla",
+          cabeceras: ["Mode", "Command", "When to use it"],
+          filas: [
+            ["Desktop", "npm run tauri dev", "Normal operation with a native window."],
+            [
+              "Web, no window (WSL/SSH/CI)",
+              "npm run tauri:web  (RUSTOCK_WEB_ONLY=1)",
+              "Environments with no X/Wayland: only SQLite + HTTP 127.0.0.1:1421, no GTK.",
+            ],
+            [
+              "Unified script",
+              "./scripts/dev.sh --seed  or  npm run dev:web -- --seed",
+              "Frees ports 6821/1421, prepares the DB and delegates to web.mjs (recommended day to day).",
+            ],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "dev.sh options",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Flag", "Effect"],
+          filas: [
+            ["--seed", "Seeds sample data if the database is empty (RUSTOCK_SEED=1, debug only)."],
+            ["--reset", "Backs rustock.db up to .backup-<timestamp>, deletes it, then seeds."],
+            [
+              "--tmpdb",
+              "Uses /tmp/opencode/rustock-dev.db (leaving the real one alone). Combinable with --seed.",
+            ],
+            ["--stop", "Kills instances on 6821/1421 without starting anything."],
+            ["--help", "Prints the usage."],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Variables honoured: RUSTOCK_SEED, RUSTOCK_WEB_ONLY, RUSTOCK_DB_PATH, RUSTOCK_HTTP_PORT (backend) and VITE_RUSTOCK_API (frontend, e.g. http://127.0.0.1:1421/api). Default DB: ~/.local/share/com.rustock.app/rustock.db (honouring XDG_DATA_HOME).",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "First run: creating the first administrator",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "Open the app. If there are no users, you will see /configurar-administrador.",
+            "Fill in the username (unique), full name, password (argon2-hashed in Rust, it never leaves for the frontend) and an optional unique email.",
+            "Press Create administrator: the system runs bootstrap_admin without a session (the only route without authentication).",
+            "You will be redirected to /login: sign in with that user.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Without at least one warehouse you cannot record movements. After signing in, create your warehouse before anything else.",
+          tono: "warning",
+        },
+      ],
+    },
+    {
+      titulo: "Sample data (seed)",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "With RUSTOCK_SEED=1 the system (debug only) populates a realistic operation without breaking any business rule (it uses repo::* — never a direct INSERT):",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Admin admin / Admin1234!, 3 UOMs, 2 categories, 1 supplier, 1 customer.",
+            "Physical tree: 1 warehouse → 3 zones → 1 rack → 2 sections → 4 locations (a mix of the simplified and strict tree).",
+            "4 products (simple, low stock, with lots, with lots + expiry and lots expiring/expired), approved movements (a multi-lot purchase inbound, 2 outbound, a transfer, an adjustment) + a comment + 1 pending approval, 2 sessions (1 closed with discrepancies, 1 in progress and blind).",
+            "Idempotent: if warehouses already exist it does nothing; it is safe to leave the variable set between restarts.",
+          ],
+        },
+        {
+          tipo: "enlaces",
+          items: [{ etiqueta: "Go to Settings (after signing in)", href: PATH.configuracion }],
+        },
+      ],
+    },
+    {
+      titulo: "Where to find it",
+      bloques: [
+        {
+          tipo: "enlaces",
+          items: [
+            { etiqueta: "Sign in", href: PATH.login },
+            { etiqueta: "Create the first administrator", href: PATH.configurarAdministrador },
+            { etiqueta: "Dashboard (after signing in)", href: PATH.dashboard },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/**
+ * Chapters already translated, by id. The parts array is assembled from the
+ * Spanish structure and each chapter is swapped for its English version when
+ * one exists — so the manual is never half-built while the translation
+ * advances chapter by chapter.
+ */
+const TRADUCIDOS: ManualCapitulo[] = [CH_VISION, CH_INSTALL];
+
+const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
+
+/** Títulos y descripciones de las partes, que no son capítulos. */
+const PARTES: Record<string, { titulo: string; descripcion: string }> = {
+  "Parte 0 — Primeros pasos": {
+    titulo: "Part 0 — First steps",
+    descripcion: "Installation, access, roles and personalisation.",
+  },
+  "Parte 1 — Conceptos y stock": {
+    titulo: "Part 1 — Concepts and stock",
+    descripcion: "The vocabulary of the domain and how the balance works.",
+  },
+  "Parte 2 — Espacio físico": {
+    titulo: "Part 2 — Physical space",
+    descripcion: "The warehouse tree, the map and the layout assistant.",
+  },
+  "Parte 3 — Catálogos maestros": {
+    titulo: "Part 3 — Master catalogues",
+    descripcion: "Products, lots, categories, suppliers, customers and branches.",
+  },
+  "Parte 4 — Movimientos: el núcleo": {
+    titulo: "Part 4 — Movements: the core",
+    descripcion: "The model, the lifecycle and every type of movement.",
+  },
+  "Parte 5 — Inventario físico y conteo": {
+    titulo: "Part 5 — Stocktaking and counting",
+    descripcion: "Sessions, counts, discrepancies and accuracy.",
+  },
+  "Parte 6 — Métricas, reportes, alertas y actividad": {
+    titulo: "Part 6 — Metrics, reports, alerts and activity",
+    descripcion: "Everything the system measures and how to read it.",
+  },
+  "Parte 7 — Procesos de extremo a extremo": {
+    titulo: "Part 7 — End-to-end processes",
+    descripcion: "The complete daily flows, step by step.",
+  },
+  "Parte 8 — Anexos y reglas transversales": {
+    titulo: "Part 8 — Appendices and cross-cutting rules",
+    descripcion: "Queries, traceability, shortcuts, checklists and the glossary.",
+  },
+};
+
+export const MANUAL_PARTES_EN: ManualParte[] = MANUAL_PARTES_ES.map((parte) => ({
+  ...parte,
+  titulo: PARTES[parte.titulo]?.titulo ?? parte.titulo,
+  descripcion: PARTES[parte.titulo]?.descripcion ?? parte.descripcion,
+  capitulos: parte.capitulos.map((cap) => POR_ID.get(cap.id) ?? cap),
+}));
 
 export const MANUAL_GLOSARIO_EN: TerminoManual[] = [
   {
