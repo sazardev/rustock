@@ -6,6 +6,7 @@ import { esPaginado, type Rol, type Usuario } from "../shared/types";
 import { formatearFecha, mensajeError } from "../shared/format";
 import { catalogoDetalle, PATH } from "../app/route-paths";
 import { useSession } from "../shared/session";
+import { useT } from "../shared/i18n";
 import {
   Badge,
   ButtonLink,
@@ -23,15 +24,8 @@ import {
 
 const PAGE_SIZE = 20;
 
-const ROL_LABEL: Record<string, string> = {
-  ADMIN: "Administrador",
-  GERENTE: "Gerente",
-  ENCARGADO_ALMACEN: "Encargado de almacén",
-  OPERADOR: "Operador",
-  LECTOR: "Lector",
-};
-
 export function UsuariosPage() {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const usuarioActual = useSession((s) => s.usuario);
@@ -76,25 +70,37 @@ export function UsuariosPage() {
 
   const columns: Array<TableColumn<Usuario>> = [
     { key: "nombre_usuario", header: "Usuario", code: true, render: (u) => u.nombre_usuario },
-    { key: "nombre_completo", header: "Nombre completo", render: (u) => u.nombre_completo },
+    {
+      key: "nombre_completo",
+      header: t.usuariosPagina.nombreCompleto,
+      render: (u) => u.nombre_completo,
+    },
     { key: "email", header: "Email", render: (u) => u.email ?? "—" },
     {
       key: "rol_id",
       header: "Rol",
       render: (u) => {
         const rol = rolDe(u.rol_id);
-        return <Text size="sm">{rol ? (ROL_LABEL[rol.codigo] ?? rol.codigo) : "—"}</Text>;
+        return (
+          <Text size="sm">
+            {rol ? (t.roles[rol.codigo as keyof typeof t.roles] ?? rol.codigo) : "—"}
+          </Text>
+        );
       },
     },
     {
       key: "activo",
       header: "Estado",
       render: (u) =>
-        u.activo ? <Badge tone="success">Activo</Badge> : <Badge tone="danger">Inactivo</Badge>,
+        u.activo ? (
+          <Badge tone="success">{t.comun.activo}</Badge>
+        ) : (
+          <Badge tone="danger">Inactivo</Badge>
+        ),
     },
     {
       key: "ultimo_acceso_at",
-      header: "Último acceso",
+      header: t.usuariosPagina.ultimoAcceso,
       render: (u) => (u.ultimo_acceso_at ? formatearFecha(u.ultimo_acceso_at) : "—"),
     },
   ];
@@ -104,9 +110,7 @@ export function UsuariosPage() {
       <PageHeader title="Usuarios" />
 
       {query.error ? (
-        <ErrorPanel title="No se pudieron cargar los usuarios">
-          {mensajeError(query.error)}
-        </ErrorPanel>
+        <ErrorPanel title={t.usuariosPagina.noSePudoCargar}>{mensajeError(query.error)}</ErrorPanel>
       ) : null}
 
       <FilterBar
@@ -120,7 +124,7 @@ export function UsuariosPage() {
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por estado"
+            aria-label={t.usuariosPagina.filtrarPorEstado}
             value={estado}
             onChange={(e) => {
               setEstado(e.target.value as typeof estado);
@@ -142,8 +146,8 @@ export function UsuariosPage() {
           loading={query.isLoading}
           onRowClick={(u) => navigate(catalogoDetalle("usuarios", u.id))}
           prefetch={prefetchDetalle}
-          emptyTitle="No hay usuarios todavía"
-          emptyDescription="Crea la primera cuenta para que otra persona pueda operar."
+          emptyTitle={t.usuariosPagina.sinUsuarios}
+          emptyDescription={t.usuariosPagina.sinUsuariosDesc}
         />
         {listado && listado.meta.total > 0 ? (
           <Pagination

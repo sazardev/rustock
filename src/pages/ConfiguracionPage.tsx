@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { PAISES, ZONA_HORARIA_LABEL, ZONAS_HORARIAS, type FormatoFecha } from "../shared/types";
+import { PAISES, ZONAS_HORARIAS, type FormatoFecha } from "../shared/types";
 import {
   eliminarArchivoEmpresa,
   guardarConfiguracionEmpresa,
@@ -518,7 +518,7 @@ export function ConfiguracionPage() {
                   id="zona_horaria"
                   options={ZONAS_HORARIAS.map((z) => ({
                     value: z,
-                    label: ZONA_HORARIA_LABEL[z] ?? z,
+                    label: t.perfil.zonasHorarias[z as keyof typeof t.perfil.zonasHorarias] ?? z,
                   }))}
                   {...register("zona_horaria")}
                 />

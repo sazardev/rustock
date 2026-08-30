@@ -17,6 +17,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { escanear } from "./backend";
 import { useToast } from "./ui";
+import { traducir } from "./i18n";
 import {
   entregarADeLaPantalla,
   escucharEscanerDeMano,
@@ -56,7 +57,7 @@ export function useEscanerDeMano(): void {
           toast(`${r.resuelto.tipo}: ${r.resuelto.etiqueta}`, "success");
           if (principal) navigate(principal.href);
         } catch (e) {
-          toast(e instanceof Error ? e.message : "No se pudo procesar el escaneo.", "error");
+          toast(e instanceof Error ? e.message : traducir().ui.noSePudoProcesarEscaneo, "error");
         }
       })();
     });

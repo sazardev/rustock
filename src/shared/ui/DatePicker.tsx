@@ -14,6 +14,7 @@ import { cn } from "../lib/cn";
 import { Icon } from "./Icon";
 import { useAnclaje, useCierreExterior } from "./anclaje";
 import { ColumnasHora } from "./TimePicker";
+import { useT } from "../i18n";
 
 export interface DatePickerProps extends InputHTMLAttributes<HTMLInputElement> {
   /** `date` muestra solo calendario; `datetime-local` añade la hora. */
@@ -115,6 +116,7 @@ export function DatePicker({
   ref,
   ...rest
 }: DatePickerProps) {
+  const t = useT();
   const idAuto = useId();
   const idTrigger = id ?? `${idAuto}-trigger`;
   const idPanel = `${idAuto}-panel`;
@@ -238,7 +240,7 @@ export function DatePicker({
         onKeyDown={alTeclear}
       >
         <span className="datepicker__valor">
-          {visible || (conHora ? "Elegir fecha y hora" : "Elegir fecha")}
+          {visible || (conHora ? t.ui.elegirFechaYHora : t.ui.elegirFecha)}
         </span>
         <Icon name="calendario" className="datepicker__icono" size={16} aria-hidden="true" />
       </button>
@@ -249,7 +251,7 @@ export function DatePicker({
               ref={panelRef}
               id={idPanel}
               role="dialog"
-              aria-label={conHora ? "Elegir fecha y hora" : "Elegir fecha"}
+              aria-label={conHora ? t.ui.elegirFechaYHora : t.ui.elegirFecha}
               className="panel-flotante calendario"
               style={{ left: posicion.left, top: posicion.top }}
             >
@@ -258,7 +260,7 @@ export function DatePicker({
                   type="button"
                   className="calendario__nav"
                   onClick={() => moverMes(-1)}
-                  aria-label="Mes anterior"
+                  aria-label={t.ui.mesAnterior}
                 >
                   <Icon name="atras" size={16} aria-hidden="true" />
                 </button>
@@ -269,7 +271,7 @@ export function DatePicker({
                   type="button"
                   className="calendario__nav calendario__nav--siguiente"
                   onClick={() => moverMes(1)}
-                  aria-label="Mes siguiente"
+                  aria-label={t.ui.mesSiguiente}
                 >
                   <Icon name="atras" size={16} aria-hidden="true" />
                 </button>

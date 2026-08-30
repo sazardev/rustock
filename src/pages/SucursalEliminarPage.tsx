@@ -5,8 +5,10 @@ import { desactivarSucursal, obtenerSucursal } from "../shared/backend";
 import { mensajeError } from "../shared/format";
 import { PATH } from "../app/route-paths";
 import { Button, ButtonLink, Card, ErrorPanel, PageHeader, useToast } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 export function SucursalEliminarPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -24,7 +26,7 @@ export function SucursalEliminarPage() {
     mutationFn: () => desactivarSucursal(id as string),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["sucursales"] });
-      toast("Sucursal desactivada", "success");
+      toast(t.sucursales.desactivada, "success");
       navigate(PATH.sucursales);
     },
     onError: (err) => setError(mensajeError(err)),
@@ -36,8 +38,8 @@ export function SucursalEliminarPage() {
   if (!sucursal) {
     return (
       <>
-        <PageHeader title="Sucursal" description="No se encontró la sucursal." />
-        <ErrorPanel title="Sucursal no encontrada">
+        <PageHeader title="Sucursal" description={t.sucursales.noEncontradaDesc} />
+        <ErrorPanel title={t.sucursales.noEncontrada}>
           La sucursal ya no existe o no tienes permiso para verla.
         </ErrorPanel>
       </>
@@ -48,10 +50,10 @@ export function SucursalEliminarPage() {
     <>
       <PageHeader
         title={`Desactivar sucursal — ${sucursal.codigo}`}
-        description="La sucursal deja de estar activa; sus datos se conservan."
+        description={t.sucursales.avisoDesactivar}
       />
 
-      <Card title="Datos de la sucursal">
+      <Card title={t.sucursales.datosSucursal}>
         <Card.Body>
           <p className="text-sm text-gray-700">
             <strong className="font-mono text-sm">{sucursal.codigo}</strong> — {sucursal.nombre}
@@ -62,7 +64,7 @@ export function SucursalEliminarPage() {
             <li>Sus datos y su ubicación se conservan.</li>
           </ul>
           {error ? (
-            <ErrorPanel title="No se pudo desactivar la sucursal" className="mt-4">
+            <ErrorPanel title={t.sucursales.noSePudoDesactivar} className="mt-4">
               {error}
             </ErrorPanel>
           ) : null}
@@ -76,7 +78,7 @@ export function SucursalEliminarPage() {
           disabled={mutacion.isPending}
           onClick={() => mutacion.mutate()}
         >
-          {mutacion.isPending ? "Procesando…" : "Desactivar sucursal"}
+          {mutacion.isPending ? "Procesando…" : t.sucursales.desactivar}
         </Button>
         <ButtonLink variant="secondary" href={`${PATH.sucursales}/${sucursal.id}`}>
           Cancelar

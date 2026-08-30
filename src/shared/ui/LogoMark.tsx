@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 /**
  * LogoMark — caja de almacén, la marca de Rustock.
  * SVG plano (sin gradientes), sin fondo y con recorte ajustado a la caja,
@@ -13,6 +14,7 @@ export interface LogoMarkProps {
 }
 
 export function LogoMark({ size = 32, className }: LogoMarkProps) {
+  const t = useT();
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -20,7 +22,7 @@ export function LogoMark({ size = 32, className }: LogoMarkProps) {
       width={size}
       height={size}
       role="img"
-      aria-label="Logo de Rustock: caja de almacén"
+      aria-label={t.ui.logoAlt}
       className={className}
     >
       {/* Caja isométrica: tapa, lateral y frontal (tonos del acento activo) */}

@@ -3,6 +3,7 @@ import { cn } from "../lib/cn";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { LogoMark } from "./LogoMark";
+import { useT } from "../i18n";
 
 export interface BrandProps {
   name?: string;
@@ -30,18 +31,16 @@ export interface TopbarNavToggleProps {
   ariaLabel?: string;
 }
 
-export function TopbarNavToggle({
-  onClick,
-  expanded = false,
-  ariaLabel = "Alternar navegación",
-}: TopbarNavToggleProps) {
+export function TopbarNavToggle({ onClick, expanded = false, ariaLabel }: TopbarNavToggleProps) {
+  const t = useT();
+  const etiqueta = ariaLabel ?? t.ui.alternarNavegacion;
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon"
       className="topbar__nav-toggle"
-      aria-label={ariaLabel}
+      aria-label={etiqueta}
       aria-expanded={expanded}
       onClick={onClick}
     >

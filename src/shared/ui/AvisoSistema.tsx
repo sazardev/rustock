@@ -9,7 +9,7 @@ import { useT } from "../i18n";
  * Vive en el flujo del lienzo, encima del contenido de la ruta: no flota, no
  * tapa nada y no exige una respuesta. Comunica exactamente dos hechos que la
  * persona necesita saber para confiar en lo que ve en pantalla —
- * "estás sin conexión" y "hay una versión nueva lista" — y ofrece la acción
+ * t.ui.sinConexion y t.ui.versionNueva — y ofrece la acción
  * correspondiente sin interrumpir la tarea en curso.
  */
 export function AvisoSistema() {

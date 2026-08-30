@@ -4,6 +4,7 @@ import { listarSucursales } from "../shared/backend";
 import type { Sucursal } from "../shared/types";
 import { mensajeError } from "../shared/format";
 import { PATH } from "../app/route-paths";
+import { useT } from "../shared/i18n";
 import {
   Badge,
   ButtonLink,
@@ -16,6 +17,7 @@ import {
 } from "../shared/ui";
 
 export function SucursalesPage() {
+  const t = useT();
   const navigate = useNavigate();
   const query = useQuery({
     queryKey: ["sucursales"],
@@ -43,7 +45,11 @@ export function SucursalesPage() {
       key: "activo",
       header: "Estado",
       render: (s) =>
-        s.activo ? <Badge tone="success">Activa</Badge> : <Badge tone="danger">Inactiva</Badge>,
+        s.activo ? (
+          <Badge tone="success">{t.sucursales.activa}</Badge>
+        ) : (
+          <Badge tone="danger">Inactiva</Badge>
+        ),
     },
   ];
 
@@ -60,9 +66,7 @@ export function SucursalesPage() {
       />
 
       {query.error ? (
-        <ErrorPanel title="No se pudieron cargar las sucursales">
-          {mensajeError(query.error)}
-        </ErrorPanel>
+        <ErrorPanel title={t.sucursales.noSePudoCargar}>{mensajeError(query.error)}</ErrorPanel>
       ) : null}
 
       <Card>
@@ -72,8 +76,8 @@ export function SucursalesPage() {
           rowKey={(s) => s.id}
           loading={query.isLoading}
           onRowClick={(s) => navigate(`${PATH.sucursales}/${s.id}`)}
-          emptyTitle="No hay sucursales todavía"
-          emptyDescription="Registra tu primer punto de operación para asociarle una ubicación."
+          emptyTitle={t.sucursales.sinSucursales}
+          emptyDescription={t.sucursales.sinSucursalesDesc}
         />
       </Card>
     </>

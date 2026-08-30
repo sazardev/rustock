@@ -6,6 +6,7 @@ import { ErrorPanel, Link, PageHeader } from "../shared/ui";
 import { PATH } from "../app/route-paths";
 import { MovimientoGenericoForm, TrasladoForm } from "./movimiento-form";
 import { useSession } from "../shared/session";
+import { useT } from "../shared/i18n";
 
 /**
  * Página de edición de un movimiento (SPEC §6.2): solo los que están en
@@ -14,6 +15,7 @@ import { useSession } from "../shared/session";
  * los campos operativos y las líneas. Ruta: `/movimientos/:id/editar`.
  */
 export function MovimientoEditarPage() {
+  const t = useT();
   const { id = "" } = useParams();
   const sesion = useSession((s) => s.usuario);
 
@@ -27,13 +29,13 @@ export function MovimientoEditarPage() {
   });
 
   if (movQuery.isLoading) {
-    return <PageHeader title="Editar movimiento" description="Cargando…" />;
+    return <PageHeader title={t.movimientoAcciones.editarTitulo} description="Cargando…" />;
   }
 
   const movimiento = movQuery.data;
   if (!movimiento) {
     return (
-      <ErrorPanel title="Movimiento no encontrado">
+      <ErrorPanel title={t.movimientoDetalle.noEncontrado}>
         No se encontró el movimiento solicitado.{" "}
         <Link href={PATH.movimientos}>Volver al listado</Link>.
       </ErrorPanel>
@@ -47,7 +49,7 @@ export function MovimientoEditarPage() {
     movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION";
   if (!estadoEditable || !esCreador) {
     return (
-      <ErrorPanel title="No se puede editar este movimiento">
+      <ErrorPanel title={t.movimientoAcciones.noSePuedeEditar}>
         Solo el creador puede editar un movimiento en estado borrador o pendiente de aprobación.{" "}
         <Link href={PATH.movimientos}>Volver al listado</Link>.
       </ErrorPanel>
@@ -58,7 +60,7 @@ export function MovimientoEditarPage() {
     <>
       <PageHeader
         title={`Editar ${movimiento.numero}`}
-        description="Solo los movimientos en borrador o pendientes de aprobación pueden editarse; el tipo no puede cambiar."
+        description={t.movimientoAcciones.soloBorrador}
       />
       {movimiento.tipo === "TRASLADO" ? (
         <TrasladoForm movimiento={movimiento} linea={lineas[0]} />

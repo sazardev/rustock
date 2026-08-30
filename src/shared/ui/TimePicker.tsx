@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../lib/cn";
 import { Icon } from "./Icon";
 import { useAnclaje, useCierreExterior } from "./anclaje";
+import { useT } from "../i18n";
 
 export interface TimePickerProps extends InputHTMLAttributes<HTMLInputElement> {
   /** Paso de la columna de minutos. Por defecto 5. */
@@ -149,6 +150,7 @@ export function TimePicker({
   ref,
   ...rest
 }: TimePickerProps) {
+  const t = useT();
   const idAuto = useId();
   const idTrigger = id ?? `${idAuto}-trigger`;
   const idPanel = `${idAuto}-panel`;
@@ -233,7 +235,7 @@ export function TimePicker({
         onClick={() => (abierto ? cerrar(false) : setAbierto(true))}
         onKeyDown={alTeclear}
       >
-        <span className="timepicker__valor">{visible || "Elegir hora"}</span>
+        <span className="timepicker__valor">{visible || t.ui.elegirHora}</span>
         <Icon name="historial" className="timepicker__icono" size={16} aria-hidden="true" />
       </button>
 
@@ -243,7 +245,7 @@ export function TimePicker({
               ref={panelRef}
               id={idPanel}
               role="dialog"
-              aria-label="Elegir hora"
+              aria-label={t.ui.elegirHora}
               className="panel-flotante reloj"
               style={{ left: posicion.left, top: posicion.top }}
             >

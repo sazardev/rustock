@@ -73,10 +73,10 @@ export function InventarioPage() {
 
   return (
     <>
-      <PageHeader title="Inventario físico" />
+      <PageHeader title={t.inventarioPagina.titulo} />
 
       {query.error ? (
-        <ErrorPanel title="No se pudieron cargar las sesiones">
+        <ErrorPanel title={t.inventarioPagina.noSePudoCargar}>
           {mensajeError(query.error)}
         </ErrorPanel>
       ) : null}
@@ -90,7 +90,7 @@ export function InventarioPage() {
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por estado"
+            aria-label={t.inventarioPagina.filtrarPorEstado}
             value={estado}
             onChange={(e) => {
               setEstado(e.target.value as EstadoSesionInventario | "");
@@ -115,8 +115,8 @@ export function InventarioPage() {
           loading={query.isLoading}
           onRowClick={(s) => navigate(sesionInventarioDetalle(s.id))}
           prefetch={prefetchDetalle}
-          emptyTitle="No hay sesiones de inventario"
-          emptyDescription="Cree una sesión de conteo para verificar las existencias de un almacén."
+          emptyTitle={t.inventarioPagina.sinSesiones}
+          emptyDescription={t.inventarioPagina.sinSesionesDesc}
           emptyAction={
             <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.inventarioNuevo}>
               Crear sesión

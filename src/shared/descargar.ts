@@ -1,3 +1,4 @@
+import { traducir } from "./i18n";
 /**
  * Descarga de archivos generados por el backend (SPEC §14.3.8).
  *
@@ -56,7 +57,7 @@ export async function svgAPng(svg: string, escala = 8): Promise<Blob> {
   lienzo.width = Math.max(1, Math.round(imagen.width * escala));
   lienzo.height = Math.max(1, Math.round(imagen.height * escala));
   const contexto = lienzo.getContext("2d");
-  if (!contexto) throw new Error("El navegador no permitió dibujar la imagen.");
+  if (!contexto) throw new Error(traducir().ui.navegadorNoDibujo);
   // Blanco literal, no un token del tema: esto es papel, no interfaz. Con
   // `--color-surface` el PNG saldría negro en modo oscuro y la etiqueta sería
   // ilegible. Un PNG transparente impreso sobre papel de color tampoco da el
@@ -69,7 +70,7 @@ export async function svgAPng(svg: string, escala = 8): Promise<Blob> {
   return new Promise<Blob>((resolver, rechazar) => {
     lienzo.toBlob((blob) => {
       if (blob) resolver(blob);
-      else rechazar(new Error("No se pudo generar el PNG."));
+      else rechazar(new Error(traducir().ui.noSePudoPng));
     }, "image/png");
   });
 }

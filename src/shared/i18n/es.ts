@@ -1070,6 +1070,20 @@ export const es = {
 
   // ============ Mi perfil ============
   perfil: {
+    zonasHorarias: {
+      "America/Lima": "(UTC-5) Lima",
+      "America/Mexico_City": "(UTC-6) Ciudad de México",
+      "America/Bogota": "(UTC-5) Bogotá",
+      "America/Santiago": "(UTC-4) Santiago",
+      "America/Argentina/Buenos_Aires": "(UTC-3) Buenos Aires",
+      "America/Caracas": "(UTC-4) Caracas",
+      "America/Guatemala": "(UTC-6) Guatemala",
+      "America/Panama": "(UTC-5) Panamá",
+      "America/Havana": "(UTC-5) La Habana",
+      "America/Sao_Paulo": "(UTC-3) São Paulo",
+      "Europe/Madrid": "(UTC+1) Madrid",
+      UTC: "(UTC+0) Tiempo universal coordinado",
+    },
     tamanos: {
       PEQUENA: "Pequeña",
       MEDIA: "Media",
@@ -1777,6 +1791,118 @@ export const es = {
     sinFilas: "No hay filas para importar.",
     sinFilasDatos: "No se encontraron filas de datos (se espera una cabecera + datos).",
     importado: "Importado",
+  },
+
+  // ============ Usuarios y sucursales ============
+  usuariosPagina: {
+    noSePudoCargar: "No se pudieron cargar los usuarios",
+    filtrarPorEstado: "Filtrar por estado",
+    sinUsuarios: "No hay usuarios todavía",
+    sinUsuariosDesc: "Crea la primera cuenta para que otra persona pueda operar.",
+    nombreCompleto: "Nombre completo",
+    ultimoAcceso: "Último acceso",
+    datosCuenta: "Datos de la cuenta",
+    noEncontrado: "Usuario no encontrado",
+    noEncontradoDesc: "No se encontró la cuenta.",
+    noSePudoOperacion: "No se pudo completar la operación",
+    desactivar: "Desactivar usuario",
+    reactivar: "Reactivar usuario",
+    desactivado: "Usuario desactivado",
+    reactivado: "Usuario reactivado",
+    avisoDesactivar: "La cuenta dejará de poder iniciar sesión; su historial se conserva.",
+    avisoReactivar: "La cuenta volverá a poder iniciar sesión.",
+  },
+
+  sucursales: {
+    noSePudoCargar: "No se pudieron cargar las sucursales",
+    sinSucursales: "No hay sucursales todavía",
+    sinSucursalesDesc: "Registra tu primer punto de operación para asociarle una ubicación.",
+    activa: "Activa",
+    noEncontrada: "Sucursal no encontrada",
+    noEncontradaDesc: "No se encontró la sucursal.",
+    datosGenerales: "Datos generales",
+    datosSucursal: "Datos de la sucursal",
+    desactivar: "Desactivar sucursal",
+    desactivada: "Sucursal desactivada",
+    noSePudoDesactivar: "No se pudo desactivar la sucursal",
+    avisoDesactivar: "La sucursal deja de estar activa; sus datos se conservan.",
+  },
+
+  // ============ Acciones sobre un movimiento ============
+  movimientoAcciones: {
+    aprobarTitulo: "Aprobar movimiento",
+    aprobarAviso:
+      "Al aprobar se ejecutan las líneas de forma atómica: este es el único momento en que un movimiento altera el saldo de sus ubicaciones.",
+    noSePuedeAprobar: "No se puede aprobar",
+    noSePudoAprobar: "No se pudo aprobar el movimiento",
+    anularTitulo: "Anular movimiento",
+    anularAviso:
+      "Se generará un movimiento inverso que revierte el efecto sobre el stock. El movimiento original queda como ANULADO; nunca se borra el historial.",
+    noSePuedeAnular: "No se puede anular",
+    noSePudoAnular: "No se pudo anular el movimiento",
+    estadoActual: "Estado actual",
+    fechaMovimiento: "Fecha del movimiento",
+    editarTitulo: "Editar movimiento",
+    noSePuedeEditar: "No se puede editar este movimiento",
+    soloBorrador:
+      "Solo los movimientos en borrador o pendientes de aprobación pueden editarse; el tipo no puede cambiar.",
+    nuevoTitulo: "Nuevo movimiento",
+    nuevoDesc: "Registra una entrada, salida, traslado o ajuste de inventario.",
+    duplicarDesc:
+      "Los datos del movimiento original están precargados. Se creará un movimiento nuevo en borrador.",
+    cargandoOrigen: "Cargando movimiento origen…",
+    tipoDeMovimiento: "Tipo de movimiento",
+  },
+
+  // ============ Inventario (listado y anulación) ============
+  inventarioPagina: {
+    titulo: "Inventario físico",
+    noSePudoCargar: "No se pudieron cargar las sesiones",
+    filtrarPorEstado: "Filtrar por estado",
+    sinSesiones: "No hay sesiones de inventario",
+    sinSesionesDesc: "Cree una sesión de conteo para verificar las existencias de un almacén.",
+    anularTitulo: "Anular sesión de inventario",
+    anular: "Anular sesión",
+    noSePuedeAnular: "No se puede anular",
+    noSePudoAnular: "No se pudo anular la sesión",
+    noEncontrada: "Sesión no encontrada",
+    estadoActual: "Estado actual",
+    avisoAnular:
+      "Rustock no borra físicamente sesiones con historial (SPEC §14.5): una sesión planeada o en curso se anula, dejando rastro de auditoría; una ya cerrada no puede anularse.",
+  },
+
+  // ============ Componentes compartidos ============
+  ui: {
+    elegirFecha: "Elegir fecha",
+    elegirFechaYHora: "Elegir fecha y hora",
+    elegirHora: "Elegir hora",
+    mesAnterior: "Mes anterior",
+    mesSiguiente: "Mes siguiente",
+    heredarDeLaEmpresa: "heredar de la empresa",
+    paletaDeColores: "Paleta de colores",
+    modoDeColor: "Modo de color",
+    cerrarNotificacion: "Cerrar notificación",
+    alternarNavegacion: "Alternar navegación",
+    logoAlt: "Logo de Rustock: caja de almacén",
+    sinConexion: "estás sin conexión",
+    versionNueva: "hay una versión nueva lista",
+    posicionEnMapa: "Posición en el mapa",
+    guardarPosicion: "Guardar posición",
+    paraMapa3D: "Para el mapa 3D.",
+    paraMapa3DApilado: "Para el mapa 3D (apilado vertical).",
+    errorDesconocido: "Error desconocido",
+    errorDesconocidoBackend: "Error desconocido del backend.",
+    noSePudoProcesarEscaneo: "No se pudo procesar el escaneo.",
+    noSePudoPng: "No se pudo generar el PNG.",
+    navegadorNoDibujo: "El navegador no permitió dibujar la imagen.",
+    camara: {
+      denegada:
+        "El navegador bloqueó la cámara. Concede el permiso en la barra de direcciones y vuelve a intentarlo.",
+      ocupada: "La cámara está ocupada por otra aplicación. Ciérrala y vuelve a intentarlo.",
+      inexistente:
+        "No se encontró ninguna cámara en este dispositivo. Usa el lector de mano o escribe el código.",
+      generico: "No se pudo abrir la cámara. Usa el lector de mano o escribe el código.",
+    },
   },
 
   // ============ Errores del backend (SPEC §17.3) ============

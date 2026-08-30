@@ -1,3 +1,4 @@
+import { traducir } from "./i18n";
 /**
  * Gateway de API de Rustock.
  *
@@ -122,7 +123,11 @@ export function comoErrorRustock(crudo: unknown): ErrorRustock {
   if (crudo && typeof crudo === "object") {
     const e = crudo as ErrorSerializado;
     if (e.codigo || e.mensaje) {
-      return new ErrorRustock(e.mensaje ?? e.codigo ?? "Error desconocido", e.codigo, e.datos);
+      return new ErrorRustock(
+        e.mensaje ?? e.codigo ?? traducir().ui.errorDesconocido,
+        e.codigo,
+        e.datos,
+      );
     }
   }
   return new ErrorRustock(String(crudo));
@@ -161,7 +166,7 @@ async function webInvoke<T>(command: string, args: Record<string, unknown>): Pro
   }
   if (!payload.ok) {
     throw new ErrorRustock(
-      payload.error ?? "Error desconocido del backend.",
+      payload.error ?? traducir().ui.errorDesconocidoBackend,
       payload.codigo,
       payload.datos,
     );

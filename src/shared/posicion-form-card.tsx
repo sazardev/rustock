@@ -10,6 +10,7 @@
  */
 import { type ChangeEvent, useEffect, useState } from "react";
 import { Button, Card, Field, FormActions, FormGrid, Input } from "./ui";
+import { useT } from "./i18n";
 
 export interface PosicionValores {
   pos_x: number | null;
@@ -32,6 +33,7 @@ export function PosicionFormCard({
   /** Muestra ancho/profundidad y la acción Rotar 90°. */
   tamanio?: boolean;
 }) {
+  const t = useT();
   const [local, setLocal] = useState(valores);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function PosicionFormCard({
   };
 
   return (
-    <Card title="Posición en el mapa" className="mt-6">
+    <Card title={t.ui.posicionEnMapa} className="mt-6">
       <Card.Body>
         <FormGrid columns={2}>
           <Field label="X" htmlFor="pos_x">
@@ -74,10 +76,10 @@ export function PosicionFormCard({
           <Field label="Y" htmlFor="pos_y">
             <Input id="pos_y" type="number" step="any" number {...campo("pos_y")} />
           </Field>
-          <Field label="Z" htmlFor="pos_z" help="Para el mapa 3D (apilado vertical).">
+          <Field label="Z" htmlFor="pos_z" help={t.ui.paraMapa3DApilado}>
             <Input id="pos_z" type="number" step="any" number {...campo("pos_z")} />
           </Field>
-          <Field label="Altura" htmlFor="altura" help="Para el mapa 3D.">
+          <Field label="Altura" htmlFor="altura" help={t.ui.paraMapa3D}>
             <Input id="altura" type="number" step="any" number {...campo("altura")} />
           </Field>
           {tamanio ? (
@@ -115,7 +117,7 @@ export function PosicionFormCard({
             disabled={guardando}
             onClick={() => onGuardar(local)}
           >
-            {guardando ? "Guardando…" : "Guardar posición"}
+            {guardando ? t.comun.guardando : t.ui.guardarPosicion}
           </Button>
         </FormActions>
       </Card.Body>

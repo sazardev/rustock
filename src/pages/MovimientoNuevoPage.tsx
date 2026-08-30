@@ -5,12 +5,14 @@ import { listarLineasMovimiento, obtenerMovimiento } from "../shared/backend";
 import { esPaginado, type TipoMovimiento } from "../shared/types";
 import { Button, Card, Icon, PageHeader } from "../shared/ui";
 import { MovimientoGenericoForm, TIPOS, TrasladoForm } from "./movimiento-form";
+import { useT } from "../shared/i18n";
 
 function tipoValido(valor: string | null): TipoMovimiento | null {
   return TIPOS.some((t) => t.value === valor) ? (valor as TipoMovimiento) : null;
 }
 
 export function MovimientoNuevoPage() {
+  const t = useT();
   // El tipo vive en la URL (?tipo=...) para que el flujo de creación rápida
   // (volver con un registro recién creado) conserve el contexto del movimiento.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,15 +55,17 @@ export function MovimientoNuevoPage() {
   return (
     <>
       <PageHeader
-        title={duplicarDe ? `Duplicar movimiento — ${origenMov?.numero ?? ""}` : "Nuevo movimiento"}
-        description={
+        title={
           duplicarDe
-            ? "Los datos del movimiento original están precargados. Se creará un movimiento nuevo en borrador."
-            : "Registra una entrada, salida, traslado o ajuste de inventario."
+            ? `Duplicar movimiento — ${origenMov?.numero ?? ""}`
+            : t.movimientoAcciones.nuevoTitulo
+        }
+        description={
+          duplicarDe ? t.movimientoAcciones.duplicarDesc : t.movimientoAcciones.nuevoDesc
         }
       />
 
-      <Card title="Tipo de movimiento" className="mb-6">
+      <Card title={t.movimientoAcciones.tipoDeMovimiento} className="mb-6">
         <Card.Body>
           <div className="flex gap-2">
             {TIPOS.map((t) => (
@@ -81,7 +85,7 @@ export function MovimientoNuevoPage() {
       </Card>
 
       {cargandoOrigen ? (
-        <Card title="Cargando movimiento origen…" className="mb-6">
+        <Card title={t.movimientoAcciones.cargandoOrigen} className="mb-6">
           <Card.Body>Precargando los datos para duplicar.</Card.Body>
         </Card>
       ) : tipo === "TRASLADO" ? (

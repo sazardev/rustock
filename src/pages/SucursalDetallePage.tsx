@@ -4,6 +4,7 @@ import { obtenerSucursal } from "../shared/backend";
 import { formatearFecha } from "../shared/format";
 import { PATH } from "../app/route-paths";
 import { Badge, ButtonLink, Card, DetailList, ErrorPanel, PageHeader } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 function osmEmbedUrl(lat: number, lng: number): string {
   const d = 0.008;
@@ -12,6 +13,7 @@ function osmEmbedUrl(lat: number, lng: number): string {
 }
 
 export function SucursalDetallePage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const query = useQuery({
     queryKey: ["sucursal", id],
@@ -26,8 +28,8 @@ export function SucursalDetallePage() {
   if (!sucursal) {
     return (
       <>
-        <PageHeader title="Sucursal" description="No se encontró la sucursal." />
-        <ErrorPanel title="Sucursal no encontrada">
+        <PageHeader title="Sucursal" description={t.sucursales.noEncontradaDesc} />
+        <ErrorPanel title={t.sucursales.noEncontrada}>
           La sucursal no existe o fue desactivada.
         </ErrorPanel>
       </>
@@ -55,7 +57,7 @@ export function SucursalDetallePage() {
         }
       />
 
-      <Card title="Datos generales">
+      <Card title={t.sucursales.datosGenerales}>
         <Card.Body>
           <DetailList
             items={[

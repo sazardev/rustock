@@ -1,3 +1,4 @@
+import { traducir } from "./i18n";
 /**
  * Lectura de códigos por cámara (SPEC §14.3, DESIGN §12).
  *
@@ -153,14 +154,14 @@ export function mensajeCamara(error: unknown): string {
   switch (nombre) {
     case "NotAllowedError":
     case "SecurityError":
-      return "El navegador bloqueó la cámara. Concede el permiso en la barra de direcciones y vuelve a intentarlo.";
+      return traducir().ui.camara.denegada;
     case "NotFoundError":
     case "OverconstrainedError":
-      return "No se encontró ninguna cámara en este dispositivo. Usa el lector de mano o escribe el código.";
+      return traducir().ui.camara.inexistente;
     case "NotReadableError":
-      return "La cámara está ocupada por otra aplicación. Ciérrala y vuelve a intentarlo.";
+      return traducir().ui.camara.ocupada;
     default:
-      return "No se pudo abrir la cámara. Usa el lector de mano o escribe el código.";
+      return traducir().ui.camara.generico;
   }
 }
 

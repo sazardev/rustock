@@ -5,8 +5,10 @@ import { anularSesionInventario, obtenerSesionInventario } from "../shared/backe
 import { Button, Card, DetailList, ErrorPanel, Link, PageHeader } from "../shared/ui";
 import { PATH, sesionInventarioDetalle } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT } from "../shared/i18n";
 
 export function SesionInventarioEliminarPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
   const navigate = useNavigate();
@@ -30,11 +32,11 @@ export function SesionInventarioEliminarPage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title="Anular sesión de inventario" description="Cargando…" />;
+    return <PageHeader title={t.inventarioPagina.anularTitulo} description="Cargando…" />;
   }
   if (!sesion) {
     return (
-      <ErrorPanel title="Sesión no encontrada">
+      <ErrorPanel title={t.inventarioPagina.noEncontrada}>
         <Link href={PATH.inventario}>Volver al listado</Link>
       </ErrorPanel>
     );
@@ -46,7 +48,7 @@ export function SesionInventarioEliminarPage() {
     <>
       <PageHeader
         title={`Anular sesión ${sesion.numero}`}
-        description="Rustock no borra físicamente sesiones con historial (SPEC §14.5): una sesión planeada o en curso se anula, dejando rastro de auditoría; una ya cerrada no puede anularse."
+        description={t.inventarioPagina.avisoAnular}
       />
 
       <Card title="Sesión">
@@ -55,21 +57,21 @@ export function SesionInventarioEliminarPage() {
             items={[
               { label: "Número", value: sesion.numero, code: true },
               { label: "Tipo", value: sesion.tipo },
-              { label: "Estado actual", value: sesion.estado },
+              { label: t.inventarioPagina.estadoActual, value: sesion.estado },
             ]}
           />
         </Card.Body>
       </Card>
 
       {!puedeAnular ? (
-        <ErrorPanel title="No se puede anular" className="mt-4">
+        <ErrorPanel title={t.inventarioPagina.noSePuedeAnular} className="mt-4">
           Esta sesión está en estado {sesion.estado}; solo las sesiones PLANEADA o EN_CURSO pueden
           anularse. Si ya tiene conteos y diferencias conciliadas, ciérrala en vez de anularla.
         </ErrorPanel>
       ) : null}
 
       {error ? (
-        <ErrorPanel title="No se pudo anular la sesión" className="mt-4">
+        <ErrorPanel title={t.inventarioPagina.noSePudoAnular} className="mt-4">
           {error}
         </ErrorPanel>
       ) : null}
@@ -81,7 +83,7 @@ export function SesionInventarioEliminarPage() {
           onClick={() => anularMut.mutate()}
           disabled={!puedeAnular || anularMut.isPending}
         >
-          {anularMut.isPending ? "Anulando…" : "Anular sesión"}
+          {anularMut.isPending ? "Anulando…" : t.inventarioPagina.anular}
         </Button>
         <Link href={sesionInventarioDetalle(sesionId)}>Cancelar</Link>
       </div>

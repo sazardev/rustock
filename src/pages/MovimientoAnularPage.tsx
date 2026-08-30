@@ -34,11 +34,11 @@ export function MovimientoAnularPage() {
   const movimiento = query.data;
 
   if (query.isLoading) {
-    return <PageHeader title="Anular movimiento" description="Cargando…" />;
+    return <PageHeader title={t.movimientoAcciones.anularTitulo} description="Cargando…" />;
   }
   if (!movimiento) {
     return (
-      <ErrorPanel title="Movimiento no encontrado">
+      <ErrorPanel title={t.movimientoDetalle.noEncontrado}>
         <Link href={PATH.movimientos}>Volver al listado</Link>
       </ErrorPanel>
     );
@@ -50,7 +50,7 @@ export function MovimientoAnularPage() {
     <>
       <PageHeader
         title={`Anular movimiento ${movimiento.numero}`}
-        description="Se generará un movimiento inverso que revierte el efecto sobre el stock. El movimiento original queda como ANULADO; nunca se borra el historial."
+        description={t.movimientoAcciones.anularAviso}
       />
 
       <Card title="Movimiento">
@@ -60,21 +60,24 @@ export function MovimientoAnularPage() {
               { label: "Número", value: movimiento.numero, code: true },
               { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
               { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
-              { label: "Estado actual", value: t.dominio.estadoMovimiento[movimiento.estado] },
+              {
+                label: t.movimientoAcciones.estadoActual,
+                value: t.dominio.estadoMovimiento[movimiento.estado],
+              },
             ]}
           />
         </Card.Body>
       </Card>
 
       {!puedeAnular ? (
-        <ErrorPanel title="No se puede anular" className="mt-4">
+        <ErrorPanel title={t.movimientoAcciones.noSePuedeAnular} className="mt-4">
           Este movimiento está en estado {t.dominio.estadoMovimiento[movimiento.estado]}; solo los
           movimientos APROBADOS pueden anularse.
         </ErrorPanel>
       ) : null}
 
       {error ? (
-        <ErrorPanel title="No se pudo anular el movimiento" className="mt-4">
+        <ErrorPanel title={t.movimientoAcciones.noSePudoAnular} className="mt-4">
           {error}
         </ErrorPanel>
       ) : null}
@@ -86,7 +89,7 @@ export function MovimientoAnularPage() {
           onClick={() => anularMut.mutate()}
           disabled={!puedeAnular || anularMut.isPending}
         >
-          {anularMut.isPending ? "Anulando…" : "Anular movimiento"}
+          {anularMut.isPending ? "Anulando…" : t.movimientoAcciones.anularTitulo}
         </Button>
         <Link href={movimientoDetalle(movimientoId)}>Cancelar</Link>
       </div>

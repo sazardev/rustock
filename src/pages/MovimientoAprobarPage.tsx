@@ -34,11 +34,11 @@ export function MovimientoAprobarPage() {
   const movimiento = query.data;
 
   if (query.isLoading) {
-    return <PageHeader title="Aprobar movimiento" description="Cargando…" />;
+    return <PageHeader title={t.movimientoAcciones.aprobarTitulo} description="Cargando…" />;
   }
   if (!movimiento) {
     return (
-      <ErrorPanel title="Movimiento no encontrado">
+      <ErrorPanel title={t.movimientoDetalle.noEncontrado}>
         <Link href={PATH.movimientos}>Volver al listado</Link>
       </ErrorPanel>
     );
@@ -51,7 +51,7 @@ export function MovimientoAprobarPage() {
     <>
       <PageHeader
         title={`Aprobar movimiento ${movimiento.numero}`}
-        description="Al aprobar se ejecutan las líneas de forma atómica: este es el único momento en que un movimiento altera el saldo de sus ubicaciones."
+        description={t.movimientoAcciones.aprobarAviso}
       />
 
       <Card title="Movimiento">
@@ -61,8 +61,14 @@ export function MovimientoAprobarPage() {
               { label: "Número", value: movimiento.numero, code: true },
               { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
               { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
-              { label: "Estado actual", value: t.dominio.estadoMovimiento[movimiento.estado] },
-              { label: "Fecha del movimiento", value: formatearFecha(movimiento.fecha_movimiento) },
+              {
+                label: t.movimientoAcciones.estadoActual,
+                value: t.dominio.estadoMovimiento[movimiento.estado],
+              },
+              {
+                label: t.movimientoAcciones.fechaMovimiento,
+                value: formatearFecha(movimiento.fecha_movimiento),
+              },
               { label: "Motivo", value: movimiento.motivo ?? "—" },
             ]}
           />
@@ -70,14 +76,14 @@ export function MovimientoAprobarPage() {
       </Card>
 
       {!puedeAprobar ? (
-        <ErrorPanel title="No se puede aprobar" className="mt-4">
+        <ErrorPanel title={t.movimientoAcciones.noSePuedeAprobar} className="mt-4">
           Este movimiento está en estado {t.dominio.estadoMovimiento[movimiento.estado]} y no admite
           aprobación.
         </ErrorPanel>
       ) : null}
 
       {error ? (
-        <ErrorPanel title="No se pudo aprobar el movimiento" className="mt-4">
+        <ErrorPanel title={t.movimientoAcciones.noSePudoAprobar} className="mt-4">
           {error}
         </ErrorPanel>
       ) : null}
@@ -89,7 +95,7 @@ export function MovimientoAprobarPage() {
           onClick={() => aprobarMut.mutate()}
           disabled={!puedeAprobar || aprobarMut.isPending}
         >
-          {aprobarMut.isPending ? "Aprobando…" : "Aprobar movimiento"}
+          {aprobarMut.isPending ? "Aprobando…" : t.movimientoAcciones.aprobarTitulo}
         </Button>
         <Link href={movimientoDetalle(movimientoId)}>Cancelar</Link>
       </div>

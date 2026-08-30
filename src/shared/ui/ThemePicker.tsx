@@ -9,6 +9,7 @@
  */
 import type { ReactNode } from "react";
 import type { ResumenTema } from "../types";
+import { useT } from "../i18n";
 
 export interface PaletaPickerProps {
   /** Paletas predefinidas (del backend). */
@@ -17,7 +18,7 @@ export interface PaletaPickerProps {
   seleccionado: string | null;
   /** Al elegir una paleta. */
   onSeleccionar: (id: string) => void;
-  /** Opción "heredar de la empresa" (solo en preferencias personales). */
+  /** Opción «heredar de la empresa» (solo en preferencias personales). */
   heredar?: boolean;
   onHeredar?: () => void;
   /** Label accesible del grupo. */
@@ -30,10 +31,11 @@ export function PaletaPicker({
   onSeleccionar,
   heredar = false,
   onHeredar,
-  ariaLabel = "Paleta de colores",
+  ariaLabel,
 }: PaletaPickerProps) {
+  const t = useT();
   return (
-    <div className="theme-picker" role="radiogroup" aria-label={ariaLabel}>
+    <div className="theme-picker" role="radiogroup" aria-label={ariaLabel ?? t.ui.paletaDeColores}>
       {heredar ? (
         <button
           type="button"
@@ -73,7 +75,7 @@ export interface ModoPickerProps {
   /** Modo seleccionado (null = heredar de la empresa). */
   seleccionado: "CLARO" | "OSCURO" | null;
   onSeleccionar: (modo: "CLARO" | "OSCURO") => void;
-  /** Opción "heredar de la empresa". */
+  /** Opción «heredar de la empresa». */
   heredar?: boolean;
   onHeredar?: () => void;
   /** Etiqueta accesible del grupo. */
@@ -110,10 +112,11 @@ export function ModoPicker({
   onSeleccionar,
   heredar = false,
   onHeredar,
-  ariaLabel = "Modo de color",
+  ariaLabel,
 }: ModoPickerProps) {
+  const t = useT();
   return (
-    <div className="modo-picker" role="radiogroup" aria-label={ariaLabel}>
+    <div className="modo-picker" role="radiogroup" aria-label={ariaLabel ?? t.ui.modoDeColor}>
       {heredar ? (
         <ModoBoton
           activo={seleccionado === null}

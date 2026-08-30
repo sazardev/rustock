@@ -1,6 +1,7 @@
 import { type ReactNode, createContext, useCallback, useContext, useState } from "react";
 import { cn } from "../lib/cn";
 import { Icon, type IconName } from "./Icon";
+import { useT } from "../i18n";
 
 export type ToastTone = "success" | "error" | "default";
 
@@ -46,6 +47,7 @@ export interface ToastProviderProps {
 }
 
 export function ToastProvider({ children, duration = 5000 }: ToastProviderProps) {
+  const t = useT();
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const dismiss = useCallback((id: number) => {
@@ -85,7 +87,7 @@ export function ToastProvider({ children, duration = 5000 }: ToastProviderProps)
                   type="button"
                   className="toast__close"
                   onClick={() => dismiss(item.id)}
-                  aria-label="Cerrar notificación"
+                  aria-label={t.ui.cerrarNotificacion}
                 >
                   <Icon name="cerrarPanel" size={16} aria-hidden="true" />
                 </button>

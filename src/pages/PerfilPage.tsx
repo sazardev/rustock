@@ -6,12 +6,7 @@ import { useNavigate } from "react-router";
 import { z } from "zod";
 import { cambiarPassword, listarTemas } from "../shared/backend";
 import { PATH } from "../app/route-paths";
-import {
-  ZONA_HORARIA_LABEL,
-  ZONAS_HORARIAS,
-  type FormatoFecha,
-  type TamanioFuente,
-} from "../shared/types";
+import { ZONAS_HORARIAS, type FormatoFecha, type TamanioFuente } from "../shared/types";
 import { usePreferencias } from "../shared/preferencias";
 import { useTema } from "../shared/tema";
 import { useSession } from "../shared/session";
@@ -369,7 +364,7 @@ export function PerfilPage() {
                   { value: "", label: t.perfil.heredarEmpresa },
                   ...ZONAS_HORARIAS.map((z) => ({
                     value: z,
-                    label: ZONA_HORARIA_LABEL[z] ?? z,
+                    label: t.perfil.zonasHorarias[z as keyof typeof t.perfil.zonasHorarias] ?? z,
                   })),
                 ]}
               />

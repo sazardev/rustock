@@ -6,12 +6,14 @@ import { useSession } from "../shared/session";
 import { mensajeError } from "../shared/format";
 import { catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { Button, ButtonLink, Card, ErrorPanel, PageHeader, useToast } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 /**
  * Página de confirmación de desactivación/reactivación de un usuario
  * (DESIGN §7.5, SPEC §14.5: borrado lógico — nunca se elimina la cuenta).
  */
 export function UsuarioEliminarPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,7 +39,10 @@ export function UsuarioEliminarPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["usuarios"] });
-      toast(usuario?.activo ? "Usuario desactivado" : "Usuario reactivado", "success");
+      toast(
+        usuario?.activo ? t.usuariosPagina.desactivado : t.usuariosPagina.reactivado,
+        "success",
+      );
       navigate(catalogoLista("usuarios"));
     },
     onError: (err) => setError(mensajeError(err)),
@@ -49,8 +54,8 @@ export function UsuarioEliminarPage() {
   if (!usuario) {
     return (
       <>
-        <PageHeader title="Usuario" description="No se encontró la cuenta." />
-        <ErrorPanel title="Usuario no encontrado">
+        <PageHeader title="Usuario" description={t.usuariosPagina.noEncontradoDesc} />
+        <ErrorPanel title={t.usuariosPagina.noEncontrado}>
           El usuario ya no existe o no tienes permiso para verlo.
         </ErrorPanel>
       </>
@@ -68,13 +73,11 @@ export function UsuarioEliminarPage() {
             : `Reactivar usuario — ${usuario.nombre_usuario}`
         }
         description={
-          desactivar
-            ? "La cuenta dejará de poder iniciar sesión; su historial se conserva."
-            : "La cuenta volverá a poder iniciar sesión."
+          desactivar ? t.usuariosPagina.avisoDesactivar : t.usuariosPagina.avisoReactivar
         }
       />
 
-      <Card title="Datos de la cuenta">
+      <Card title={t.usuariosPagina.datosCuenta}>
         <Card.Body>
           <p className="text-sm text-gray-700">
             <strong className="font-mono text-sm">{usuario.nombre_usuario}</strong> —{" "}
@@ -93,7 +96,7 @@ export function UsuarioEliminarPage() {
             )}
           </ul>
           {error ? (
-            <ErrorPanel title="No se pudo completar la operación" className="mt-4">
+            <ErrorPanel title={t.usuariosPagina.noSePudoOperacion} className="mt-4">
               {error}
             </ErrorPanel>
           ) : null}
@@ -115,8 +118,8 @@ export function UsuarioEliminarPage() {
             {mutacion.isPending
               ? "Procesando…"
               : desactivar
-                ? "Desactivar usuario"
-                : "Reactivar usuario"}
+                ? t.usuariosPagina.desactivar
+                : t.usuariosPagina.reactivar}
           </Button>
         )}
         <ButtonLink variant="secondary" href={catalogoDetalle("usuarios", usuario.id)}>

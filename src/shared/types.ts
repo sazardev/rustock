@@ -1280,22 +1280,6 @@ export const ZONAS_HORARIAS = [
   "UTC",
 ] as const;
 
-/** Etiquetas legibles de las zonas horarias para la UI. */
-export const ZONA_HORARIA_LABEL: Record<string, string> = {
-  "America/Lima": "(UTC-5) Lima",
-  "America/Mexico_City": "(UTC-6) Ciudad de México",
-  "America/Bogota": "(UTC-5) Bogotá",
-  "America/Santiago": "(UTC-4) Santiago",
-  "America/Argentina/Buenos_Aires": "(UTC-3) Buenos Aires",
-  "America/Caracas": "(UTC-4) Caracas",
-  "America/Guatemala": "(UTC-6) Guatemala",
-  "America/Panama": "(UTC-5) Panamá",
-  "America/Havana": "(UTC-5) La Habana",
-  "America/Sao_Paulo": "(UTC-3) São Paulo",
-  "Europe/Madrid": "(UTC+1) Madrid",
-  UTC: "(UTC+0) Tiempo universal coordinado",
-};
-
 // ============ Sucursales (config de empresa, solo ADMIN) ============
 
 export interface Sucursal extends Auditoria {
