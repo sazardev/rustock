@@ -8,6 +8,78 @@ y el versionado [SemVer](https://semver.org/lang/es/).
 
 ### Bug Fixes
 
+- **tests:** Quita conversiones inútiles que clippy 1.98 rechaza
+
+- **css:** Define las variantes responsivas de rejilla que faltaban
+
+
+### Chore
+
+- **scripts:** Capturar acepta RUSTOCK_IDIOMA para revisar el inglés
+
+
+### Features
+
+- **i18n:** Cimientos de internacionalización con diccionarios tipados
+
+- **i18n:** Errores del backend traducibles por código y datos
+
+- **i18n:** Traduce los trece catálogos, listados y componentes compartidos
+
+- **i18n:** Traduce el vocabulario del dominio y la pantalla de movimientos
+
+- **i18n:** Traduce el formulario de movimientos, las reglas y las migas de pan
+
+- **i18n:** Traduce etiquetas, el panel de escaneos y los nueve reportes
+
+- **i18n:** Traduce Configuración y Mi perfil
+
+- **i18n:** Traduce dashboard, historial, captura rápida, detalle de movimiento, sesión de inventario y mapa
+
+- **i18n:** Traduce los quince formularios de catálogo
+
+- **i18n:** Traduce el command palette
+
+- **i18n:** Traduce alertas, inventario, importación, asistente de mapa y detalle de usuario
+
+- **i18n:** Traduce los componentes compartidos y los módulos sin React
+
+- **i18n:** Traduce el mapa 3D, los paneles del mapa, las páginas de estado y los tipos de movimiento
+
+- **i18n:** El SEO sigue al idioma
+
+- **i18n:** Traduce la landing pública completa
+
+- **i18n:** Traduce la galería del sistema de diseño
+
+- **i18n:** Traduce la Ayuda completa y prepara el Manual
+
+- **i18n:** Traduce el marco de la Ayuda y el Manual
+
+- **i18n:** Traduce el glosario del Manual (50 términos)
+
+- **i18n:** Traduce las nueve partes del Manual y sus dos primeros capítulos
+
+- **i18n:** Traduce la Parte 0 del Manual (visión, instalación, roles y personalización)
+
+- **i18n:** Traduce la Parte 1 y los siete primeros capítulos de la Parte 2 del Manual
+
+- **i18n:** Traduce las Partes 2 y 3 del Manual (espacio físico y catálogos maestros)
+
+- **i18n:** Traduce la Parte 4 del Manual (movimientos: modelo, ciclo, tipos, FIFO/FEFO y captura)
+
+- **i18n:** Traduce las Partes 5 y 6 del Manual (inventario, dashboard, reportes, alertas y actividad)
+
+- **i18n:** Traduce la Parte 7 del Manual (seis procesos de extremo a extremo)
+
+- **i18n:** Traduce la Parte 8 y cierra el Manual, con guardia contra deriva
+
+- **i18n:** Cierra la internacionalización — barrido final de la interfaz
+
+## [0.4.0] - 2026-08-29
+
+### Bug Fixes
+
 - **backend:** Elimina campo costo_unitario duplicado en tests
 
 - **backend:** Valida coherencia tipo/sub_tipo y corrige índices de auditoría en DBs existentes
