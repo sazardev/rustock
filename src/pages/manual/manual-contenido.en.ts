@@ -225,7 +225,304 @@ const CH_INSTALL: ManualCapitulo = {
  * one exists — so the manual is never half-built while the translation
  * advances chapter by chapter.
  */
-const TRADUCIDOS: ManualCapitulo[] = [CH_VISION, CH_INSTALL];
+
+const CH_ROLES: ManualCapitulo = {
+  id: "m00-roles",
+  titulo: "Users, roles and permissions",
+  icono: "rol",
+  resumen: "5 default roles, resource:action permissions and the access matrix. Who can do what.",
+  paraQueSirve:
+    "To stop anyone doing what is not theirs to do. Sensitive actions require an explicit permission and are audited.",
+  cuandoUsarlo:
+    "When adding your team, and whenever you assign approve/cancel/close responsibilities.",
+  terminosClave: ["usuario", "rol", "permiso", "auditoria", "desactivar"],
+  relacionados: ["m00-vision", "m06-historial", "m08-transversales"],
+  secciones: [
+    {
+      titulo: "User: attributes and rules",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["nombre_usuario", "Unique, identifies the login. Immutable after creation (14.7)."],
+            ["nombre_completo", "Required, human-readable."],
+            ["email", "Optional, unique if present."],
+            [
+              "password_hash",
+              "Argon2 in Rust; never serialised to the frontend (skip_serializing).",
+            ],
+            ["rol_id", "Exactly one role (v1). Multi-role is a future extension (20)."],
+            ["activo", "Defaults to true. An inactive user neither authenticates nor operates."],
+            ["ultimo_acceso_at", "Updated on sign-in."],
+            ["created_at / updated_at", "Automatic, UTC."],
+            ["created_by / updated_by", "Required on every manageable record."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Every movement or change is attributed to an active user.",
+            "The first user is the bootstrap ADMIN with every permission (the only one without a session).",
+            "An inactive user cannot authenticate or perform actions.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Default roles (not deletable)",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Role", "Description"],
+          filas: [
+            [
+              "ADMIN",
+              "Full control: settings, users, catalogues, movements, stocktaking, reports.",
+            ],
+            [
+              "MANAGER",
+              "Sees everything, creates and validates movements, manages catalogues; does not manage users or permissions.",
+            ],
+            [
+              "WAREHOUSE_MANAGER",
+              "Manages movements (inbound/outbound/transfers/adjustments) and runs stocktakes.",
+            ],
+            [
+              "OPERATOR",
+              "Records inbound/outbound/transfer movements; does not authorise adjustments or close stocktakes.",
+            ],
+            [
+              "READER",
+              "Read only: queries, reports, traceability, with no ability to change anything.",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The default roles exist from installation and cannot be deleted (they can be renamed with the ADMIN permission). A user has exactly one role (v1).",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Granular resource:action permissions",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Each permission protects one specific action in the form resource:action. For example: producto:ver, movimiento:aprobar, inventario:cerrar.",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Resources (23): almacen, zona, rack, seccion, ubicacion, caja, producto, categoria, uom, proveedor, cliente, lote, usuario, rol, movimiento, entrada, salida, traslado, ajuste, inventario, comentario, reporte, configuracion.",
+            "Actions (11): ver, crear, editar, eliminar (logical delete), desactivar, aprobar, anular, exportar, ejecutar, cerrar, asignar.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The ver action is the minimum condition for a resource to appear in listings or details. Without it, 403, and it is recorded in the audit. exportar is required independently (you may read without being able to export). anular and aprobar are separate permissions from crear (an operator creates, a warehouse manager approves).",
+          tono: "warning",
+        },
+      ],
+    },
+    {
+      titulo: "Permission matrix (13×5, defaults)",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Permission", "ADMIN", "MANAGER", "WH MANAGER", "OPERATOR", "READER"],
+          filas: [
+            ["View any record", "Yes", "Yes", "Yes", "Yes", "Yes"],
+            [
+              "Create/edit catalogues (product, supplier, customer, category, UOM)",
+              "Yes",
+              "Yes",
+              "Yes",
+              "No",
+              "No",
+            ],
+            ["Create movements (inbound/outbound/transfer)", "Yes", "Yes", "Yes", "Yes", "No"],
+            ["Approve/validate movements", "Yes", "Yes", "Yes", "No", "No"],
+            ["Create stock adjustments", "Yes", "Yes", "Yes", "No", "No"],
+            ["Approve adjustments (where dual control applies)", "Yes", "Yes", "No", "No", "No"],
+            ["Run an inventory session / record counts", "Yes", "Yes", "Yes", "Yes", "No"],
+            ["Close an inventory session", "Yes", "Yes", "No", "No", "No"],
+            ["Cancel movements", "Yes", "Yes", "No", "No", "No"],
+            ["Comment on any record", "Yes", "Yes", "Yes", "Yes", "No"],
+            ["Manage users and roles", "Yes", "No", "No", "No", "No"],
+            ["System settings", "Yes", "No", "No", "No", "No"],
+            ["Export reports", "Yes", "Yes", "Yes", "Yes", "No"],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The matrix is the default (SPEC 4.4); an ADMIN can fine-tune permissions per role in v2. The puedo(resource, action)→bool command queries the matrix without auditing, and is used to show or hide Create and the approve toggle.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Audit: who did what",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Audit field", "Meaning"],
+          filas: [
+            ["usuario_id", "Who."],
+            ["accion", "What (create, edit, approve, cancel, run, view…)."],
+            ["entidad / entidad_id", "On what."],
+            ["antes / despues", "The previous/subsequent state where applicable (a JSON diff)."],
+            ["timestamp", "When (UTC)."],
+            ["ip / origen", "From where (machine/session)."],
+            [
+              "modulo / proceso / tenant / ruta",
+              "Automatic classification of the command or view (H25 full tracking).",
+            ],
+            ["tipo_evento", "COMMAND or VIEW (page navigation)."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Events are immutable and cannot be deleted by any role.",
+            "Without permission → a 403 recorded in the audit.",
+            "The con_auditoria! macro records success or failure with the session’s real actor (SesionState).",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Managing users in the app",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "The list at /usuarios has a status filter and pagination; the detail shows recent activity via listar_historial with the name resolved.",
+            "New: /usuarios/nuevo; edit: /usuarios/:id/editar (the username is immutable, SKU-style).",
+            "Delete: /usuarios/:id/eliminar deactivates (it does not delete) with safeguards: you cannot deactivate yourself, nor the last active ADMIN (the UltimoAdmin error).",
+            "Change your own password at /perfil (it checks the current one, the PasswordActualIncorrecta error) or have an admin reset it at /usuarios/:id/password.",
+            "A single in-memory session (one process, one user at a time): login/logout/quien_soy. Without a session everything requires authentication (puede resolves to NoAutenticado).",
+          ],
+        },
+        {
+          tipo: "enlaces",
+          items: [
+            { etiqueta: "Users and roles", href: PATH.usuarios },
+            { etiqueta: "My profile", href: PATH.perfil },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_PERSONALISATION: ManualCapitulo = {
+  id: "m00-personalizacion",
+  titulo: "Personalisation: theme, preferences and shortcuts",
+  icono: "configuracion",
+  resumen: "6 palettes + light/dark, font size, sidebar order, time zone and quick search.",
+  paraQueSirve: "So each person works comfortably without breaking the Rust & Iron identity.",
+  cuandoUsarlo: "When setting up your own workstation and when teaching your team the shortcuts.",
+  terminosClave: ["usuario"],
+  relacionados: ["m00-roles", "m08-atajos"],
+  secciones: [
+    {
+      titulo: "Visual theme: 6 palettes + light/dark mode",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "The colour logic lives in Rust (domain/tema.rs): each palette declares its accent; the rest is generated by mode. The frontend only applies the token→value map on :root.",
+        },
+        {
+          tipo: "tabla",
+          cabeceras: ["Palette", "Idea"],
+          filas: [
+            ["Rust", "The base identity, accent #B7410E."],
+            ["Forest", "Deep green."],
+            ["Ocean", "Technical blue."],
+            ["Grape", "Operational violet."],
+            ["Honey", "Warm amber."],
+            ["Slate", "Blue-grey."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Global (ADMIN) at /configuracion: choose a palette + mode.",
+            "Personal at /perfil: palette/mode, or Inherit from the company.",
+            "With no session, the global theme is painted via obtener_tema_global.",
+            "The LogoMark is tinted with the accent; the favicon stays fixed rust.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Per-user preferences",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Preference", "Values", "Where"],
+          filas: [
+            ["Font size", "SMALL (87.5%), MEDIUM (100%), LARGE (112.5%)", "/perfil → :root (rem)."],
+            ["Sidebar order", "A JSON array of hrefs", "Up/down arrows per group at /perfil."],
+            [
+              "Time zone",
+              "12 IANA zones (America/Lima by default)",
+              "/perfil (Inherit) or /configuracion.",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "PreferenciasResueltas carries the applied fallbacks and the tema_heredado/modo_heredado flags.",
+          tono: "success",
+        },
+      ],
+    },
+    {
+      titulo: "Keyboard shortcuts",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Shortcut", "Action"],
+          filas: [
+            ["Ctrl/Cmd+K", "Search all of Rustock."],
+            ["/", "Focus the global search."],
+            ["N", "New record on listings."],
+            ["Ctrl/Cmd+Enter", "Save the form."],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The palette (Ctrl+K) is a floating results panel that navigates and never mutates. fzf subsequence matching, synonyms, and a boost from history.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Where to find it",
+      bloques: [
+        {
+          tipo: "enlaces",
+          items: [
+            { etiqueta: "My profile", href: PATH.perfil },
+            { etiqueta: "Global settings", href: PATH.configuracion },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const TRADUCIDOS: ManualCapitulo[] = [CH_VISION, CH_INSTALL, CH_ROLES, CH_PERSONALISATION];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
 
