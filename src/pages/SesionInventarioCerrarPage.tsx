@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import {
@@ -19,14 +20,10 @@ import {
 } from "../shared/ui";
 import { ProductoRef, UbicacionRef } from "../shared/refs";
 import { PATH, sesionInventarioDetalle } from "../app/route-paths";
-import {
-  ESTADO_SESION_LABEL,
-  TIPO_DIFERENCIA_LABEL,
-  TIPO_DIFERENCIA_TONE,
-  mensajeError,
-} from "../shared/format";
+import { TIPO_DIFERENCIA_TONE, mensajeError } from "../shared/format";
 
 export function SesionInventarioCerrarPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
   const navigate = useNavigate();
@@ -73,7 +70,7 @@ export function SesionInventarioCerrarPage() {
       render: (d) => (
         <Badge tone={TIPO_DIFERENCIA_TONE[d.tipo]}>
           {d.tipo === "sobrante" ? "Entrada por ajuste" : "Salida por ajuste"} (
-          {TIPO_DIFERENCIA_LABEL[d.tipo]})
+          {t.dominio.tipoDiferencia[d.tipo]})
         </Badge>
       ),
     },
@@ -102,7 +99,7 @@ export function SesionInventarioCerrarPage() {
 
       {!puedeCerrar ? (
         <ErrorPanel title="No se puede cerrar">
-          Esta sesión está en estado {ESTADO_SESION_LABEL[sesion.estado]}; solo las sesiones
+          Esta sesión está en estado {t.dominio.estadoSesion[sesion.estado]}; solo las sesiones
           EN_CURSO pueden cerrarse.
         </ErrorPanel>
       ) : null}

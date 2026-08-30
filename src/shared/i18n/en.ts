@@ -324,6 +324,81 @@ export const en: Diccionario = {
     historialCaja: "Container history",
   },
 
+  dominio: {
+    tipoMovimiento: {
+      ENTRADA: "Receipt",
+      SALIDA: "Issue",
+      TRASLADO: "Transfer",
+      AJUSTE: "Adjustment",
+      CONSUMO: "Consumption",
+    },
+    subTipoMovimiento: {
+      COMPRA: "Purchase",
+      DEVOLUCION_CLIENTE: "Customer return",
+      AJUSTE_POSITIVO: "Positive adjustment",
+      INICIAL: "Opening stock",
+      TRASLADO_ENTRADA: "Transfer (in)",
+      CLIENTE: "Customer",
+      DEVOLUCION_PROVEEDOR: "Return to supplier",
+      MERMA: "Shrinkage",
+      AJUSTE_NEGATIVO: "Negative adjustment",
+      TRASLADO_SALIDA: "Transfer (out)",
+    },
+    estadoMovimiento: {
+      BORRADOR: "Draft",
+      PENDIENTE_APROBACION: "Pending approval",
+      APROBADO: "Approved",
+      ANULADO: "Voided",
+    },
+    estadoAlerta: {
+      ABIERTA: "Open",
+      RESUELTA: "Resolved",
+      IGNORADA: "Archived",
+    },
+    tipoAlerta: {
+      STOCK_BAJO: "Low stock",
+      STOCK_EXCEDIDO: "Stock exceeded",
+      UBICACION_SOBRECAPACIDAD: "Location over capacity",
+      LOTE_POR_VENCER: "Lot expiring soon",
+      LOTE_VENCIDO: "Lot expired",
+      DIFERENCIA_INVENTARIO: "Stocktake discrepancy",
+      MOVIMIENTO_PENDIENTE: "Pending movement",
+    },
+    estadoSesion: {
+      PLANEADA: "Planned",
+      EN_CURSO: "In progress",
+      CERRADA: "Closed",
+      ANULADA: "Voided",
+    },
+    tipoSesion: {
+      COMPLETO: "Full",
+      CICLICO: "Cycle",
+    },
+    tipoDiferencia: {
+      conciliado: "Reconciled",
+      sobrante: "Overage",
+      faltante: "Shortage",
+    },
+  },
+
+  mov: {
+    titulo: "Movements",
+    descripcion: "Receipts, issues, transfers and stock adjustments.",
+    nuevo: "New movement",
+    crearPrimero: "Create movement",
+    sinMovimientos: "No movements yet",
+    sinMovimientosDesc: "Record the first movement to start operating.",
+    noSePudoCargar: "Could not load the movements",
+    todosLosTipos: "All types",
+    todosLosEstados: "All statuses",
+    filtrarPorTipo: "Filter by type",
+    filtrarPorEstado: "Filter by status",
+    numero: "Number",
+    subTipo: "Sub-type",
+    documento: "Document",
+    nota: "Movements are approved on their detail page. Every void creates a reversing movement.",
+  },
+
   errores: {
     SALDO_INSUFICIENTE: (p) =>
       `Insufficient stock in ${p.ubicacion}: ${p.disponible} available, ${p.intentado} attempted.`,

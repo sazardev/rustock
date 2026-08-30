@@ -23,7 +23,7 @@ import { useSession } from "../session";
 import { usePreferencias } from "../preferencias";
 import type { BuscarItem } from "../types";
 import { Icon, useToast, type IconName } from "../ui";
-import { useT } from "../i18n";
+import { useT, type Diccionario } from "../i18n";
 import { usePalette } from "./palette-store";
 import { comandosPalette, leerRecientes, registrarReciente, type ComandoPalette } from "./commands";
 import { indiceResaltado, puntuacionCandidato } from "./fuzzy";
@@ -33,13 +33,7 @@ import {
   sesionInventarioDetalle,
   PATH,
 } from "../../app/route-paths";
-import {
-  ESTADO_MOVIMIENTO_LABEL,
-  ESTADO_SESION_LABEL,
-  TIPO_ALERTA_LABEL,
-  TIPO_MOVIMIENTO_LABEL,
-  TIPO_SESION_LABEL,
-} from "../format";
+import { ESTADO_MOVIMIENTO_LABEL, TIPO_MOVIMIENTO_LABEL } from "../format";
 
 const DEBOUNCE_MS = 250;
 const MINIMO_DATOS = 2;
@@ -97,13 +91,14 @@ function hrefDeDato(recurso: string, item: BuscarItem): string {
 }
 
 /** Subtítulo legible de un dato, etiquetando tipo/estado con la UI (DESIGN §9.1). */
-function subtituloDeDato(recurso: string, item: BuscarItem): string {
+function subtituloDeDato(t: Diccionario, recurso: string, item: BuscarItem): string {
   if (recurso === "movimientos") {
     const tipo = item.datos?.tipo;
     const estado = item.datos?.estado;
     return [
-      tipo && (TIPO_MOVIMIENTO_LABEL[tipo as keyof typeof TIPO_MOVIMIENTO_LABEL] ?? tipo),
-      estado && (ESTADO_MOVIMIENTO_LABEL[estado as keyof typeof ESTADO_MOVIMIENTO_LABEL] ?? estado),
+      tipo && (t.dominio.tipoMovimiento[tipo as keyof typeof TIPO_MOVIMIENTO_LABEL] ?? tipo),
+      estado &&
+        (t.dominio.estadoMovimiento[estado as keyof typeof ESTADO_MOVIMIENTO_LABEL] ?? estado),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -112,15 +107,17 @@ function subtituloDeDato(recurso: string, item: BuscarItem): string {
     const tipo = item.datos?.tipo;
     const estado = item.datos?.estado;
     return [
-      tipo && (TIPO_SESION_LABEL[tipo] ?? tipo),
-      estado && (ESTADO_SESION_LABEL[estado as keyof typeof ESTADO_SESION_LABEL] ?? estado),
+      tipo && (t.dominio.tipoSesion[tipo as keyof typeof t.dominio.tipoSesion] ?? tipo),
+      estado && (t.dominio.estadoSesion[estado as keyof typeof t.dominio.estadoSesion] ?? estado),
     ]
       .filter(Boolean)
       .join(" · ");
   }
   if (recurso === "alertas") {
     const tipo = item.datos?.tipo;
-    return tipo ? (TIPO_ALERTA_LABEL[tipo] ?? tipo) : (item.subtitulo ?? "");
+    return tipo
+      ? (t.dominio.tipoAlerta[tipo as keyof typeof t.dominio.tipoAlerta] ?? tipo)
+      : (item.subtitulo ?? "");
   }
   return item.subtitulo ?? "";
 }
@@ -177,12 +174,12 @@ function comandoAFila(c: ComandoPalette): FilaPalette {
   };
 }
 
-function datoAFila(recurso: string, item: BuscarItem): FilaPalette {
+function datoAFila(t: Diccionario, recurso: string, item: BuscarItem): FilaPalette {
   return {
     id: `${recurso}:${item.id}`,
     grupo: etiquetaGrupo(recurso),
     titulo: item.titulo,
-    subtitulo: subtituloDeDato(recurso, item),
+    subtitulo: subtituloDeDato(t, recurso, item),
     icono: GRUPO_DATOS[recurso]?.icono ?? "buscar",
     href: hrefDeDato(recurso, item),
   };
@@ -314,12 +311,12 @@ export function CommandPalette() {
 
     const gruposDatos: Array<{ titulo: string; filas: FilaPalette[] }> = [];
     for (const g of datosQuery.data?.grupos ?? []) {
-      const filas = g.items.map((item) => datoAFila(g.recurso, item));
+      const filas = g.items.map((item) => datoAFila(t, g.recurso, item));
       if (filas.length > 0) gruposDatos.push({ titulo: etiquetaGrupo(g.recurso), filas });
     }
 
     return [...gruposEstaticos, ...gruposDatos];
-  }, [consulta, comandos, recientes, datosQuery.data]);
+  }, [t, consulta, comandos, recientes, datosQuery.data]);
 
   // Lista plana (sin cabeceras) para la navegación por teclado.
   const listaPlana = useMemo(() => grupos.flatMap((g) => g.filas), [grupos]);
@@ -332,7 +329,7 @@ export function CommandPalette() {
       return () => window.clearTimeout(t);
     }
     return undefined;
-  }, [abierto]);
+  }, [t, abierto]);
 
   // Atajos globales (Ctrl/Cmd+K y "/").
   useEffect(() => {
@@ -409,7 +406,7 @@ export function CommandPalette() {
     window.addEventListener("keydown", alTeclado);
     return () => window.removeEventListener("keydown", alTeclado);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto, indice, listaPlana, cerrar]);
+  }, [t, abierto, indice, listaPlana, cerrar]);
 
   // Mantiene visible la fila activa al navegar.
   useEffect(() => {
@@ -418,7 +415,7 @@ export function CommandPalette() {
     }
     const el = listaRef.current?.querySelector<HTMLElement>(`[data-flat="${indice}"]`);
     el?.scrollIntoView({ block: "nearest" });
-  }, [abierto, indice, listaPlana]);
+  }, [t, abierto, indice, listaPlana]);
 
   // Devuelve el foco al elemento que abrió el palette.
   useEffect(() => {
@@ -431,7 +428,7 @@ export function CommandPalette() {
     if (origen && typeof origen.focus === "function") {
       origen.focus();
     }
-  }, [abierto]);
+  }, [t, abierto]);
 
   if (!abierto) {
     return null;

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useT } from "../shared/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { listarSesionesInventario, precisionSesion } from "../shared/backend";
@@ -15,7 +16,7 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import { PATH, sesionInventarioDetalle } from "../app/route-paths";
-import { TIPO_SESION_LABEL, formatearFechaCorta, mensajeError } from "../shared/format";
+import { formatearFechaCorta, mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 interface FilaPrecision {
@@ -24,6 +25,7 @@ interface FilaPrecision {
 }
 
 export function ReportePrecisionPage() {
+  const t = useT();
   const navigate = useNavigate();
 
   const query = useQuery({
@@ -51,7 +53,7 @@ export function ReportePrecisionPage() {
     const filas = query.data ?? [];
     return filas.map((f) => ({
       sesion: f.sesion.numero,
-      tipo: TIPO_SESION_LABEL[f.sesion.tipo],
+      tipo: t.dominio.tipoSesion[f.sesion.tipo],
       cerrada: formatearFechaCorta(f.sesion.closed_at ?? f.sesion.fecha_fin),
       precision_sku_pct: f.precision.precision_sku.toFixed(1),
       skus_exactos: f.precision.skus_exactos,
@@ -63,14 +65,14 @@ export function ReportePrecisionPage() {
       ubicaciones_exactas: f.precision.ubicaciones_exactas,
       ubicaciones_contadas: f.precision.ubicaciones_contadas,
     }));
-  }, [query.data]);
+  }, [query.data, t.dominio.tipoSesion]);
 
   const columns: Array<TableColumn<FilaPrecision>> = [
     { key: "numero", header: "Sesión", code: true, render: (f) => f.sesion.numero },
     {
       key: "tipo",
       header: "Tipo",
-      render: (f) => <Badge tone="info">{TIPO_SESION_LABEL[f.sesion.tipo]}</Badge>,
+      render: (f) => <Badge tone="info">{t.dominio.tipoSesion[f.sesion.tipo]}</Badge>,
     },
     {
       key: "fecha_fin",

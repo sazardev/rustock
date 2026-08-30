@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useT } from "../shared/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { listarMovimientos, listarUsuarios } from "../shared/backend";
 import { esPaginado, type TipoMovimiento } from "../shared/types";
@@ -16,7 +17,7 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import { PATH } from "../app/route-paths";
-import { TIPO_MOVIMIENTO_LABEL, mensajeError } from "../shared/format";
+import { mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 const TIPOS: TipoMovimiento[] = ["ENTRADA", "SALIDA", "TRASLADO", "AJUSTE", "CONSUMO"];
@@ -28,6 +29,7 @@ interface FilaUsuario {
 }
 
 export function ReporteUsuariosPage() {
+  const t = useT();
   const [tipo, setTipo] = useState<TipoMovimiento | "">("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
@@ -127,9 +129,9 @@ export function ReporteUsuariosPage() {
             onChange={(e) => setTipo(e.target.value as TipoMovimiento | "")}
           >
             <option value="">Todos los tipos</option>
-            {TIPOS.map((t) => (
-              <option key={t} value={t}>
-                {TIPO_MOVIMIENTO_LABEL[t]}
+            {TIPOS.map((tipo) => (
+              <option key={tipo} value={tipo}>
+                {t.dominio.tipoMovimiento[tipo]}
               </option>
             ))}
           </Select>

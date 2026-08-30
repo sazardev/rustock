@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useT } from "../shared/i18n";
 import { useNavigate, useParams } from "react-router";
 import { kardexProducto, listarProductos } from "../shared/backend";
 import { esPaginado, type KardexLinea } from "../shared/types";
@@ -13,14 +14,10 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import { PATH, reporteKardexProducto } from "../app/route-paths";
-import {
-  TIPO_MOVIMIENTO_LABEL,
-  TIPO_MOVIMIENTO_TONE,
-  formatearFecha,
-  mensajeError,
-} from "../shared/format";
+import { TIPO_MOVIMIENTO_TONE, formatearFecha, mensajeError } from "../shared/format";
 
 export function ReporteKardexPage() {
+  const t = useT();
   const { productoId } = useParams<{ productoId?: string }>();
   const navigate = useNavigate();
 
@@ -43,7 +40,7 @@ export function ReporteKardexPage() {
       key: "tipo",
       header: "Tipo",
       render: (l) => (
-        <Badge tone={TIPO_MOVIMIENTO_TONE[l.tipo]}>{TIPO_MOVIMIENTO_LABEL[l.tipo]}</Badge>
+        <Badge tone={TIPO_MOVIMIENTO_TONE[l.tipo]}>{t.dominio.tipoMovimiento[l.tipo]}</Badge>
       ),
     },
     {

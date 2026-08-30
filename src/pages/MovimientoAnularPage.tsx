@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useT } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { anularMovimiento, obtenerMovimiento } from "../shared/backend";
 import { Button, Card, DetailList, ErrorPanel, Link, PageHeader } from "../shared/ui";
 import { movimientoDetalle, PATH } from "../app/route-paths";
-import { ESTADO_MOVIMIENTO_LABEL, TIPO_MOVIMIENTO_LABEL, mensajeError } from "../shared/format";
+import { mensajeError } from "../shared/format";
 
 export function MovimientoAnularPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const movimientoId = id as string;
   const navigate = useNavigate();
@@ -56,9 +58,9 @@ export function MovimientoAnularPage() {
           <DetailList
             items={[
               { label: "Número", value: movimiento.numero, code: true },
-              { label: "Tipo", value: TIPO_MOVIMIENTO_LABEL[movimiento.tipo] },
+              { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
               { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
-              { label: "Estado actual", value: ESTADO_MOVIMIENTO_LABEL[movimiento.estado] },
+              { label: "Estado actual", value: t.dominio.estadoMovimiento[movimiento.estado] },
             ]}
           />
         </Card.Body>
@@ -66,7 +68,7 @@ export function MovimientoAnularPage() {
 
       {!puedeAnular ? (
         <ErrorPanel title="No se puede anular" className="mt-4">
-          Este movimiento está en estado {ESTADO_MOVIMIENTO_LABEL[movimiento.estado]}; solo los
+          Este movimiento está en estado {t.dominio.estadoMovimiento[movimiento.estado]}; solo los
           movimientos APROBADOS pueden anularse.
         </ErrorPanel>
       ) : null}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ignorarAlerta, listarAlertas } from "../shared/backend";
 import type { Alerta, EstadoAlerta } from "../shared/types";
@@ -21,10 +22,8 @@ import {
   UbicacionRef,
 } from "../shared/refs";
 import {
-  ESTADO_ALERTA_LABEL,
   ESTADO_ALERTA_TONE,
   SEVERIDAD_ALERTA_TONE,
-  TIPO_ALERTA_LABEL,
   formatearFecha,
   mensajeError,
 } from "../shared/format";
@@ -68,6 +67,7 @@ function AlertaEntidadRef({ entidad, entidadId }: { entidad: string; entidadId: 
 }
 
 export function AlertasPage() {
+  const t = useT();
   const [estado, setEstado] = useState<EstadoAlerta>("ABIERTA");
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -108,7 +108,7 @@ export function AlertasPage() {
       header: "Tipo",
       render: (a) => (
         <Badge tone={SEVERIDAD_ALERTA_TONE[a.severidad]} icon="alerta">
-          {TIPO_ALERTA_LABEL[a.tipo] ?? a.tipo}
+          {t.dominio.tipoAlerta[a.tipo] ?? a.tipo}
         </Badge>
       ),
     },
@@ -128,7 +128,7 @@ export function AlertasPage() {
       key: "estado",
       header: "Estado",
       render: (a) => (
-        <Badge tone={ESTADO_ALERTA_TONE[a.estado]}>{ESTADO_ALERTA_LABEL[a.estado]}</Badge>
+        <Badge tone={ESTADO_ALERTA_TONE[a.estado]}>{t.dominio.estadoAlerta[a.estado]}</Badge>
       ),
     },
   ];

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useT } from "../shared/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { listarClientes, listarMovimientos, listarProveedores } from "../shared/backend";
@@ -21,14 +22,7 @@ import {
 } from "../shared/ui";
 import { ClienteRef, ProveedorRef } from "../shared/refs";
 import { movimientoDetalle, PATH } from "../app/route-paths";
-import {
-  ESTADO_MOVIMIENTO_LABEL,
-  ESTADO_MOVIMIENTO_TONE,
-  SUB_TIPO_MOVIMIENTO_LABEL,
-  TIPO_MOVIMIENTO_LABEL,
-  formatearFecha,
-  mensajeError,
-} from "../shared/format";
+import { ESTADO_MOVIMIENTO_TONE, formatearFecha, mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
 
 export interface ConfigReporteTipo {
@@ -80,6 +74,7 @@ const CAMPOS_EXPORT = [
 ];
 
 export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTipo }) {
+  const t = useT();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [estado, setEstado] = useState<EstadoMovimiento | "">("");
@@ -151,9 +146,9 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
     () =>
       filasTodo.map((m) => ({
         numero: m.numero,
-        tipo: TIPO_MOVIMIENTO_LABEL[m.tipo],
-        sub_tipo: SUB_TIPO_MOVIMIENTO_LABEL[m.sub_tipo],
-        estado: ESTADO_MOVIMIENTO_LABEL[m.estado],
+        tipo: t.dominio.tipoMovimiento[m.tipo],
+        sub_tipo: t.dominio.subTipoMovimiento[m.sub_tipo],
+        estado: t.dominio.estadoMovimiento[m.estado],
         fecha_movimiento: formatearFecha(m.fecha_movimiento),
         documento_referencia: m.documento_referencia ?? "",
         motivo: m.motivo ?? "",
@@ -161,7 +156,7 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
         cliente_id: m.cliente_id ?? "",
         usuario_id: m.created_by,
       })),
-    [filasTodo],
+    [t, filasTodo],
   );
 
   const listado = tablaQuery.data && esPaginado(tablaQuery.data) ? tablaQuery.data : null;
@@ -169,12 +164,18 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
 
   const columns: Array<TableColumn<Movimiento>> = [
     { key: "numero", header: "Número", code: true, render: (m) => m.numero },
-    { key: "sub_tipo", header: "Sub-tipo", render: (m) => SUB_TIPO_MOVIMIENTO_LABEL[m.sub_tipo] },
+    {
+      key: "sub_tipo",
+      header: "Sub-tipo",
+      render: (m) => t.dominio.subTipoMovimiento[m.sub_tipo],
+    },
     {
       key: "estado",
       header: "Estado",
       render: (m) => (
-        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>{ESTADO_MOVIMIENTO_LABEL[m.estado]}</Badge>
+        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
+          {t.dominio.estadoMovimiento[m.estado]}
+        </Badge>
       ),
     },
     { key: "fecha_movimiento", header: "Fecha", render: (m) => formatearFecha(m.fecha_movimiento) },
@@ -246,7 +247,7 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
               ["BORRADOR", "PENDIENTE_APROBACION", "APROBADO", "ANULADO"] as EstadoMovimiento[]
             ).map((e) => (
               <option key={e} value={e}>
-                {ESTADO_MOVIMIENTO_LABEL[e]}
+                {t.dominio.estadoMovimiento[e]}
               </option>
             ))}
           </Select>
@@ -322,11 +323,12 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
               <p className="text-base text-gray-500">Cargando…</p>
             ) : totales.length > 0 ? (
               <DetailList
-                items={totales.map((t) => ({
+                items={totales.map((fila) => ({
                   label:
-                    SUB_TIPO_MOVIMIENTO_LABEL[t.key as keyof typeof SUB_TIPO_MOVIMIENTO_LABEL] ??
-                    t.key,
-                  value: t.count.toLocaleString(),
+                    t.dominio.subTipoMovimiento[
+                      fila.key as keyof typeof t.dominio.subTipoMovimiento
+                    ] ?? fila.key,
+                  value: fila.count.toLocaleString(),
                   code: true,
                 }))}
               />

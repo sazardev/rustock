@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useT, type Diccionario } from "../shared/i18n";
 import { obtenerDashboard, obtenerKpisGenerales, listarMovimientos } from "../shared/backend";
 import { esPaginado, type Movimiento } from "../shared/types";
 import {
@@ -13,41 +14,46 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import {
-  ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
   TIPO_MOVIMIENTO_ICON,
-  TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
   mensajeError,
 } from "../shared/format";
 
-const columns: Array<TableColumn<Movimiento>> = [
-  { key: "numero", header: "Número", code: true, render: (m) => m.numero },
-  {
-    key: "tipo",
-    header: "Tipo",
-    render: (m) => (
-      <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
-        {TIPO_MOVIMIENTO_LABEL[m.tipo]}
-      </Badge>
-    ),
-  },
-  {
-    key: "fecha_movimiento",
-    header: "Fecha",
-    render: (m) => formatearFecha(m.fecha_movimiento),
-  },
-  {
-    key: "estado",
-    header: "Estado",
-    render: (m) => (
-      <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>{ESTADO_MOVIMIENTO_LABEL[m.estado]}</Badge>
-    ),
-  },
-];
+/** Columnas del panel, en el idioma activo (SPEC §17). */
+function columnasDe(t: Diccionario): Array<TableColumn<Movimiento>> {
+  return [
+    { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+    {
+      key: "tipo",
+      header: "Tipo",
+      render: (m) => (
+        <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
+          {t.dominio.tipoMovimiento[m.tipo]}
+        </Badge>
+      ),
+    },
+    {
+      key: "fecha_movimiento",
+      header: "Fecha",
+      render: (m) => formatearFecha(m.fecha_movimiento),
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (m) => (
+        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
+          {t.dominio.estadoMovimiento[m.estado]}
+        </Badge>
+      ),
+    },
+  ];
+}
 
 export function DashboardPage() {
+  const t = useT();
+  const columns = columnasDe(t);
   const dashboardQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: obtenerDashboard,

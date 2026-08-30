@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useT } from "../shared/i18n";
 import { useParams } from "react-router";
 import {
   diferenciasSesion,
@@ -24,15 +25,14 @@ import {
 import { AlmacenRef, LoteRef, ProductoRef, UbicacionRef } from "../shared/refs";
 import { PATH, sesionInventarioCerrar, sesionInventarioConteos } from "../app/route-paths";
 import {
-  ESTADO_SESION_LABEL,
   ESTADO_SESION_TONE,
-  TIPO_DIFERENCIA_LABEL,
   TIPO_DIFERENCIA_TONE,
   formatearFecha,
   mensajeError,
 } from "../shared/format";
 
 export function SesionInventarioDetallePage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
   const queryClient = useQueryClient();
@@ -100,7 +100,7 @@ export function SesionInventarioDetallePage() {
       key: "tipo",
       header: "Tipo",
       render: (d) => (
-        <Badge tone={TIPO_DIFERENCIA_TONE[d.tipo]}>{TIPO_DIFERENCIA_LABEL[d.tipo]}</Badge>
+        <Badge tone={TIPO_DIFERENCIA_TONE[d.tipo]}>{t.dominio.tipoDiferencia[d.tipo]}</Badge>
       ),
     },
   ];
@@ -123,7 +123,7 @@ export function SesionInventarioDetallePage() {
         title={sesion.numero}
         description={
           <Badge tone={ESTADO_SESION_TONE[sesion.estado]}>
-            {ESTADO_SESION_LABEL[sesion.estado]}
+            {t.dominio.estadoSesion[sesion.estado]}
           </Badge>
         }
         actions={

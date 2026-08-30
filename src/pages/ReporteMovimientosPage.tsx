@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useT } from "../shared/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
@@ -33,11 +34,8 @@ import {
 } from "../shared/ui";
 import { movimientoDetalle, PATH } from "../app/route-paths";
 import {
-  ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
-  SUB_TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_ICON,
-  TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
   mensajeError,
@@ -84,6 +82,7 @@ function etiquetaDia(iso: string): string {
 }
 
 export function ReporteMovimientosPage() {
+  const t = useT();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [tipo, setTipo] = useState<TipoMovimiento | "">("");
@@ -211,9 +210,9 @@ export function ReporteMovimientosPage() {
     () =>
       filasTodo.map((m) => ({
         numero: m.numero,
-        tipo: TIPO_MOVIMIENTO_LABEL[m.tipo],
-        sub_tipo: SUB_TIPO_MOVIMIENTO_LABEL[m.sub_tipo],
-        estado: ESTADO_MOVIMIENTO_LABEL[m.estado],
+        tipo: t.dominio.tipoMovimiento[m.tipo],
+        sub_tipo: t.dominio.subTipoMovimiento[m.sub_tipo],
+        estado: t.dominio.estadoMovimiento[m.estado],
         fecha_movimiento: formatearFecha(m.fecha_movimiento),
         documento_referencia: m.documento_referencia ?? "",
         motivo: m.motivo ?? "",
@@ -229,7 +228,7 @@ export function ReporteMovimientosPage() {
           ? (ubicacionPorId.get(m.destino_ubicacion_id)?.codigo ?? m.destino_ubicacion_id)
           : "",
       })),
-    [filasTodo, proveedorPorId, clientePorId, usuarioPorId, ubicacionPorId],
+    [t, filasTodo, proveedorPorId, clientePorId, usuarioPorId, ubicacionPorId],
   );
 
   const listado = tablaQuery.data && esPaginado(tablaQuery.data) ? tablaQuery.data : null;
@@ -242,20 +241,22 @@ export function ReporteMovimientosPage() {
       header: "Tipo",
       render: (m) => (
         <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
-          {TIPO_MOVIMIENTO_LABEL[m.tipo]}
+          {t.dominio.tipoMovimiento[m.tipo]}
         </Badge>
       ),
     },
     {
       key: "sub_tipo",
       header: "Sub-tipo",
-      render: (m) => SUB_TIPO_MOVIMIENTO_LABEL[m.sub_tipo],
+      render: (m) => t.dominio.subTipoMovimiento[m.sub_tipo],
     },
     {
       key: "estado",
       header: "Estado",
       render: (m) => (
-        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>{ESTADO_MOVIMIENTO_LABEL[m.estado]}</Badge>
+        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
+          {t.dominio.estadoMovimiento[m.estado]}
+        </Badge>
       ),
     },
     { key: "fecha_movimiento", header: "Fecha", render: (m) => formatearFecha(m.fecha_movimiento) },
@@ -316,9 +317,9 @@ export function ReporteMovimientosPage() {
             }}
           >
             <option value="">Todos los tipos</option>
-            {TIPOS.map((t) => (
-              <option key={t} value={t}>
-                {TIPO_MOVIMIENTO_LABEL[t]}
+            {TIPOS.map((valor) => (
+              <option key={valor} value={valor}>
+                {t.dominio.tipoMovimiento[valor]}
               </option>
             ))}
           </Select>
@@ -335,7 +336,7 @@ export function ReporteMovimientosPage() {
             <option value="">Todos los sub-tipos</option>
             {SUB_TIPOS.map((s) => (
               <option key={s} value={s}>
-                {SUB_TIPO_MOVIMIENTO_LABEL[s]}
+                {t.dominio.subTipoMovimiento[s]}
               </option>
             ))}
           </Select>
@@ -352,7 +353,7 @@ export function ReporteMovimientosPage() {
             <option value="">Todos los estados</option>
             {ESTADOS.map((e) => (
               <option key={e} value={e}>
-                {ESTADO_MOVIMIENTO_LABEL[e]}
+                {t.dominio.estadoMovimiento[e]}
               </option>
             ))}
           </Select>
@@ -483,9 +484,9 @@ export function ReporteMovimientosPage() {
               <p className="text-base text-gray-500">Cargando…</p>
             ) : (
               <DetailList
-                items={TIPOS.map((t) => ({
-                  label: TIPO_MOVIMIENTO_LABEL[t],
-                  value: conteoPorTipo(t).toLocaleString(),
+                items={TIPOS.map((tipo) => ({
+                  label: t.dominio.tipoMovimiento[tipo],
+                  value: conteoPorTipo(tipo).toLocaleString(),
                   code: true,
                 }))}
               />

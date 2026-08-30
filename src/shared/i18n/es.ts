@@ -339,6 +339,86 @@ export const es = {
     historialCaja: "Historial de la caja",
   },
 
+  // ============ Vocabulario del dominio ============
+  // Los estados y tipos que el backend guarda como códigos y la interfaz
+  // muestra como palabras. Se traducen aquí, no en el backend: el código es
+  // el dato, la palabra es presentación.
+  dominio: {
+    tipoMovimiento: {
+      ENTRADA: "Entrada",
+      SALIDA: "Salida",
+      TRASLADO: "Traslado",
+      AJUSTE: "Ajuste",
+      CONSUMO: "Consumo",
+    },
+    subTipoMovimiento: {
+      COMPRA: "Compra",
+      DEVOLUCION_CLIENTE: "Devolución de cliente",
+      AJUSTE_POSITIVO: "Ajuste positivo",
+      INICIAL: "Inicial",
+      TRASLADO_ENTRADA: "Traslado (entrada)",
+      CLIENTE: "Cliente",
+      DEVOLUCION_PROVEEDOR: "Devolución a proveedor",
+      MERMA: "Merma",
+      AJUSTE_NEGATIVO: "Ajuste negativo",
+      TRASLADO_SALIDA: "Traslado (salida)",
+    },
+    estadoMovimiento: {
+      BORRADOR: "Borrador",
+      PENDIENTE_APROBACION: "Pendiente de aprobación",
+      APROBADO: "Aprobado",
+      ANULADO: "Anulado",
+    },
+    estadoAlerta: {
+      ABIERTA: "Abierta",
+      RESUELTA: "Resuelta",
+      IGNORADA: "Archivada",
+    },
+    tipoAlerta: {
+      STOCK_BAJO: "Stock bajo",
+      STOCK_EXCEDIDO: "Stock excedido",
+      UBICACION_SOBRECAPACIDAD: "Ubicación sobrecapacidad",
+      LOTE_POR_VENCER: "Lote por vencer",
+      LOTE_VENCIDO: "Lote vencido",
+      DIFERENCIA_INVENTARIO: "Diferencia de inventario",
+      MOVIMIENTO_PENDIENTE: "Movimiento pendiente",
+    },
+    estadoSesion: {
+      PLANEADA: "Planeada",
+      EN_CURSO: "En curso",
+      CERRADA: "Cerrada",
+      ANULADA: "Anulada",
+    },
+    tipoSesion: {
+      COMPLETO: "Completo",
+      CICLICO: "Cíclico",
+    },
+    tipoDiferencia: {
+      conciliado: "Conciliado",
+      sobrante: "Sobrante",
+      faltante: "Faltante",
+    },
+  },
+
+  // ============ Movimientos ============
+  mov: {
+    titulo: "Movimientos",
+    descripcion: "Entradas, salidas, traslados y ajustes de stock.",
+    nuevo: "Nuevo movimiento",
+    crearPrimero: "Crear movimiento",
+    sinMovimientos: "No hay movimientos todavía",
+    sinMovimientosDesc: "Registre el primer movimiento para comenzar a operar.",
+    noSePudoCargar: "No se pudieron cargar los movimientos",
+    todosLosTipos: "Todos los tipos",
+    todosLosEstados: "Todos los estados",
+    filtrarPorTipo: "Filtrar por tipo",
+    filtrarPorEstado: "Filtrar por estado",
+    numero: "Número",
+    subTipo: "Sub-tipo",
+    documento: "Documento",
+    nota: "Los movimientos se aprueban en su página de detalle. Cada anulación genera un movimiento inverso.",
+  },
+
   // ============ Errores del backend (SPEC §17.3) ============
   // La clave es el código estable que devuelve Rust; nunca cambia aunque se
   // reescriba el texto.

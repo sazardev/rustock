@@ -1,17 +1,14 @@
 import { useState } from "react";
+import { useT } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { aprobarMovimiento, obtenerMovimiento } from "../shared/backend";
 import { Button, Card, DetailList, ErrorPanel, Link, PageHeader } from "../shared/ui";
 import { movimientoDetalle, PATH } from "../app/route-paths";
-import {
-  ESTADO_MOVIMIENTO_LABEL,
-  TIPO_MOVIMIENTO_LABEL,
-  formatearFecha,
-  mensajeError,
-} from "../shared/format";
+import { formatearFecha, mensajeError } from "../shared/format";
 
 export function MovimientoAprobarPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const movimientoId = id as string;
   const navigate = useNavigate();
@@ -62,9 +59,9 @@ export function MovimientoAprobarPage() {
           <DetailList
             items={[
               { label: "Número", value: movimiento.numero, code: true },
-              { label: "Tipo", value: TIPO_MOVIMIENTO_LABEL[movimiento.tipo] },
+              { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
               { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
-              { label: "Estado actual", value: ESTADO_MOVIMIENTO_LABEL[movimiento.estado] },
+              { label: "Estado actual", value: t.dominio.estadoMovimiento[movimiento.estado] },
               { label: "Fecha del movimiento", value: formatearFecha(movimiento.fecha_movimiento) },
               { label: "Motivo", value: movimiento.motivo ?? "—" },
             ]}
@@ -74,7 +71,7 @@ export function MovimientoAprobarPage() {
 
       {!puedeAprobar ? (
         <ErrorPanel title="No se puede aprobar" className="mt-4">
-          Este movimiento está en estado {ESTADO_MOVIMIENTO_LABEL[movimiento.estado]} y no admite
+          Este movimiento está en estado {t.dominio.estadoMovimiento[movimiento.estado]} y no admite
           aprobación.
         </ErrorPanel>
       ) : null}

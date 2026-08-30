@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useT } from "../shared/i18n";
 import { useNavigate, useSearchParams } from "react-router";
 import { listarMovimientos, obtenerMovimiento } from "../shared/backend";
 import {
@@ -24,11 +25,8 @@ import {
 import { movimientoDetalle, PATH } from "../app/route-paths";
 import { FavoritosFiltros } from "../shared/favoritos";
 import {
-  ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
-  SUB_TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_ICON,
-  TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
   mensajeError,
@@ -39,6 +37,7 @@ const ESTADOS: EstadoMovimiento[] = ["BORRADOR", "PENDIENTE_APROBACION", "APROBA
 const PAGE_SIZE = 20;
 
 export function MovimientosPage() {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -89,37 +88,39 @@ export function MovimientosPage() {
   }
 
   const columns: Array<TableColumn<Movimiento>> = [
-    { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+    { key: "numero", header: t.mov.numero, code: true, render: (m) => m.numero },
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (m) => (
         <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
-          {TIPO_MOVIMIENTO_LABEL[m.tipo]}
+          {t.dominio.tipoMovimiento[m.tipo]}
         </Badge>
       ),
     },
     {
       key: "sub_tipo",
-      header: "Sub-tipo",
+      header: t.mov.subTipo,
       code: true,
-      render: (m) => SUB_TIPO_MOVIMIENTO_LABEL[m.sub_tipo],
+      render: (m) => t.dominio.subTipoMovimiento[m.sub_tipo],
     },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (m) => (
-        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>{ESTADO_MOVIMIENTO_LABEL[m.estado]}</Badge>
+        <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
+          {t.dominio.estadoMovimiento[m.estado]}
+        </Badge>
       ),
     },
     {
       key: "fecha_movimiento",
-      header: "Fecha",
+      header: t.comun.fecha,
       render: (m) => formatearFecha(m.fecha_movimiento),
     },
     {
       key: "documento_referencia",
-      header: "Documento",
+      header: t.mov.documento,
       code: true,
       render: (m) => m.documento_referencia ?? "—",
     },
@@ -127,45 +128,43 @@ export function MovimientosPage() {
 
   return (
     <>
-      <PageHeader title="Movimientos" />
+      <PageHeader title={t.mov.titulo} description={t.mov.descripcion} />
 
       {query.error ? (
-        <ErrorPanel title="No se pudieron cargar los movimientos">
-          {mensajeError(query.error)}
-        </ErrorPanel>
+        <ErrorPanel title={t.mov.noSePudoCargar}>{mensajeError(query.error)}</ErrorPanel>
       ) : null}
 
       <FilterBar
         action={
           <ButtonLink variant="primary" icon="agregar" href={PATH.movimientosNuevo}>
-            Nuevo movimiento
+            {t.mov.nuevo}
           </ButtonLink>
         }
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por tipo"
+            aria-label={t.mov.filtrarPorTipo}
             value={tipo}
             onChange={(e) => actualizarFiltros({ tipo: e.target.value, page: 1 })}
           >
-            <option value="">Todos los tipos</option>
-            {TIPOS.map((t) => (
-              <option key={t} value={t}>
-                {TIPO_MOVIMIENTO_LABEL[t]}
+            <option value="">{t.mov.todosLosTipos}</option>
+            {TIPOS.map((valor) => (
+              <option key={valor} value={valor}>
+                {t.dominio.tipoMovimiento[valor]}
               </option>
             ))}
           </Select>
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por estado"
+            aria-label={t.mov.filtrarPorEstado}
             value={estado}
             onChange={(e) => actualizarFiltros({ estado: e.target.value, page: 1 })}
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t.mov.todosLosEstados}</option>
             {ESTADOS.map((e) => (
               <option key={e} value={e}>
-                {ESTADO_MOVIMIENTO_LABEL[e]}
+                {t.dominio.estadoMovimiento[e]}
               </option>
             ))}
           </Select>
@@ -192,11 +191,11 @@ export function MovimientosPage() {
           loading={query.isLoading}
           onRowClick={(m) => navigate(movimientoDetalle(m.id))}
           prefetch={prefetchDetalle}
-          emptyTitle="No hay movimientos todavía"
-          emptyDescription="Registre el primer movimiento para comenzar a operar."
+          emptyTitle={t.mov.sinMovimientos}
+          emptyDescription={t.mov.sinMovimientosDesc}
           emptyAction={
             <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.movimientosNuevo}>
-              Crear movimiento
+              {t.mov.crearPrimero}
             </ButtonLink>
           }
         />

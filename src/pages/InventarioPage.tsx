@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../shared/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { listarSesionesInventario, obtenerSesionInventario } from "../shared/backend";
@@ -18,17 +19,13 @@ import {
 } from "../shared/ui";
 import { AlmacenRef } from "../shared/refs";
 import { PATH, sesionInventarioDetalle } from "../app/route-paths";
-import {
-  ESTADO_SESION_LABEL,
-  ESTADO_SESION_TONE,
-  formatearFecha,
-  mensajeError,
-} from "../shared/format";
+import { ESTADO_SESION_TONE, formatearFecha, mensajeError } from "../shared/format";
 
 const ESTADOS: EstadoSesionInventario[] = ["PLANEADA", "EN_CURSO", "CERRADA", "ANULADA"];
 const PAGE_SIZE = 20;
 
 export function InventarioPage() {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -68,7 +65,7 @@ export function InventarioPage() {
       key: "estado",
       header: "Estado",
       render: (s) => (
-        <Badge tone={ESTADO_SESION_TONE[s.estado]}>{ESTADO_SESION_LABEL[s.estado]}</Badge>
+        <Badge tone={ESTADO_SESION_TONE[s.estado]}>{t.dominio.estadoSesion[s.estado]}</Badge>
       ),
     },
     { key: "fecha_inicio", header: "Inicio", render: (s) => formatearFecha(s.fecha_inicio) },
@@ -103,7 +100,7 @@ export function InventarioPage() {
             <option value="">Todos los estados</option>
             {ESTADOS.map((e) => (
               <option key={e} value={e}>
-                {ESTADO_SESION_LABEL[e]}
+                {t.dominio.estadoSesion[e]}
               </option>
             ))}
           </Select>

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useT } from "../shared/i18n";
 import { useParams } from "react-router";
 import { enviarAAprobacion, listarLineasMovimiento, obtenerMovimiento } from "../shared/backend";
 import { esPaginado, type LineaMovimiento } from "../shared/types";
@@ -29,10 +30,7 @@ import {
 import { MovimientoComentarios } from "./MovimientoComentarios";
 import { movimientoAnular, movimientoAprobar, movimientoEditar, PATH } from "../app/route-paths";
 import {
-  ESTADO_MOVIMIENTO_LABEL,
   ESTADO_MOVIMIENTO_TONE,
-  SUB_TIPO_MOVIMIENTO_LABEL,
-  TIPO_MOVIMIENTO_LABEL,
   TIPO_MOVIMIENTO_TONE,
   formatearFecha,
   mensajeError,
@@ -40,6 +38,7 @@ import {
 import { useSession } from "../shared/session";
 
 export function MovimientoDetallePage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const movimientoId = id as string;
   const queryClient = useQueryClient();
@@ -105,8 +104,8 @@ export function MovimientoDetallePage() {
   }
 
   const datosGenerales = [
-    { label: "Tipo", value: TIPO_MOVIMIENTO_LABEL[movimiento.tipo] },
-    { label: "Sub-tipo", value: SUB_TIPO_MOVIMIENTO_LABEL[movimiento.sub_tipo], code: true },
+    { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
+    { label: "Sub-tipo", value: t.dominio.subTipoMovimiento[movimiento.sub_tipo], code: true },
     { label: "Fecha del movimiento", value: formatearFecha(movimiento.fecha_movimiento) },
     { label: "Documento de referencia", value: movimiento.documento_referencia ?? "—", code: true },
     // Trazabilidad de contraparte (SPEC §6.4): de quién vino / a quién fue.
@@ -149,10 +148,10 @@ export function MovimientoDetallePage() {
         description={
           <div className="flex items-center gap-2">
             <Badge tone={TIPO_MOVIMIENTO_TONE[movimiento.tipo]}>
-              {TIPO_MOVIMIENTO_LABEL[movimiento.tipo]}
+              {t.dominio.tipoMovimiento[movimiento.tipo]}
             </Badge>
             <Badge tone={ESTADO_MOVIMIENTO_TONE[movimiento.estado]}>
-              {ESTADO_MOVIMIENTO_LABEL[movimiento.estado]}
+              {t.dominio.estadoMovimiento[movimiento.estado]}
             </Badge>
           </div>
         }
