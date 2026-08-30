@@ -1480,6 +1480,436 @@ const CH_BRANCH: ManualCapitulo = {
   ],
 };
 
+const CH_MOVEMENT_MODEL: ManualCapitulo = {
+  id: "m04-modelo",
+  titulo: "The general movement model",
+  icono: "movements",
+  resumen: "The fields, lines and audit rules of every movement.",
+  terminosClave: ["movimiento", "entrada", "salida", "traslado", "ajuste", "saldo"],
+  relacionados: ["m04-ciclo", "m04-fifo"],
+  secciones: [
+    {
+      titulo: "Header",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["id", "An immutable, unique UUID."],
+            [
+              "numero",
+              "A sequential text, unique per year and warehouse, e.g. MOV-2026-000123 (or MOV-ALM-PRINCIPAL-2026-000006).",
+            ],
+            ["tipo", "INBOUND, OUTBOUND, TRANSFER, ADJUSTMENT, CONSUMPTION."],
+            [
+              "sub_tipo",
+              "Depending on the type: PURCHASE, CUSTOMER_RETURN, POSITIVE_ADJUSTMENT, OPENING, TRANSFER_IN; CUSTOMER, SUPPLIER_RETURN, SHRINKAGE, NEGATIVE_ADJUSTMENT, TRANSFER_OUT.",
+            ],
+            ["estado", "DRAFT, PENDING_APPROVAL, APPROVED, CANCELLED."],
+            [
+              "fecha_movimiento",
+              "The date and time of the fact (it may differ from created_at). Stored in UTC, displayed in the configured zone.",
+            ],
+            [
+              "motivo",
+              "Text; required for POSITIVE/NEGATIVE_ADJUSTMENT and SHRINKAGE (≥3 characters), optional otherwise.",
+            ],
+            [
+              "origen_ubicacion_id",
+              "A reference to the source location; for outbound movements, transfers and negative adjustments.",
+            ],
+            [
+              "destino_ubicacion_id",
+              "A reference to the destination location; for inbound movements, transfers and positive adjustments.",
+            ],
+            [
+              "proveedor_id",
+              "A reference to the supplier; for PURCHASE inbound and SUPPLIER_RETURN outbound movements.",
+            ],
+            [
+              "cliente_id",
+              "A reference to the customer; for CUSTOMER outbound and CUSTOMER_RETURN inbound movements.",
+            ],
+            [
+              "sesion_inventario_id",
+              "A reference to the inventory session if the movement comes from a count (an automatic adjustment on closing).",
+            ],
+            [
+              "documento_referencia",
+              "Optional text: a PO number, delivery note, invoice, and so on. It links inter-warehouse transfers.",
+            ],
+            ["notas", "Optional text: general observations."],
+            ["created_by / created_at", "Who created it and when (audit)."],
+            ["approved_by / approved_at", "Who approved it and when (where applicable)."],
+            ["anulado_by / anulado_at", "Who cancelled it and when (where applicable)."],
+            [
+              "movimiento_inverso_id",
+              "A reference to the reversing movement generated when an APPROVED one is cancelled (a mutual reference).",
+            ],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Lines",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Line field", "Rule"],
+          filas: [
+            ["producto_id", "Required; the product must be active."],
+            [
+              "lote_id",
+              "Required if the product tracks lots; it must exist and must not be expired for the CUSTOMER/SUPPLIER_RETURN sub-types.",
+            ],
+            ["cantidad", "A number >0, in base UOM."],
+            [
+              "origen_ubicacion_id",
+              "For outbound movements and transfers; it must have enough balance.",
+            ],
+            [
+              "destino_ubicacion_id",
+              "For inbound movements and transfers; the destination capacity is validated.",
+            ],
+            [
+              "caja_origen_id / caja_destino_id",
+              "Optional; the container restriction is validated if the container is restricted to a product/lot.",
+            ],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "A movement can have N lines and split one quantity across several lots or locations (multiple rows). For example: a multi-lot purchase inbound with the same product in two different lots.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Movement audit",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Who (created_by, approved_by, anulado_by), What (type, product, quantity), Where (source/destination, with the warehouse resolved transitively), When (fecha_movimiento, created_at, approved_at), Why (reason, reference document, notes).",
+            "Every transition is recorded in the audit with before/after, and can be queried at /historial and /reportes/auditoria.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_LIFECYCLE: ManualCapitulo = {
+  id: "m04-ciclo",
+  titulo: "Lifecycle and statuses",
+  icono: "ajuste",
+  resumen:
+    "DRAFT → PENDING → APPROVED (the only one that changes the balance) → CANCELLED (generates the reverse).",
+  terminosClave: ["borrador", "pendiente-aprobacion", "aprobado", "anulado", "movimiento-inverso"],
+  relacionados: ["m04-modelo", "m04-ajustes"],
+  secciones: [
+    {
+      titulo: "Statuses and transitions",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "DRAFT → PENDING_APPROVAL → APPROVED → (the effect is applied). From DRAFT or PENDING you can go to CANCELLED.",
+        },
+        {
+          tipo: "tabla",
+          cabeceras: ["Status", "Effect on stock", "Editable"],
+          filas: [
+            ["DRAFT", "No", "Yes, by its creator only."],
+            ["PENDING_APPROVAL", "No", "Yes, by its creator only."],
+            ["APPROVED", "Yes (atomically)", "No (immutable; only cancellable)."],
+            ["CANCELLED", "No (generates the reverse)", "No."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Approving validates the balance, that the lot is not expired, capacity, lot tracking, containers, that no session blocks it, and that the balance never goes negative.",
+            "Cancelling requires movimiento:anular; if APPROVED it generates an atomic reverse with a mutual movimiento_inverso_id reference.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Editing movements",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "EditarMovimiento (type/sub-type/number stay fixed): the creator only, and only while DRAFT/PENDING.",
+            "Route /movimientos/:id/editar, plus the Edit button on the detail.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Create and approve at once",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "If requiere_aprobacion = false, the form offers a Create and approve at once toggle when the user can approve.",
+            "It chains create + approve. If approval is required, it does not appear.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_INBOUND: ManualCapitulo = {
+  id: "m04-entradas",
+  titulo: "Inbound movements",
+  icono: "entrada",
+  resumen: "PURCHASE, CUSTOMER_RETURN, POSITIVE_ADJUSTMENT, OPENING and TRANSFER_IN.",
+  terminosClave: ["entrada", "proveedor", "ajuste"],
+  relacionados: ["m04-modelo", "m07-recepcion"],
+  secciones: [
+    {
+      titulo: "Types",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Sub-type", "Source", "Destination", "Notes"],
+          filas: [
+            [
+              "PURCHASE",
+              "Supplier",
+              "Location (receiving or final)",
+              "Validates that the product is active, the lot valid and unexpired, and the destination capacity. It can split across several lots or locations. The PO document is optional.",
+            ],
+            [
+              "CUSTOMER_RETURN",
+              "Customer",
+              "A RETURNS location is suggested",
+              "If it tracks lots, it records the source lot or creates one with the expiry given. It does not reopen the original outbound movement.",
+            ],
+            [
+              "POSITIVE_ADJUSTMENT",
+              "— (a justified cause)",
+              "Location",
+              "Always a reason of ≥3. Permission ajuste:crear. It increases stock.",
+            ],
+            [
+              "OPENING",
+              "— (opening stock)",
+              "Location",
+              "The initial load before normal operation. It requires configuracion:ejecutar (ADMIN/MANAGER only). Identified as start-up stock, with an optional initial session.",
+            ],
+            [
+              "TRANSFER_IN",
+              "See transfers (9)",
+              "Destination location",
+              "The destination half of an intra- or inter-warehouse transfer. Generated automatically when the transfer is approved.",
+            ],
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_OUTBOUND: ManualCapitulo = {
+  id: "m04-salidas",
+  titulo: "Outbound movements",
+  icono: "salida",
+  resumen: "CUSTOMER, SUPPLIER_RETURN, SHRINKAGE and NEGATIVE_ADJUSTMENT.",
+  terminosClave: ["salida", "cliente", "merma", "ajuste"],
+  relacionados: ["m04-modelo", "m04-fifo", "m07-despacho"],
+  secciones: [
+    {
+      titulo: "Types and the dispatch flow",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Sub-type", "Source", "Destination", "Requires"],
+          filas: [
+            [
+              "CUSTOMER",
+              "Location",
+              "Customer",
+              "Enough balance, an unexpired lot (FEFO/FIFO). The delivery note or order document is optional.",
+            ],
+            [
+              "SUPPLIER_RETURN",
+              "Location",
+              "Supplier",
+              "Any location with stock; it allows a specific lot if lots are tracked; the reason is optional (a comment is recommended for quality issues).",
+            ],
+            [
+              "SHRINKAGE",
+              "Location",
+              "— (a loss)",
+              "Always a reason and, depending on the settings, approval. It decreases the balance and the lot; an expired lot has no restriction.",
+            ],
+            [
+              "NEGATIVE_ADJUSTMENT",
+              "Location",
+              "— (a justified cause)",
+              "Always a reason (≥3) and the ajuste:crear permission; it never leaves a balance below 0.",
+            ],
+            [
+              "TRANSFER_OUT",
+              "Source location (see transfers, 9)",
+              "—",
+              "The source half of an intra- or inter-warehouse transfer. Generated automatically when the transfer is approved.",
+            ],
+          ],
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Create an OUTBOUND / CUSTOMER movement at /movimientos/nuevo?tipo=SALIDA: product/quantity/customer lines plus the source (with the FIFO/FEFO selector where applicable).",
+            "Use Suggest FIFO/FEFO if the product tracks lots (pick the product and the quantity, and the system proposes the lots and locations).",
+            "It validates enough balance, an unexpired lot and a location with stock; if not, it tells you where the stock is (product/lot/location).",
+            "Approve → an atomic decrease, with traceability of the origin of every unit dispatched.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_TRANSFERS: ManualCapitulo = {
+  id: "m04-traslados",
+  titulo: "Transfers",
+  icono: "traslado",
+  resumen:
+    "Moving stock without changing the warehouse total (intra) or with two linked movements (inter).",
+  terminosClave: ["traslado", "ubicacion-bin", "caja"],
+  relacionados: ["m04-modelo", "m07-traslado"],
+  secciones: [
+    {
+      titulo: "Between locations / containers / warehouses",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Between locations: source → destination, the same warehouse unless it is inter-warehouse. Atomic: an outbound at the source plus an inbound at the destination as one fact (insertar_movimiento inside a transaction). It validates the source balance, product/lot coherence and destination capacity.",
+            "Between containers: give the source/destination container; if restricted, coherence is validated; on moving everything, it is left empty.",
+            "Between warehouses (9.3): two linked movements with the same number/reference document (TRANSFER_OUT at the source + TRANSFER_IN at the destination), each a DRAFT approved separately, transactional with no orphans, and no change to the total if it is the same warehouse.",
+            "Route: /movimientos/nuevo?tipo=TRASLADO (a single line with different source and destination, never the same location). The type selector lives in the query string, not a sub-route.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Moving a whole container is modelled as a transfer of its contents (validar_restriccion_caja on approval). It does not change the warehouse total if it is the same warehouse.",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_ADJUSTMENTS: ManualCapitulo = {
+  id: "m04-ajustes",
+  titulo: "Stock adjustments",
+  icono: "ajuste",
+  resumen: "Corrections, shrinkage and surpluses: always with a reason, and never automatic.",
+  terminosClave: ["ajuste", "merma", "saldo"],
+  relacionados: ["m04-modelo", "m05-diferencias"],
+  secciones: [
+    {
+      titulo: "Validation rules",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Rule", "Detail"],
+          filas: [
+            ["A reason is required", "Not empty, ≥3 characters, always."],
+            ["Never automatic", "Always a user with the permission."],
+            ["The balance is never <0", "A negative one is rejected on approval."],
+            ["Execution", "APPROVED only (or directly if the role can approve)."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "For a correction: state the expected balance or the difference.",
+            "Shrinkage: a negative adjustment with a loss reason. Surplus: a positive one.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_FIFO: ManualCapitulo = {
+  id: "m04-fifo",
+  titulo: "Outbound policy: FIFO / FEFO",
+  icono: "lote",
+  resumen: "How the system chooses which lot and location leave first.",
+  terminosClave: ["fifo", "fefo", "lote", "vencimiento"],
+  relacionados: ["m03-lote", "m04-salidas"],
+  secciones: [
+    {
+      titulo: "Order of the suggestion",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Product condition", "Policy", "Criterion"],
+          filas: [
+            ["Perishable or tracks expiry", "FEFO", "The earliest expiry date first."],
+            ["Tracks lots without expiry", "FIFO", "The earliest manufacture or arrival date."],
+            ["Does not track lots", "General stock", "From the chosen location."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Specific-lot exception: the user can give a specific lot_id if it has a balance and, for a perishable, is not expired.",
+            "Within the source location; if there are several, it suggests by age and allows manual adjustment.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Hard rule: an expired lot does not go out to a customer or as a supplier return; only SHRINKAGE or a NEGATIVE_ADJUSTMENT.",
+          tono: "warning",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_QUICK_CAPTURE: ManualCapitulo = {
+  id: "m04-captura",
+  titulo: "Quick capture with a scanner",
+  icono: "codigoBarras",
+  resumen: "Receiving and dispatching, guided code by code.",
+  terminosClave: ["codigo-barras", "entrada", "salida", "lote"],
+  relacionados: ["m04-entradas", "m04-salidas"],
+  secciones: [
+    {
+      titulo: "Flow",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Routes: /movimientos/captura-recepcion and /movimientos/captura-despacho.",
+            "A scan resolves to a PRODUCT/LOCATION/LOT/CONTAINER type with a label; EscaneoResuelto carries controla_lote straight from Rust.",
+            "Lines require a lot if the product tracks lots.",
+            "The scanner feeds the form; it never creates data on its own. An unknown code → an error plus a suggestion.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Quick capture avoids typing mistakes and honours the same validation as the ordinary form.",
+          tono: "success",
+        },
+      ],
+    },
+  ],
+};
+
 const TRADUCIDOS: ManualCapitulo[] = [
   CH_VISION,
   CH_INSTALL,
@@ -1504,6 +1934,14 @@ const TRADUCIDOS: ManualCapitulo[] = [
   CH_CATEGORY,
   CH_SUPPLIER_CUSTOMER,
   CH_BRANCH,
+  CH_MOVEMENT_MODEL,
+  CH_LIFECYCLE,
+  CH_INBOUND,
+  CH_OUTBOUND,
+  CH_TRANSFERS,
+  CH_ADJUSTMENTS,
+  CH_FIFO,
+  CH_QUICK_CAPTURE,
 ];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
