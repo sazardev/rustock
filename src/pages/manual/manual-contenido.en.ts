@@ -1910,6 +1910,387 @@ const CH_QUICK_CAPTURE: ManualCapitulo = {
   ],
 };
 
+const CH_SESSION: ManualCapitulo = {
+  id: "m05-sesion",
+  titulo: "Inventory session",
+  icono: "inventario",
+  resumen:
+    "The formal process of counting all or part of the warehouse, with statuses and a scope.",
+  terminosClave: ["sesion-inventario", "conteo-ciego", "doble-conteo"],
+  relacionados: ["m05-conteo", "m05-diferencias"],
+  secciones: [
+    {
+      titulo: "Attributes",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["id", "An immutable UUID."],
+            ["numero", "Unique per year, e.g. INV-2026-0001."],
+            [
+              "tipo",
+              "FULL (the whole warehouse/scope) or CYCLE (a subset: zone, category, expiring soon, random sample).",
+            ],
+            ["estado", "PLANNED → IN_PROGRESS → CLOSED / CANCELLED."],
+            ["almacen_id", "Required, the warehouse being counted."],
+            ["alcance", "A free-text criterion (e.g. zone, category, location)."],
+            [
+              "fecha_inicio",
+              "If it has a value, the session starts IN_PROGRESS and accepts counts; left blank it stays PLANNED (and needs iniciar_sesion_inventario).",
+            ],
+            ["fecha_fin", "Optional, the closing date."],
+            ["responsable_id", "The user responsible for the session."],
+            ["conteo_ciego", "Boolean: if true, the balance is not shown while counting."],
+            ["exige_doble_conteo", "Boolean: if true, every discrepancy requires a 2nd count."],
+            ["created_by / created_at / closed_by / closed_at / anulado_by / anulado_at", "Audit."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "The iniciar_sesion_inventario command (PLANNED→IN_PROGRESS), with an inline button on the detail while PLANNED.",
+            "List /inventario (status filter, 20 per page), detail /inventario/:id, new /inventario/nuevo, delete /inventario/:id/eliminar (deactivates if it has no history).",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_COUNT: ManualCapitulo = {
+  id: "m05-conteo",
+  titulo: "Recording a count",
+  icono: "inventario",
+  resumen:
+    "Field-by-field recording per (location, product, lot) with a quantity and a count number.",
+  terminosClave: ["sesion-inventario", "conteo-ciego", "doble-conteo", "ubicacion-bin", "lote"],
+  relacionados: ["m05-sesion", "m05-diferencias"],
+  secciones: [
+    {
+      titulo: "Fields per line",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["sesion_id", "Required, a session that is IN_PROGRESS."],
+            ["ubicacion_id", "Required, a location in the session’s warehouse."],
+            ["producto_id", "Required."],
+            ["lote_id", "Required if the product tracks lots."],
+            ["cantidad_contada", "≥0 (0 = the product is physically absent)."],
+            ["conteo_numero", "≥1 (1st count, 2nd recount if a double count is required)."],
+            ["usuario_contador_id", "Who counted (audit, taken from the session’s user)."],
+            ["timestamp", "When it was recorded (UTC)."],
+            ["nota", "Optional, free text (e.g. damaged box)."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "A dedicated page /inventario/:id/conteos, only while IN_PROGRESS. The form: location, product, lot where applicable, quantity, count number, note; it keeps the number when clearing.",
+            "Blind counting is guaranteed: the balance is never shown while recording, blind or not.",
+            "A physical surplus with no balance → an inbound adjustment. An IN_PROGRESS session blocks manual adjustments on that warehouse (concurrency, 14.6).",
+            "Validation: the system allows counting any product/lot with a quantity of 0, including one that is not in stock.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_DISCREPANCIES: ManualCapitulo = {
+  id: "m05-diferencias",
+  titulo: "Discrepancies, reconciliation and accuracy",
+  icono: "inventario",
+  resumen:
+    "What happens to counted versus system, how it is closed, and how your accuracy is measured over time.",
+  terminosClave: ["diferencia-inventario", "precision-inventario", "ajuste"],
+  relacionados: ["m05-conteo", "m06-reportes"],
+  secciones: [
+    {
+      titulo: "Discrepancies",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Discrepancy", "Meaning", "Proposed action"],
+          filas: [
+            ["0", "Reconciled", "No action."],
+            [">0", "Surplus", "An inbound adjustment with the reason inventory discrepancy."],
+            ["<0", "Shortfall", "An outbound adjustment with the reason inventory discrepancy."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "If a double count is required, it is only accepted when the 2nd confirms it.",
+            "Discrepancies are computed live for active sessions; on closing they are snapshotted into sesion_diferencias within the same transaction (H27).",
+            "Closing: the inventario:cerrar permission only. The route /inventario/:id/cerrar generates the adjustments (or leaves them PENDING, depending on the policy). A closed session accepts no further counts.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Metrics and the snapshot (H27)",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Metric", "Formula"],
+          filas: [
+            ["SKU accuracy", "(exact SKUs / counted)×100"],
+            ["Quantity accuracy", "(correct units / counted)×100"],
+            ["Location accuracy", "(locations with no discrepancy / counted)×100"],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Before the fix, accuracy was always ~100% because it was computed against the post-adjustment balance. It is now frozen on closing. Verified: 10900 vs 11000 → Shortfall -100, SKU 0%, quantity 99.1%.",
+          tono: "warning",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_DASHBOARD_M: ManualCapitulo = {
+  id: "m06-dashboard",
+  titulo: "Dashboard",
+  icono: "dashboard",
+  resumen: "The business at a glance: stock, alerts, today’s movements and accuracy.",
+  terminosClave: ["saldo", "alerta", "precision-inventario", "merma"],
+  relacionados: ["m06-reportes", "m06-alertas"],
+  secciones: [
+    {
+      titulo: "Key indicators",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Indicator", "What it shows"],
+          filas: [
+            ["Active SKUs", "Active products in the catalogue."],
+            ["Total units", "The sum of all stock in base UOM."],
+            [
+              "Inventory value",
+              "Average cost or inbound cost (configurable, an informational financial figure).",
+            ],
+            ["Active alerts", "Alerts in the OPEN state (low stock, expiries, pending items)."],
+            ["Movements today", "Movements whose movement date is today."],
+            [
+              "Accuracy, last session",
+              "By SKU for the last CLOSED session, or No closed sessions.",
+            ],
+            ["Location occupancy", "% of locations holding stock out of all locations."],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Additional indicators and KPIs (16.3)",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Indicator", "What it shows"],
+          filas: [
+            [
+              "Shrinkage rate",
+              "% of shrinkage units against inbound (shrinkage units / inbound ×100). Informational.",
+            ],
+            [
+              "Expired lots not written off",
+              "Past their expiry with a balance >0. It should trend to 0.",
+            ],
+            [
+              "Turnover",
+              "Stock turnover = outbound for the period / average stock. Informational.",
+            ],
+            ["Days of cover", "Days of cover = stock / average daily consumption. Informational."],
+            [
+              "Stock age",
+              "Average days since the last inbound movement per lot. It detects obsolescence.",
+            ],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Recent movements: the 5 most recent by movement date (number, type, date, status); the row opens the detail. A New movement button in the header.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The full 16.3 KPIs: SKU accuracy ≥95%, quantity accuracy ≥98%, location accuracy ≥90%, Turnover, Days of cover, Shrinkage rate, Expired lots not written off, Stock age. Accuracy is measured per session, and its trend lives at /reportes/precision.",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_REPORTS_M: ManualCapitulo = {
+  id: "m06-reportes",
+  titulo: "Reports by area (10 reports)",
+  icono: "reportes",
+  resumen:
+    "Stock, movements, inbound, outbound, shrinkage, expiries, stock card, accuracy, audit and users. Filters, pure-CSS charts and export.",
+  terminosClave: ["kardex", "trazabilidad", "saldo", "auditoria"],
+  relacionados: ["m06-dashboard", "m08-consulta"],
+  secciones: [
+    {
+      titulo: "The report catalogue",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Report", "Route", "Typical filters / chart"],
+          filas: [
+            [
+              "Current stock",
+              "/reportes/stock",
+              "By product/category/location/lot; an aggregate table plus detail; export.",
+            ],
+            [
+              "Movements by period",
+              "/reportes/movimientos",
+              "By type/status/sub-type/user/supplier/customer/date; totals grouped by type; a 30-day chart; export.",
+            ],
+            ["Inbound for the period", "/reportes/entradas", "tipo=ENTRADA + supplier."],
+            ["Outbound for the period", "/reportes/salidas", "tipo=SALIDA + customer."],
+            [
+              "Shrinkage and adjustments",
+              "/reportes/mermas-ajustes",
+              "sub_tipo IN SHRINKAGE/ADJUSTMENT.",
+            ],
+            ["Stock card", "/reportes/kardex", "By product/lot: movements with a running balance."],
+            ["Expiries", "/reportes/vencimientos", "30/60/90 days and expired."],
+            [
+              "Accuracy per session",
+              "/reportes/precision",
+              "3 metrics per closed session plus the trend.",
+            ],
+            [
+              "Audit",
+              "/reportes/auditoria",
+              "By user/level/dates/command/entity; includes tipo_evento/modulo.",
+            ],
+            ["User activity", "/reportes/usuarios", "Number of movements grouped by created_by."],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "The charts are pure CSS (no heavy library): .chart for columns and .chart-row for horizontal bars.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "How to filter and export (see Part 8)",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Every report uses the universal engine (15) with a deep link in the URL.",
+            "Export to CSV (separator ; + a UTF-8 BOM for es-ES) or JSON with nombreExportacion. It requires the export permission.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_ALERTS_M: ManualCapitulo = {
+  id: "m06-alertas",
+  titulo: "Alerts and notifications",
+  icono: "alerta",
+  resumen:
+    "7 types that regenerate themselves and link to the root cause. Archive without reopening.",
+  terminosClave: ["alerta", "stock-minimo", "vencimiento"],
+  relacionados: ["m06-dashboard", "m05-diferencias"],
+  secciones: [
+    {
+      titulo: "Types",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Alert", "When"],
+          filas: [
+            ["Low stock", "The sum across locations is ≤ stock_minimo."],
+            ["Stock over maximum", "The balance is > stock_maximo."],
+            ["Over capacity", "An attempt to bring in more than capacidad_maxima."],
+            ["Lot expiring soon", "The expiry falls in the next N days (dias_aviso)."],
+            ["Expired lot", "Past its expiry with a balance >0."],
+            ["Inventory discrepancy", "A session with discrepancies."],
+            ["Pending approval", "There is a PENDING movement."],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Rules",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Property", "Value"],
+          filas: [
+            ["Severity", "INFO, MEDIUM, HIGH."],
+            ["Status", "OPEN, RESOLVED, ARCHIVED."],
+            ["Visibility", "Only those with view permission on the record."],
+            ["Regeneration", "Lazily on each listing. An ARCHIVED one does not reopen."],
+            [
+              "Real resolution",
+              "The condition disappears by doing the business action, not by pressing Resolve. That is why the button says Archive.",
+            ],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Every alert has an entity/entity_id linking to the detail: product→/productos/:id, lot→/lotes/:id, and so on.",
+            "At /alertas: a linked Entity column plus only the Archive button (XCircle), with a per-type toast explaining the real action. The row disappears via an optimistic update.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_ACTIVITY_M: ManualCapitulo = {
+  id: "m06-historial",
+  titulo: "Activity centre and history",
+  icono: "historial",
+  resumen: "Full tracking: commands + views with module, process, tenant, duration and local time.",
+  terminosClave: ["auditoria", "trazabilidad"],
+  relacionados: ["m00-roles", "m06-reportes"],
+  secciones: [
+    {
+      titulo: "What is recorded",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Every command (COMMAND) with its actor, module, process, tenant, duration and JSON metadata.",
+            "Every page view (VIEW) via registrar_vista: route, module, process, view duration (sendBeacon), local hour 0–23 and day of week 1–7, metadata and client info.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Metrics and the /historial page",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "The metricas_actividad command (gated on reporte:ver): a summary, breakdowns by module/day/hour/day of week/user/process, top routes and automatic insights (peak hour, dominant module, 7-day trend).",
+            "The paginated listar_historial command (page/page_size up to 200, -1 = export capped at 5000; combinable filters) → Paginado<EventoAuditoria>.",
+            "The /historial page as the activity centre: filters for period/user/type/module/result/command, 6 KPIs, an Overview card with insights, CSS charts and a paginated event table with export.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 const TRADUCIDOS: ManualCapitulo[] = [
   CH_VISION,
   CH_INSTALL,
@@ -1942,6 +2323,13 @@ const TRADUCIDOS: ManualCapitulo[] = [
   CH_ADJUSTMENTS,
   CH_FIFO,
   CH_QUICK_CAPTURE,
+  CH_SESSION,
+  CH_COUNT,
+  CH_DISCREPANCIES,
+  CH_DASHBOARD_M,
+  CH_REPORTS_M,
+  CH_ALERTS_M,
+  CH_ACTIVITY_M,
 ];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
