@@ -180,7 +180,7 @@ export function MapaContextoCard({ tipo, row }: Props) {
       <Card.Body>
         {row.pos_x === null || row.pos_y === null ? (
           <Text as="p" size="sm" color="muted" className="mb-3">
-            Este nodo aún no tiene una posición asignada en el mapa.
+            {t.comun.nodoSinPosicion}
           </Text>
         ) : (
           <MiniMapa hermanos={conPosicion} actualId={row.id} />
@@ -188,7 +188,7 @@ export function MapaContextoCard({ tipo, row }: Props) {
         {mismaPosicion.length > 1 ? (
           <div className="mt-3">
             <Text as="p" size="sm" weight="medium">
-              Apilado en este sitio
+              {t.comun.apiladoAqui}
             </Text>
             <ul className="mapa-contexto__apilado">
               <li>

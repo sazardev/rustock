@@ -22,16 +22,14 @@ export function SucursalDetallePage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title="Sucursal" description="Cargando…" />;
+    return <PageHeader title={t.campos.sucursal} description={t.comun.cargando} />;
   }
   const sucursal = query.data ?? null;
   if (!sucursal) {
     return (
       <>
-        <PageHeader title="Sucursal" description={t.sucursales.noEncontradaDesc} />
-        <ErrorPanel title={t.sucursales.noEncontrada}>
-          La sucursal no existe o fue desactivada.
-        </ErrorPanel>
+        <PageHeader title={t.campos.sucursal} description={t.sucursales.noEncontradaDesc} />
+        <ErrorPanel title={t.sucursales.noEncontrada}>{t.comun.sucursalNoExiste}</ErrorPanel>
       </>
     );
   }
@@ -46,11 +44,11 @@ export function SucursalDetallePage() {
         actions={
           <>
             <ButtonLink variant="secondary" href={`${PATH.sucursales}/${sucursal.id}/editar`}>
-              Editar
+              {t.comun.editar}
             </ButtonLink>
             {sucursal.activo ? (
               <ButtonLink variant="danger" href={`${PATH.sucursales}/${sucursal.id}/eliminar`}>
-                Desactivar
+                {t.comun.desactivar}
               </ButtonLink>
             ) : null}
           </>
@@ -61,20 +59,20 @@ export function SucursalDetallePage() {
         <Card.Body>
           <DetailList
             items={[
-              { label: "Código", value: sucursal.codigo, code: true },
-              { label: "Nombre", value: sucursal.nombre },
-              { label: "País", value: sucursal.pais ?? "—" },
-              { label: "Ciudad", value: sucursal.ciudad ?? "—" },
-              { label: "Dirección", value: sucursal.direccion ?? "—" },
+              { label: t.comun.codigo, value: sucursal.codigo, code: true },
+              { label: t.comun.nombre, value: sucursal.nombre },
+              { label: t.campos.pais, value: sucursal.pais ?? "—" },
+              { label: t.campos.ciudad, value: sucursal.ciudad ?? "—" },
+              { label: t.campos.direccion, value: sucursal.direccion ?? "—" },
               {
-                label: "Coordenadas",
+                label: t.campos.coordenadas,
                 value: hayCoordenadas
                   ? `${sucursal.latitud?.toFixed(6)}, ${sucursal.longitud?.toFixed(6)}`
                   : "—",
                 code: true,
               },
               {
-                label: "Creada",
+                label: t.campos.creada,
                 value: formatearFecha(sucursal.created_at),
               },
             ]}
@@ -90,7 +88,7 @@ export function SucursalDetallePage() {
       </Card>
 
       {hayCoordenadas ? (
-        <Card title="Mapa" className="mt-6">
+        <Card title={t.campos.mapa} className="mt-6">
           <Card.Body>
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <iframe
@@ -106,7 +104,7 @@ export function SucursalDetallePage() {
                 variant="ghost"
                 href={`https://www.google.com/maps?q=${sucursal.latitud},${sucursal.longitud}`}
               >
-                Abrir en Google Maps
+                {t.comun.abrirGoogleMaps}
               </ButtonLink>
             </div>
           </Card.Body>

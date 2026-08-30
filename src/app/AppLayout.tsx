@@ -234,7 +234,7 @@ export function AppLayout() {
                       descripcion: t.paginas.galeriaDisenoDesc,
                     },
                     {
-                      label: "No encontrado",
+                      label: t.paginas.noEncontrada,
                       href: "/no-encontrado",
                       icon: "alerta",
                       descripcion: t.paginas.paginaDeError,

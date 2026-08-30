@@ -21,16 +21,16 @@ export function ArchivoVerPage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title="Archivo" description="Cargando…" />;
+    return <PageHeader title={t.campos.archivo} description={t.comun.cargando} />;
   }
   const archivo = query.data ?? null;
   if (!archivo) {
     return (
       <>
-        <PageHeader title="Archivo" description={t.paginas.archivoNoEncontradoDesc} />
+        <PageHeader title={t.campos.archivo} description={t.paginas.archivoNoEncontradoDesc} />
         <ErrorPanel title={t.paginas.archivoNoEncontrado}>
           <ButtonLink variant="link" href={PATH.configuracion}>
-            Volver a configuración
+            {t.comun.volverAConfiguracion}
           </ButtonLink>
         </ErrorPanel>
       </>
@@ -53,7 +53,7 @@ export function ArchivoVerPage() {
             className="btn btn--primary"
             aria-label={`Descargar ${archivo.nombre}`}
           >
-            Descargar
+            {t.comun.descargar}
           </a>
         }
       />
@@ -78,16 +78,14 @@ export function ArchivoVerPage() {
               sandbox="allow-scripts"
             />
           ) : (
-            <p className="text-sm text-gray-600">
-              Este tipo de archivo no se puede previsualizar. Usa el botón Descargar para abrirlo.
-            </p>
+            <p className="text-sm text-gray-600">{t.comun.sinPrevisualizacion}</p>
           )}
         </Card.Body>
       </Card>
 
       <div className="mt-4">
         <ButtonLink variant="secondary" href={PATH.configuracion}>
-          Volver a configuración
+          {t.comun.volverAConfiguracion}
         </ButtonLink>
       </div>
     </>

@@ -51,16 +51,16 @@ function DemoBotones() {
   return (
     <div className="flex flex-wrap items-center gap-4">
       <Button variant="primary" onClick={demo("Primario")}>
-        Primario
+        {t.comun.primario}
       </Button>
       <Button variant="secondary" onClick={demo("Secundario")}>
-        Secundario
+        {t.comun.secundario}
       </Button>
       <Button variant="danger" onClick={demo("Peligro")}>
-        Peligro
+        {t.comun.peligro}
       </Button>
       <Button variant="ghost" onClick={demo("Fantasma")}>
-        Fantasma
+        {t.comun.fantasma}
       </Button>
       <Button variant="link" onClick={demo("Enlace")}>
         Enlace
@@ -83,10 +83,10 @@ function DemoBotones() {
         <Icon name="ver" size={16} aria-hidden="true" />
       </Button>
       <Button variant="secondary" disabled>
-        Deshabilitado
+        {t.comun.deshabilitado}
       </Button>
       <ButtonLink variant="primary" href="/galeria#botones">
-        Enlace botón
+        {t.comun.enlaceBoton}
       </ButtonLink>
     </div>
   );
@@ -157,13 +157,13 @@ function DemoCampos() {
       <Field label={t.galeria.nombreAlmacen} required htmlFor="demo-nombre">
         <Input id="demo-nombre" placeholder="Almacén Central" />
       </Field>
-      <Field label="Código" help={t.galeria.codigoUnico} htmlFor="demo-codigo">
+      <Field label={t.comun.codigo} help={t.galeria.codigoUnico} htmlFor="demo-codigo">
         <Input id="demo-codigo" code placeholder="ALM-###" />
       </Field>
-      <Field label="Cantidad" htmlFor="demo-cantidad">
+      <Field label={t.comun.cantidad} htmlFor="demo-cantidad">
         <Input id="demo-cantidad" number placeholder="0" />
       </Field>
-      <Field label="Estado" htmlFor="demo-estado">
+      <Field label={t.comun.estado} htmlFor="demo-estado">
         <Select id="demo-estado" placeholder={t.galeria.seleccioneEstado}>
           <option value="activo">Activo</option>
           <option value="mantenimiento">Mantenimiento</option>
@@ -176,7 +176,7 @@ function DemoCampos() {
       >
         <Input id="demo-error" number defaultValue="0" aria-invalid="true" />
       </Field>
-      <Field label="Observaciones" htmlFor="demo-notas">
+      <Field label={t.campos.observaciones} htmlFor="demo-notas">
         <Textarea id="demo-notas" placeholder={t.galeria.notasInternas} />
       </Field>
       <div className="flex flex-wrap items-center gap-6">
@@ -223,12 +223,12 @@ function DemoTabla() {
     );
   });
   const columns: Array<TableColumn<Producto>> = [
-    { key: "sku", header: "SKU", code: true, sortable: true, render: (p) => p.sku },
-    { key: "nombre", header: "Producto", sortable: true, render: (p) => p.nombre },
-    { key: "stock", header: "Stock", num: true, sortable: true, render: (p) => p.stock },
+    { key: "sku", header: t.campos.sku, code: true, sortable: true, render: (p) => p.sku },
+    { key: "nombre", header: t.campos.producto, sortable: true, render: (p) => p.nombre },
+    { key: "stock", header: t.campos.stock, num: true, sortable: true, render: (p) => p.stock },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (p) => (
         <Badge
           tone={p.estado === "Disponible" ? "success" : "danger"}
@@ -363,20 +363,20 @@ function DemoTarjetas() {
             icon="editar"
             onClick={() => toast(t.galeria.toasts.editandoDatos, "default")}
           >
-            Editar
+            {t.comun.editar}
           </Button>
         }
       >
         <DetailList
           items={[
-            { label: "Código", value: "ALM-001", code: true },
-            { label: "Nombre", value: "Almacén Central" },
-            { label: "Zona", value: "Zona Norte" },
-            { label: "Capacidad", value: "1,200", num: true },
+            { label: t.comun.codigo, value: "ALM-001", code: true },
+            { label: t.comun.nombre, value: "Almacén Central" },
+            { label: t.campos.zona, value: "Zona Norte" },
+            { label: t.campos.capacidad, value: "1,200", num: true },
           ]}
         />
       </Card>
-      <Card title="Acciones" muted>
+      <Card title={t.comun.acciones} muted>
         <div className="flex flex-col items-start gap-2">
           <Button
             variant="secondary"
@@ -397,7 +397,7 @@ function DemoTarjetas() {
             icon="eliminar"
             onClick={() => toast(t.galeria.toasts.confirmacionBorrado, "error")}
           >
-            Eliminar
+            {t.comun.eliminar}
           </Button>
         </div>
       </Card>
@@ -424,18 +424,22 @@ function DemoFiltros() {
         }
       >
         <FilterField grow>
-          <Field label="Buscar">
+          <Field label={t.comun.buscar}>
             <Input
-              aria-label="Buscar"
-              placeholder="Código o nombre"
+              aria-label={t.comun.buscar}
+              placeholder={t.galeria.codigoONombre}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </Field>
         </FilterField>
         <FilterField>
-          <Field label="Zona">
-            <Select aria-label="Zona" value={zona} onChange={(e) => setZona(e.target.value)}>
+          <Field label={t.campos.zona}>
+            <Select
+              aria-label={t.campos.zona}
+              value={zona}
+              onChange={(e) => setZona(e.target.value)}
+            >
               <option value="">Todas las zonas</option>
               <option value="norte">Zona Norte</option>
               <option value="sur">Zona Sur</option>
@@ -652,7 +656,7 @@ export function GaleriaPage() {
     <>
       <PageHeader title={t.galeria.titulo} description={t.galeria.descripcion} />
 
-      <ShowcaseSection id="iconos" title="Iconografía" description={t.galeria.iconosDesc}>
+      <ShowcaseSection id="iconos" title={t.galeria.iconografia} description={t.galeria.iconosDesc}>
         <DemoIconos />
       </ShowcaseSection>
 
@@ -660,7 +664,11 @@ export function GaleriaPage() {
         <DemoPaleta />
       </ShowcaseSection>
 
-      <ShowcaseSection id="sombras" title="Sombras y elevación" description={t.galeria.sombrasDesc}>
+      <ShowcaseSection
+        id="sombras"
+        title={t.galeria.sombrasElevacion}
+        description={t.galeria.sombrasDesc}
+      >
         <DemoSombras />
       </ShowcaseSection>
 
@@ -698,7 +706,7 @@ export function GaleriaPage() {
 
       <ShowcaseSection
         id="insignias"
-        title="Insignias y etiquetas"
+        title={t.galeria.insigniasEtiquetas}
         description={t.galeria.badgesDesc}
       >
         <DemoBadges />
@@ -706,17 +714,25 @@ export function GaleriaPage() {
 
       <ShowcaseSection
         id="tarjetas"
-        title="Tarjetas y paneles"
+        title={t.galeria.tarjetasPaneles}
         description={t.galeria.tarjetasDesc}
       >
         <DemoTarjetas />
       </ShowcaseSection>
 
-      <ShowcaseSection id="filtros" title="Búsqueda y filtros" description={t.galeria.filtrosDesc}>
+      <ShowcaseSection
+        id="filtros"
+        title={t.galeria.busquedaFiltros}
+        description={t.galeria.filtrosDesc}
+      >
         <DemoFiltros />
       </ShowcaseSection>
 
-      <ShowcaseSection id="toast" title="Notificaciones" description={t.galeria.avisosDesc}>
+      <ShowcaseSection
+        id="toast"
+        title={t.galeria.notificaciones}
+        description={t.galeria.avisosDesc}
+      >
         <DemoToast />
       </ShowcaseSection>
 

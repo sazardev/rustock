@@ -32,7 +32,7 @@ export function SesionInventarioEliminarPage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title={t.inventarioPagina.anularTitulo} description="Cargando…" />;
+    return <PageHeader title={t.inventarioPagina.anularTitulo} description={t.comun.cargando} />;
   }
   if (!sesion) {
     return (
@@ -51,12 +51,12 @@ export function SesionInventarioEliminarPage() {
         description={t.inventarioPagina.avisoAnular}
       />
 
-      <Card title="Sesión">
+      <Card title={t.campos.sesion}>
         <Card.Body>
           <DetailList
             items={[
-              { label: "Número", value: sesion.numero, code: true },
-              { label: "Tipo", value: sesion.tipo },
+              { label: t.campos.numero, value: sesion.numero, code: true },
+              { label: t.comun.tipo, value: sesion.tipo },
               { label: t.inventarioPagina.estadoActual, value: sesion.estado },
             ]}
           />

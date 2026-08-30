@@ -1,4 +1,5 @@
 import { Badge, Icon, type IconName } from "../../shared/ui";
+import { useT } from "../../shared/i18n";
 
 interface Kpi {
   valor: string;
@@ -61,6 +62,7 @@ const MOVIMIENTOS_MOCK: FilaMock[] = [
  * no representa datos reales ni enlaza a rutas).
  */
 export function Mockup() {
+  const t = useT();
   return (
     <div className="landing__mock">
       <div className="landing__mock-bar">
@@ -72,7 +74,7 @@ export function Mockup() {
         <span className="landing__mock-bar-title">rustock · inventario</span>
         <span className="landing__mock-search">
           <Icon name="buscar" size={12} aria-hidden="true" />
-          Buscar
+          {t.comun.buscar}
         </span>
       </div>
 

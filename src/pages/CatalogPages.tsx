@@ -216,7 +216,7 @@ export function CatalogDetailPage<T extends { id: string }>({
   const row = query.data;
 
   if (query.isLoading) {
-    return <PageHeader title={adapter.singular} description="Cargando…" />;
+    return <PageHeader title={adapter.singular} description={t.comun.cargando} />;
   }
 
   if (!row) {
@@ -236,7 +236,7 @@ export function CatalogDetailPage<T extends { id: string }>({
           <div className="flex gap-2">
             {slug === "almacenes" ? (
               <ButtonLink variant="secondary" icon="ubicacion" href={almacenMapa(id)}>
-                Ver mapa
+                {t.comun.verMapa}
               </ButtonLink>
             ) : null}
             {TIPO_ETIQUETA_POR_SLUG[slug] ? (
@@ -245,22 +245,22 @@ export function CatalogDetailPage<T extends { id: string }>({
                 icon="codigoBarras"
                 href={etiquetasDe(TIPO_ETIQUETA_POR_SLUG[slug], [id])}
               >
-                Etiqueta
+                {t.campos.etiqueta}
               </ButtonLink>
             ) : null}
             {adapter.duplicarHref ? (
               <ButtonLink variant="secondary" icon="agregar" href={adapter.duplicarHref(id)}>
-                Duplicar
+                {t.comun.duplicarAccion}
               </ButtonLink>
             ) : null}
             {adapter.editarHref ? (
               <ButtonLink variant="secondary" icon="editar" href={adapter.editarHref(id)}>
-                Editar
+                {t.comun.editar}
               </ButtonLink>
             ) : null}
             {adapter.eliminarHref ? (
               <ButtonLink variant="ghost" icon="eliminar" href={adapter.eliminarHref(id)}>
-                Eliminar
+                {t.comun.eliminar}
               </ButtonLink>
             ) : null}
           </div>
@@ -337,11 +337,11 @@ function HistorialCajaCard({ cajaId }: { cajaId: string }) {
       <Card.Body>
         {q.isLoading ? (
           <Text as="p" size="sm" color="muted">
-            Cargando historial…
+            {t.comun.cargandoHistorial}
           </Text>
         ) : filas.length === 0 ? (
           <Text as="p" size="sm" color="muted">
-            Esta caja aún no ha participado en ningún movimiento.
+            {t.comun.cajaSinMovimientos}
           </Text>
         ) : (
           <Table
@@ -352,7 +352,7 @@ function HistorialCajaCard({ cajaId }: { cajaId: string }) {
                 code: true,
                 render: (r: any) => r.numero,
               },
-              { key: "tipo", header: "Tipo", render: (r: any) => r.tipo },
+              { key: "tipo", header: t.comun.tipo, render: (r: any) => r.tipo },
               {
                 key: "fecha",
                 header: t.comun.fecha,
@@ -412,7 +412,7 @@ function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadI
           </ul>
         ) : (
           <Text as="p" size="sm" color="muted">
-            Sin comentarios todavía.
+            {t.comun.sinComentarios}
           </Text>
         )}
         <form
@@ -483,7 +483,10 @@ export function CatalogEliminarPage<T extends { id: string }>({
 
   if (query.isLoading) {
     return (
-      <PageHeader title={`Eliminar ${adapter.singular.toLowerCase()}`} description="Cargando…" />
+      <PageHeader
+        title={`Eliminar ${adapter.singular.toLowerCase()}`}
+        description={t.comun.cargando}
+      />
     );
   }
 

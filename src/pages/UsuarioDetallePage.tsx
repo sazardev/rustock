@@ -18,14 +18,6 @@ import {
 import type { EventoAuditoria } from "../shared/audit";
 import { useT } from "../shared/i18n";
 
-const ROL_LABEL: Record<string, string> = {
-  ADMIN: "Administrador",
-  GERENTE: "Gerente",
-  ENCARGADO_ALMACEN: "Encargado de almacén",
-  OPERADOR: "Operador",
-  LECTOR: "Lector",
-};
-
 export function UsuarioDetallePage() {
   const t = useT();
   const { id } = useParams<{ id: string }>();
@@ -55,15 +47,15 @@ export function UsuarioDetallePage() {
   const esMiCuenta = usuarioActual?.id === id;
 
   if (query.isLoading) {
-    return <PageHeader title="Usuario" description="Cargando…" />;
+    return <PageHeader title={t.perfil.usuario} description={t.comun.cargando} />;
   }
   if (!usuario) {
     return (
       <>
-        <PageHeader title="Usuario" description={t.usuarioDetalle.noEncontradoDesc} />
+        <PageHeader title={t.perfil.usuario} description={t.usuarioDetalle.noEncontradoDesc} />
         <ErrorPanel title={t.usuarioDetalle.noEncontrado}>
           <ButtonLink variant="link" href={catalogoLista("usuarios")}>
-            Volver al listado de usuarios
+            {t.comun.volverAlListadoUsuarios}
           </ButtonLink>
         </ErrorPanel>
       </>
@@ -75,19 +67,24 @@ export function UsuarioDetallePage() {
   const columnasHistorial: Array<TableColumn<EventoAuditoria>> = [
     {
       key: "timestamp",
-      header: "Fecha",
+      header: t.comun.fecha,
       render: (e) => formatearFecha(e.timestamp),
     },
-    { key: "comando", header: "Comando", code: true, render: (e) => e.comando ?? "—" },
+    {
+      key: "comando",
+      header: t.reportes.auditoria.comandoAccion,
+      code: true,
+      render: (e) => e.comando ?? "—",
+    },
     {
       key: "entidad",
-      header: "Entidad",
+      header: t.reportes.columnas.entidad,
       code: true,
       render: (e) => `${e.entidad}${e.entidad_id ? ` (${e.entidad_id.slice(0, 8)})` : ""}`,
     },
     {
       key: "exito",
-      header: "Resultado",
+      header: t.reportes.columnas.resultado,
       render: (e) =>
         e.exito ? <Badge tone="success">OK</Badge> : <Badge tone="danger">Error</Badge>,
     },
@@ -102,14 +99,14 @@ export function UsuarioDetallePage() {
           esAdmin ? (
             <>
               <ButtonLink variant="secondary" href={`${PATH.usuarios}/${usuario.id}/password`}>
-                Cambiar contraseña
+                {t.perfil.cambiar}
               </ButtonLink>
               <ButtonLink variant="secondary" href={`${PATH.usuarios}/${usuario.id}/editar`}>
-                Editar
+                {t.comun.editar}
               </ButtonLink>
               {usuario.activo ? (
                 <ButtonLink variant="danger" href={`${PATH.usuarios}/${usuario.id}/eliminar`}>
-                  Desactivar
+                  {t.comun.desactivar}
                 </ButtonLink>
               ) : (
                 <ButtonLink variant="primary" href={`${PATH.usuarios}/${usuario.id}/eliminar`}>
@@ -125,12 +122,12 @@ export function UsuarioDetallePage() {
         <Card.Body>
           <DetailList
             items={[
-              { label: "Usuario", value: usuario.nombre_usuario },
+              { label: t.perfil.usuario, value: usuario.nombre_usuario },
               { label: t.usuarioDetalle.nombreCompleto, value: usuario.nombre_completo },
-              { label: "Email", value: usuario.email ?? "—" },
+              { label: t.perfil.email, value: usuario.email ?? "—" },
               {
-                label: "Rol",
-                value: rol ? (ROL_LABEL[rol.codigo] ?? rol.codigo) : "—",
+                label: t.perfil.rol,
+                value: rol ? (t.roles[rol.codigo as keyof typeof t.roles] ?? rol.codigo) : "—",
               },
               {
                 label: t.usuarioDetalle.ultimoAcceso,

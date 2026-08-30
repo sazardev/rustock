@@ -138,7 +138,7 @@ export function FavoritosFiltros({
       ) : null}
       {favoritos.length > 0 ? (
         <Text size="xs" color="muted" as="p">
-          Guarda consultas frecuentes para volver a ellas en un clic.
+          {t.comun.favoritosAyuda}
         </Text>
       ) : null}
     </div>

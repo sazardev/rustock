@@ -20,6 +20,88 @@ export const es = {
 
   // ============ Transversal ============
   comun: {
+    cargandoEstructura: "Cargando estructura…",
+    cargandoHistorial: "Cargando historial…",
+    volverAlMapa2D: "Volver al mapa 2D",
+    sinPrevisualizacion:
+      "Este tipo de archivo no se puede previsualizar. Usa el botón Descargar para abrirlo.",
+    cajaSinMovimientos: "Esta caja aún no ha participado en ningún movimiento.",
+    sinComentarios: "Sin comentarios todavía.",
+    deshabilitado: "Deshabilitado",
+    enlaceBoton: "Enlace botón",
+    informacion: "Información",
+    unidadesDePlano:
+      "Unidades de plano del mapa (10 unidades por celda de rejilla). Los códigos se generan solos.",
+    recintoPequeno:
+      "El recinto es pequeño para tantos elementos: aumenta las medidas o reduce pasillos y racks.",
+    ajustaValores: "Ajusta los valores para ver la vista previa.",
+    nodoSinPosicion: "Este nodo aún no tiene una posición asignada en el mapa.",
+    seleccionaNodo: "Selecciona un nodo del mapa para ver sus detalles.",
+    seleccionaProductoKardex:
+      "Selecciona un producto para ver su historial de movimientos y saldo acumulado.",
+    saldoDerivadoNota:
+      "El saldo se calcula exclusivamente desde movimientos aprobados. Toda alteración de stock pasa por un movimiento.",
+    sucursalNoExiste: "La sucursal no existe o fue desactivada.",
+    sucursalSinPermiso: "La sucursal ya no existe o no tienes permiso para verla.",
+    usuarioSinPermiso: "El usuario ya no existe o no tienes permiso para verlo.",
+    agregarLinea: "Agregar línea",
+    quitarLinea: "Quitar línea",
+    sugerirFifoFefo: "Sugerir FIFO/FEFO",
+    nuevoProveedor: "Nuevo proveedor",
+    nuevoCliente: "Nuevo cliente",
+    configuracionAdmin:
+      "La configuración de la empresa la gestiona el administrador. Tus preferencias personales viven en tu perfil.",
+    favoritosAyuda: "Guarda consultas frecuentes para volver a ellas en un clic.",
+    pruebaConSku: "Prueba con el SKU, código, número o nombre de lo que buscas.",
+    ayudaDesactivada:
+      "Las guías de Ayuda están desactivadas en la búsqueda: actívalas en Mi perfil si las quieres aquí.",
+
+    archivar: "Archivar",
+    reintentar: "Reintentar",
+    descargar: "Descargar",
+    descargarPlantilla: "Descargar plantilla",
+    listo: "Listo",
+    heredar: "Heredar",
+    claro: "Claro",
+    oscuro: "Oscuro",
+    exportarCsv: "Exportar CSV",
+    irAlDashboard: "Ir al dashboard",
+    volverAlDashboard: "Volver al dashboard",
+    volverAConfiguracion: "Volver a configuración",
+    volverAlMapa: "Volver al mapa",
+    volverALaSesion: "Volver a la sesión",
+    volverAlListadoUsuarios: "Volver al listado de usuarios",
+    verMapa: "Ver mapa",
+    desactivar: "Desactivar",
+    duplicarAccion: "Duplicar",
+    editado: "Editado",
+    exito: "Éxito",
+    vista: "Vista",
+    comando: "Comando",
+    error: "Error",
+    primario: "Primario",
+    secundario: "Secundario",
+    peligro: "Peligro",
+    fantasma: "Fantasma",
+    deshacer: "Deshacer",
+    rehacer: "Rehacer",
+    encuadrarTodo: "Encuadrar todo",
+    resetearVista: "Resetear vista",
+    irHacia: "Ir hacia",
+    apiladoAqui: "Apilado en este sitio",
+    stockBajo: "Stock bajo",
+    abrirGoogleMaps: "Abrir en Google Maps",
+    noPuedesDesactivarte: "No puedes desactivar tu propia cuenta",
+    nuevoAlmacen: "Nuevo almacén",
+    nuevaZona: "Nueva zona",
+    nuevoProducto: "Nuevo producto",
+    nuevoLote: "Nuevo lote",
+    nuevaUbicacion: "Nueva ubicación",
+    nuevaCategoria: "Nueva categoría",
+    nuevaUom: "Nueva UOM",
+    nuevaSucursal: "Nueva sucursal",
+    nuevoUsuario: "Nuevo usuario",
+
     guardar: "Guardar",
     guardando: "Guardando…",
     cancelar: "Cancelar",
@@ -197,6 +279,50 @@ export const es = {
   // ============ Etiquetas de campo compartidas ============
   // Las mismas columnas aparecen en trece catálogos: se declaran una vez.
   campos: {
+    alcance: "Alcance",
+    accionRuta: "Acción / ruta",
+    alertas: "Alertas",
+    ancho: "Ancho",
+    altura: "Altura",
+    archivo: "Archivo",
+    capacidad: "Capacidad",
+    contenido: "Contenido",
+    coordenadas: "Coordenadas",
+    creada: "Creada",
+    detalle: "Detalle",
+    destino: "Destino",
+    duracion: "Duración",
+    entidad: "Entidad",
+    fecha: "Fecha",
+    fechaHora: "Fecha y hora",
+    fila: "Fila",
+    hora: "Hora",
+    latitud: "Latitud",
+    longitud: "Longitud",
+    lotes: "Lotes",
+    mapa: "Mapa",
+    metadata: "Metadata",
+    minuto: "Minuto",
+    modulo: "Módulo",
+    movimiento: "Movimiento",
+    nivelABC: "Nivel A, B, C…",
+    nota: "Nota",
+    observaciones: "Observaciones",
+    proceso: "Proceso",
+    productoOpcional: "Producto (opcional)",
+    profundidad: "Profundidad",
+    rango: "Rango",
+    resultado: "Resultado",
+    rol: "Rol",
+    severidad: "Severidad",
+    sesion: "Sesión",
+    stock: "Stock",
+    sucursal: "Sucursal",
+    sucursales: "Sucursales",
+    tipoRackEjemplo: "Estantería, pallet, nevera…",
+    usuario: "Usuario",
+    usuarios: "Usuarios",
+
     almacen: "Almacén",
     alturaZ: "Altura (Z)",
     baseDeFamilia: "Base de familia",
@@ -1678,6 +1804,9 @@ export const es = {
 
   // ============ Alertas ============
   alertas: {
+    abiertas: "Abiertas",
+    resueltas: "Resueltas",
+    archivadas: "Archivadas",
     noSePudoCargar: "No se pudieron cargar las alertas",
     filtrarPorEstado: "Filtrar por estado",
     sinAlertas: "Sin alertas en este estado",
@@ -1798,6 +1927,8 @@ export const es = {
 
   // ============ Importación masiva ============
   importar: {
+    tituloError: "Importación",
+    contenidoCsv: "Contenido CSV",
     titulo: "Importación masiva",
     descripcion:
       "Carga productos, ubicaciones o stock inicial desde un CSV. Cada fila se valida contra las reglas del sistema y los errores se reportan por fila.",
@@ -1814,6 +1945,9 @@ export const es = {
 
   // ============ Usuarios y sucursales ============
   usuariosPagina: {
+    todosLosEstados: "Todos los estados",
+    avisoDesactivadas:
+      "Las cuentas desactivadas no pueden iniciar sesión; su historial se conserva.",
     noSePudoCargar: "No se pudieron cargar los usuarios",
     filtrarPorEstado: "Filtrar por estado",
     sinUsuarios: "No hay usuarios todavía",
@@ -1875,6 +2009,8 @@ export const es = {
 
   // ============ Inventario (listado y anulación) ============
   inventarioPagina: {
+    nuevaSesion: "Nueva sesión",
+    todosLosEstados: "Todos los estados",
     titulo: "Inventario físico",
     noSePudoCargar: "No se pudieron cargar las sesiones",
     filtrarPorEstado: "Filtrar por estado",
@@ -1926,6 +2062,9 @@ export const es = {
 
   // ============ Mapa 3D y paneles del mapa ============
   mapa3d: {
+    mapa3D: "Mapa 3D",
+    requiereWebGL: "El mapa 3D requiere WebGL",
+    lienzo2DAria: "Mapa físico del almacén: nodos navegables con Tab y activables con Enter",
     descripcion:
       "Arrastra sobre el piso para reposicionar, rota/haz zoom con el mouse, o selecciona un nodo para ver y editar sus detalles.",
     pantallaCompleta: "Pantalla completa",
@@ -2229,6 +2368,13 @@ export const es = {
 
   // ============ Galería del sistema de diseño ============
   galeria: {
+    iconografia: "Iconografía",
+    sombrasElevacion: "Sombras y elevación",
+    codigoONombre: "Código o nombre",
+    tarjetasPaneles: "Tarjetas y paneles",
+    insigniasEtiquetas: "Insignias y etiquetas",
+    busquedaFiltros: "Búsqueda y filtros",
+    notificaciones: "Notificaciones",
     titulo: "Sistema de diseño",
     descripcion: "Galería de componentes del design system Rustock.",
     colores: "Paleta de colores",

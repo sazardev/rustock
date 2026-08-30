@@ -284,7 +284,7 @@ export function ProductoFormPage() {
   });
 
   if (esEdicion && productoQuery.isLoading) {
-    return <PageHeader title={t.formularios.producto.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.producto.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -315,7 +315,7 @@ export function ProductoFormPage() {
               </ErrorPanel>
             ) : null}
             <FormGrid columns={2}>
-              <Field label="SKU" htmlFor="sku" required error={errors.sku?.message}>
+              <Field label={t.campos.sku} htmlFor="sku" required error={errors.sku?.message}>
                 <Input id="sku" code disabled={esEdicion} {...register("sku")} />
               </Field>
               <Field
@@ -343,13 +343,13 @@ export function ProductoFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="categoria_id" rutaNueva={catalogoNuevo("categorias")}>
-                      Nueva categoría
+                      {t.comun.nuevaCategoria}
                     </CrearRapido>
                   ) : null}
                 </div>
               </Field>
               <Field
-                label="UOM base"
+                label={t.campos.uomBase}
                 htmlFor="uom_base_id"
                 required
                 error={errors.uom_base_id?.message}
@@ -378,7 +378,7 @@ export function ProductoFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="uom_base_id" rutaNueva={catalogoNuevo("uoms")}>
-                      Nueva UOM
+                      {t.comun.nuevaUom}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -400,7 +400,7 @@ export function ProductoFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="uom_venta_id" rutaNueva={catalogoNuevo("uoms")}>
-                      Nueva UOM
+                      {t.comun.nuevaUom}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -422,7 +422,7 @@ export function ProductoFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="uom_compra_id" rutaNueva={catalogoNuevo("uoms")}>
-                      Nueva UOM
+                      {t.comun.nuevaUom}
                     </CrearRapido>
                   ) : null}
                 </div>

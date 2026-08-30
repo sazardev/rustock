@@ -139,7 +139,7 @@ export function CategoriaFormPage() {
   });
 
   if (esEdicion && categoriaQuery.isLoading) {
-    return <PageHeader title={t.formularios.categoria.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.categoria.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -195,7 +195,7 @@ export function CategoriaFormPage() {
                   </div>
                   {!esEdicion && !retornaAFormulario ? (
                     <CrearRapido campo="parent_id" rutaNueva={catalogoNuevo("categorias")}>
-                      Nueva categoría
+                      {t.comun.nuevaCategoria}
                     </CrearRapido>
                   ) : null}
                 </div>

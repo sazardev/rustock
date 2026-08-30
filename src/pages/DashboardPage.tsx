@@ -169,7 +169,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" />
+      <PageHeader title={t.nav.dashboard} />
 
       <FilterBar
         action={

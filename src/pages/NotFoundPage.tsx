@@ -14,7 +14,7 @@ export function NotFoundPage() {
             description={t.paginas.noEncontradaDesc}
             action={
               <ButtonLink variant="primary" href={PATH.dashboard}>
-                Ir al dashboard
+                {t.comun.irAlDashboard}
               </ButtonLink>
             }
           />

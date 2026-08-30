@@ -238,7 +238,7 @@ export function ReporteStockPage() {
   const columnasProducto: Array<TableColumn<FilaProducto>> = [
     {
       key: "producto_id",
-      header: "SKU",
+      header: t.campos.sku,
       code: true,
       render: (f) => <ProductoRef id={f.producto_id} />,
     },
@@ -253,7 +253,7 @@ export function ReporteStockPage() {
       num: true,
       render: (f) => f.ubicaciones,
     },
-    { key: "lotes", header: "Lotes", num: true, render: (f) => f.lotes },
+    { key: "lotes", header: t.campos.lotes, num: true, render: (f) => f.lotes },
     {
       key: "unidades",
       header: t.reportes.columnas.unidades,
@@ -281,7 +281,7 @@ export function ReporteStockPage() {
         if (minimo !== null && minimo !== undefined && minimo > 0 && f.unidades <= minimo) {
           return (
             <Badge tone="danger" icon="alerta">
-              Stock bajo
+              {t.comun.stockBajo}
             </Badge>
           );
         }
@@ -383,10 +383,7 @@ export function ReporteStockPage() {
         </Card>
         <Card title={t.reportes.stock.saldoDerivado}>
           <Card.Body>
-            <p className="text-sm text-gray-500">
-              El saldo se calcula exclusivamente desde movimientos aprobados. Toda alteración de
-              stock pasa por un movimiento.
-            </p>
+            <p className="text-sm text-gray-500">{t.comun.saldoDerivadoNota}</p>
           </Card.Body>
         </Card>
       </div>

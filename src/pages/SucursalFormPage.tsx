@@ -142,7 +142,7 @@ export function SucursalFormPage() {
   }
 
   if (esEdicion && entidadQuery.isLoading) {
-    return <PageHeader title={t.formularios.sucursal.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.sucursal.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -166,7 +166,7 @@ export function SucursalFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -182,7 +182,7 @@ export function SucursalFormPage() {
               >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="País" htmlFor="pais">
+              <Field label={t.campos.pais} htmlFor="pais">
                 <Select id="pais" placeholder={t.formularios.seleccionaPais} {...register("pais")}>
                   {PAISES.map((p) => (
                     <option key={p} value={p}>
@@ -191,14 +191,14 @@ export function SucursalFormPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Ciudad" htmlFor="ciudad">
+              <Field label={t.campos.ciudad} htmlFor="ciudad">
                 <Input id="ciudad" {...register("ciudad")} />
               </Field>
-              <Field label="Dirección" htmlFor="direccion" className="lg:col-span-2">
+              <Field label={t.campos.direccion} htmlFor="direccion" className="lg:col-span-2">
                 <Input id="direccion" {...register("direccion")} />
               </Field>
               <Field
-                label="Latitud"
+                label={t.campos.latitud}
                 htmlFor="latitud"
                 error={errors.latitud?.message}
                 help="Entre -90 y 90."
@@ -206,7 +206,7 @@ export function SucursalFormPage() {
                 <Input id="latitud" number {...register("latitud")} />
               </Field>
               <Field
-                label="Longitud"
+                label={t.campos.longitud}
                 htmlFor="longitud"
                 error={errors.longitud?.message}
                 help="Entre -180 y 180."

@@ -141,7 +141,7 @@ export function SeccionFormPage() {
   });
 
   if (esEdicion && seccionQuery.isLoading) {
-    return <PageHeader title={t.formularios.seccion.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.seccion.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -169,7 +169,7 @@ export function SeccionFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -180,8 +180,8 @@ export function SeccionFormPage() {
               <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Nivel" htmlFor="nivel">
-                <Input id="nivel" placeholder="Nivel A, B, C…" {...register("nivel")} />
+              <Field label={t.campos.nivel} htmlFor="nivel">
+                <Input id="nivel" placeholder={t.campos.nivelABC} {...register("nivel")} />
               </Field>
               <Field
                 label={t.campos.rack}

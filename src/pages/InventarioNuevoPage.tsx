@@ -127,21 +127,25 @@ export function InventarioNuevoPage() {
               </ErrorPanel>
             ) : null}
             <FormGrid columns={2}>
-              <Field label="Tipo" htmlFor="tipo" required>
+              <Field label={t.comun.tipo} htmlFor="tipo" required>
                 <Select id="tipo" {...register("tipo")}>
                   <option value="COMPLETO">Completo</option>
                   <option value="CICLICO">Cíclico</option>
                 </Select>
               </Field>
               <Field
-                label="Almacén"
+                label={t.campos.almacen}
                 htmlFor="almacen_id"
                 required
                 error={errors.almacen_id?.message}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
-                    <Select id="almacen_id" placeholder="Selecciona" {...register("almacen_id")}>
+                    <Select
+                      id="almacen_id"
+                      placeholder={t.formularios.selecciona}
+                      {...register("almacen_id")}
+                    >
                       {almacenes.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.codigo} — {a.nombre}
@@ -150,11 +154,15 @@ export function InventarioNuevoPage() {
                     </Select>
                   </div>
                   <CrearRapido campo="almacen_id" rutaNueva={catalogoNuevo("almacenes")}>
-                    Nuevo almacén
+                    {t.comun.nuevoAlmacen}
                   </CrearRapido>
                 </div>
               </Field>
-              <Field label="Alcance" htmlFor="alcance" help={t.inventarioNuevo.alcanceAyuda}>
+              <Field
+                label={t.campos.alcance}
+                htmlFor="alcance"
+                help={t.inventarioNuevo.alcanceAyuda}
+              >
                 <Input id="alcance" {...register("alcance")} />
               </Field>
               <Field

@@ -143,7 +143,7 @@ export function PasilloFormPage() {
   });
 
   if (esEdicion && pasilloQuery.isLoading) {
-    return <PageHeader title={t.formularios.pasillo.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.pasillo.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -171,7 +171,7 @@ export function PasilloFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}

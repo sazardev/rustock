@@ -101,12 +101,12 @@ export function ContenidoInventarioCard({ tipo, row }: Props) {
   const columnas: TableColumn<FilaContenido>[] = [
     {
       key: "producto",
-      header: "Producto",
+      header: t.campos.producto,
       render: (f) => <ProductoRef id={f.producto_id} />,
     },
     {
       key: "lote",
-      header: "Lote",
+      header: t.campos.lote,
       render: (f) => (f.lote_id ? <LoteRef id={f.lote_id} /> : "—"),
     },
     ...(tipo === "ubicacion"
@@ -114,20 +114,20 @@ export function ContenidoInventarioCard({ tipo, row }: Props) {
       : [
           {
             key: "ubicacion",
-            header: "Ubicación",
+            header: t.campos.ubicacion,
             render: (f: FilaContenido) => <UbicacionRef id={f.ubicacion_id} />,
           } satisfies TableColumn<FilaContenido>,
         ]),
     {
       key: "cantidad",
-      header: "Cantidad",
+      header: t.comun.cantidad,
       num: true,
       render: (f) => f.cantidad.toLocaleString(),
     },
   ];
 
   return (
-    <Card title="Contenido" className="mt-6">
+    <Card title={t.campos.contenido} className="mt-6">
       <Card.Body>
         {cargando ? (
           <Text as="p" size="sm" color="muted">

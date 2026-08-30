@@ -53,22 +53,31 @@ export function InventarioPage() {
   const filas = listado?.data ?? [];
 
   const columns: Array<TableColumn<SesionInventario>> = [
-    { key: "numero", header: "Número", code: true, render: (s) => s.numero },
+    { key: "numero", header: t.campos.numero, code: true, render: (s) => s.numero },
     {
       key: "tipo",
-      header: "Tipo",
-      render: (s) => (s.tipo === "COMPLETO" ? "Completo" : "Cíclico"),
+      header: t.comun.tipo,
+      render: (s) =>
+        s.tipo === "COMPLETO" ? t.sesionInventario.completo : t.sesionInventario.ciclico,
     },
-    { key: "almacen_id", header: "Almacén", render: (s) => <AlmacenRef id={s.almacen_id} /> },
-    { key: "alcance", header: "Alcance", render: (s) => s.alcance ?? "—" },
+    {
+      key: "almacen_id",
+      header: t.campos.almacen,
+      render: (s) => <AlmacenRef id={s.almacen_id} />,
+    },
+    { key: "alcance", header: t.campos.alcance, render: (s) => s.alcance ?? "—" },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (s) => (
         <Badge tone={ESTADO_SESION_TONE[s.estado]}>{t.dominio.estadoSesion[s.estado]}</Badge>
       ),
     },
-    { key: "fecha_inicio", header: "Inicio", render: (s) => formatearFecha(s.fecha_inicio) },
+    {
+      key: "fecha_inicio",
+      header: t.sesionInventario.fechaInicio,
+      render: (s) => formatearFecha(s.fecha_inicio),
+    },
   ];
 
   return (
@@ -84,7 +93,7 @@ export function InventarioPage() {
       <FilterBar
         action={
           <ButtonLink variant="primary" icon="agregar" href={PATH.inventarioNuevo}>
-            Nueva sesión
+            {t.inventarioPagina.nuevaSesion}
           </ButtonLink>
         }
       >
@@ -97,7 +106,7 @@ export function InventarioPage() {
               setPage(1);
             }}
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t.inventarioPagina.todosLosEstados}</option>
             {ESTADOS.map((e) => (
               <option key={e} value={e}>
                 {t.dominio.estadoSesion[e]}
@@ -119,7 +128,7 @@ export function InventarioPage() {
           emptyDescription={t.inventarioPagina.sinSesionesDesc}
           emptyAction={
             <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.inventarioNuevo}>
-              Crear sesión
+              {t.inventarioNuevo.crear}
             </ButtonLink>
           }
         />

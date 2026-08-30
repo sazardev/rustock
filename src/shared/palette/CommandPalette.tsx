@@ -563,9 +563,7 @@ export function CommandPalette() {
                   <span className="palette__estado-titulo">
                     Sin resultados para &quot;{consultaActiva}&quot;
                   </span>
-                  <span className="palette__estado-texto">
-                    Prueba con el SKU, código, número o nombre de lo que buscas.
-                  </span>
+                  <span className="palette__estado-texto">{t.comun.pruebaConSku}</span>
                   {!ayudaEnPalette ? (
                     <span className="palette__estado-texto">
                       Las guías de Ayuda están desactivadas en la búsqueda: actívalas en Mi perfil

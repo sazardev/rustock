@@ -192,7 +192,7 @@ export function CajaFormPage() {
   });
 
   if (esEdicion && cajaQuery.isLoading) {
-    return <PageHeader title={t.formularios.caja.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.caja.editar} description={t.comun.cargando} />;
   }
 
   function onSubmit(v: FormValues) {
@@ -232,7 +232,7 @@ export function CajaFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -243,7 +243,7 @@ export function CajaFormPage() {
               <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Etiqueta" htmlFor="etiqueta">
+              <Field label={t.campos.etiqueta} htmlFor="etiqueta">
                 <Input
                   id="etiqueta"
                   placeholder={t.formularios.caja.marcadorCodigo}
@@ -251,7 +251,7 @@ export function CajaFormPage() {
                 />
               </Field>
               <Field
-                label="Ubicación"
+                label={t.campos.ubicacion}
                 htmlFor="ubicacion_id"
                 required
                 error={errors.ubicacion_id?.message}
@@ -273,13 +273,13 @@ export function CajaFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="ubicacion_id" rutaNueva={catalogoNuevo("ubicaciones")}>
-                      Nueva ubicación
+                      {t.comun.nuevaUbicacion}
                     </CrearRapido>
                   ) : null}
                 </div>
               </Field>
               <Field
-                label="Producto (opcional)"
+                label={t.campos.productoOpcional}
                 htmlFor="producto_id"
                 error={errors.producto_id?.message}
                 help={t.formularios.caja.productoAyuda}
@@ -308,14 +308,14 @@ export function CajaFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="producto_id" rutaNueva={catalogoNuevo("productos")}>
-                      Nuevo producto
+                      {t.comun.nuevoProducto}
                     </CrearRapido>
                   ) : null}
                 </div>
               </Field>
               {productoVigente?.controla_lote ? (
                 <Field
-                  label="Lote"
+                  label={t.campos.lote}
                   htmlFor="lote_id"
                   required
                   error={errors.lote_id?.message}
@@ -348,7 +348,7 @@ export function CajaFormPage() {
                     </div>
                     {!esEdicion ? (
                       <CrearRapido campo="lote_id" rutaNueva={catalogoNuevo("lotes")}>
-                        Nuevo lote
+                        {t.comun.nuevoLote}
                       </CrearRapido>
                     ) : null}
                   </div>

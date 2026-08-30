@@ -170,7 +170,7 @@ function LoteSelect({ productoId, ...rest }: { productoId: string } & Record<str
   const lotes = lotesQuery.data && esPaginado(lotesQuery.data) ? lotesQuery.data.data : [];
 
   return (
-    <Select aria-label="Lote" placeholder={t.movForm.seleccionaLote} {...rest}>
+    <Select aria-label={t.campos.lote} placeholder={t.movForm.seleccionaLote} {...rest}>
       {lotes.map((l) => (
         <option key={l.id} value={l.id}>
           {l.numero}
@@ -231,13 +231,13 @@ function LineaFields({
               />
             </div>
             <CrearRapido campo="producto_id" rutaNueva={catalogoNuevo("productos")}>
-              Nuevo producto
+              {t.comun.nuevoProducto}
             </CrearRapido>
           </div>
         </Field>
 
         {producto?.controla_lote ? (
-          <Field label="Lote" required>
+          <Field label={t.campos.lote} required>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <Controller
@@ -247,7 +247,7 @@ function LineaFields({
                 />
               </div>
               <CrearRapido campo="lote_id" rutaNueva={catalogoNuevo("lotes")}>
-                Nuevo lote
+                {t.comun.nuevoLote}
               </CrearRapido>
             </div>
           </Field>
@@ -284,7 +284,7 @@ function LineaFields({
                 />
               </div>
               <CrearRapido campo="origen_ubicacion_id" rutaNueva={catalogoNuevo("ubicaciones")}>
-                Nueva ubicación
+                {t.comun.nuevaUbicacion}
               </CrearRapido>
             </div>
           </Field>
@@ -313,7 +313,7 @@ function LineaFields({
                 />
               </div>
               <CrearRapido campo="destino_ubicacion_id" rutaNueva={catalogoNuevo("ubicaciones")}>
-                Nueva ubicación
+                {t.comun.nuevaUbicacion}
               </CrearRapido>
             </div>
           </Field>
@@ -322,7 +322,7 @@ function LineaFields({
 
       {canRemove ? (
         <Button type="button" variant="ghost" size="sm" icon="eliminar" onClick={onRemove}>
-          Quitar línea
+          {t.comun.quitarLinea}
         </Button>
       ) : null}
     </div>
@@ -408,7 +408,7 @@ function SugerenciaFifoFefo({
           disabled={!productoId || !cantidad || sugerirMut.isPending}
           onClick={() => sugerirMut.mutate()}
         >
-          Sugerir FIFO/FEFO
+          {t.comun.sugerirFifoFefo}
         </Button>
       </Card.Body>
     </Card>
@@ -652,7 +652,7 @@ export function MovimientoGenericoForm({
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="proveedor_id" rutaNueva={catalogoNuevo("proveedores")}>
-                      Nuevo proveedor
+                      {t.comun.nuevoProveedor}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -677,7 +677,7 @@ export function MovimientoGenericoForm({
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="cliente_id" rutaNueva={catalogoNuevo("clientes")}>
-                      Nuevo cliente
+                      {t.comun.nuevoCliente}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -737,7 +737,7 @@ export function MovimientoGenericoForm({
             icon="agregar"
             onClick={() => append(LINEA_VACIA)}
           >
-            Agregar línea
+            {t.comun.agregarLinea}
           </Button>
         </Card.Body>
       </Card>
@@ -768,7 +768,7 @@ export function MovimientoGenericoForm({
           variant="secondary"
           href={esEdicion ? movimientoEditar(movimiento!.id) : PATH.movimientos}
         >
-          Cancelar
+          {t.comun.cancelar}
         </ButtonLink>
       </FormActions>
     </form>
@@ -965,20 +965,20 @@ export function TrasladoForm({
                 </div>
                 {!esEdicion ? (
                   <CrearRapido campo="producto_id" rutaNueva={catalogoNuevo("productos")}>
-                    Nuevo producto
+                    {t.comun.nuevoProducto}
                   </CrearRapido>
                 ) : null}
               </div>
             </Field>
             {producto?.controla_lote ? (
-              <Field label="Lote" required>
+              <Field label={t.campos.lote} required>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <LoteSelect productoId={productoId} {...register("lote_id")} />
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="lote_id" rutaNueva={catalogoNuevo("lotes")}>
-                      Nuevo lote
+                      {t.comun.nuevoLote}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -1007,7 +1007,7 @@ export function TrasladoForm({
                 </div>
                 {!esEdicion ? (
                   <CrearRapido campo="origen_ubicacion_id" rutaNueva={catalogoNuevo("ubicaciones")}>
-                    Nueva ubicación
+                    {t.comun.nuevaUbicacion}
                   </CrearRapido>
                 ) : null}
               </div>
@@ -1032,7 +1032,7 @@ export function TrasladoForm({
                     campo="destino_ubicacion_id"
                     rutaNueva={catalogoNuevo("ubicaciones")}
                   >
-                    Nueva ubicación
+                    {t.comun.nuevaUbicacion}
                   </CrearRapido>
                 ) : null}
               </div>
@@ -1068,7 +1068,7 @@ export function TrasladoForm({
           variant="secondary"
           href={esEdicion ? movimientoEditar(movimiento!.id) : PATH.movimientos}
         >
-          Cancelar
+          {t.comun.cancelar}
         </ButtonLink>
       </FormActions>
     </form>

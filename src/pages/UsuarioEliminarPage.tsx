@@ -49,15 +49,13 @@ export function UsuarioEliminarPage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title="Usuario" description="Cargando…" />;
+    return <PageHeader title={t.campos.usuario} description={t.comun.cargando} />;
   }
   if (!usuario) {
     return (
       <>
-        <PageHeader title="Usuario" description={t.usuariosPagina.noEncontradoDesc} />
-        <ErrorPanel title={t.usuariosPagina.noEncontrado}>
-          El usuario ya no existe o no tienes permiso para verlo.
-        </ErrorPanel>
+        <PageHeader title={t.campos.usuario} description={t.usuariosPagina.noEncontradoDesc} />
+        <ErrorPanel title={t.usuariosPagina.noEncontrado}>{t.comun.usuarioSinPermiso}</ErrorPanel>
       </>
     );
   }
@@ -106,7 +104,7 @@ export function UsuarioEliminarPage() {
       <div className="mt-6 flex items-center gap-3">
         {esMiCuenta && desactivar ? (
           <Button type="button" variant="danger" disabled>
-            No puedes desactivar tu propia cuenta
+            {t.comun.noPuedesDesactivarte}
           </Button>
         ) : (
           <Button
@@ -123,7 +121,7 @@ export function UsuarioEliminarPage() {
           </Button>
         )}
         <ButtonLink variant="secondary" href={catalogoDetalle("usuarios", usuario.id)}>
-          Cancelar
+          {t.comun.cancelar}
         </ButtonLink>
       </div>
     </>

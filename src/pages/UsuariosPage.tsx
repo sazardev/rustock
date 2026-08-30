@@ -69,16 +69,21 @@ export function UsuariosPage() {
   const filas = listado?.data ?? [];
 
   const columns: Array<TableColumn<Usuario>> = [
-    { key: "nombre_usuario", header: "Usuario", code: true, render: (u) => u.nombre_usuario },
+    {
+      key: "nombre_usuario",
+      header: t.campos.usuario,
+      code: true,
+      render: (u) => u.nombre_usuario,
+    },
     {
       key: "nombre_completo",
       header: t.usuariosPagina.nombreCompleto,
       render: (u) => u.nombre_completo,
     },
-    { key: "email", header: "Email", render: (u) => u.email ?? "—" },
+    { key: "email", header: t.perfil.email, render: (u) => u.email ?? "—" },
     {
       key: "rol_id",
-      header: "Rol",
+      header: t.campos.rol,
       render: (u) => {
         const rol = rolDe(u.rol_id);
         return (
@@ -90,7 +95,7 @@ export function UsuariosPage() {
     },
     {
       key: "activo",
-      header: "Estado",
+      header: t.comun.estado,
       render: (u) =>
         u.activo ? (
           <Badge tone="success">{t.comun.activo}</Badge>
@@ -107,7 +112,7 @@ export function UsuariosPage() {
 
   return (
     <>
-      <PageHeader title="Usuarios" />
+      <PageHeader title={t.campos.usuarios} />
 
       {query.error ? (
         <ErrorPanel title={t.usuariosPagina.noSePudoCargar}>{mensajeError(query.error)}</ErrorPanel>
@@ -117,7 +122,7 @@ export function UsuariosPage() {
         action={
           esAdmin ? (
             <ButtonLink variant="primary" icon="agregar" href={`${PATH.usuarios}/nuevo`}>
-              Nuevo usuario
+              {t.comun.nuevoUsuario}
             </ButtonLink>
           ) : undefined
         }
@@ -131,7 +136,7 @@ export function UsuariosPage() {
               setPage(1);
             }}
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t.usuariosPagina.todosLosEstados}</option>
             <option value="activo">Activos</option>
             <option value="inactivo">Inactivos</option>
           </Select>
@@ -164,7 +169,7 @@ export function UsuariosPage() {
       <Card muted>
         <Card.Body>
           <Text as="p" size="sm" color="muted">
-            Las cuentas desactivadas no pueden iniciar sesión; su historial se conserva.
+            {t.usuariosPagina.avisoDesactivadas}
           </Text>
         </Card.Body>
       </Card>

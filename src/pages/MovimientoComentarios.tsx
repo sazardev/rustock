@@ -33,7 +33,7 @@ export function MovimientoComentarios({ movimientoId }: { movimientoId: string }
 
   return (
     <div className="mt-6">
-      <Card title="Comentarios">
+      <Card title={t.comentarios.titulo}>
         <Card.Body>
           {comentariosQuery.data && comentariosQuery.data.length > 0 ? (
             <ul className="list-none p-0">
@@ -50,7 +50,7 @@ export function MovimientoComentarios({ movimientoId }: { movimientoId: string }
                       </Text>
                       {c.editado ? (
                         <Badge tone="neutral" className="text-xs">
-                          Editado
+                          {t.comun.editado}
                         </Badge>
                       ) : null}
                     </div>
@@ -62,7 +62,7 @@ export function MovimientoComentarios({ movimientoId }: { movimientoId: string }
             </ul>
           ) : (
             <Text as="p" size="sm" color="muted">
-              Sin comentarios todavía.
+              {t.comun.sinComentarios}
             </Text>
           )}
 
@@ -87,7 +87,7 @@ export function MovimientoComentarios({ movimientoId }: { movimientoId: string }
                 size="sm"
                 disabled={comentarMut.isPending || !textoComentario.trim()}
               >
-                Comentar
+                {t.comentarios.enviar}
               </Button>
             </div>
           </form>

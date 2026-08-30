@@ -175,7 +175,7 @@ export function RackFormPage() {
   });
 
   if (esEdicion && rackQuery.isLoading) {
-    return <PageHeader title={t.formularios.rack.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.rack.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -203,7 +203,7 @@ export function RackFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -215,7 +215,7 @@ export function RackFormPage() {
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field label={t.comun.tipo} htmlFor="tipo">
-                <Input id="tipo" placeholder="Estantería, pallet, nevera…" {...register("tipo")} />
+                <Input id="tipo" placeholder={t.campos.tipoRackEjemplo} {...register("tipo")} />
               </Field>
               <Field
                 label={t.campos.zona}
@@ -245,7 +245,11 @@ export function RackFormPage() {
                   ) : null}
                 </div>
               </Field>
-              <Field label="Pasillo" htmlFor="pasillo_id" help={t.formularios.rack.pasilloAyuda}>
+              <Field
+                label={t.campos.pasillo}
+                htmlFor="pasillo_id"
+                help={t.formularios.rack.pasilloAyuda}
+              >
                 <Select
                   id="pasillo_id"
                   placeholder={t.formularios.rack.sinPasillo}

@@ -79,15 +79,15 @@ export function PosicionFormCard({
           <Field label="Z" htmlFor="pos_z" help={t.ui.paraMapa3DApilado}>
             <Input id="pos_z" type="number" step="any" number {...campo("pos_z")} />
           </Field>
-          <Field label="Altura" htmlFor="altura" help={t.ui.paraMapa3D}>
+          <Field label={t.campos.altura} htmlFor="altura" help={t.ui.paraMapa3D}>
             <Input id="altura" type="number" step="any" number {...campo("altura")} />
           </Field>
           {tamanio ? (
             <>
-              <Field label="Ancho" htmlFor="mapa_ancho">
+              <Field label={t.campos.ancho} htmlFor="mapa_ancho">
                 <Input id="mapa_ancho" type="number" step="any" number {...campo("ancho")} />
               </Field>
-              <Field label="Profundidad" htmlFor="mapa_profundidad">
+              <Field label={t.campos.profundidad} htmlFor="mapa_profundidad">
                 <Input
                   id="mapa_profundidad"
                   type="number"

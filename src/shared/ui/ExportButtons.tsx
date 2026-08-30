@@ -4,6 +4,7 @@ import { useToast } from "./Toast";
 import { exportarCSV, exportarJSON, exportarXLSX } from "../exportar";
 import { mensajeError } from "../format";
 import { cn } from "../lib/cn";
+import { useT } from "../i18n";
 
 export interface ExportButtonsProps {
   /** Nombre base del archivo (sin extensión ni fecha). */
@@ -22,6 +23,7 @@ export interface ExportButtonsProps {
  * propio estado de carga.
  */
 export function ExportButtons({ nombre, filas, disabled, className }: ExportButtonsProps) {
+  const t = useT();
   const { toast } = useToast();
   const [generandoXlsx, setGenerandoXlsx] = useState(false);
   const sinFilas = filas.length === 0;
@@ -46,7 +48,7 @@ export function ExportButtons({ nombre, filas, disabled, className }: ExportButt
         disabled={disabled || sinFilas}
         onClick={() => exportarCSV(nombre, filas)}
       >
-        Exportar CSV
+        {t.comun.exportarCsv}
       </Button>
       <Button
         variant="secondary"

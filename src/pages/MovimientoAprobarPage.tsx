@@ -34,7 +34,7 @@ export function MovimientoAprobarPage() {
   const movimiento = query.data;
 
   if (query.isLoading) {
-    return <PageHeader title={t.movimientoAcciones.aprobarTitulo} description="Cargando…" />;
+    return <PageHeader title={t.movimientoAcciones.aprobarTitulo} description={t.comun.cargando} />;
   }
   if (!movimiento) {
     return (
@@ -54,13 +54,13 @@ export function MovimientoAprobarPage() {
         description={t.movimientoAcciones.aprobarAviso}
       />
 
-      <Card title="Movimiento">
+      <Card title={t.campos.movimiento}>
         <Card.Body>
           <DetailList
             items={[
-              { label: "Número", value: movimiento.numero, code: true },
-              { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
-              { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
+              { label: t.campos.numero, value: movimiento.numero, code: true },
+              { label: t.comun.tipo, value: t.dominio.tipoMovimiento[movimiento.tipo] },
+              { label: t.campos.subTipo, value: movimiento.sub_tipo, code: true },
               {
                 label: t.movimientoAcciones.estadoActual,
                 value: t.dominio.estadoMovimiento[movimiento.estado],
@@ -69,7 +69,7 @@ export function MovimientoAprobarPage() {
                 label: t.movimientoAcciones.fechaMovimiento,
                 value: formatearFecha(movimiento.fecha_movimiento),
               },
-              { label: "Motivo", value: movimiento.motivo ?? "—" },
+              { label: t.campos.motivo, value: movimiento.motivo ?? "—" },
             ]}
           />
         </Card.Body>

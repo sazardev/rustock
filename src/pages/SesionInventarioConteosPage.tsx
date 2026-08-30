@@ -133,13 +133,31 @@ export function SesionInventarioConteosPage() {
   const columns: Array<TableColumn<Conteo>> = [
     {
       key: "ubicacion_id",
-      header: "Ubicación",
+      header: t.campos.ubicacion,
       render: (c) => <UbicacionRef id={c.ubicacion_id} />,
     },
-    { key: "producto_id", header: "Producto", render: (c) => <ProductoRef id={c.producto_id} /> },
-    { key: "cantidad_contada", header: "Cantidad", num: true, render: (c) => c.cantidad_contada },
-    { key: "conteo_numero", header: "N.º conteo", num: true, render: (c) => c.conteo_numero },
-    { key: "timestamp", header: "Cuándo", render: (c) => formatearFecha(c.timestamp) },
+    {
+      key: "producto_id",
+      header: t.campos.producto,
+      render: (c) => <ProductoRef id={c.producto_id} />,
+    },
+    {
+      key: "cantidad_contada",
+      header: t.comun.cantidad,
+      num: true,
+      render: (c) => c.cantidad_contada,
+    },
+    {
+      key: "conteo_numero",
+      header: t.sesionInventario.nroConteo,
+      num: true,
+      render: (c) => c.conteo_numero,
+    },
+    {
+      key: "timestamp",
+      header: t.sesionInventario.cuando,
+      render: (c) => formatearFecha(c.timestamp),
+    },
   ];
 
   const sesion = sesionQuery.data;
@@ -152,7 +170,7 @@ export function SesionInventarioConteosPage() {
         description={sesion?.conteo_ciego ? t.conteos.ciegoActivo : t.conteos.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={sesionInventarioDetalle(sesionId)}>
-            Volver a la sesión
+            {t.comun.volverALaSesion}
           </ButtonLink>
         }
       />
@@ -172,12 +190,12 @@ export function SesionInventarioConteosPage() {
             </ErrorPanel>
           ) : null}
           <FormGrid columns={2}>
-            <Field label="Ubicación" htmlFor="conteo-ubicacion" required>
+            <Field label={t.campos.ubicacion} htmlFor="conteo-ubicacion" required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
                     id="conteo-ubicacion"
-                    placeholder="Selecciona"
+                    placeholder={t.formularios.selecciona}
                     value={form.ubicacion_id}
                     onChange={(e) => setForm({ ...form, ubicacion_id: e.target.value })}
                   >
@@ -189,16 +207,16 @@ export function SesionInventarioConteosPage() {
                   </Select>
                 </div>
                 <CrearRapido campo="ubicacion_id" rutaNueva={catalogoNuevo("ubicaciones")}>
-                  Nueva ubicación
+                  {t.comun.nuevaUbicacion}
                 </CrearRapido>
               </div>
             </Field>
-            <Field label="Producto" htmlFor="conteo-producto" required>
+            <Field label={t.campos.producto} htmlFor="conteo-producto" required>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Select
                     id="conteo-producto"
-                    placeholder="Selecciona"
+                    placeholder={t.formularios.selecciona}
                     value={form.producto_id}
                     onChange={(e) => setForm({ ...form, producto_id: e.target.value, lote_id: "" })}
                   >
@@ -210,17 +228,17 @@ export function SesionInventarioConteosPage() {
                   </Select>
                 </div>
                 <CrearRapido campo="producto_id" rutaNueva={catalogoNuevo("productos")}>
-                  Nuevo producto
+                  {t.comun.nuevoProducto}
                 </CrearRapido>
               </div>
             </Field>
             {productoSeleccionado?.controla_lote ? (
-              <Field label="Lote" htmlFor="conteo-lote" required>
+              <Field label={t.campos.lote} htmlFor="conteo-lote" required>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="conteo-lote"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       value={form.lote_id}
                       onChange={(e) => setForm({ ...form, lote_id: e.target.value })}
                     >
@@ -232,7 +250,7 @@ export function SesionInventarioConteosPage() {
                     </Select>
                   </div>
                   <CrearRapido campo="lote_id" rutaNueva={catalogoNuevo("lotes")}>
-                    Nuevo lote
+                    {t.comun.nuevoLote}
                   </CrearRapido>
                 </div>
               </Field>
@@ -264,7 +282,7 @@ export function SesionInventarioConteosPage() {
                 onChange={(e) => setForm({ ...form, conteo_numero: e.target.value })}
               />
             </Field>
-            <Field label="Nota" htmlFor="conteo-nota">
+            <Field label={t.campos.nota} htmlFor="conteo-nota">
               <Input
                 id="conteo-nota"
                 placeholder={t.conteos.marcadorNota}

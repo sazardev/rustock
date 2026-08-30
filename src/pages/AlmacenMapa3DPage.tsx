@@ -778,24 +778,24 @@ export function AlmacenMapa3DPage() {
     return (
       <>
         <PageHeader
-          title="Mapa 3D"
+          title={t.mapa3d.mapa3D}
           description={t.mapa3d.descripcion}
           actions={
             <ButtonLink variant="ghost" icon="ubicacion" href={almacenMapa(almacenId ?? "")}>
-              Volver al mapa 2D
+              {t.comun.volverAlMapa2D}
             </ButtonLink>
           }
         />
         {cargando ? (
           <Text as="p" size="sm" color="muted">
-            Cargando estructura…
+            {t.comun.cargandoEstructura}
           </Text>
         ) : nodos.length === 0 ? (
           <Text as="p" size="sm" color="muted">
             Este almacén aún no tiene zonas, racks o ubicaciones para mostrar en el mapa.
           </Text>
         ) : (
-          <ErrorPanel title="El mapa 3D requiere WebGL">
+          <ErrorPanel title={t.mapa3d.requiereWebGL}>
             Este equipo o navegador no pudo crear un contexto WebGL (sin aceleración gráfica o
             driver sin soporte). El mapa 2D ofrece las mismas posiciones y ediciones:{" "}
             <Link href={almacenMapa(almacenId ?? "")}>abrir el mapa 2D</Link>.
@@ -863,7 +863,7 @@ export function AlmacenMapa3DPage() {
             disabled={!hist.puedeDeshacer || moverMut.isPending}
             onClick={deshacer}
           >
-            Deshacer
+            {t.comun.deshacer}
           </Button>
           <Button
             variant="ghost"
@@ -872,13 +872,13 @@ export function AlmacenMapa3DPage() {
             disabled={!hist.puedeRehacer || moverMut.isPending}
             onClick={rehacer}
           >
-            Rehacer
+            {t.comun.rehacer}
           </Button>
           <Button variant="ghost" size="sm" icon="encuadrar" onClick={encuadrarTodo}>
-            Encuadrar todo
+            {t.comun.encuadrarTodo}
           </Button>
           <Button variant="ghost" size="sm" icon="refrescar" onClick={resetearVista}>
-            Resetear vista
+            {t.comun.resetearVista}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => irAVista("iso")}>
             Isométrica

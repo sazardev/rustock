@@ -121,9 +121,7 @@ export function ReporteKardexPage() {
             emptyDescription={t.reportes.kardex.sinMovimientosDesc}
           />
         ) : (
-          <p className="text-base text-gray-500">
-            Selecciona un producto para ver su historial de movimientos y saldo acumulado.
-          </p>
+          <p className="text-base text-gray-500">{t.comun.seleccionaProductoKardex}</p>
         )}
       </Card>
     </>

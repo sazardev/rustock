@@ -67,7 +67,7 @@ export function NodoSeleccionadoPanel({
         <Card title={t.mapa3d.nodoSeleccionado}>
           <Card.Body>
             <Text as="p" size="sm" color="muted">
-              Selecciona un nodo del mapa para ver sus detalles.
+              {t.comun.seleccionaNodo}
             </Text>
           </Card.Body>
         </Card>
@@ -97,7 +97,7 @@ export function NodoSeleccionadoPanel({
               icon="ver"
               href={catalogoDetalle(SLUG_POR_TIPO[nodo.tipo], nodo.id)}
             >
-              Ir hacia
+              {t.comun.irHacia}
             </ButtonLink>
             {onDuplicar && nodo.tipo !== "ubicacion" ? (
               <Button
@@ -107,7 +107,7 @@ export function NodoSeleccionadoPanel({
                 disabled={duplicando}
                 onClick={onDuplicar}
               >
-                Duplicar
+                {t.comun.duplicarAccion}
               </Button>
             ) : null}
             {nodo.tipo !== "ubicacion" ? (
@@ -117,7 +117,7 @@ export function NodoSeleccionadoPanel({
                 icon="eliminar"
                 href={catalogoEliminar(SLUG_POR_TIPO[nodo.tipo], nodo.id)}
               >
-                Eliminar
+                {t.comun.eliminar}
               </ButtonLink>
             ) : null}
           </div>
@@ -182,12 +182,12 @@ function ContenidoDeNodo(
       {props.tipo === "ubicacion" ? (
         <ContenidoInventarioCard tipo="ubicacion" row={props.entidad} />
       ) : null}
-      <Card title="Metadata" className="mt-6">
+      <Card title={t.campos.metadata} className="mt-6">
         <Card.Body>
           <DetailList
             items={[
-              { label: "Creado", value: formatearFecha(entidad.created_at) },
-              { label: "Actualizado", value: formatearFecha(entidad.updated_at) },
+              { label: t.campos.creado, value: formatearFecha(entidad.created_at) },
+              { label: t.reportes.columnas.actualizado, value: formatearFecha(entidad.updated_at) },
               {
                 label: t.mapa3d.creadoPor,
                 value: entidad.created_by ? <UsuarioNombre id={entidad.created_by} /> : "—",

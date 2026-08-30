@@ -33,15 +33,13 @@ export function SucursalEliminarPage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title="Sucursal" description="Cargando…" />;
+    return <PageHeader title={t.campos.sucursal} description={t.comun.cargando} />;
   }
   if (!sucursal) {
     return (
       <>
-        <PageHeader title="Sucursal" description={t.sucursales.noEncontradaDesc} />
-        <ErrorPanel title={t.sucursales.noEncontrada}>
-          La sucursal ya no existe o no tienes permiso para verla.
-        </ErrorPanel>
+        <PageHeader title={t.campos.sucursal} description={t.sucursales.noEncontradaDesc} />
+        <ErrorPanel title={t.sucursales.noEncontrada}>{t.comun.sucursalSinPermiso}</ErrorPanel>
       </>
     );
   }
@@ -81,7 +79,7 @@ export function SucursalEliminarPage() {
           {mutacion.isPending ? "Procesando…" : t.sucursales.desactivar}
         </Button>
         <ButtonLink variant="secondary" href={`${PATH.sucursales}/${sucursal.id}`}>
-          Cancelar
+          {t.comun.cancelar}
         </ButtonLink>
       </div>
     </>

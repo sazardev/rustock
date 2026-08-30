@@ -324,7 +324,7 @@ export function DatePicker({
 
               <div className="calendario__pie">
                 <button type="button" className="calendario__accion" onClick={limpiar}>
-                  Limpiar
+                  {t.comun.limpiar}
                 </button>
                 <button
                   type="button"

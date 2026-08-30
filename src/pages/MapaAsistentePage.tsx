@@ -193,7 +193,7 @@ export function MapaAsistentePage() {
         description={t.asistenteMapa.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={almacenMapa(almacenId)}>
-            Volver al mapa
+            {t.comun.volverAlMapa}
           </ButtonLink>
         }
       />
@@ -259,7 +259,7 @@ export function MapaAsistentePage() {
               </Text>
               <FormActions>
                 <ButtonLink variant="secondary" href={almacenMapa(almacenId)}>
-                  Cancelar
+                  {t.comun.cancelar}
                 </ButtonLink>
                 <Button
                   type="submit"
@@ -305,7 +305,7 @@ export function MapaAsistentePage() {
               </svg>
             ) : (
               <Text as="p" size="sm" color="muted">
-                Ajusta los valores para ver la vista previa.
+                {t.comun.ajustaValores}
               </Text>
             )}
           </Card.Body>

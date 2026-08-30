@@ -143,7 +143,7 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
   });
 
   if (esEdicion && entidadQuery.isLoading) {
-    return <PageHeader title={`Editar ${cfg.singularMin}`} description="Cargando…" />;
+    return <PageHeader title={`Editar ${cfg.singularMin}`} description={t.comun.cargando} />;
   }
 
   return (
@@ -173,7 +173,7 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -181,20 +181,25 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+              <Field
+                label={t.comun.nombre}
+                htmlFor="nombre"
+                required
+                error={errors.nombre?.message}
+              >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Contacto" htmlFor="contacto_nombre">
+              <Field label={t.campos.contacto} htmlFor="contacto_nombre">
                 <Input id="contacto_nombre" {...register("contacto_nombre")} />
               </Field>
-              <Field label="Teléfono" htmlFor="contacto_telefono">
+              <Field label={t.campos.telefono} htmlFor="contacto_telefono">
                 <Input id="contacto_telefono" code {...register("contacto_telefono")} />
               </Field>
-              <Field label="Email" htmlFor="contacto_email">
+              <Field label={t.perfil.email} htmlFor="contacto_email">
                 <Input id="contacto_email" type="email" {...register("contacto_email")} />
               </Field>
             </FormGrid>
-            <Field label="Dirección" htmlFor="direccion">
+            <Field label={t.campos.direccion} htmlFor="direccion">
               <Textarea id="direccion" rows={2} {...register("direccion")} />
             </Field>
           </Card.Body>
@@ -218,7 +223,7 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
                   : catalogoLista(cfg.slug)
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

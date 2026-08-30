@@ -99,7 +99,7 @@ export function AlmacenFormPage() {
   });
 
   if (esEdicion && almacenQuery.isLoading) {
-    return <PageHeader title={t.formularios.almacen.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.almacen.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -127,7 +127,7 @@ export function AlmacenFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -143,7 +143,7 @@ export function AlmacenFormPage() {
               >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Dirección" htmlFor="direccion">
+              <Field label={t.campos.direccion} htmlFor="direccion">
                 <Input id="direccion" {...register("direccion")} />
               </Field>
             </FormGrid>

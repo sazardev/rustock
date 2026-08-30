@@ -27,14 +27,14 @@ export function SucursalesPage() {
   const filas = query.data ?? [];
 
   const columns: Array<TableColumn<Sucursal>> = [
-    { key: "codigo", header: "Código", code: true, render: (s) => s.codigo },
-    { key: "nombre", header: "Nombre", render: (s) => s.nombre },
-    { key: "pais", header: "País", render: (s) => s.pais ?? "—" },
-    { key: "ciudad", header: "Ciudad", render: (s) => s.ciudad ?? "—" },
-    { key: "direccion", header: "Dirección", render: (s) => s.direccion ?? "—" },
+    { key: "codigo", header: t.comun.codigo, code: true, render: (s) => s.codigo },
+    { key: "nombre", header: t.comun.nombre, render: (s) => s.nombre },
+    { key: "pais", header: t.campos.pais, render: (s) => s.pais ?? "—" },
+    { key: "ciudad", header: t.campos.ciudad, render: (s) => s.ciudad ?? "—" },
+    { key: "direccion", header: t.campos.direccion, render: (s) => s.direccion ?? "—" },
     {
       key: "coordenadas",
-      header: "Coordenadas",
+      header: t.campos.coordenadas,
       code: true,
       render: (s) =>
         s.latitud !== null && s.longitud !== null
@@ -43,7 +43,7 @@ export function SucursalesPage() {
     },
     {
       key: "activo",
-      header: "Estado",
+      header: t.comun.estado,
       render: (s) =>
         s.activo ? (
           <Badge tone="success">{t.sucursales.activa}</Badge>
@@ -55,12 +55,12 @@ export function SucursalesPage() {
 
   return (
     <>
-      <PageHeader title="Sucursales" />
+      <PageHeader title={t.campos.sucursales} />
 
       <FilterBar
         action={
           <ButtonLink variant="primary" icon="agregar" href={`${PATH.sucursales}/nuevo`}>
-            Nueva sucursal
+            {t.comun.nuevaSucursal}
           </ButtonLink>
         }
       />

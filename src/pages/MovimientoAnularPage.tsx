@@ -34,7 +34,7 @@ export function MovimientoAnularPage() {
   const movimiento = query.data;
 
   if (query.isLoading) {
-    return <PageHeader title={t.movimientoAcciones.anularTitulo} description="Cargando…" />;
+    return <PageHeader title={t.movimientoAcciones.anularTitulo} description={t.comun.cargando} />;
   }
   if (!movimiento) {
     return (
@@ -53,13 +53,13 @@ export function MovimientoAnularPage() {
         description={t.movimientoAcciones.anularAviso}
       />
 
-      <Card title="Movimiento">
+      <Card title={t.campos.movimiento}>
         <Card.Body>
           <DetailList
             items={[
-              { label: "Número", value: movimiento.numero, code: true },
-              { label: "Tipo", value: t.dominio.tipoMovimiento[movimiento.tipo] },
-              { label: "Sub-tipo", value: movimiento.sub_tipo, code: true },
+              { label: t.campos.numero, value: movimiento.numero, code: true },
+              { label: t.comun.tipo, value: t.dominio.tipoMovimiento[movimiento.tipo] },
+              { label: t.campos.subTipo, value: movimiento.sub_tipo, code: true },
               {
                 label: t.movimientoAcciones.estadoActual,
                 value: t.dominio.estadoMovimiento[movimiento.estado],

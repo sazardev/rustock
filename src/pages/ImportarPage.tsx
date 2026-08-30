@@ -147,10 +147,10 @@ export function ImportarPage() {
   const mal = (resultados?.length ?? 0) - ok;
 
   const columnasResultado: Array<TableColumn<ResultadoImportacion>> = [
-    { key: "fila", header: "Fila", num: true, render: (r) => r.fila },
+    { key: "fila", header: t.campos.fila, num: true, render: (r) => r.fila },
     {
       key: "ok",
-      header: "Estado",
+      header: t.comun.estado,
       render: (r) =>
         r.ok ? (
           <Badge tone="success">{t.importar.importado}</Badge>
@@ -159,7 +159,7 @@ export function ImportarPage() {
         ),
     },
     { key: "id", header: "Id", code: true, render: (r) => r.id ?? "—" },
-    { key: "error", header: "Detalle", render: (r) => r.error ?? "—" },
+    { key: "error", header: t.campos.detalle, render: (r) => r.error ?? "—" },
   ];
 
   return (
@@ -169,7 +169,7 @@ export function ImportarPage() {
       <Card title={t.importar.origen}>
         <Card.Body>
           {error ? (
-            <ErrorPanel title="Importación" className="mb-4">
+            <ErrorPanel title={t.importar.tituloError} className="mb-4">
               {error}
             </ErrorPanel>
           ) : null}
@@ -184,11 +184,11 @@ export function ImportarPage() {
               </Select>
             </Field>
             <Button type="button" variant="secondary" icon="exportar" onClick={descargarPlantilla}>
-              Descargar plantilla
+              {t.comun.descargarPlantilla}
             </Button>
           </div>
           <div className="mt-4">
-            <Field label="Contenido CSV" htmlFor="csv" help={t.importar.cabeceraAyuda}>
+            <Field label={t.importar.contenidoCsv} htmlFor="csv" help={t.importar.cabeceraAyuda}>
               <Textarea
                 id="csv"
                 rows={10}

@@ -133,22 +133,22 @@ export function ProductoUbicacionesCard({ row }: { row: Producto }) {
   const columnas: TableColumn<FilaUbicacion>[] = [
     {
       key: "ubicacion",
-      header: "Ubicación",
+      header: t.campos.ubicacion,
       render: (f) => <UbicacionRef id={f.ubicacion_id} />,
     },
     {
       key: "almacen",
-      header: "Almacén",
+      header: t.campos.almacen,
       render: (f) => (f.almacen_id ? <AlmacenRef id={f.almacen_id} /> : "—"),
     },
     {
       key: "lote",
-      header: "Lote",
+      header: t.campos.lote,
       render: (f) => (f.lote_id ? <LoteRef id={f.lote_id} /> : "—"),
     },
     {
       key: "cantidad",
-      header: "Cantidad",
+      header: t.comun.cantidad,
       num: true,
       render: (f) => f.cantidad.toLocaleString(),
     },

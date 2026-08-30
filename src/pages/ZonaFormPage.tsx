@@ -152,7 +152,7 @@ export function ZonaFormPage() {
   });
 
   if (esEdicion && zonaQuery.isLoading) {
-    return <PageHeader title={t.formularios.zona.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.zona.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -180,7 +180,7 @@ export function ZonaFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
@@ -197,7 +197,7 @@ export function ZonaFormPage() {
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field
-                label="Almacén"
+                label={t.campos.almacen}
                 htmlFor="almacen_id"
                 required
                 error={errors.almacen_id?.message}
@@ -219,7 +219,7 @@ export function ZonaFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="almacen_id" rutaNueva={catalogoNuevo("almacenes")}>
-                      Nuevo almacén
+                      {t.comun.nuevoAlmacen}
                     </CrearRapido>
                   ) : null}
                 </div>

@@ -68,6 +68,7 @@ export function ColumnasHora({
   onElegir,
   autoDesplazar = true,
 }: ColumnasHoraProps) {
+  const t = useT();
   const horaActivaRef = useRef<HTMLButtonElement | null>(null);
   const minutoActivoRef = useRef<HTMLButtonElement | null>(null);
 
@@ -90,7 +91,7 @@ export function ColumnasHora({
 
   return (
     <div className="reloj__columnas">
-      <div className="reloj__columna" role="listbox" aria-label="Hora">
+      <div className="reloj__columna" role="listbox" aria-label={t.campos.hora}>
         {horas.map((h) => {
           const activa = h === hora;
           return (
@@ -108,7 +109,7 @@ export function ColumnasHora({
           );
         })}
       </div>
-      <div className="reloj__columna" role="listbox" aria-label="Minuto">
+      <div className="reloj__columna" role="listbox" aria-label={t.campos.minuto}>
         {minutosVisibles.map((m) => {
           const activo = m === minuto;
           return (
@@ -265,14 +266,14 @@ export function TimePicker({
                     cerrar(true);
                   }}
                 >
-                  Limpiar
+                  {t.comun.limpiar}
                 </button>
                 <button
                   type="button"
                   className="calendario__accion calendario__accion--principal"
                   onClick={() => cerrar(true)}
                 >
-                  Listo
+                  {t.comun.listo}
                 </button>
               </div>
             </div>,

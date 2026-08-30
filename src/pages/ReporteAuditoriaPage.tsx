@@ -113,11 +113,11 @@ export function ReporteAuditoriaPage() {
       render: (e) =>
         e.tipo_evento === "VISTA" ? (
           <Badge tone="info" icon="historial">
-            Vista
+            {t.comun.vista}
           </Badge>
         ) : (
           <Badge tone="warning" icon="movements">
-            Comando
+            {t.comun.comando}
           </Badge>
         ),
     },
@@ -145,7 +145,7 @@ export function ReporteAuditoriaPage() {
     },
     {
       key: "nivel",
-      header: "Nivel",
+      header: t.campos.nivel,
       render: (e) => <Badge tone={e.nivel === "ESCRITURA" ? "warning" : "info"}>{e.nivel}</Badge>,
     },
     {
@@ -154,11 +154,11 @@ export function ReporteAuditoriaPage() {
       render: (e) =>
         e.exito ? (
           <Badge tone="success" icon="aprobar">
-            Éxito
+            {t.comun.exito}
           </Badge>
         ) : (
           <Badge tone="danger" icon="anular">
-            Error
+            {t.comun.error}
           </Badge>
         ),
     },

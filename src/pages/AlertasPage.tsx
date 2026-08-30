@@ -28,11 +28,14 @@ import {
   mensajeError,
 } from "../shared/format";
 
-const ESTADOS: Array<{ value: EstadoAlerta; label: string }> = [
-  { value: "ABIERTA", label: "Abiertas" },
-  { value: "RESUELTA", label: "Resueltas" },
-  { value: "IGNORADA", label: "Archivadas" },
-];
+/** Los tres estados de una alerta, en el idioma activo. */
+function estadosDe(t: Diccionario): Array<{ value: EstadoAlerta; label: string }> {
+  return [
+    { value: "ABIERTA", label: t.alertas.abiertas },
+    { value: "RESUELTA", label: t.alertas.resueltas },
+    { value: "IGNORADA", label: t.alertas.archivadas },
+  ];
+}
 
 /** Cómo se resuelve de verdad cada alerta (SPEC §17.2): la resolución es la
  * acción de negocio que elimina la causa, no el botón. */
@@ -99,7 +102,7 @@ export function AlertasPage() {
   const columns: Array<TableColumn<Alerta>> = [
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (a) => (
         <Badge tone={SEVERIDAD_ALERTA_TONE[a.severidad]} icon="alerta">
           {t.dominio.tipoAlerta[a.tipo] ?? a.tipo}
@@ -108,11 +111,11 @@ export function AlertasPage() {
     },
     {
       key: "entidad",
-      header: "Entidad",
+      header: t.campos.entidad,
       render: (a) => <AlertaEntidadRef entidad={a.entidad} entidadId={a.entidad_id} />,
     },
-    { key: "detalle", header: "Detalle", render: (a) => a.detalle ?? "—" },
-    { key: "severidad", header: "Severidad", render: (a) => a.severidad },
+    { key: "detalle", header: t.campos.detalle, render: (a) => a.detalle ?? "—" },
+    { key: "severidad", header: t.campos.severidad, render: (a) => a.severidad },
     {
       key: "fecha_deteccion",
       header: "Detectada",
@@ -120,7 +123,7 @@ export function AlertasPage() {
     },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (a) => (
         <Badge tone={ESTADO_ALERTA_TONE[a.estado]}>{t.dominio.estadoAlerta[a.estado]}</Badge>
       ),
@@ -129,7 +132,7 @@ export function AlertasPage() {
 
   return (
     <>
-      <PageHeader title="Alertas" />
+      <PageHeader title={t.campos.alertas} />
 
       {alertasQuery.error ? (
         <ErrorPanel title={t.alertas.noSePudoCargar}>{mensajeError(alertasQuery.error)}</ErrorPanel>
@@ -142,7 +145,7 @@ export function AlertasPage() {
             value={estado}
             onChange={(e) => setEstado(e.target.value as EstadoAlerta)}
           >
-            {ESTADOS.map((o) => (
+            {estadosDe(t).map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -169,7 +172,7 @@ export function AlertasPage() {
                       onClick={() => ignorarMut.mutate(a.id)}
                       disabled={ignorarMut.isPending}
                     >
-                      Archivar
+                      {t.comun.archivar}
                     </Button>
                   </div>
                 )

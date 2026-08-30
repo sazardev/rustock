@@ -14,7 +14,7 @@ export function ForbiddenPage() {
             description={t.paginas.accesoNoPermitidoDesc}
             action={
               <ButtonLink variant="primary" href={PATH.dashboard}>
-                Volver al dashboard
+                {t.comun.volverAlDashboard}
               </ButtonLink>
             }
           />

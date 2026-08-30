@@ -71,21 +71,30 @@ export function MovimientoDetallePage() {
     (movimiento?.estado === "BORRADOR" || movimiento?.estado === "PENDIENTE_APROBACION");
 
   const columns: Array<TableColumn<LineaMovimiento>> = [
-    { key: "producto_id", header: "Producto", render: (l) => <ProductoRef id={l.producto_id} /> },
+    {
+      key: "producto_id",
+      header: t.campos.producto,
+      render: (l) => <ProductoRef id={l.producto_id} />,
+    },
     {
       key: "lote_id",
-      header: "Lote",
+      header: t.campos.lote,
       render: (l) => (l.lote_id ? <LoteRef id={l.lote_id} /> : "—"),
     },
-    { key: "cantidad", header: "Cantidad", num: true, render: (l) => l.cantidad.toLocaleString() },
+    {
+      key: "cantidad",
+      header: t.comun.cantidad,
+      num: true,
+      render: (l) => l.cantidad.toLocaleString(),
+    },
     {
       key: "origen_ubicacion_id",
-      header: "Origen",
+      header: t.campos.origen,
       render: (l) => (l.origen_ubicacion_id ? <UbicacionRef id={l.origen_ubicacion_id} /> : "—"),
     },
     {
       key: "destino_ubicacion_id",
-      header: "Destino",
+      header: t.campos.destino,
       render: (l) => (l.destino_ubicacion_id ? <UbicacionRef id={l.destino_ubicacion_id} /> : "—"),
     },
   ];

@@ -308,7 +308,7 @@ export function UbicacionFormPage() {
   });
 
   if (esEdicion && ubicacionQuery.isLoading) {
-    return <PageHeader title={t.formularios.ubicacion.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.ubicacion.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -338,7 +338,7 @@ export function UbicacionFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Código"
+                label={t.comun.codigo}
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}

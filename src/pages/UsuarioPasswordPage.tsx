@@ -73,7 +73,7 @@ export function UsuarioPasswordPage() {
   });
 
   if (query.isLoading) {
-    return <PageHeader title={t.passwordUsuario.titulo} description="Cargando…" />;
+    return <PageHeader title={t.passwordUsuario.titulo} description={t.comun.cargando} />;
   }
   if (!usuario) {
     return (
@@ -82,9 +82,7 @@ export function UsuarioPasswordPage() {
           title={t.passwordUsuario.titulo}
           description={t.passwordUsuario.noEncontradoDesc}
         />
-        <ErrorPanel title={t.passwordUsuario.noEncontrado}>
-          El usuario ya no existe o no tienes permiso para verlo.
-        </ErrorPanel>
+        <ErrorPanel title={t.passwordUsuario.noEncontrado}>{t.comun.usuarioSinPermiso}</ErrorPanel>
       </>
     );
   }

@@ -182,67 +182,67 @@ export function HistorialPage() {
   const columns: Array<TableColumn<EventoAuditoria>> = [
     {
       key: "timestamp",
-      header: "Fecha y hora",
+      header: t.campos.fechaHora,
       render: (e) => formatearFecha(e.timestamp),
     },
     {
       key: "tipo_evento",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (e) =>
         e.tipo_evento === "VISTA" ? (
           <Badge tone="info" icon="historial">
-            Vista
+            {t.comun.vista}
           </Badge>
         ) : (
           <Badge tone="warning" icon="movements">
-            Comando
+            {t.comun.comando}
           </Badge>
         ),
     },
     {
       key: "usuario_id",
-      header: "Usuario",
+      header: t.campos.usuario,
       render: (e) =>
         e.usuario_id ? (usuarioPorId.get(e.usuario_id)?.nombre_usuario ?? e.usuario_id) : "—",
     },
     {
       key: "modulo",
-      header: "Módulo",
+      header: t.campos.modulo,
       render: (e) => e.modulo ?? "—",
     },
     {
       key: "accion",
-      header: "Acción / ruta",
+      header: t.campos.accionRuta,
       code: true,
       render: (e) => (e.tipo_evento === "VISTA" ? (e.ruta ?? e.entidad) : (e.comando ?? e.accion)),
     },
     {
       key: "proceso",
-      header: "Proceso",
+      header: t.campos.proceso,
       render: (e) => e.proceso ?? "—",
     },
     {
       key: "nivel",
-      header: "Nivel",
+      header: t.campos.nivel,
       render: (e) => <Badge tone={e.nivel === "ESCRITURA" ? "warning" : "info"}>{e.nivel}</Badge>,
     },
     {
       key: "exito",
-      header: "Resultado",
+      header: t.campos.resultado,
       render: (e) =>
         e.exito ? (
           <Badge tone="success" icon="aprobar">
-            Éxito
+            {t.comun.exito}
           </Badge>
         ) : (
           <Badge tone="danger" icon="anular">
-            Error
+            {t.comun.error}
           </Badge>
         ),
     },
     {
       key: "duracion",
-      header: "Duración",
+      header: t.campos.duracion,
       num: true,
       code: true,
       render: (e) =>
@@ -295,7 +295,7 @@ export function HistorialPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Desde"
+            aria-label={t.reportes.desde}
             value={desde}
             onChange={(e) => {
               setDesde(e.target.value);
@@ -306,7 +306,7 @@ export function HistorialPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Hasta"
+            aria-label={t.reportes.hasta}
             value={hasta}
             onChange={(e) => {
               setHasta(e.target.value);
@@ -383,7 +383,7 @@ export function HistorialPage() {
           <Input
             type="search"
             aria-label={t.historial.buscarComando}
-            placeholder="Comando (ej. aprobar_movimiento)"
+            placeholder={t.reportes.auditoria.comandoEjemplo}
             value={comando}
             onChange={(e) => {
               setComando(e.target.value);

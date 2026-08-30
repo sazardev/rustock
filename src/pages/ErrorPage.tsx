@@ -18,7 +18,7 @@ export function ErrorPage() {
                 icon="refrescar"
                 onClick={() => toast(t.paginas.reintentandoConexion, "default")}
               >
-                Reintentar
+                {t.comun.reintentar}
               </Button>
             }
           />

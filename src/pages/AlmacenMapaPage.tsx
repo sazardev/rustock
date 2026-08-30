@@ -549,6 +549,7 @@ function MapaCanvas({
   onClickNodo: (tipo: TipoNodo, id: string) => void;
   onCrear: (tipo: Exclude<Herramienta, "seleccionar">, rect: RectMapa) => void;
 }) {
+  const t = useT();
   const svgRef = useRef<SVGSVGElement>(null);
   const { toast } = useToast();
   const [viewBox, setViewBox] = useState<ViewBox>({ x: 0, y: 0, w: 1100, h: 620 });
@@ -1005,7 +1006,7 @@ function MapaCanvas({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       role="group"
-      aria-label="Mapa físico del almacén: nodos navegables con Tab y activables con Enter"
+      aria-label={t.mapa3d.lienzo2DAria}
     >
       <defs>
         <pattern

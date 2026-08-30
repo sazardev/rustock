@@ -29,7 +29,7 @@ export function MovimientoEditarPage() {
   });
 
   if (movQuery.isLoading) {
-    return <PageHeader title={t.movimientoAcciones.editarTitulo} description="Cargando…" />;
+    return <PageHeader title={t.movimientoAcciones.editarTitulo} description={t.comun.cargando} />;
   }
 
   const movimiento = movQuery.data;

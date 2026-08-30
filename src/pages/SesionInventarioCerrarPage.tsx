@@ -57,18 +57,32 @@ export function SesionInventarioCerrarPage() {
   const columns: Array<TableColumn<DiferenciaInventario>> = [
     {
       key: "ubicacion_id",
-      header: "Ubicación",
+      header: t.campos.ubicacion,
       render: (d) => <UbicacionRef id={d.ubicacion_id} />,
     },
-    { key: "producto_id", header: "Producto", render: (d) => <ProductoRef id={d.producto_id} /> },
+    {
+      key: "producto_id",
+      header: t.campos.producto,
+      render: (d) => <ProductoRef id={d.producto_id} />,
+    },
     {
       key: "saldo_sistema",
       header: t.cierreInventario.saldoSistema,
       num: true,
       render: (d) => d.saldo_sistema,
     },
-    { key: "cantidad_contada", header: "Contado", num: true, render: (d) => d.cantidad_contada },
-    { key: "diferencia", header: "Diferencia", num: true, render: (d) => d.diferencia },
+    {
+      key: "cantidad_contada",
+      header: t.sesionInventario.contado,
+      num: true,
+      render: (d) => d.cantidad_contada,
+    },
+    {
+      key: "diferencia",
+      header: t.sesionInventario.diferencia,
+      num: true,
+      render: (d) => d.diferencia,
+    },
     {
       key: "tipo",
       header: t.cierreInventario.ajusteQueSeGenerara,
@@ -84,7 +98,7 @@ export function SesionInventarioCerrarPage() {
   ];
 
   if (sesionQuery.isLoading) {
-    return <PageHeader title={t.cierreInventario.titulo} description="Cargando…" />;
+    return <PageHeader title={t.cierreInventario.titulo} description={t.comun.cargando} />;
   }
 
   if (!sesion) {

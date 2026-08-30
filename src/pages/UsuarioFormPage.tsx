@@ -114,7 +114,7 @@ export function UsuarioFormPage() {
   });
 
   if (esEdicion && entidadQuery.isLoading) {
-    return <PageHeader title={t.formularios.usuario.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.usuario.editar} description={t.comun.cargando} />;
   }
 
   function onSubmit(v: FormValues) {
@@ -146,7 +146,7 @@ export function UsuarioFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Usuario"
+                label={t.campos.usuario}
                 htmlFor="nombre_usuario"
                 required
                 error={errors.nombre_usuario?.message}
@@ -167,11 +167,11 @@ export function UsuarioFormPage() {
               >
                 <Input id="nombre_completo" {...register("nombre_completo")} />
               </Field>
-              <Field label="Email" htmlFor="email" error={errors.email?.message}>
+              <Field label={t.perfil.email} htmlFor="email" error={errors.email?.message}>
                 <Input id="email" type="email" {...register("email")} />
               </Field>
               <Field
-                label="Rol"
+                label={t.campos.rol}
                 htmlFor="rol_id"
                 required
                 error={errors.rol_id?.message}
@@ -191,7 +191,7 @@ export function UsuarioFormPage() {
               </Field>
               {!esEdicion ? (
                 <Field
-                  label="Contraseña"
+                  label={t.perfil.contrasena}
                   htmlFor="password"
                   required
                   error={errors.password?.message}

@@ -113,7 +113,7 @@ export function ArbolAlmacen({ almacenId }: { almacenId: string }) {
       <Card.Body>
         {cargando ? (
           <Text as="p" size="sm" color="muted">
-            Cargando estructura…
+            {t.comun.cargandoEstructura}
           </Text>
         ) : zonas.length === 0 ? (
           <Text as="p" size="sm" color="muted">

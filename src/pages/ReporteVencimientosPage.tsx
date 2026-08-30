@@ -31,7 +31,7 @@ function rangosDe(t: Diccionario): { id: RangoId; titulo: string }[] {
 
 function columnasDe(t: Diccionario): Array<TableColumn<LotePorVencer>> {
   return [
-    { key: "sku", header: "SKU", code: true, render: (l) => l.sku },
+    { key: "sku", header: t.campos.sku, code: true, render: (l) => l.sku },
     { key: "numero", header: t.reportes.vencimientos.lote, code: true, render: (l) => l.numero },
     {
       key: "fecha_vencimiento",
@@ -107,7 +107,7 @@ export function ReporteVencimientosPage() {
           title={rangosDe(t).find((r) => r.id === rango)?.titulo ?? t.reportes.vencimientos.lotes}
           actions={
             <Select
-              aria-label="Rango"
+              aria-label={t.campos.rango}
               value={rango}
               onChange={(e) => setRango(e.target.value as RangoId)}
             >

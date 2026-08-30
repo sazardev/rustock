@@ -208,7 +208,7 @@ export function LoteFormPage() {
   });
 
   if (esEdicion && loteQuery.isLoading) {
-    return <PageHeader title={t.formularios.lote.editar} description="Cargando…" />;
+    return <PageHeader title={t.formularios.lote.editar} description={t.comun.cargando} />;
   }
 
   return (
@@ -240,7 +240,7 @@ export function LoteFormPage() {
             ) : null}
             <FormGrid columns={2}>
               <Field
-                label="Número"
+                label={t.campos.numero}
                 htmlFor="numero"
                 required
                 error={errors.numero?.message}
@@ -249,7 +249,7 @@ export function LoteFormPage() {
                 <Input id="numero" code disabled={esEdicion} {...register("numero")} />
               </Field>
               <Field
-                label="Producto"
+                label={t.campos.producto}
                 htmlFor="producto_id"
                 required
                 error={errors.producto_id?.message}
@@ -272,7 +272,7 @@ export function LoteFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="producto_id" rutaNueva={catalogoNuevo("productos")}>
-                      Nuevo producto
+                      {t.comun.nuevoProducto}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -292,7 +292,7 @@ export function LoteFormPage() {
               >
                 <Input id="fecha_vencimiento" type="date" {...register("fecha_vencimiento")} />
               </Field>
-              <Field label="Origen" htmlFor="origen">
+              <Field label={t.campos.origen} htmlFor="origen">
                 <Input id="origen" {...register("origen")} />
               </Field>
             </FormGrid>

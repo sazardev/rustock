@@ -123,7 +123,7 @@ export function ModoPicker({
           onClick={() => onHeredar?.()}
           muestraClase="modo-picker__muestra--heredar"
         >
-          Heredar
+          {t.comun.heredar}
         </ModoBoton>
       ) : null}
       <ModoBoton
@@ -131,14 +131,14 @@ export function ModoPicker({
         onClick={() => onSeleccionar("CLARO")}
         muestraClase="modo-picker__muestra--claro"
       >
-        Claro
+        {t.comun.claro}
       </ModoBoton>
       <ModoBoton
         activo={seleccionado === "OSCURO"}
         onClick={() => onSeleccionar("OSCURO")}
         muestraClase="modo-picker__muestra--oscuro"
       >
-        Oscuro
+        {t.comun.oscuro}
       </ModoBoton>
     </div>
   );
