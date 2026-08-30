@@ -1403,6 +1403,8 @@ en      → "Insufficient stock in RACK-A1: 5 available, 8 attempted"
 
 Es la única forma de que añadir un idioma no obligue a tocar Rust ni a recompilar. Y evita lo peor de las alternativas: que quien use la aplicación en inglés reciba los mensajes de error en castellano, justo cuando más importa entender.
 
+**Limitación conocida.** Dos variantes genéricas —`CAMPO_REQUERIDO` y `CAMPO_INVALIDO`— reciben hoy el nombre del campo como **frase en castellano** (`"límite en kg para la regla 'Sin tope'"`). Traducir el envoltorio no basta si el relleno sigue en castellano: hay 104 puntos de llamada que deben pasar a claves de campo estables para cerrar el círculo.
+
 ### 17.4 Reglas
 
 - **Las URL no se traducen.** Un enlace compartido tiene que abrir lo mismo para todo el mundo.

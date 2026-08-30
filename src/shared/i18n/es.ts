@@ -188,6 +188,65 @@ export const es = {
     },
   },
 
+  // ============ Errores del backend (SPEC §17.3) ============
+  // La clave es el código estable que devuelve Rust; nunca cambia aunque se
+  // reescriba el texto.
+  errores: {
+    SALDO_INSUFICIENTE: (p: { ubicacion: string; disponible: number; intentado: number }) =>
+      `Saldo insuficiente en ${p.ubicacion}: ${p.disponible} disponibles, se intentaron ${p.intentado}.`,
+    SALDO_NEGATIVO: (p: { ubicacion: string; producto: string }) =>
+      `El saldo no puede quedar negativo en ${p.ubicacion} (producto ${p.producto}).`,
+    CODIGO_DUPLICADO: (p: { codigo: string }) => `El código «${p.codigo}» ya existe.`,
+    CAMPO_REQUERIDO: (p: { campo: string }) => `Falta un dato obligatorio: ${p.campo}.`,
+    CAMPO_INVALIDO: (p: { campo: string }) => `Valor no válido: ${p.campo}.`,
+    PASSWORD_ACTUAL_INCORRECTA: () => "La contraseña actual no coincide.",
+    ULTIMO_ADMIN: () => "No se puede desactivar al último administrador activo.",
+    MOTIVO_REQUERIDO: () => "El motivo es obligatorio (mínimo 3 caracteres).",
+    LOTE_VENCIDO: (p: { lote: string }) =>
+      `El lote ${p.lote} está vencido: no puede salir a cliente ni devolverse al proveedor.`,
+    LOTE_REQUERIDO: (p: { producto: string }) =>
+      `El producto ${p.producto} controla lote: todo movimiento debe indicarlo.`,
+    NO_ENCONTRADO: (p: { entidad: string; id: string }) =>
+      `No se encontró ${p.entidad} con identificador «${p.id}».`,
+    DESACTIVAR_CON_SALDO: (p: { entidad: string }) =>
+      `No se puede desactivar ${p.entidad}: todavía tiene saldo.`,
+    REGLA_INCUMPLIDA: (p: { regla: string; detalle: string }) =>
+      `Regla de negocio «${p.regla}»: ${p.detalle}`,
+    CAPACIDAD_EXCEDIDA: (p: { ubicacion: string }) =>
+      `La ubicación ${p.ubicacion} supera su capacidad máxima.`,
+    SIN_PERMISO: (p: { permiso: string }) =>
+      `Acción no autorizada: se requiere el permiso «${p.permiso}».`,
+    NO_AUTENTICADO: () => "No hay una sesión activa: inicia sesión para continuar.",
+    CREDENCIALES_INVALIDAS: () => "Usuario o contraseña incorrectos.",
+    PASSWORD_DEBIL: () => "La contraseña debe tener al menos 8 caracteres.",
+    FILTRO_INVALIDO: (p: { filtro: string }) =>
+      `El filtro «${p.filtro}» no es válido para este recurso.`,
+    CAJA_RESTRINGIDA: (p: { caja: string }) =>
+      `La caja ${p.caja} está restringida a otro producto o lote.`,
+    AJUSTE_BLOQUEADO_POR_INVENTARIO: (p: { ubicacion: string }) =>
+      `No se puede ajustar ${p.ubicacion}: hay una sesión de inventario en curso en ese almacén. Regístralo como diferencia de la sesión.`,
+    ENTIDAD_INACTIVA: (p: { entidad: string }) =>
+      `${p.entidad} está inactiva y no admite esta operación.`,
+    MOVIMIENTO_APROBADO_NO_EDITABLE: () => "Un movimiento aprobado no puede editarse.",
+    MOVIMIENTO_APROBADO: () =>
+      "Un movimiento aprobado solo puede anularse; se generará el movimiento inverso.",
+    MOVIMIENTO_ANULADO: () => "Un movimiento anulado no puede volver a aprobarse.",
+    TRANSICION_INVALIDA: (p: { destino: string; origen: string }) =>
+      `No se puede pasar de «${p.origen}» a «${p.destino}».`,
+    CON_HISTORIAL: (p: { entidad: string }) =>
+      `No se puede eliminar ${p.entidad}: tiene historial asociado.`,
+    CICLO_CATEGORIA: () => "La categoría no puede tener ciclos en su jerarquía.",
+    SOLAPE_MAPA: (p: { tipoA: string; codigoA: string; tipoB: string; codigoB: string }) =>
+      `${p.tipoA} ${p.codigoA} se solapa con ${p.tipoB} ${p.codigoB} en el mapa. Ajusta la posición o el tamaño.`,
+    DIMENSION_INVALIDA: (p: { entidad: string; minimo: number }) =>
+      `El tamaño de ${p.entidad} no es válido: ancho y profundidad deben superar ${p.minimo} unidades.`,
+    ERROR_BASE_DE_DATOS: (p: { detalle: string }) => `Error de base de datos: ${p.detalle}`,
+    ERROR_SERIALIZACION: (p: { detalle: string }) => `Error de datos: ${p.detalle}`,
+    DESCONOCIDO: () => "Ha ocurrido un error inesperado.",
+    sinConexion: (p: { destino: string }) =>
+      `No se pudo conectar con el backend en ${p.destino}. ¿Está corriendo la aplicación?`,
+  },
+
   // ============ Metadatos de página (SEO) ============
   seo: {
     loginTitulo: "Iniciar sesión — Rustock",

@@ -300,9 +300,18 @@ El servidor HTTP tenía **una sola sesión para todo el proceso**: la última pe
 - [x] Shell completo: navegación, barra superior, migas, avisos de plataforma, roles y command palette.
 - [x] Pantallas de acceso, incluidos los mensajes de validación de los formularios.
 
+### Entrega 2 — Errores traducibles ✅
+
+- [x] `AppError::codigo()` y `AppError::datos()` para las 30 variantes; los códigos son contrato y no cambian aunque se reescriba el texto.
+- [x] Serialización como objeto `{codigo, datos, mensaje}` por IPC y por HTTP; `error` se mantiene con el texto castellano como respaldo y para los registros.
+- [x] `ErrorRustock` en el frontend normaliza lo que llega por las dos vías.
+- [x] Los 30 errores redactados en castellano e inglés; `mensajeError()` compone la frase en el idioma activo.
+- [x] Fechas y horas con la etiqueta BCP-47 del idioma activo.
+- [x] 3 pruebas: cada error lleva código y datos, la serialización tiene la forma esperada, y los códigos son únicos y con formato estable.
+
 ### Pendiente
 
-- [ ] **Errores del backend** (§17.3): 32 variantes de `AppError` y ~60 `format!()` pasan a código + datos.
+- [ ] **Prosa dentro de los datos**: 104 usos de `CampoRequerido`/`CampoInvalido` pasan una frase castellana como nombre del campo (`"límite en kg para la regla 'Sin tope'"`). Traducir el envoltorio no basta: hay que convertirlos a claves de campo estables.
 - [ ] **Cadenas de interfaz**: ~1 000 textos en 119 archivos `.tsx`.
 - [ ] **Prosa larga**: ayuda (26 guías + glosario), manual del cliente (8 partes) y landing — 6 854 líneas.
 - [ ] Preferencia de idioma en el perfil (migración `preferencias_usuario.idioma`).

@@ -34,7 +34,13 @@ export { API_BASE };
 export async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauri()) {
     const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
-    return tauriInvoke<T>(command, args);
+    try {
+      return await tauriInvoke<T>(command, args);
+    } catch (crudo) {
+      // Tauri entrega el error ya deserializado: se normaliza para que la
+      // interfaz reciba la misma forma que por HTTP.
+      throw comoErrorRustock(crudo);
+    }
   }
   return webInvoke<T>(command, args ?? {});
 }
@@ -81,6 +87,47 @@ export function olvidarSesion(): void {
   guardarToken(null);
 }
 
+/**
+ * Error del backend con su código y sus datos (SPEC §17.3).
+ *
+ * El backend no redacta mensajes: devuelve qué falló y con qué valores, y la
+ * interfaz compone la frase en el idioma activo. `message` conserva el texto
+ * en castellano como respaldo, por si aparece un código que el diccionario
+ * todavía no conoce — es preferible un mensaje en el idioma equivocado a una
+ * pantalla que no dice nada.
+ */
+export class ErrorRustock extends Error {
+  readonly codigo: string | undefined;
+  readonly datos: Record<string, unknown>;
+
+  constructor(mensaje: string, codigo?: string, datos?: Record<string, unknown>) {
+    super(mensaje);
+    this.name = "ErrorRustock";
+    this.codigo = codigo;
+    this.datos = datos ?? {};
+  }
+}
+
+/** Forma del error que serializa Rust (ver `error.rs`). */
+interface ErrorSerializado {
+  codigo?: string;
+  datos?: Record<string, unknown>;
+  mensaje?: string;
+}
+
+/** Normaliza lo que llega por IPC o por HTTP a un `ErrorRustock`. */
+export function comoErrorRustock(crudo: unknown): ErrorRustock {
+  if (crudo instanceof ErrorRustock) return crudo;
+  if (typeof crudo === "string") return new ErrorRustock(crudo);
+  if (crudo && typeof crudo === "object") {
+    const e = crudo as ErrorSerializado;
+    if (e.codigo || e.mensaje) {
+      return new ErrorRustock(e.mensaje ?? e.codigo ?? "Error desconocido", e.codigo, e.datos);
+    }
+  }
+  return new ErrorRustock(String(crudo));
+}
+
 /** Despacho de comandos vía el servidor HTTP local (modo navegador). */
 async function webInvoke<T>(command: string, args: Record<string, unknown>): Promise<T> {
   const token = leerToken();
@@ -103,6 +150,8 @@ async function webInvoke<T>(command: string, args: Record<string, unknown>): Pro
     ok: boolean;
     data?: unknown;
     error?: string;
+    codigo?: string;
+    datos?: Record<string, unknown>;
     sesion?: string;
   };
   // El backend emite el token al abrir sesión; a partir de ahí lo presenta
@@ -111,7 +160,11 @@ async function webInvoke<T>(command: string, args: Record<string, unknown>): Pro
     guardarToken(payload.sesion);
   }
   if (!payload.ok) {
-    throw new Error(payload.error ?? "Error desconocido del backend.");
+    throw new ErrorRustock(
+      payload.error ?? "Error desconocido del backend.",
+      payload.codigo,
+      payload.datos,
+    );
   }
   return payload.data as T;
 }

@@ -159,7 +159,17 @@ fn manejar(db: &Arc<DbState>, registro: &Arc<RegistroSesiones>, mut request: tin
             Some(token) => json!({ "ok": true, "data": v, "sesion": token }).to_string(),
             None => json!({ "ok": true, "data": v }).to_string(),
         },
-        Err(e) => json!({ "ok": false, "error": e.to_string() }).to_string(),
+        // El error viaja como código + datos para que la interfaz redacte la
+        // frase en su idioma (SPEC §17.3). `error` se mantiene con el texto en
+        // castellano: sirve de respaldo si aparece un código que el
+        // diccionario todavía no conoce, y es lo que se ve en los registros.
+        Err(e) => json!({
+            "ok": false,
+            "error": e.to_string(),
+            "codigo": e.codigo(),
+            "datos": e.datos(),
+        })
+        .to_string(),
     };
 
     let mut response = Response::from_string(cuerpo_respuesta);

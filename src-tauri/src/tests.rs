@@ -7808,3 +7808,122 @@ fn una_regla_desactivada_no_se_evalua() {
             .is_empty()
     );
 }
+
+// ============ Errores traducibles (Fase 12, SPEC §17.3) ============
+
+#[test]
+fn cada_error_lleva_codigo_y_sus_datos() {
+    use crate::error::AppError;
+
+    let e = AppError::SaldoInsuficiente {
+        ubicacion: "RACK-A1".into(),
+        disponible: 5,
+        intentado: 8,
+    };
+    assert_eq!(e.codigo(), "SALDO_INSUFICIENTE");
+    let d = e.datos();
+    assert_eq!(d["ubicacion"], "RACK-A1");
+    assert_eq!(d["disponible"], 5);
+    assert_eq!(d["intentado"], 8);
+
+    let e = AppError::NoEncontrado("producto", "abc".into());
+    assert_eq!(e.codigo(), "NO_ENCONTRADO");
+    assert_eq!(e.datos()["entidad"], "producto");
+    assert_eq!(e.datos()["id"], "abc");
+
+    // Un error sin datos no inventa ninguno: la frase se basta sola.
+    let e = AppError::NoAutenticado;
+    assert_eq!(e.codigo(), "NO_AUTENTICADO");
+    assert_eq!(e.datos(), serde_json::json!({}));
+}
+
+#[test]
+fn el_error_se_serializa_con_codigo_datos_y_mensaje() {
+    use crate::error::AppError;
+
+    let e = AppError::ReglaIncumplida {
+        regla: "Tope de peso".into(),
+        detalle: "el rack RACK-A1 quedaría en 145.40 kg".into(),
+    };
+    let v = serde_json::to_value(&e).expect("serializa");
+    assert_eq!(v["codigo"], "REGLA_INCUMPLIDA");
+    assert_eq!(v["datos"]["regla"], "Tope de peso");
+    // El mensaje viaja para los registros y como respaldo si el diccionario
+    // todavía no conoce el código.
+    assert!(
+        v["mensaje"]
+            .as_str()
+            .expect("mensaje")
+            .contains("Tope de peso")
+    );
+}
+
+#[test]
+fn los_codigos_de_error_son_unicos_y_estables() {
+    use crate::error::AppError;
+    use std::collections::HashSet;
+
+    // Una muestra de cada forma de variante: sin datos, con tupla y con campos.
+    let errores = vec![
+        AppError::SaldoInsuficiente {
+            ubicacion: "U".into(),
+            disponible: 1,
+            intentado: 2,
+        },
+        AppError::SaldoNegativo {
+            ubicacion: "U".into(),
+            producto: "P".into(),
+        },
+        AppError::CodigoDuplicado("C".into()),
+        AppError::CampoRequerido("c".into()),
+        AppError::CampoInvalido("c".into()),
+        AppError::PasswordActualIncorrecta,
+        AppError::UltimoAdmin,
+        AppError::MotivoRequerido,
+        AppError::LoteVencido("L".into()),
+        AppError::LoteRequerido("P".into()),
+        AppError::NoEncontrado("e", "i".into()),
+        AppError::DesactivarConSaldo("e"),
+        AppError::ReglaIncumplida {
+            regla: "r".into(),
+            detalle: "d".into(),
+        },
+        AppError::CapacidadExcedida("U".into()),
+        AppError::SinPermiso("p".into()),
+        AppError::NoAutenticado,
+        AppError::CredencialesInvalidas,
+        AppError::PasswordDebil,
+        AppError::FiltroInvalido("f".into()),
+        AppError::CajaRestringida("C".into()),
+        AppError::AjusteBloqueadoPorInventario("U".into()),
+        AppError::EntidadInactiva("e"),
+        AppError::MovimientoAprobadoNoEditable,
+        AppError::MovimientoAprobado,
+        AppError::MovimientoAnulado,
+        AppError::TransicionInvalida("a".into(), "b".into()),
+        AppError::ConHistorial("e"),
+        AppError::CicloCategoria,
+        AppError::SolapeMapa {
+            tipo_a: "a".into(),
+            codigo_a: "A".into(),
+            tipo_b: "b".into(),
+            codigo_b: "B".into(),
+        },
+        AppError::DimensionInvalida("e", 10),
+    ];
+
+    let codigos: Vec<&str> = errores.iter().map(|e| e.codigo()).collect();
+    let unicos: HashSet<&&str> = codigos.iter().collect();
+    assert_eq!(
+        codigos.len(),
+        unicos.len(),
+        "dos errores comparten código: la interfaz no podría distinguirlos"
+    );
+    // Los códigos son contrato con el cliente: nada de minúsculas ni espacios.
+    for c in &codigos {
+        assert!(
+            c.chars().all(|x| x.is_ascii_uppercase() || x == '_'),
+            "código con formato inesperado: {c}"
+        );
+    }
+}

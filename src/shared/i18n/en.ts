@@ -180,6 +180,50 @@ export const en: Diccionario = {
     },
   },
 
+  errores: {
+    SALDO_INSUFICIENTE: (p) =>
+      `Insufficient stock in ${p.ubicacion}: ${p.disponible} available, ${p.intentado} attempted.`,
+    SALDO_NEGATIVO: (p) => `Stock cannot go negative in ${p.ubicacion} (product ${p.producto}).`,
+    CODIGO_DUPLICADO: (p) => `The code “${p.codigo}” already exists.`,
+    CAMPO_REQUERIDO: (p) => `A required value is missing: ${p.campo}.`,
+    CAMPO_INVALIDO: (p) => `Invalid value: ${p.campo}.`,
+    PASSWORD_ACTUAL_INCORRECTA: () => "The current password does not match.",
+    ULTIMO_ADMIN: () => "The last active administrator cannot be deactivated.",
+    MOTIVO_REQUERIDO: () => "A reason is required (at least 3 characters).",
+    LOTE_VENCIDO: (p) =>
+      `Lot ${p.lote} has expired: it cannot be issued to a customer or returned to the supplier.`,
+    LOTE_REQUERIDO: (p) =>
+      `Product ${p.producto} is lot-controlled: every movement must state the lot.`,
+    NO_ENCONTRADO: (p) => `No ${p.entidad} found with identifier “${p.id}”.`,
+    DESACTIVAR_CON_SALDO: (p) => `${p.entidad} cannot be deactivated: it still holds stock.`,
+    REGLA_INCUMPLIDA: (p) => `Business rule “${p.regla}”: ${p.detalle}`,
+    CAPACIDAD_EXCEDIDA: (p) => `Location ${p.ubicacion} would exceed its maximum capacity.`,
+    SIN_PERMISO: (p) => `Not authorised: the “${p.permiso}” permission is required.`,
+    NO_AUTENTICADO: () => "No active session: sign in to continue.",
+    CREDENCIALES_INVALIDAS: () => "Incorrect username or password.",
+    PASSWORD_DEBIL: () => "The password must be at least 8 characters long.",
+    FILTRO_INVALIDO: (p) => `The filter “${p.filtro}” is not valid for this resource.`,
+    CAJA_RESTRINGIDA: (p) => `Container ${p.caja} is restricted to another product or lot.`,
+    AJUSTE_BLOQUEADO_POR_INVENTARIO: (p) =>
+      `${p.ubicacion} cannot be adjusted: a stocktake is in progress in that warehouse. Record it as a session discrepancy instead.`,
+    ENTIDAD_INACTIVA: (p) => `${p.entidad} is inactive and does not accept this operation.`,
+    MOVIMIENTO_APROBADO_NO_EDITABLE: () => "An approved movement cannot be edited.",
+    MOVIMIENTO_APROBADO: () =>
+      "An approved movement can only be voided; the reversing movement will be created.",
+    MOVIMIENTO_ANULADO: () => "A voided movement cannot be approved again.",
+    TRANSICION_INVALIDA: (p) => `Cannot move from “${p.origen}” to “${p.destino}”.`,
+    CON_HISTORIAL: (p) => `${p.entidad} cannot be deleted: it has associated history.`,
+    CICLO_CATEGORIA: () => "A category cannot form a cycle in its hierarchy.",
+    SOLAPE_MAPA: (p) =>
+      `${p.tipoA} ${p.codigoA} overlaps ${p.tipoB} ${p.codigoB} on the map. Adjust the position or the size.`,
+    DIMENSION_INVALIDA: (p) =>
+      `The size of ${p.entidad} is not valid: width and depth must exceed ${p.minimo} units.`,
+    ERROR_BASE_DE_DATOS: (p) => `Database error: ${p.detalle}`,
+    ERROR_SERIALIZACION: (p) => `Data error: ${p.detalle}`,
+    DESCONOCIDO: () => "Something went wrong.",
+    sinConexion: (p) => `Could not reach the backend at ${p.destino}. Is the application running?`,
+  },
+
   seo: {
     loginTitulo: "Sign in — Rustock",
     loginDesc:

@@ -4,11 +4,14 @@
  * Alertas se vean consistentes (DESIGN.md).
  *
  * El formato de fechas respeta la zona horaria y el formato elegidos en las
- * preferencias de la sesión (SPEC §14.4): si no hay preferencias cargadas,
- * cae al formato por defecto del diseño (DD MMM YYYY, `es-ES`).
+ * preferencias de la sesión (SPEC §14.4) y el idioma activo (§17): el nombre
+ * del mes y el orden de la hora cambian con él. Si no hay preferencias
+ * cargadas, cae al formato por defecto del diseño (DD MMM YYYY).
  */
 import type { BadgeTone, IconName } from "./ui";
 import { preferenciasActuales } from "./preferencias";
+import { ErrorRustock } from "./api";
+import { localeDe, traducir } from "./i18n";
 import type {
   EstadoAlerta,
   EstadoMovimiento,
@@ -48,7 +51,7 @@ function construirFecha(d: Date, opciones: OpcionesFecha, conHora: boolean): str
       }).format(d);
       break;
     case "DD_MM_YYYY":
-      fecha = new Intl.DateTimeFormat("es-ES", {
+      fecha = new Intl.DateTimeFormat(localeDe(), {
         ...base,
         day: "2-digit",
         month: "2-digit",
@@ -56,7 +59,7 @@ function construirFecha(d: Date, opciones: OpcionesFecha, conHora: boolean): str
       }).format(d);
       break;
     default:
-      fecha = new Intl.DateTimeFormat("es-ES", {
+      fecha = new Intl.DateTimeFormat(localeDe(), {
         ...base,
         day: "2-digit",
         month: "short",
@@ -64,7 +67,7 @@ function construirFecha(d: Date, opciones: OpcionesFecha, conHora: boolean): str
       }).format(d);
   }
   if (!conHora) return fecha;
-  const hora = new Intl.DateTimeFormat("es-ES", {
+  const hora = new Intl.DateTimeFormat(localeDe(), {
     ...base,
     hour: "2-digit",
     minute: "2-digit",
@@ -196,6 +199,27 @@ export const TIPO_DIFERENCIA_TONE: Record<string, BadgeTone> = {
   faltante: "danger",
 };
 
+/**
+ * Redacta el error en el idioma activo (SPEC §17.3).
+ *
+ * El backend devuelve un código y sus datos, no una frase: aquí se compone.
+ * Si aparece un código que el diccionario todavía no conoce se usa el mensaje
+ * que viene de Rust — está en castellano, pero un mensaje en el idioma
+ * equivocado sigue siendo mejor que una pantalla que no dice nada.
+ */
 export function mensajeError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  const t = traducir();
+  if (err instanceof ErrorRustock && err.codigo) {
+    const redactar = (t.errores as Record<string, unknown>)[err.codigo];
+    if (typeof redactar === "function") {
+      try {
+        return (redactar as (datos: Record<string, unknown>) => string)(err.datos);
+      } catch {
+        // Datos incompletos para esa plantilla: se cae al mensaje del backend.
+      }
+    }
+    return err.message;
+  }
+  if (err instanceof Error) return err.message;
+  return String(err);
 }

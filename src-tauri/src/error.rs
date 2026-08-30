@@ -117,12 +117,126 @@ pub enum AppError {
     Json(#[from] serde_json::Error),
 }
 
+impl AppError {
+    /// Código estable del error (SPEC §17.3).
+    ///
+    /// Es lo que la interfaz traduce. El mensaje en castellano sigue viajando
+    /// para los registros y como respaldo, pero **no es lo que se muestra**:
+    /// si lo fuera, quien use Rustock en inglés recibiría los errores en
+    /// castellano justo cuando más importa entender qué ha pasado.
+    ///
+    /// Los códigos no cambian nunca aunque se reescriba el mensaje: son
+    /// contrato con el cliente, igual que un nombre de campo.
+    pub fn codigo(&self) -> &'static str {
+        match self {
+            Self::SaldoInsuficiente { .. } => "SALDO_INSUFICIENTE",
+            Self::SaldoNegativo { .. } => "SALDO_NEGATIVO",
+            Self::CodigoDuplicado(_) => "CODIGO_DUPLICADO",
+            Self::CampoRequerido(_) => "CAMPO_REQUERIDO",
+            Self::CampoInvalido(_) => "CAMPO_INVALIDO",
+            Self::PasswordActualIncorrecta => "PASSWORD_ACTUAL_INCORRECTA",
+            Self::UltimoAdmin => "ULTIMO_ADMIN",
+            Self::MotivoRequerido => "MOTIVO_REQUERIDO",
+            Self::LoteVencido(_) => "LOTE_VENCIDO",
+            Self::LoteRequerido(_) => "LOTE_REQUERIDO",
+            Self::NoEncontrado(..) => "NO_ENCONTRADO",
+            Self::DesactivarConSaldo(_) => "DESACTIVAR_CON_SALDO",
+            Self::ReglaIncumplida { .. } => "REGLA_INCUMPLIDA",
+            Self::CapacidadExcedida(_) => "CAPACIDAD_EXCEDIDA",
+            Self::SinPermiso(_) => "SIN_PERMISO",
+            Self::NoAutenticado => "NO_AUTENTICADO",
+            Self::CredencialesInvalidas => "CREDENCIALES_INVALIDAS",
+            Self::PasswordDebil => "PASSWORD_DEBIL",
+            Self::FiltroInvalido(_) => "FILTRO_INVALIDO",
+            Self::CajaRestringida(_) => "CAJA_RESTRINGIDA",
+            Self::AjusteBloqueadoPorInventario(_) => "AJUSTE_BLOQUEADO_POR_INVENTARIO",
+            Self::EntidadInactiva(_) => "ENTIDAD_INACTIVA",
+            Self::MovimientoAprobadoNoEditable => "MOVIMIENTO_APROBADO_NO_EDITABLE",
+            Self::MovimientoAprobado => "MOVIMIENTO_APROBADO",
+            Self::MovimientoAnulado => "MOVIMIENTO_ANULADO",
+            Self::TransicionInvalida(..) => "TRANSICION_INVALIDA",
+            Self::ConHistorial(_) => "CON_HISTORIAL",
+            Self::CicloCategoria => "CICLO_CATEGORIA",
+            Self::SolapeMapa { .. } => "SOLAPE_MAPA",
+            Self::DimensionInvalida(..) => "DIMENSION_INVALIDA",
+            Self::Db(_) => "ERROR_BASE_DE_DATOS",
+            Self::Json(_) => "ERROR_SERIALIZACION",
+        }
+    }
+
+    /// Datos con los que la interfaz redacta la frase en su idioma.
+    ///
+    /// Los nombres de los campos son parte del contrato: cambiarlos rompe la
+    /// traducción igual que cambiar el nombre de una columna rompe una consulta.
+    pub fn datos(&self) -> serde_json::Value {
+        use serde_json::json;
+        match self {
+            Self::SaldoInsuficiente {
+                ubicacion,
+                disponible,
+                intentado,
+            } => {
+                json!({ "ubicacion": ubicacion, "disponible": disponible, "intentado": intentado })
+            }
+            Self::SaldoNegativo {
+                ubicacion,
+                producto,
+            } => json!({ "ubicacion": ubicacion, "producto": producto }),
+            Self::CodigoDuplicado(v) => json!({ "codigo": v }),
+            Self::CampoRequerido(v) | Self::CampoInvalido(v) => json!({ "campo": v }),
+            Self::LoteVencido(v) => json!({ "lote": v }),
+            Self::LoteRequerido(v) => json!({ "producto": v }),
+            Self::NoEncontrado(entidad, id) => json!({ "entidad": entidad, "id": id }),
+            Self::DesactivarConSaldo(entidad)
+            | Self::EntidadInactiva(entidad)
+            | Self::ConHistorial(entidad) => json!({ "entidad": entidad }),
+            Self::ReglaIncumplida { regla, detalle } => {
+                json!({ "regla": regla, "detalle": detalle })
+            }
+            Self::CapacidadExcedida(v) | Self::AjusteBloqueadoPorInventario(v) => {
+                json!({ "ubicacion": v })
+            }
+            Self::SinPermiso(v) => json!({ "permiso": v }),
+            Self::FiltroInvalido(v) => json!({ "filtro": v }),
+            Self::CajaRestringida(v) => json!({ "caja": v }),
+            Self::TransicionInvalida(destino, origen) => {
+                json!({ "destino": destino, "origen": origen })
+            }
+            Self::SolapeMapa {
+                tipo_a,
+                codigo_a,
+                tipo_b,
+                codigo_b,
+            } => json!({
+                "tipoA": tipo_a, "codigoA": codigo_a,
+                "tipoB": tipo_b, "codigoB": codigo_b
+            }),
+            Self::DimensionInvalida(entidad, minimo) => {
+                json!({ "entidad": entidad, "minimo": minimo })
+            }
+            Self::Db(e) => json!({ "detalle": e.to_string() }),
+            Self::Json(e) => json!({ "detalle": e.to_string() }),
+            // Los errores sin datos no llevan nada: la frase se basta sola.
+            _ => json!({}),
+        }
+    }
+}
+
 impl Serialize for AppError {
+    /// Se serializa como objeto, no como texto: la interfaz necesita el código
+    /// y los datos para redactar la frase en el idioma activo (SPEC §17.3).
+    /// `mensaje` viaja también, para los registros y como respaldo si aparece
+    /// un código que el diccionario todavía no conoce.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        use serde::ser::SerializeStruct;
+        let mut estado = serializer.serialize_struct("AppError", 3)?;
+        estado.serialize_field("codigo", self.codigo())?;
+        estado.serialize_field("datos", &self.datos())?;
+        estado.serialize_field("mensaje", &self.to_string())?;
+        estado.end()
     }
 }
 
