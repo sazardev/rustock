@@ -7904,9 +7904,9 @@ fn los_codigos_de_error_son_unicos_y_estables() {
         AppError::ConHistorial("e"),
         AppError::CicloCategoria,
         AppError::SolapeMapa {
-            tipo_a: "a".into(),
+            tipo_a: "a",
             codigo_a: "A".into(),
-            tipo_b: "b".into(),
+            tipo_b: "b",
             codigo_b: "B".into(),
         },
         AppError::DimensionInvalida("e", 10),
