@@ -522,7 +522,497 @@ const CH_PERSONALISATION: ManualCapitulo = {
   ],
 };
 
-const TRADUCIDOS: ManualCapitulo[] = [CH_VISION, CH_INSTALL, CH_ROLES, CH_PERSONALISATION];
+const CH_GLOSSARY_ESSENTIAL: ManualCapitulo = {
+  id: "m01-glosario",
+  titulo: "Essential glossary",
+  icono: "ayuda",
+  resumen: "The 15 terms you cannot afford to confuse.",
+  paraQueSirve: "To give the team one shared vocabulary.",
+  terminosClave: ["producto-sku", "lote", "saldo", "movimiento", "ubicacion-bin"],
+  relacionados: ["m01-stock", "m02-almacen"],
+  secciones: [
+    {
+      titulo: "Critical terms",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Term", "In one line"],
+          filas: [
+            ["SKU", "The product’s canonical identifier, unique and immutable."],
+            ["Lot", "A group of units with a common origin and dates; the basis of FEFO."],
+            ["Balance", "(Location, Product, Lot) → quantity. Never negative."],
+            ["Movement", "The only route to changing stock."],
+            ["Location (bin)", "The addressable point where the balance lives."],
+            ["FEFO / FIFO", "Outbound policies."],
+          ],
+        },
+        {
+          tipo: "enlaces",
+          items: [
+            { etiqueta: "Full glossary (50 terms)", href: "/manual/m08-glosario" },
+            { etiqueta: "Glossary in Help (46 terms)", href: PATH.ayudaGlosario },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_STOCK: ManualCapitulo = {
+  id: "m01-stock",
+  titulo: "Stock and balances",
+  icono: "stock",
+  resumen: "Where stock lives, how it is calculated, minimums/maximums and accuracy.",
+  paraQueSirve:
+    "To understand that the balance is the sum of approved movements, materialised and indexed.",
+  cuandoUsarlo: "When reading dashboards, reports and alerts.",
+  terminosClave: [
+    "saldo",
+    "stock-minimo",
+    "stock-maximo",
+    "capacidad-maxima",
+    "uom-base",
+    "precision-inventario",
+  ],
+  relacionados: ["m02-ubicacion", "m04-fifo", "m06-dashboard"],
+  secciones: [
+    {
+      titulo: "Where stock lives",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "Stock lives in locations, optionally inside containers.",
+            "The balance unit: the product’s base UOM.",
+            "Balance per location: the key (location, product, lot) → quantity.",
+            "One location can hold several rows (product×lot).",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Materialised and indexed (15.11): instant queries with no recalculation. Source: approved movements.",
+          tono: "info",
+        },
+      ],
+    },
+    {
+      titulo: "Minimums, maximums and capacity",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Concept", "Where it is set", "What it triggers"],
+          filas: [
+            [
+              "stock_minimo (product)",
+              "Product + company default",
+              "The Low stock alert if the sum is ≤ the minimum.",
+            ],
+            ["stock_maximo (product)", "Product", "The Stock over maximum alert if > the maximum."],
+            [
+              "capacidad_maxima (location)",
+              "Location",
+              "Blocks approval of an inbound movement or a transfer in if it would exceed it.",
+            ],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Accuracy",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Metric", "Formula", "Target"],
+          filas: [
+            ["SKU accuracy", "(exact SKUs / counted)×100", "≥95%"],
+            ["Quantity accuracy", "(correct units / counted)×100", "≥98%"],
+            ["Location accuracy", "(locations with no discrepancy / counted)×100", "≥90%"],
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "Calculated per closed session, and shown in reportes/precision as a trend over time.",
+          tono: "success",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_UOM: ManualCapitulo = {
+  id: "m01-uom",
+  titulo: "Units of measure (UOM)",
+  icono: "uom",
+  resumen: "The unit family, the conversion factor and the base.",
+  paraQueSirve:
+    "To measure everything consistently: 1 BOX = 10 PZA if the factor is 10 over the PZA base.",
+  cuandoUsarlo: "Before creating products.",
+  terminosClave: ["uom", "uom-base", "producto-sku"],
+  relacionados: ["m03-producto"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique, e.g. PZA, KG, BOX, M, L. Locked after creation."],
+            ["nombre", "Human-readable."],
+            ["tipo", "UNIT, WEIGHT, VOLUME, LENGTH, AREA."],
+            ["factor", "≥1, how many base units it equals."],
+            ["base", "Boolean: the root of its family."],
+            ["activo", "Defaults to true. Not deactivable while a product uses it."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "The /uoms list has search, 20 per page, ordered by created_at desc.",
+            "Create: /uoms/nuevo. Edit: /uoms/:id/editar. Delete: deactivates.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Good practice",
+      bloques: [
+        {
+          tipo: "nota",
+          texto:
+            "Create each family’s base first (PZA, KG, L) and the derived ones afterwards (BOX, GR, ML).",
+          tono: "success",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_WAREHOUSE: ManualCapitulo = {
+  id: "m02-almacen",
+  titulo: "Warehouse",
+  icono: "almacen",
+  resumen: "The root of the whole operation. Without a warehouse there is no stock.",
+  paraQueSirve: "To anchor the entire operation physically to a place.",
+  terminosClave: ["almacen", "desactivar"],
+  relacionados: ["m02-zona", "m02-arbol"],
+  secciones: [
+    {
+      titulo: "Attributes and rules",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            [
+              "codigo",
+              "Unique, upper case with no spaces, e.g. ALM-PRINCIPAL. Required, normalised. Code unique among active records, trimmed.",
+            ],
+            ["nombre", "Required, human-readable."],
+            ["descripcion", "Optional, free text."],
+            ["direccion", "Optional, context only; not used for shipping in v1."],
+            ["activo", "Defaults to true. An inactive one takes no new movements (queries only)."],
+            [
+              "id / created_at / updated_at / created_by / updated_by",
+              "Automatic/audit, immutable.",
+            ],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "At least one warehouse must exist to operate.",
+            "The code cannot repeat among active warehouses; normalised to upper case and trimmed.",
+            "Deactivating keeps the history; it does not physically delete.",
+            "Uniqueness of child codes (zone/rack/section/location) is validated across the whole warehouse (not just under the parent).",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "In the app",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "List /almacenes, new /almacenes/nuevo (the code is locked after creation), detail with a navigable Zone→Rack→Section→Location tree (ArbolAlmacen.tsx), edit /almacenes/:id/editar, delete deactivates (/almacenes/:id/eliminar).",
+            "2D map: /almacenes/:id/mapa (build canvas ?modo=construir), 3D map: /almacenes/:id/mapa-3d (immersive fullscreen), Assistant: /almacenes/:id/mapa/asistente.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_ZONE: ManualCapitulo = {
+  id: "m02-zona",
+  titulo: "Zone",
+  icono: "zona",
+  resumen: "A logical or physical division of the warehouse.",
+  terminosClave: ["zona", "almacen"],
+  relacionados: ["m02-almacen", "m02-rack"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique within the warehouse, e.g. Z-01."],
+            ["nombre/descripcion", "Required / optional."],
+            ["almacen_id", "Exactly one warehouse."],
+            ["pos_x/pos_y/ancho/profundidad", "Real position and size. Default 150×70."],
+            ["activo", "Defaults to true."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "A zone with no history can be physically deleted; with history it is only deactivated.",
+            "Routes: /zonas, /zonas/nuevo, /zonas/:id, /zonas/:id/editar, /zonas/:id/eliminar.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_AISLE: ManualCapitulo = {
+  id: "m02-pasillo",
+  titulo: "Aisle",
+  icono: "zona",
+  resumen: "A physical corridor that groups racks within a zone.",
+  terminosClave: ["pasillo", "zona", "rack"],
+  relacionados: ["m02-zona", "m02-rack", "m02-mapa2d"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique within the warehouse, e.g. PAS-01."],
+            ["nombre", "Required."],
+            ["zona_id", "Exactly one zone."],
+            ["pos_x/pos_y/ancho/profundidad", "Real geometry; default 130×56."],
+            ["activo", "Defaults to true."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "It takes no part in the simplified tree: a rack always belongs to a zone.",
+            "Not deactivable while a rack holds stock.",
+            "Routes: /pasillos* (CRUD).",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto: "Collision matrix (14.8): an aisle cannot have racks or locations on top of it.",
+          tono: "warning",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_RACK: ManualCapitulo = {
+  id: "m02-rack",
+  titulo: "Rack / Shelving",
+  icono: "zona",
+  resumen: "A structure within a zone, optionally inside an aisle.",
+  terminosClave: ["rack", "zona", "pasillo", "seccion"],
+  relacionados: ["m02-zona", "m02-seccion"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique within the warehouse, e.g. RACK-A1."],
+            ["nombre/tipo", "Required / shelving, pallet, fridge."],
+            ["zona_id", "Exactly one zone."],
+            ["pasillo_id", "Optional; must be in the same zone if given."],
+            ["pos_x/pos_y/ancho/profundidad", "110×56 default."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: ["It can hold sections and/or locations directly. Routes: /racks*."],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_SECTION: ManualCapitulo = {
+  id: "m02-seccion",
+  titulo: "Section",
+  icono: "zona",
+  resumen: "A level or bay within a rack.",
+  terminosClave: ["seccion", "rack"],
+  relacionados: ["m02-rack", "m02-ubicacion"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            [
+              "codigo",
+              "Unique within the warehouse, e.g. RACK-A1-N2. A hierarchical code is recommended.",
+            ],
+            [
+              "nombre",
+              "Required, human-readable (optional depending on the implementation, but documented).",
+            ],
+            ["nivel", "Optional, text or integer (e.g. 1, A, B)."],
+            ["rack_id", "Exactly one rack."],
+            ["descripcion", "Optional, free text."],
+            [
+              "activo",
+              "Defaults to true; it is only deactivated if it has no history, otherwise the history is kept.",
+            ],
+            ["id / created_at / updated_at / created_by / updated_by", "Automatic/audit."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "It can hold locations. The code is preferably derived from the tree path.",
+            "Routes: /secciones (list), /secciones/nuevo, /secciones/:id, /secciones/:id/editar, /secciones/:id/eliminar (deactivates).",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_LOCATION: ManualCapitulo = {
+  id: "m02-ubicacion",
+  titulo: "Location (bin)",
+  icono: "ubicacion",
+  resumen: "The addressable point where stock lives.",
+  paraQueSirve: "To put every unit in an exact place, so you can count and pick by place.",
+  terminosClave: ["ubicacion-bin", "capacidad-maxima", "saldo"],
+  relacionados: ["m02-caja", "m04-modelo"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique within the warehouse, e.g. RACK-A1-N2-P3."],
+            ["seccion_id / rack_id / zona_id", "Exactly one parent (the simplified tree)."],
+            [
+              "tipo",
+              "STANDARD, PICKING, RESERVE, RECEIVING, QUARANTINE, RETURNS, DAMAGED, SHIPPING.",
+            ],
+            ["capacidad_maxima", "Optional; summed in base UOM."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "It can hold multiple products×lots (mixing is allowed).",
+            "Resolving almacen_id walks up the ancestors.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Location types",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Type", "Use"],
+          filas: [
+            ["STANDARD", "General storage."],
+            ["PICKING", "Order preparation."],
+            ["RESERVE", "Reserve stock."],
+            ["RECEIVING", "Goods just received."],
+            ["QUARANTINE", "Under review."],
+            ["RETURNS", "Returned by a customer."],
+            ["DAMAGED", "Damaged."],
+            ["SHIPPING", "Ready to dispatch."],
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "In the app",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "List /ubicaciones, detail, new /ubicaciones/nuevo (double selector), edit, delete deactivates (rejected while it holds a balance).",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_CONTAINER: ManualCapitulo = {
+  id: "m02-caja",
+  titulo: "Container",
+  icono: "caja",
+  resumen: "An optional container inside a location that can restrict the product or lot.",
+  terminosClave: ["caja", "ubicacion-bin", "lote", "producto-sku"],
+  relacionados: ["m02-ubicacion", "m04-traslados"],
+  secciones: [
+    {
+      titulo: "Model",
+      bloques: [
+        {
+          tipo: "tabla",
+          cabeceras: ["Field", "Rule"],
+          filas: [
+            ["codigo", "Unique within the warehouse."],
+            ["ubicacion_id", "Exactly one location."],
+            ["producto_id", "Optional: that product only."],
+            ["lote_id", "Optional: that lot only."],
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "A restricted container accepts no more than one distinct product/lot.",
+            "Moving a container = a transfer (validar_restriccion_caja).",
+            "Routes: /cajas*. CRUD.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const TRADUCIDOS: ManualCapitulo[] = [
+  CH_VISION,
+  CH_INSTALL,
+  CH_ROLES,
+  CH_PERSONALISATION,
+  CH_GLOSSARY_ESSENTIAL,
+  CH_STOCK,
+  CH_UOM,
+  CH_WAREHOUSE,
+  CH_ZONE,
+  CH_AISLE,
+  CH_RACK,
+  CH_SECTION,
+  CH_LOCATION,
+  CH_CONTAINER,
+];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
 
