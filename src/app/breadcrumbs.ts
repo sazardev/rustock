@@ -38,7 +38,7 @@ export function crumbsFromPath(pathname: string, t: Diccionario): Crumb[] {
   const crumbs: Crumb[] = [];
 
   if (parts.length === 0) {
-    crumbs.push({ label: "Dashboard" });
+    crumbs.push({ label: t.nav.dashboard });
     return crumbs;
   }
 

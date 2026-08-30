@@ -3,13 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import {
-  FORMATO_FECHA_LABEL,
-  PAISES,
-  ZONA_HORARIA_LABEL,
-  ZONAS_HORARIAS,
-  type FormatoFecha,
-} from "../shared/types";
+import { PAISES, ZONA_HORARIA_LABEL, ZONAS_HORARIAS, type FormatoFecha } from "../shared/types";
 import {
   eliminarArchivoEmpresa,
   guardarConfiguracionEmpresa,
@@ -538,9 +532,9 @@ export function ConfiguracionPage() {
               >
                 <Select
                   id="formato_fecha"
-                  options={(Object.keys(FORMATO_FECHA_LABEL) as FormatoFecha[]).map((k) => ({
+                  options={(Object.keys(t.perfil.formatosFecha) as FormatoFecha[]).map((k) => ({
                     value: k,
-                    label: FORMATO_FECHA_LABEL[k],
+                    label: t.perfil.formatosFecha[k],
                   }))}
                   {...register("formato_fecha")}
                 />

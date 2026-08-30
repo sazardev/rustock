@@ -1296,18 +1296,6 @@ export const ZONA_HORARIA_LABEL: Record<string, string> = {
   UTC: "(UTC+0) Tiempo universal coordinado",
 };
 
-export const FORMATO_FECHA_LABEL: Record<string, string> = {
-  DD_MMM_YYYY: "08 ago 2026",
-  DD_MM_YYYY: "08/08/2026",
-  YYYY_MM_DD: "2026-08-08",
-};
-
-export const TAMANIO_FUENTE_LABEL: Record<string, string> = {
-  PEQUENA: "Pequeña",
-  MEDIA: "Media",
-  GRANDE: "Grande",
-};
-
 // ============ Sucursales (config de empresa, solo ADMIN) ============
 
 export interface Sucursal extends Auditoria {

@@ -562,6 +562,7 @@ export const en: Diccionario = {
       historial: "Activity log",
       usuarios: "Users and roles",
       configuracion: "Settings",
+      perfil: "My profile",
       galeria: "Design gallery",
       manual: "Manual",
       ayuda: "Help",
@@ -618,6 +619,12 @@ export const en: Diccionario = {
   },
 
   etiquetas: {
+    formatos: {
+      "50x25": "50 × 25 mm — standard roll",
+      "70x37": "70 × 37 mm — A4 sheet (24 per sheet)",
+      "100x50": "100 × 50 mm — large box",
+      "38x38": "38 × 38 mm — square QR",
+    },
     titulo: "Labels",
     descripcion:
       "Generate and print the codes the scanner will later read. The printed code is the same one Rustock uses to find the record.",
@@ -1025,6 +1032,16 @@ export const en: Diccionario = {
   },
 
   perfil: {
+    tamanos: {
+      PEQUENA: "Small",
+      MEDIA: "Medium",
+      GRANDE: "Large",
+    },
+    formatosFecha: {
+      DD_MMM_YYYY: "08 Aug 2026",
+      DD_MM_YYYY: "08/08/2026",
+      YYYY_MM_DD: "2026-08-08",
+    },
     titulo: "My profile",
     descripcion: "Your details, your display preferences and your password.",
     cerrarSesion: "Sign out",

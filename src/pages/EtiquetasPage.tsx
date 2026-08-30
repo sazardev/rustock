@@ -43,11 +43,11 @@ function tiposDe(t: Diccionario): { valor: TipoEtiqueta; label: string }[] {
 
 /** Formatos de etiqueta habituales en almacén, en milímetros reales. */
 const FORMATOS = [
-  { valor: "50x25", label: "50 × 25 mm — rollo estándar", ancho: 50, alto: 25 },
-  { valor: "70x37", label: "70 × 37 mm — hoja A4 (24 por hoja)", ancho: 70, alto: 37 },
-  { valor: "100x50", label: "100 × 50 mm — caja grande", ancho: 100, alto: 50 },
-  { valor: "38x38", label: "38 × 38 mm — QR cuadrado", ancho: 38, alto: 38 },
-];
+  { valor: "50x25", ancho: 50, alto: 25 },
+  { valor: "70x37", ancho: 70, alto: 37 },
+  { valor: "100x50", ancho: 100, alto: 50 },
+  { valor: "38x38", ancho: 38, alto: 38 },
+] as const;
 
 type Disposicion = "hoja" | "rollo";
 
@@ -305,7 +305,7 @@ export function EtiquetasPage() {
                 <Select id="formato" value={formato} onChange={(e) => setFormato(e.target.value)}>
                   {FORMATOS.map((f) => (
                     <option key={f.valor} value={f.valor}>
-                      {f.label}
+                      {t.etiquetas.formatos[f.valor]}
                     </option>
                   ))}
                 </Select>

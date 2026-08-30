@@ -214,8 +214,7 @@ export function MovimientosPage() {
       <Card muted>
         <Card.Body>
           <Text as="p" size="sm" color="muted">
-            Los movimientos se aprueban en su página de detalle. Cada anulación genera un movimiento
-            inverso.
+            {t.mov.nota}
           </Text>
         </Card.Body>
       </Card>

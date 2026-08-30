@@ -7,8 +7,6 @@ import { z } from "zod";
 import { cambiarPassword, listarTemas } from "../shared/backend";
 import { PATH } from "../app/route-paths";
 import {
-  FORMATO_FECHA_LABEL,
-  TAMANIO_FUENTE_LABEL,
   ZONA_HORARIA_LABEL,
   ZONAS_HORARIAS,
   type FormatoFecha,
@@ -353,9 +351,9 @@ export function PerfilPage() {
               <Select
                 id="tamano_fuente"
                 defaultValue={preferencias?.tamano_fuente ?? "MEDIA"}
-                options={(Object.keys(TAMANIO_FUENTE_LABEL) as TamanioFuente[]).map((k) => ({
+                options={(Object.keys(t.perfil.tamanos) as TamanioFuente[]).map((k) => ({
                   value: k,
-                  label: TAMANIO_FUENTE_LABEL[k],
+                  label: t.perfil.tamanos[k],
                 }))}
               />
             </Field>
@@ -382,9 +380,9 @@ export function PerfilPage() {
                 defaultValue={preferencias?.formato_fecha ?? ""}
                 options={[
                   { value: "", label: t.perfil.heredarEmpresa },
-                  ...(Object.keys(FORMATO_FECHA_LABEL) as FormatoFecha[]).map((k) => ({
+                  ...(Object.keys(t.perfil.formatosFecha) as FormatoFecha[]).map((k) => ({
                     value: k,
-                    label: FORMATO_FECHA_LABEL[k],
+                    label: t.perfil.formatosFecha[k],
                   })),
                 ]}
               />

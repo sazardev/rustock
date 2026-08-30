@@ -591,6 +591,7 @@ export const es = {
       historial: "Historial de actividad",
       usuarios: "Usuarios y roles",
       configuracion: "Configuración",
+      perfil: "Mi perfil",
       galeria: "Galería de diseño",
       manual: "Manual",
       ayuda: "Ayuda",
@@ -649,6 +650,12 @@ export const es = {
 
   // ============ Etiquetas ============
   etiquetas: {
+    formatos: {
+      "50x25": "50 × 25 mm — rollo estándar",
+      "70x37": "70 × 37 mm — hoja A4 (24 por hoja)",
+      "100x50": "100 × 50 mm — caja grande",
+      "38x38": "38 × 38 mm — QR cuadrado",
+    },
     titulo: "Etiquetas",
     descripcion:
       "Genera e imprime los códigos que después leerá el escáner. El código impreso es el mismo con el que Rustock encuentra la entidad.",
@@ -1063,6 +1070,16 @@ export const es = {
 
   // ============ Mi perfil ============
   perfil: {
+    tamanos: {
+      PEQUENA: "Pequeña",
+      MEDIA: "Media",
+      GRANDE: "Grande",
+    },
+    formatosFecha: {
+      DD_MMM_YYYY: "08 ago 2026",
+      DD_MM_YYYY: "08/08/2026",
+      YYYY_MM_DD: "2026-08-08",
+    },
     titulo: "Mi perfil",
     descripcion: "Tus datos, tus preferencias de presentación y tu contraseña.",
     cerrarSesion: "Cerrar sesión",
