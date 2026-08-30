@@ -24,10 +24,10 @@ import {
 /** Columnas del panel, en el idioma activo (SPEC §17). */
 function columnasDe(t: Diccionario): Array<TableColumn<Movimiento>> {
   return [
-    { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+    { key: "numero", header: t.campos.numero, code: true, render: (m) => m.numero },
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (m) => (
         <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
           {t.dominio.tipoMovimiento[m.tipo]}
@@ -36,12 +36,12 @@ function columnasDe(t: Diccionario): Array<TableColumn<Movimiento>> {
     },
     {
       key: "fecha_movimiento",
-      header: "Fecha",
+      header: t.comun.fecha,
       render: (m) => formatearFecha(m.fecha_movimiento),
     },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (m) => (
         <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
           {t.dominio.estadoMovimiento[m.estado]}
@@ -75,7 +75,11 @@ export function DashboardPage() {
 
   const kpiItems = resumen
     ? [
-        { label: "SKUs activos", value: resumen.total_skus_activos.toLocaleString(), code: true },
+        {
+          label: t.dashboard.skusActivos,
+          value: resumen.total_skus_activos.toLocaleString(),
+          code: true,
+        },
         {
           label: t.dashboard.unidadesTotales,
           value: resumen.total_unidades.toLocaleString(),
@@ -138,7 +142,7 @@ export function DashboardPage() {
           label: t.dashboard.antiguedad,
           value:
             kpis.antiguedad_stock_dias !== null
-              ? `${kpis.antiguedad_stock_dias.toFixed(1)} días`
+              ? t.dashboard.dias({ total: kpis.antiguedad_stock_dias.toFixed(1) })
               : t.dashboard.sinStock,
           code: kpis.antiguedad_stock_dias !== null,
         },
@@ -170,7 +174,7 @@ export function DashboardPage() {
       <FilterBar
         action={
           <ButtonLink variant="primary" icon="agregar" href="/movimientos/nuevo">
-            Nuevo movimiento
+            {t.dashboard.nuevoMovimiento}
           </ButtonLink>
         }
       />

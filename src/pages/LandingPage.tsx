@@ -5,20 +5,21 @@ import { useSession } from "../shared/session";
 import { Badge, ButtonLink, Card, Icon, Link, LogoMark, Text } from "../shared/ui";
 import { Seo, jsonLdBreadcrumb, jsonLdFaq } from "../shared/seo";
 import {
-  COMPARATIVA,
-  CONFIANZA,
-  DOLORES,
-  ESTADISTICAS,
-  FAQS,
-  FEATURES,
-  PASOS,
-  PLANES,
-  PRINCIPIOS,
-  STACK,
-  TESTIMONIOS,
+  comparativaDe,
+  confianzaDe,
+  doloresDe,
+  estadisticasDe,
+  faqsDe,
+  featuresDe,
+  pasosDe,
+  planesDe,
+  principiosDe,
+  stackDe,
+  testimoniosDe,
 } from "./landing/data";
 import { Mockup } from "./landing/Mockup";
 import { Reveal } from "./landing/Reveal";
+import { useT } from "../shared/i18n";
 
 function FaqItem({
   pregunta,
@@ -53,6 +54,7 @@ function FaqItem({
 }
 
 export function LandingPage() {
+  const t = useT();
   const usuario = useSession((s) => s.usuario);
   const cargandoSesion = useSession((s) => s.cargando);
   const [faqAbierta, setFaqAbierta] = useState<number>(0);
@@ -64,7 +66,9 @@ export function LandingPage() {
     return <Navigate to={PATH.dashboard} replace />;
   }
 
-  const faqJsonLd = jsonLdFaq(FAQS.map((f) => ({ pregunta: f.pregunta, respuesta: f.respuesta })));
+  const faqJsonLd = jsonLdFaq(
+    faqsDe(t).map((f) => ({ pregunta: f.pregunta, respuesta: f.respuesta })),
+  );
   const breadcrumbJsonLd = jsonLdBreadcrumb([{ name: "Inicio", url: "https://rustock.app/" }]);
   const softwareJsonLd = {
     "@context": "https://schema.org",
@@ -72,8 +76,7 @@ export function LandingPage() {
     name: "Rustock",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Windows, macOS, Linux",
-    description:
-      "WMS self-hosted todo en uno: stock en tiempo real, lotes con FIFO/FEFO, trazabilidad inmutable y sin nube.",
+    description: t.seo.aplicacionDesc,
     url: "https://rustock.app",
     image: "https://rustock.app/og-image.png",
     offers: {
@@ -88,9 +91,9 @@ export function LandingPage() {
   const howToJsonLd = {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    name: "Cómo poner tu almacén bajo control con Rustock en 3 pasos",
+    name: t.landing.pagina.pasosAria,
     totalTime: "PT10M",
-    step: PASOS.map((p, i) => ({
+    step: pasosDe(t).map((p, i) => ({
       "@type": "HowToStep",
       position: i + 1,
       name: p.title,
@@ -101,8 +104,8 @@ export function LandingPage() {
   return (
     <div className="landing">
       <Seo
-        title="Rustock — WMS self-hosted para control total de tu almacén"
-        description="WMS self-hosted todo en uno: stock en tiempo real, lotes con FIFO/FEFO, trazabilidad inmutable y sin nube. Una instalación, un archivo. Tu almacén bajo control."
+        title={t.seo.landingTitulo}
+        description={t.seo.landingDesc}
         jsonLd={[breadcrumbJsonLd, softwareJsonLd, faqJsonLd, howToJsonLd]}
       />
 
@@ -112,26 +115,26 @@ export function LandingPage() {
             <LogoMark size={28} />
             <span className="landing__brand-name">Rustock</span>
           </Link>
-          <nav className="landing__nav" aria-label="Secciones de la página">
+          <nav className="landing__nav" aria-label={t.landing.pagina.seccionesAria}>
             <div className="landing__nav-links">
               <a className="landing__nav-link" href="#caracteristicas">
-                Características
+                {t.landing.pagina.navCaracteristicas}
               </a>
               <a className="landing__nav-link" href="#comparativa">
-                Comparativa
+                {t.landing.pagina.navComparativa}
               </a>
               <a className="landing__nav-link" href="#como-funciona">
-                Cómo funciona
+                {t.landing.pagina.navComoFunciona}
               </a>
               <a className="landing__nav-link" href="#precios">
-                Precios
+                {t.landing.pagina.navPrecios}
               </a>
               <a className="landing__nav-link" href="#faq">
                 FAQ
               </a>
             </div>
             <ButtonLink variant="primary" href={PATH.login}>
-              Iniciar sesión
+              {t.landing.pagina.iniciarSesion}
             </ButtonLink>
           </nav>
         </div>
@@ -144,7 +147,7 @@ export function LandingPage() {
             <div className="landing__hero-item">
               <span className="landing__hero-badge">
                 <Badge tone="info" icon="almacen">
-                  Self-hosted — sin nube · Sin suscripción
+                  {t.landing.pagina.heroBadge}
                 </Badge>
               </span>
             </div>
@@ -153,16 +156,15 @@ export function LandingPage() {
               <span className="landing__hero-sub"> de verdad.</span>
             </h1>
             <p className="landing__lead landing__hero-item landing__hero-item--2">
-              Rustock reemplaza Excel y el SaaS que te alquila el acceso. Una sola aplicación en
-              Rust, un archivo SQLite, trazabilidad inmutable.{" "}
-              <strong>Cada unidad tiene su historia.</strong>
+              {t.landing.pagina.heroLead} Rust, un archivo SQLite, trazabilidad inmutable.{" "}
+              <strong>{t.landing.pagina.heroLeadFuerte}</strong>
             </p>
             <div className="landing__cta landing__hero-item landing__hero-item--3">
               <ButtonLink variant="primary" href={PATH.configurarAdministrador}>
-                Configurar el administrador — gratis
+                {t.landing.pagina.ctaAdminGratis}
               </ButtonLink>
               <ButtonLink variant="secondary" href="#caracteristicas">
-                Ver características
+                {t.landing.pagina.verCaracteristicas}
               </ButtonLink>
             </div>
             <p className="landing__hero-nota landing__hero-item landing__hero-item--3">
@@ -179,7 +181,7 @@ export function LandingPage() {
                   className="landing__mock-chip-icon"
                   aria-hidden="true"
                 />
-                FEFO automático
+                {t.landing.pagina.chipFefo}
               </div>
               <div className="landing__mock-chip landing__mock-chip--bottom">
                 <Icon
@@ -188,7 +190,7 @@ export function LandingPage() {
                   className="landing__mock-chip-icon"
                   aria-hidden="true"
                 />
-                Saldos materializados — 0 recálculo
+                {t.landing.pagina.chipSaldos}
               </div>
               <Mockup />
             </div>
@@ -198,9 +200,9 @@ export function LandingPage() {
         {/* Confianza — social proof minimalista */}
         <section className="landing__section landing__section--confianza">
           <div className="landing__container">
-            <p className="landing__confianza-label">Operaciones que ya dejaron Excel</p>
+            <p className="landing__confianza-label">{t.landing.pagina.confianzaLabel}</p>
             <div className="landing__confianza-grid">
-              {CONFIANZA.map((item) => (
+              {confianzaDe(t).map((item) => (
                 <span key={item} className="landing__confianza-item">
                   {item}
                 </span>
@@ -212,13 +214,13 @@ export function LandingPage() {
         {/* Dolores */}
         <section className="landing__section">
           <div className="landing__container">
-            <span className="landing__eyebrow">La verdad incómoda</span>
-            <h2 className="landing__section-title">El descontrol no es normal. Es caro.</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.doloresEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.doloresTitulo}</h2>
             <Text as="p" size="lg" className="landing__section-desc">
-              Tres dolores que Rustock elimina de raíz — con reglas, no con promesas.
+              {t.landing.pagina.doloresLead}
             </Text>
             <div className="landing__dolores">
-              {DOLORES.map((dolor) => (
+              {doloresDe(t).map((dolor) => (
                 <Card key={dolor.titulo} className="landing__dolor">
                   <Card.Body>
                     <div className="landing__dolor-icon">
@@ -238,14 +240,13 @@ export function LandingPage() {
         {/* Estadísticas — banda oscura */}
         <section className="landing__section landing__section--dark">
           <div className="landing__container">
-            <span className="landing__eyebrow">Una sola instalación</span>
-            <h2 className="landing__section-title">Tu operación completa en un solo lugar</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.instalacionEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.instalacionTitulo}</h2>
             <Text as="p" size="lg" className="landing__section-desc">
-              Sin suscripciones, sin nube, sin piezas móviles: una aplicación, un archivo, control
-              total.
+              {t.landing.pagina.instalacionLead}
             </Text>
             <div className="landing__stats">
-              {ESTADISTICAS.map((stat, index) => (
+              {estadisticasDe(t).map((stat, index) => (
                 <Reveal key={stat.etiqueta} delay={index * 70} className="landing__stat">
                   <span className="landing__stat-valor">{stat.valor}</span>
                   <span className="landing__stat-etiqueta">{stat.etiqueta}</span>
@@ -258,14 +259,13 @@ export function LandingPage() {
         {/* Características */}
         <section id="caracteristicas" className="landing__section">
           <div className="landing__container">
-            <span className="landing__eyebrow">Características</span>
-            <h2 className="landing__section-title">Todo lo que necesita un almacén — sin humo</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.navCaracteristicas}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.caracteristicasTitulo}</h2>
             <Text as="p" size="lg" className="landing__section-desc">
-              Seis capacidades que trabajan juntas para que el stock registrado coincida con el
-              stock físico. Probado en 800 SKUs reales.
+              {t.landing.pagina.caracteristicasLead}
             </Text>
             <div className="landing__grid">
-              {FEATURES.map((feature, index) => (
+              {featuresDe(t).map((feature, index) => (
                 <Reveal key={feature.title} delay={(index % 3) * 70} className="landing__grid-item">
                   <Card className="landing__feature">
                     <Card.Body>
@@ -287,30 +287,25 @@ export function LandingPage() {
         {/* Comparativa rompedora */}
         <section id="comparativa" className="landing__section landing__section--white">
           <div className="landing__container">
-            <span className="landing__eyebrow">Por qué Rustock</span>
-            <h2 className="landing__section-title">
-              Excel te frena. El SaaS te alquila. Rustock te da la propiedad.
-            </h2>
+            <span className="landing__eyebrow">{t.landing.pagina.comparativaEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.comparativaTitulo}</h2>
             <Text as="p" size="lg" className="landing__section-desc">
-              La comparativa honesta. Sin asteriscos. Sin letra pequeña.
+              {t.landing.pagina.comparativaLead}
             </Text>
             <div className="landing__table-wrap">
-              <table
-                className="landing__table"
-                aria-label="Comparativa Rustock frente a Excel y SaaS"
-              >
+              <table className="landing__table" aria-label={t.landing.pagina.comparativaAria}>
                 <thead>
                   <tr>
-                    <th scope="col">Criterio</th>
+                    <th scope="col">{t.landing.pagina.colCriterio}</th>
                     <th scope="col" className="landing__table-head--rustock">
                       <span className="landing__table-badge">Rustock</span>
                     </th>
-                    <th scope="col">Excel</th>
-                    <th scope="col">SaaS típico</th>
+                    <th scope="col">{t.landing.pagina.colExcel}</th>
+                    <th scope="col">{t.landing.pagina.colSaas}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {COMPARATIVA.map((fila) => (
+                  {comparativaDe(t).map((fila) => (
                     <tr key={fila.caracteristica}>
                       <th scope="row">{fila.caracteristica}</th>
                       <td className={fila.destaqueRustock ? "landing__table-cell--destacada" : ""}>
@@ -325,8 +320,7 @@ export function LandingPage() {
             </div>
             <div className="landing__comparativa-cta">
               <Text as="p" size="sm" color="muted">
-                Un binario nativo en Rust. Sin vendor lock-in. Sin sorpresas en la factura. Código
-                que puedes auditar, datos que puedes tocar.
+                {t.landing.pagina.comparativaPie}
               </Text>
             </div>
           </div>
@@ -335,12 +329,10 @@ export function LandingPage() {
         {/* Cómo funciona */}
         <section id="como-funciona" className="landing__section landing__section--tinted">
           <div className="landing__container">
-            <span className="landing__eyebrow">Cómo funciona</span>
-            <h2 className="landing__section-title">
-              De la instalación al control en 3 pasos — 10 minutos
-            </h2>
+            <span className="landing__eyebrow">{t.landing.pagina.pasosEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.pasosTitulo}</h2>
             <div className="landing__pasos">
-              {PASOS.map((paso, index) => (
+              {pasosDe(t).map((paso, index) => (
                 <Reveal key={paso.title} delay={index * 90} className="landing__paso">
                   <span className="landing__paso-numero">{String(index + 1).padStart(2, "0")}</span>
                   <h3 className="landing__paso-titulo">
@@ -361,14 +353,13 @@ export function LandingPage() {
         {/* Pricing / Valor */}
         <section id="precios" className="landing__section landing__section--white">
           <div className="landing__container">
-            <span className="landing__eyebrow">Valor</span>
-            <h2 className="landing__section-title">Un precio honesto: el tuyo. Para siempre.</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.preciosEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.preciosTitulo}</h2>
             <Text as="p" size="lg" className="landing__section-desc">
-              No pagas por usuario, por mes ni por escanear un código. Elige cómo empezar. Cambia
-              cuando quieras.
+              {t.landing.pagina.preciosLead}
             </Text>
             <div className="landing__planes">
-              {PLANES.map((plan) => (
+              {planesDe(t).map((plan) => (
                 <Card
                   key={plan.nombre}
                   className={`landing__plan ${plan.destacado ? "landing__plan--destacado" : ""}`}
@@ -376,7 +367,7 @@ export function LandingPage() {
                   <Card.Body>
                     {plan.destacado ? (
                       <Badge tone="info" className="landing__plan-badge">
-                        Recomendado · Más elegido
+                        {t.landing.pagina.recomendado}
                       </Badge>
                     ) : null}
                     <h3 className="landing__plan-nombre">{plan.nombre}</h3>
@@ -421,10 +412,10 @@ export function LandingPage() {
         {/* Stack de confianza */}
         <section className="landing__section landing__section--stack">
           <div className="landing__container">
-            <span className="landing__eyebrow">Hecho para durar</span>
-            <h2 className="landing__section-title">Tecnología que no te deja tirado</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.stackEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.stackTitulo}</h2>
             <div className="landing__stack">
-              {STACK.map((tech) => (
+              {stackDe(t).map((tech) => (
                 <div key={tech.nombre} className="landing__stack-item">
                   <span className="landing__stack-nombre">{tech.nombre}</span>
                   <span className="landing__stack-rol">{tech.rol}</span>
@@ -437,10 +428,10 @@ export function LandingPage() {
         {/* Testimonios */}
         <section className="landing__section landing__section--dark">
           <div className="landing__container">
-            <span className="landing__eyebrow">Prueba social</span>
-            <h2 className="landing__section-title">Operaciones que ya tomaron el control</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.testimoniosEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.testimoniosTitulo}</h2>
             <div className="landing__testimonios">
-              {TESTIMONIOS.map((t) => (
+              {testimoniosDe(t).map((t) => (
                 <div key={t.autor} className="landing__testimonio">
                   <p className="landing__testimonio-cita">“{t.cita}”</p>
                   <div className="landing__testimonio-autor">
@@ -461,12 +452,10 @@ export function LandingPage() {
         {/* FAQ */}
         <section id="faq" className="landing__section">
           <div className="landing__container">
-            <span className="landing__eyebrow">Preguntas frecuentes</span>
-            <h2 className="landing__section-title">
-              Lo que todos preguntan antes de tomar el control
-            </h2>
+            <span className="landing__eyebrow">{t.landing.pagina.faqsEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.faqsTitulo}</h2>
             <div className="landing__faq">
-              {FAQS.map((faq, index) => (
+              {faqsDe(t).map((faq, index) => (
                 <FaqItem
                   key={faq.pregunta}
                   pregunta={faq.pregunta}
@@ -482,10 +471,10 @@ export function LandingPage() {
         {/* Principios */}
         <section id="integridad" className="landing__section landing__section--tinted">
           <div className="landing__container">
-            <span className="landing__eyebrow">Integridad</span>
-            <h2 className="landing__section-title">Cuatro reglas que no se negocian. Nunca.</h2>
+            <span className="landing__eyebrow">{t.landing.pagina.principiosEyebrow}</span>
+            <h2 className="landing__section-title">{t.landing.pagina.principiosTitulo}</h2>
             <div className="landing__principles">
-              {PRINCIPIOS.map((principio, index) => (
+              {principiosDe(t).map((principio, index) => (
                 <Reveal
                   key={principio.title}
                   delay={(index % 4) * 70}
@@ -514,20 +503,18 @@ export function LandingPage() {
             </div>
             <h2 className="landing__section-title">¿Listo para tomar el control? Hoy.</h2>
             <Text as="p" size="lg" className="landing__cta-final-desc">
-              Configura el primer usuario administrador y empieza a operar en minutos. Tus datos se
-              quedan contigo: SQLite embebido, sin dependencias en la nube.{" "}
-              <strong>Sin tarjeta. Sin nube. Sin límites. Sin excusas.</strong>
+              {t.landing.pagina.cierreLead} <strong>{t.landing.pagina.cierreFuerte}</strong>
             </Text>
             <div className="landing__cta">
               <ButtonLink variant="primary" href={PATH.configurarAdministrador}>
-                Configurar el administrador — es gratis
+                {t.landing.pagina.cierreCtaAdmin}
               </ButtonLink>
               <ButtonLink variant="secondary" href={PATH.login}>
-                Ya tengo cuenta — iniciar sesión
+                {t.landing.pagina.cierreCtaLogin}
               </ButtonLink>
             </div>
             <p className="landing__cta-nota">
-              Instalación en 3 minutos &middot; 26 guías + glosario &middot; Soporte vía ayuda
+              {t.landing.pagina.cierreNota}
               &middot; Hecho en Rust para durar décadas
             </p>
           </div>
@@ -542,18 +529,18 @@ export function LandingPage() {
               <span>Rustock</span>
             </span>
             <Text as="p" size="xs" color="muted" className="landing__footer-tagline">
-              WMS self-hosted. Tu almacén, bajo control. Para siempre.
+              {t.landing.pagina.pieLead}
             </Text>
           </div>
-          <nav className="landing__footer-nav" aria-label="Enlaces del pie">
-            <a href="#caracteristicas">Características</a>
-            <a href="#comparativa">Comparativa</a>
+          <nav className="landing__footer-nav" aria-label={t.landing.pagina.enlacesPie}>
+            <a href="#caracteristicas">{t.landing.pagina.navCaracteristicas}</a>
+            <a href="#comparativa">{t.landing.pagina.navComparativa}</a>
             <a href="#faq">FAQ</a>
-            <a href="/ayuda">Ayuda</a>
-            <a href="/ayuda/glosario">Glosario</a>
+            <a href="/ayuda">{t.landing.pagina.navAyuda}</a>
+            <a href="/ayuda/glosario">{t.landing.pagina.navGlosario}</a>
           </nav>
           <Text as="span" size="xs" color="muted">
-            Self-hosted — SQLite — Rust + React — Hecho para durar · rustock.app
+            {t.landing.pagina.pieFirma}
           </Text>
         </div>
       </footer>

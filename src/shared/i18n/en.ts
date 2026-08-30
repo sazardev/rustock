@@ -1128,6 +1128,9 @@ export const en: Diccionario = {
   },
 
   dashboard: {
+    skusActivos: "Active SKUs",
+    nuevoMovimiento: "New movement",
+    dias: (p) => `${p.total} days`,
     noSePudoCargar: "Could not load the indicators",
     indicadoresClave: "Key indicators",
     indicadoresAdicionales: "Additional indicators",
@@ -1881,6 +1884,264 @@ export const en: Diccionario = {
     galeriaDiseno: "Design gallery",
     galeriaDisenoDesc: "Design system components and tokens",
     paginaDeError: "Sample error page",
+  },
+
+  landing: {
+    pagina: {
+      navCaracteristicas: "Features",
+      navComparativa: "Comparison",
+      navComoFunciona: "How it works",
+      navPrecios: "Pricing",
+      navAyuda: "Help",
+      navGlosario: "Glossary",
+      iniciarSesion: "Sign in",
+      seccionesAria: "Page sections",
+      enlacesPie: "Footer links",
+      heroBadge: "Self-hosted — no cloud · No subscription",
+      heroTitulo: "Rustock — self-hosted WMS for full control of your warehouse",
+      heroLead:
+        "Rustock replaces Excel and the SaaS that rents you access. A single application in",
+      heroLeadFuerte: "Every unit has its story.",
+      ctaAdminGratis: "Set up the administrator — free",
+      verCaracteristicas: "See the features",
+      chipFefo: "Automatic FEFO",
+      chipSaldos: "Materialised balances — 0 recalculation",
+      confianzaLabel: "Operations that already left Excel behind",
+      doloresEyebrow: "The uncomfortable truth",
+      doloresTitulo: "Losing control is not normal. It is expensive.",
+      doloresLead: "Three pains Rustock removes at the root — with rules, not promises.",
+      instalacionEyebrow: "One single installation",
+      instalacionTitulo: "Your whole operation in one place",
+      instalacionLead:
+        "No subscriptions, no cloud, no moving parts: one application, one file, full control.",
+      caracteristicasEyebrow: "Features",
+      caracteristicasTitulo: "Everything a warehouse needs — no smoke",
+      caracteristicasLead:
+        "Six capabilities that work together so recorded stock matches physical stock. Proven on 800 real SKUs.",
+      comparativaEyebrow: "Why Rustock",
+      comparativaTitulo: "Excel slows you down. SaaS rents to you. Rustock gives you ownership.",
+      comparativaLead: "The honest comparison. No asterisks. No small print.",
+      comparativaAria: "Comparison of Rustock against Excel and SaaS",
+      colCriterio: "Criterion",
+      colExcel: "Excel",
+      colSaas: "Typical SaaS",
+      comparativaPie:
+        "A native binary in Rust. No vendor lock-in. No surprises on the invoice. Code you can audit, data you can touch.",
+      pasosEyebrow: "How it works",
+      pasosTitulo: "From install to control in 3 steps — 10 minutes",
+      pasosAria: "How to get your warehouse under control with Rustock in 3 steps",
+      preciosEyebrow: "Value",
+      preciosTitulo: "An honest price: yours. Forever.",
+      preciosLead:
+        "You do not pay per user, per month or per code scanned. Choose how to start. Change whenever you like.",
+      recomendado: "Recommended · Most chosen",
+      stackEyebrow: "Built to last",
+      stackTitulo: "Technology that will not leave you stranded",
+      testimoniosEyebrow: "Social proof",
+      testimoniosTitulo: "Operations that already took control",
+      faqsEyebrow: "Frequently asked questions",
+      faqsTitulo: "What everyone asks before taking control",
+      principiosEyebrow: "Integrity",
+      principiosTitulo: "Four rules that are never up for negotiation.",
+      cierreLead:
+        "Set up the first administrator account and start operating in minutes. Your data stays with you: embedded SQLite, no cloud dependencies.",
+      cierreFuerte: "No card. No cloud. No limits. No excuses.",
+      cierreCtaAdmin: "Set up the administrator — it is free",
+      cierreCtaLogin: "I already have an account — sign in",
+      cierreNota: "Install in 3 minutes · 26 guides + glossary · Support via the help",
+      pieLead: "Self-hosted WMS. Your warehouse, under control. Forever.",
+      pieFirma: "Self-hosted — SQLite — Rust + React — Built to last · rustock.app",
+    },
+
+    features: {
+      stockTitulo: "Real-time stock",
+      stockTexto:
+        "Balances by location, product and lot, with minimums, maximums and automatic replenishment alerts.",
+      movimientosTitulo: "Traceable movements",
+      movimientosTexto:
+        "Every change to stock is a movement with a type, a reason and an author. Immutable history, and cancellations via a reversing movement.",
+      fifoTitulo: "Automatic FIFO and FEFO",
+      fifoTexto:
+        "Outbound movements respect age and expiry. An expired lot never goes out to a customer.",
+      inventarioTitulo: "Stocktaking",
+      inventarioTexto:
+        "Full or cycle counts, blind counts, double counts and accuracy measured by SKU, quantity and location.",
+      trazabilidadTitulo: "Full traceability",
+      trazabilidadTexto:
+        "A timeline for products, locations, lots and containers: where each unit came from and who moved it.",
+      rolesTitulo: "Roles and permissions",
+      rolesTexto:
+        "Role-based control with granular permissions and a complete audit of who did what and when.",
+    },
+    pasos: {
+      instalaTitulo: "Install and start",
+      instalaTexto:
+        "A single application compiled in Rust. On first run you create the administrator account and you are done.",
+      defineTitulo: "Define your warehouse",
+      defineTexto:
+        "Warehouses, zones, locations, products, lots and units of measure with unique, normalised codes.",
+      registraTitulo: "Record and control",
+      registraTexto:
+        "Inbound, outbound, transfers and adjustments with a reason and an author. Counts, alerts and reports in one place.",
+    },
+    principios: {
+      movimientoTitulo: "One movement, one fact",
+      movimientoTexto: "No operation changes stock outside the movement model.",
+      saldoTitulo: "The balance is derived",
+      saldoTexto: "Every stock figure is backed by movements; there are never hand-set balances.",
+      historialTitulo: "Nothing is destroyed",
+      historialTexto: "Records are deactivated or cancelled; the history always remains.",
+      consultableTitulo: "Everything queryable",
+      consultableTexto: "Every list is filterable, sortable, searchable, pageable and exportable.",
+    },
+    estadisticas: {
+      serviciosNube: "external cloud services",
+      archivoBd: "database file (SQLite)",
+      instalacion: "installation on your machine",
+      trazabilidad: "traceability per unit",
+    },
+    dolores: {
+      stockTitulo: "Stock that never adds up",
+      stockTexto:
+        "You leave Excel behind, and the nights spent counting by hand. Every figure has its movement, every movement its author.",
+      vencimientosTitulo: "Expiries that slip through",
+      vencimientosTexto:
+        "Automatic FEFO. What expires first goes out first. Zero expired lots left unwritten-off.",
+      mermasTitulo: "Shrinkage with no explanation",
+      mermasTexto:
+        "Immutable traceability. You know where each unit came from, who moved it and why.",
+    },
+    confianza: [
+      "Distribuidora Andina — 800 SKUs",
+      "Bodega Central — Chilled and dry",
+      "Taller Industrial — Spare parts",
+      "Operadora Logística — 3 sites",
+    ],
+    stack: {
+      rust: "Native binary · No GC",
+      sqlite: "One file · 0 latency",
+      tauri: "Native window · No Electron",
+      react: "Instant UI",
+    },
+    comparativa: {
+      costo: "Monthly cost",
+      costoRustock: "0 — once installed, it is yours",
+      costoExcel: "0 but with no control",
+      costoSaas: "29 – 299 per month per user",
+      datos: "Data",
+      datosRustock: "On your machine, SQLite",
+      datosExcel: "A fragile local file",
+      datosSaas: "In someone else’s cloud",
+      trazabilidad: "Traceability",
+      trazabilidadRustock: "Immutable, per movement",
+      trazabilidadExcel: "Does not exist",
+      trazabilidadSaas: "Limited",
+      fifo: "FIFO / FEFO",
+      fifoRustock: "Automatic",
+      fifoExcel: "Manual and error-prone",
+      fifoSaas: "Some, at extra cost",
+      ciego: "Blind count",
+      ciegoRustock: "Built in",
+      ciegoExcel: "Impossible",
+      ciegoSaas: "Rare",
+      auditoria: "Audit",
+      auditoriaRustock: "Who, what, when and why",
+      auditoriaExcel: "No",
+      auditoriaSaas: "Partial",
+      offline: "Offline",
+      offlineRustock: "100% — no internet needed",
+      offlineExcel: "Yes",
+      offlineSaas: "No",
+    },
+    planes: {
+      communityNombre: "Community",
+      communityPeriodo: "forever",
+      communityDesc: "For warehouses that want to leave Excel today.",
+      communityIncluye: [
+        "1 warehouse, unlimited warehouses with branches",
+        "Products, lots, locations and movements with no limit",
+        "FIFO/FEFO, stocktaking and complete reports",
+        "Roles, audit and full traceability",
+      ],
+      communityCta: "Download free",
+      proNombre: "Self-hosted Pro",
+      proPeriodo: "your infrastructure",
+      proDesc: "The same Community, with full control. There is no small print.",
+      proIncluye: [
+        "Everything in Community",
+        "Embedded SQLite — one file, zero cloud",
+        "2D/3D warehouse map and command palette",
+        "Support via 26 guides of documentation + glossary",
+      ],
+      proCta: "Start now",
+      medidaNombre: "Bespoke",
+      medidaPrecio: "On request",
+      medidaPeriodo: "for unusual operations",
+      medidaDesc: "Specific adaptations and deployments.",
+      medidaIncluye: [
+        "Bespoke integrations (optional plugins)",
+        "Migration from your current system",
+        "Training for your team",
+        "Minimal footprint: native Rust, no vendor lock-in",
+      ],
+      medidaCta: "Talk to the team",
+    },
+    testimonios: {
+      unoCita:
+        "We went from losing stock with no idea why to having every movement traced. Shrinkage dropped 40% in three months.",
+      unoAutor: "Head of operations",
+      unoCargo: "Food distributor, 800 SKUs",
+      dosCita:
+        "Automatic FIFO and FEFO removed human error from expiries. Zero expired lots left unwritten-off since we started using Rustock.",
+      dosAutor: "Warehouse manager",
+      dosCargo: "Pharmaceutical warehouse",
+      tresCita:
+        "Installing was copying a binary and creating the admin. No Docker, no cloud, no surprises. All warehouse software should be like this.",
+      tresAutor: "Technical management",
+      tresCargo: "Industrial workshop",
+    },
+    faqs: [
+      {
+        pregunta: "Does Rustock need the internet or the cloud?",
+        respuesta:
+          "No. Rustock is 100% self-hosted: it installs on your machine and keeps everything in a local SQLite file. It works offline, with no subscriptions or external services.",
+      },
+      {
+        pregunta: "Can I migrate from Excel?",
+        respuesta:
+          "Yes. You can create your products, locations and lots by hand or import them through the guided forms. The first-steps help takes you from zero to operational in minutes, and the balance is always backed by movements.",
+      },
+      {
+        pregunta: "How does Rustock prevent stock going negative?",
+        respuesta:
+          "Every outbound movement validates the available balance in the location and lot. If it is not enough, the operation is rejected with a clear message. And an expired lot never goes out to a customer: only as shrinkage or an adjustment.",
+      },
+      {
+        pregunta: "How is it different from an inventory SaaS?",
+        respuesta:
+          "Your data never leaves your infrastructure, you do not pay per user or per month, and traceability is immutable by design. A SaaS rents you access; Rustock gives you ownership.",
+      },
+      {
+        pregunta: "Does it support multiple warehouses and branches?",
+        respuesta:
+          "Yes. The tree is Warehouse → Zone → Rack → Section → Location → Container, with branches as their own entity and atomic inter-warehouse transfers with full traceability.",
+      },
+      {
+        pregunta: "What if I make a mistake in a movement?",
+        respuesta:
+          "An approved movement is immutable. It is cancelled by generating its reverse, without deleting history. Who created it, who approved it and who cancelled it all remain, with dates and a reason.",
+      },
+      {
+        pregunta: "Is Rustock open source?",
+        respuesta:
+          "Rustock is distributed as a self-contained, self-hosted application. The 26 guides of documentation and the 46-term glossary describe every behaviour faithfully so you can audit each decision.",
+      },
+      {
+        pregunta: "What machines does it run on?",
+        respuesta:
+          "Windows, macOS and Linux (Tauri v2 + Rust). The backend is an optimised native binary and the frontend is React 19. A single database file, minimal footprint, instant startup.",
+      },
+    ],
   },
 
   errores: {

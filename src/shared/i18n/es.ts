@@ -1167,6 +1167,9 @@ export const es = {
 
   // ============ Dashboard ============
   dashboard: {
+    skusActivos: "SKUs activos",
+    nuevoMovimiento: "Nuevo movimiento",
+    dias: (p: { total: string }) => `${p.total} días`,
     noSePudoCargar: "No se pudieron cargar los indicadores",
     indicadoresClave: "Indicadores clave",
     indicadoresAdicionales: "Indicadores adicionales",
@@ -1957,6 +1960,265 @@ export const es = {
     galeriaDiseno: "Galería de diseño",
     galeriaDisenoDesc: "Componentes y tokens del sistema de diseño",
     paginaDeError: "Página de error de ejemplo",
+  },
+
+  // ============ Landing pública ============
+  landing: {
+    pagina: {
+      navCaracteristicas: "Características",
+      navComparativa: "Comparativa",
+      navComoFunciona: "Cómo funciona",
+      navPrecios: "Precios",
+      navAyuda: "Ayuda",
+      navGlosario: "Glosario",
+      iniciarSesion: "Iniciar sesión",
+      seccionesAria: "Secciones de la página",
+      enlacesPie: "Enlaces del pie",
+      heroBadge: "Self-hosted — sin nube · Sin suscripción",
+      heroTitulo: "Rustock — WMS self-hosted para control total de tu almacén",
+      heroLead:
+        "Rustock reemplaza Excel y el SaaS que te alquila el acceso. Una sola aplicación en",
+      heroLeadFuerte: "Cada unidad tiene su historia.",
+      ctaAdminGratis: "Configurar el administrador — gratis",
+      verCaracteristicas: "Ver características",
+      chipFefo: "FEFO automático",
+      chipSaldos: "Saldos materializados — 0 recálculo",
+      confianzaLabel: "Operaciones que ya dejaron Excel",
+      doloresEyebrow: "La verdad incómoda",
+      doloresTitulo: "El descontrol no es normal. Es caro.",
+      doloresLead: "Tres dolores que Rustock elimina de raíz — con reglas, no con promesas.",
+      instalacionEyebrow: "Una sola instalación",
+      instalacionTitulo: "Tu operación completa en un solo lugar",
+      instalacionLead:
+        "Sin suscripciones, sin nube, sin piezas móviles: una aplicación, un archivo, control total.",
+      caracteristicasEyebrow: "Características",
+      caracteristicasTitulo: "Todo lo que necesita un almacén — sin humo",
+      caracteristicasLead:
+        "Seis capacidades que trabajan juntas para que el stock registrado coincida con el stock físico. Probado en 800 SKUs reales.",
+      comparativaEyebrow: "Por qué Rustock",
+      comparativaTitulo: "Excel te frena. El SaaS te alquila. Rustock te da la propiedad.",
+      comparativaLead: "La comparativa honesta. Sin asteriscos. Sin letra pequeña.",
+      comparativaAria: "Comparativa Rustock frente a Excel y SaaS",
+      colCriterio: "Criterio",
+      colExcel: "Excel",
+      colSaas: "SaaS típico",
+      comparativaPie:
+        "Un binario nativo en Rust. Sin vendor lock-in. Sin sorpresas en la factura. Código que puedes auditar, datos que puedes tocar.",
+      pasosEyebrow: "Cómo funciona",
+      pasosTitulo: "De la instalación al control en 3 pasos — 10 minutos",
+      pasosAria: "Cómo poner tu almacén bajo control con Rustock en 3 pasos",
+      preciosEyebrow: "Valor",
+      preciosTitulo: "Un precio honesto: el tuyo. Para siempre.",
+      preciosLead:
+        "No pagas por usuario, por mes ni por escanear un código. Elige cómo empezar. Cambia cuando quieras.",
+      recomendado: "Recomendado · Más elegido",
+      stackEyebrow: "Hecho para durar",
+      stackTitulo: "Tecnología que no te deja tirado",
+      testimoniosEyebrow: "Prueba social",
+      testimoniosTitulo: "Operaciones que ya tomaron el control",
+      faqsEyebrow: "Preguntas frecuentes",
+      faqsTitulo: "Lo que todos preguntan antes de tomar el control",
+      principiosEyebrow: "Integridad",
+      principiosTitulo: "Cuatro reglas que no se negocian. Nunca.",
+      cierreLead:
+        "Configura el primer usuario administrador y empieza a operar en minutos. Tus datos se quedan contigo: SQLite embebido, sin dependencias en la nube.",
+      cierreFuerte: "Sin tarjeta. Sin nube. Sin límites. Sin excusas.",
+      cierreCtaAdmin: "Configurar el administrador — es gratis",
+      cierreCtaLogin: "Ya tengo cuenta — iniciar sesión",
+      cierreNota: "Instalación en 3 minutos · 26 guías + glosario · Soporte vía ayuda",
+      pieLead: "WMS self-hosted. Tu almacén, bajo control. Para siempre.",
+      pieFirma: "Self-hosted — SQLite — Rust + React — Hecho para durar · rustock.app",
+    },
+
+    features: {
+      stockTitulo: "Stock en tiempo real",
+      stockTexto:
+        "Saldos por ubicación, producto y lote, con mínimos, máximos y alertas automáticas de reposición.",
+      movimientosTitulo: "Movimientos trazables",
+      movimientosTexto:
+        "Cada alteración de stock es un movimiento con tipo, motivo y autor. Historial inmutable y anulaciones con movimiento inverso.",
+      fifoTitulo: "FIFO y FEFO automáticos",
+      fifoTexto:
+        "Las salidas respetan antigüedad y vencimiento. Un lote vencido nunca sale a cliente.",
+      inventarioTitulo: "Inventario físico",
+      inventarioTexto:
+        "Conteos completos o cíclicos, conteo ciego, doble conteo y precisión medida por SKU, cantidad y ubicación.",
+      trazabilidadTitulo: "Trazabilidad total",
+      trazabilidadTexto:
+        "Línea de tiempo de productos, ubicaciones, lotes y cajas: de dónde vino cada unidad y quién la movió.",
+      rolesTitulo: "Roles y permisos",
+      rolesTexto:
+        "Control por roles con permisos granulares y auditoría completa de quién hizo qué y cuándo.",
+    },
+    pasos: {
+      instalaTitulo: "Instala y arranca",
+      instalaTexto:
+        "Una sola aplicación compilada en Rust. En el primer arranque creas el usuario administrador y listo.",
+      defineTitulo: "Define tu almacén",
+      defineTexto:
+        "Almacenes, zonas, ubicaciones, productos, lotes y unidades de medida con códigos únicos y normalizados.",
+      registraTitulo: "Registra y controla",
+      registraTexto:
+        "Entradas, salidas, traslados y ajustes con motivo y autor. Conteos, alertas y reportes en el mismo lugar.",
+    },
+    principios: {
+      movimientoTitulo: "Un movimiento, un hecho",
+      movimientoTexto: "Ninguna operación altera el stock por fuera del modelo de movimientos.",
+      saldoTitulo: "El saldo es derivado",
+      saldoTexto: "Cada cifra de stock se respalda en movimientos; nunca existen saldos a mano.",
+      historialTitulo: "Nada se destruye",
+      historialTexto: "Las entidades se desactivan o anulan; el historial siempre permanece.",
+      consultableTitulo: "Todo consultable",
+      consultableTexto: "Cada listado es filtrable, ordenable, buscable, paginable y exportable.",
+    },
+    estadisticas: {
+      serviciosNube: "servicios externos en la nube",
+      archivoBd: "archivo de base de datos (SQLite)",
+      instalacion: "instalación en tu equipo",
+      trazabilidad: "de trazabilidad por unidad",
+    },
+    dolores: {
+      stockTitulo: "Stock que no cuadra",
+      stockTexto:
+        "Dejas Excel y dejas las noches contando a mano. Cada cifra tiene su movimiento, cada movimiento su autor.",
+      vencimientosTitulo: "Vencimientos que se pierden",
+      vencimientosTexto:
+        "FEFO automático. Lo que vence primero sale primero. Cero lotes vencidos sin dar de baja.",
+      mermasTitulo: "Mermas sin explicación",
+      mermasTexto:
+        "Trazabilidad inmutable. Sabes de dónde vino cada unidad, quién la movió y por qué.",
+    },
+    confianza: [
+      "Distribuidora Andina — 800 SKUs",
+      "Bodega Central — Frío y seco",
+      "Taller Industrial — Repuestos",
+      "Operadora Logística — 3 sedes",
+    ],
+    stack: {
+      rust: "Binario nativo · Sin GC",
+      sqlite: "Un archivo · 0 latencia",
+      tauri: "Ventana nativa · Sin Electron",
+      react: "UI instantánea",
+    },
+    comparativa: {
+      costo: "Costo mensual",
+      costoRustock: "0 — una vez instalado, es tuyo",
+      costoExcel: "0 pero sin control",
+      costoSaas: "29 – 299 por mes y por usuario",
+      datos: "Datos",
+      datosRustock: "En tu equipo, SQLite",
+      datosExcel: "Archivo local frágil",
+      datosSaas: "En la nube de otro",
+      trazabilidad: "Trazabilidad",
+      trazabilidadRustock: "Inmutable, por movimiento",
+      trazabilidadExcel: "No existe",
+      trazabilidadSaas: "Limitada",
+      fifo: "FIFO / FEFO",
+      fifoRustock: "Automático",
+      fifoExcel: "Manual y propenso a error",
+      fifoSaas: "Algunos, con costo extra",
+      ciego: "Conteo ciego",
+      ciegoRustock: "Integrado",
+      ciegoExcel: "Imposible",
+      ciegoSaas: "Raro",
+      auditoria: "Auditoría",
+      auditoriaRustock: "Quién, qué, cuándo y por qué",
+      auditoriaExcel: "No",
+      auditoriaSaas: "Parcial",
+      offline: "Offline",
+      offlineRustock: "100% — sin internet",
+      offlineExcel: "Sí",
+      offlineSaas: "No",
+    },
+    planes: {
+      communityNombre: "Community",
+      communityPeriodo: "para siempre",
+      communityDesc: "Para bodegas que quieren dejar Excel hoy.",
+      communityIncluye: [
+        "1 almacén, almacenes ilimitados con sucursales",
+        "Productos, lotes, ubicaciones y movimientos sin límite",
+        "FIFO/FEFO, inventario físico y reportes completos",
+        "Roles, auditoría y trazabilidad total",
+      ],
+      communityCta: "Descargar gratis",
+      proNombre: "Self-hosted Pro",
+      proPeriodo: "tu infraestructura",
+      proDesc: "El mismo Community, con control total. No hay letra pequeña.",
+      proIncluye: [
+        "Todo lo de Community",
+        "SQLite embebido — un archivo, cero nube",
+        "Mapa 2D/3D del almacén y command palette",
+        "Soporte vía documentación de 26 guías + glosario",
+      ],
+      proCta: "Empezar ahora",
+      medidaNombre: "A medida",
+      medidaPrecio: "A consultar",
+      medidaPeriodo: "para operaciones singulares",
+      medidaDesc: "Adaptaciones y despliegues específicos.",
+      medidaIncluye: [
+        "Integraciones a medida (plugins opcionales)",
+        "Migración desde tu sistema actual",
+        "Formación para tu equipo",
+        "Huella mínima: Rust nativo, sin vendor lock-in",
+      ],
+      medidaCta: "Hablar con el equipo",
+    },
+    testimonios: {
+      unoCita:
+        "Pasamos de perder stock sin saber por qué a tener cada movimiento trazado. La merma bajó un 40% en tres meses.",
+      unoAutor: "Dirección de operaciones",
+      unoCargo: "Distribuidora alimentaria, 800 SKUs",
+      dosCita:
+        "FIFO y FEFO automáticos nos quitaron el error humano en vencimientos. Cero lotes vencidos sin dar de baja desde que usamos Rustock.",
+      dosAutor: "Responsable de almacén",
+      dosCargo: "Bodega farmacéutica",
+      tresCita:
+        "Instalar fue copiar un binario y crear el admin. Sin Docker, sin nube, sin sorpresas. Así debería ser todo el software de almacén.",
+      tresAutor: "Gerencia técnica",
+      tresCargo: "Taller industrial",
+    },
+    faqs: [
+      {
+        pregunta: "¿Rustock necesita internet o la nube?",
+        respuesta:
+          "No. Rustock es 100% self-hosted: se instala en tu equipo y guarda todo en un archivo SQLite local. Funciona offline, sin suscripciones ni servicios externos.",
+      },
+      {
+        pregunta: "¿Puedo migrar desde Excel?",
+        respuesta:
+          "Sí. Puedes crear tus productos, ubicaciones y lotes manualmente o importar vía los formularios guiados. La ayuda de primeros pasos te lleva de cero a operativo en minutos, y el saldo siempre queda respaldado por movimientos.",
+      },
+      {
+        pregunta: "¿Cómo evita Rustock que el stock quede negativo?",
+        respuesta:
+          "Cada salida valida el saldo disponible en la ubicación y lote. Si no alcanza, la operación se rechaza con un mensaje claro. Además, un lote vencido nunca sale a cliente: solo como merma o ajuste.",
+      },
+      {
+        pregunta: "¿Qué diferencia hay con un SaaS de inventario?",
+        respuesta:
+          "Tus datos nunca salen de tu infraestructura, no pagas por usuario ni por mes, y la trazabilidad es inmutable por diseño. Un SaaS te alquila el acceso; Rustock te da la propiedad.",
+      },
+      {
+        pregunta: "¿Soporta múltiples almacenes y sucursales?",
+        respuesta:
+          "Sí. El árbol es Almacén → Zona → Rack → Sección → Ubicación → Caja, con sucursales como entidad propia y traslados inter-almacén atómicos con trazabilidad completa.",
+      },
+      {
+        pregunta: "¿Qué pasa si me equivoco en un movimiento?",
+        respuesta:
+          "Un movimiento aprobado es inmutable. Se anula generando su inverso, sin borrar el historial. Queda quién lo creó, quién lo aprobó y quién lo anuló, con fechas y motivo.",
+      },
+      {
+        pregunta: "¿Rustock es de código abierto?",
+        respuesta:
+          "Rustock se distribuye como aplicación self-hosted autosuficiente. La documentación de 26 guías y el glosario de 46 términos describen fielmente cada comportamiento para que audites cada decisión.",
+      },
+      {
+        pregunta: "¿En qué equipo funciona?",
+        respuesta:
+          "En Windows, macOS y Linux (Tauri v2 + Rust). El backend es un binario nativo optimizado y el frontend es React 19. Un solo archivo de base de datos, tamaño mínimo, arranque instantáneo.",
+      },
+    ],
   },
 
   // ============ Errores del backend (SPEC §17.3) ============
