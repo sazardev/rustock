@@ -2291,6 +2291,227 @@ const CH_ACTIVITY_M: ManualCapitulo = {
   ],
 };
 
+const CH_P_RECEIVING: ManualCapitulo = {
+  id: "m07-recepcion",
+  titulo: "Receiving goods from a supplier",
+  icono: "entrada",
+  resumen: "From the PO to available stock: create a purchase inbound movement and approve it.",
+  paraQueSirve: "To record faithfully what comes in and leave its origin traced.",
+  terminosClave: ["entrada", "proveedor", "lote", "capacidad-maxima"],
+  relacionados: ["m04-entradas", "m03-producto"],
+  secciones: [
+    {
+      titulo: "What you need",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "An active product, an active supplier, an active location with enough capacity, and a lot (if the product tracks lots, plus an expiry if it tracks expiry).",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Steps",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "Create an INBOUND / PURCHASE movement at /movimientos/nuevo: select the supplier and the reference document (the PO number).",
+            "Add lines: product, lot (existing or new), quantity >0 and the destination location. You can split across several lots or locations.",
+            "It validates: the product is active, the lot unexpired, the destination in the same warehouse, the capacity, and lot tracking.",
+            "Save (it starts as a DRAFT). Send it for approval if your role cannot approve, or if approval is required.",
+            "A WAREHOUSE MANAGER/MANAGER approves at /movimientos/:id/aprobar → stock increases atomically at the destination.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "What happens in the system",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "The movement becomes APPROVED (the only status that changes balances). The destination balances increase; the update is atomic.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Rules",
+      bloques: [
+        {
+          tipo: "nota",
+          texto:
+            "A purchase with an inactive product or an expired lot is rejected. If more arrives than was recorded, adjust the quantity while it is still editable (not approved), or create a new movement.",
+          tono: "warning",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_P_DISPATCH: ManualCapitulo = {
+  id: "m07-despacho",
+  titulo: "Dispatching to a customer",
+  icono: "salida",
+  resumen: "From the need to a traceable outbound movement: FIFO/FEFO and balance validation.",
+  paraQueSirve:
+    "To dispatch the right thing, with healthy rotation and without leaving a negative balance.",
+  terminosClave: ["salida", "cliente", "fifo", "fefo", "saldo"],
+  relacionados: ["m04-salidas", "m04-fifo"],
+  secciones: [
+    {
+      titulo: "Steps",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "Create an OUTBOUND / CUSTOMER movement at /movimientos/nuevo: product/quantity/customer lines plus the source.",
+            "Use Suggest FIFO/FEFO: pick the product and the quantity, and the system proposes the lots and locations.",
+            "It validates that the balance is enough; if not, it tells you where the stock is.",
+            "Approve → an atomic decrease; the origin stays traced.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Rules",
+      bloques: [
+        {
+          tipo: "nota",
+          texto:
+            "An expired lot does not go out to a customer or as a supplier return; only SHRINKAGE/NEGATIVE_ADJUSTMENT. The policy applies within the source location.",
+          tono: "warning",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_P_TRANSFER: ManualCapitulo = {
+  id: "m07-traslado",
+  titulo: "Internal transfer",
+  icono: "traslado",
+  resumen: "Moving between locations without changing the warehouse total, with atomic validation.",
+  terminosClave: ["traslado", "ubicacion-bin", "caja"],
+  relacionados: ["m04-traslados", "m02-ubicacion"],
+  secciones: [
+    {
+      titulo: "Steps",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "Create a TRANSFER at /movimientos/nuevo: product (+lot), quantity, source and destination (never the same location), and the source/destination container where applicable.",
+            "It validates coherence, the source balance, the destination capacity, any container restriction, and the same warehouse (or an inter-warehouse move).",
+            "Approve → an atomic outbound at the source plus an inbound at the destination. The container/location history reflects the new contents.",
+          ],
+        },
+      ],
+    },
+    {
+      titulo: "Inter-warehouse",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "If the source and the destination are in different warehouses, the system records two linked movements with the same number/reference document (TRANSFER_OUT at the source + TRANSFER_IN at the destination, each a DRAFT approved separately, transactional with no orphans).",
+        },
+      ],
+    },
+  ],
+};
+
+const CH_P_STOCKTAKE: ManualCapitulo = {
+  id: "m07-inventario-proc",
+  titulo: "Cycle stocktaking",
+  icono: "inventario",
+  resumen:
+    "From the plan to the close with accuracy measured: counting, discrepancies and automatic adjustments.",
+  terminosClave: [
+    "sesion-inventario",
+    "conteo-ciego",
+    "diferencia-inventario",
+    "precision-inventario",
+  ],
+  relacionados: ["m05-sesion", "m05-diferencias"],
+  secciones: [
+    {
+      titulo: "Steps",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "A WAREHOUSE MANAGER plans a CYCLE session at /inventario/nuevo with the warehouse + scope, a start date (blank → PLANNED, with a value → IN_PROGRESS), blind counting and whether a double count is required.",
+            "If PLANNED, start it with the button on the detail (iniciar_sesion_inventario → IN_PROGRESS).",
+            "OPERATORS record counts at /inventario/:id/conteos (location/product/lot/quantity, 0 if absent/number/note).",
+            "Review the discrepancies on the detail and close at /inventario/:id/cerrar (inventario:cerrar only). Closing generates the adjustments and the snapshot.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_P_RETURN: ManualCapitulo = {
+  id: "m07-devolucion",
+  titulo: "Customer return",
+  icono: "entrada",
+  resumen:
+    "An inbound return into a RETURNS location, traced without reopening the original outbound movement.",
+  terminosClave: ["entrada", "cliente", "lote", "ubicacion-bin"],
+  relacionados: ["m04-entradas", "m07-despacho"],
+  secciones: [
+    {
+      titulo: "Steps",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "Create an INBOUND / CUSTOMER_RETURN movement into a RETURNS-type location.",
+            "If it tracks lots, record the source lot or create one with the expiry given.",
+            "Reference the original outbound movement via the reference document if you wish (it does not reopen it).",
+            "Approve → it increases in returns, available for inspection; if it is shrinkage, write it off later as SHRINKAGE.",
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CH_P_SHRINKAGE: ManualCapitulo = {
+  id: "m07-merma",
+  titulo: "Shrinkage from damage",
+  icono: "salida",
+  resumen:
+    "An outbound movement for loss with a mandatory reason, keeping the shrinkage rate current.",
+  terminosClave: ["merma", "ajuste", "salida"],
+  relacionados: ["m04-salidas", "m06-dashboard"],
+  secciones: [
+    {
+      titulo: "Steps",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "You find a damaged box in a location.",
+            "Create an OUTBOUND / SHRINKAGE movement with a mandatory reason (damage, damp…) plus a comment.",
+            "A WAREHOUSE MANAGER approves → it decreases the lot/location; it adds to the shrinkage rate.",
+            "Expired stock not yet written off reaches 0 once it is written off as shrinkage.",
+          ],
+        },
+        {
+          tipo: "nota",
+          texto:
+            "An expired lot can only leave as SHRINKAGE or a NEGATIVE_ADJUSTMENT. See the shrinkage report and the dashboard.",
+          tono: "info",
+        },
+      ],
+    },
+  ],
+};
+
 const TRADUCIDOS: ManualCapitulo[] = [
   CH_VISION,
   CH_INSTALL,
@@ -2330,6 +2551,12 @@ const TRADUCIDOS: ManualCapitulo[] = [
   CH_REPORTS_M,
   CH_ALERTS_M,
   CH_ACTIVITY_M,
+  CH_P_RECEIVING,
+  CH_P_DISPATCH,
+  CH_P_TRANSFER,
+  CH_P_STOCKTAKE,
+  CH_P_RETURN,
+  CH_P_SHRINKAGE,
 ];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
