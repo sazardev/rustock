@@ -6,6 +6,7 @@
  * con listado + detalle reales pero sin formulario propio (alcance
  * documentado en el plan, ver MEMORY.md Hito 8).
  */
+import type { Diccionario } from "../shared/i18n";
 import {
   desactivarAlmacen,
   desactivarCaja,
@@ -100,509 +101,650 @@ export interface CatalogAdapter<T extends { id: string }> {
   desactivar?: (id: string) => Promise<void>;
 }
 
-function badgeActivo(activo: boolean) {
+function badgeActivo(activo: boolean, t: Diccionario) {
   return (
     <Badge tone={activo ? "success" : "neutral"} icon={activo ? "aprobar" : "anular"}>
-      {activo ? "Activo" : "Inactivo"}
+      {activo ? t.comun.activo : t.comun.inactivo}
     </Badge>
   );
 }
 
 /** Filas de posición en el mapa 2D/3D, comunes a Zona/Pasillo/Rack/Ubicación. */
-function filasPosicion(n: {
-  pos_x: number | null;
-  pos_y: number | null;
-  pos_z: number | null;
-  altura: number | null;
-}): DetailItem[] {
+function filasPosicion(
+  n: {
+    pos_x: number | null;
+    pos_y: number | null;
+    pos_z: number | null;
+    altura: number | null;
+  },
+  t: Diccionario,
+): DetailItem[] {
   return [
     {
-      label: "Posición (X, Y)",
+      label: t.campos.posicionXY,
       value: n.pos_x !== null && n.pos_y !== null ? `${n.pos_x}, ${n.pos_y}` : "—",
     },
     {
-      label: "Altura (Z)",
+      label: t.campos.alturaZ,
       value:
         n.pos_z !== null || n.altura !== null ? `z=${n.pos_z ?? "—"} · h=${n.altura ?? "—"}` : "—",
     },
   ];
 }
 
-const almacenAdapter: CatalogAdapter<Almacen> = {
-  titulo: "Almacenes",
-  descripcion: "Catálogo de almacenes y su estado operativo.",
-  singular: "Almacén",
-  icon: "almacen",
-  listar: backend.listarAlmacenes,
-  obtener: obtenerAlmacen,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    { key: "direccion", header: "Dirección", render: (r) => r.direccion ?? "—" },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre },
-    { label: "Descripción", value: r.descripcion ?? "—" },
-    { label: "Dirección", value: r.direccion ?? "—" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-    { label: "Última actualización", value: formatearFecha(r.updated_at) },
-  ],
-  tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("almacenes") + "/nuevo",
-  editarHref: (id) => catalogoEditar("almacenes", id),
-  eliminarHref: (id) => catalogoEliminar("almacenes", id),
-  desactivar: desactivarAlmacen,
-};
+function almacenAdapter(t: Diccionario): CatalogAdapter<Almacen> {
+  return {
+    titulo: t.catalogos.almacenesTitulo,
+    descripcion: t.catalogos.almacenesDesc,
+    singular: t.catalogos.almacenSingular,
+    icon: "almacen",
+    listar: backend.listarAlmacenes,
+    obtener: obtenerAlmacen,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      { key: "direccion", header: t.campos.direccion, render: (r) => r.direccion ?? "—" },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre },
+      { label: t.campos.descripcion, value: r.descripcion ?? "—" },
+      { label: t.campos.direccion, value: r.direccion ?? "—" },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+      { label: t.campos.ultimaActualizacion, value: formatearFecha(r.updated_at) },
+    ],
+    tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("almacenes") + "/nuevo",
+    editarHref: (id) => catalogoEditar("almacenes", id),
+    eliminarHref: (id) => catalogoEliminar("almacenes", id),
+    desactivar: desactivarAlmacen,
+  };
+}
 
-const ubicacionAdapter: CatalogAdapter<Ubicacion> = {
-  titulo: "Ubicaciones",
-  descripcion: "Ubicaciones de almacenamiento (bins).",
-  singular: "Ubicación",
-  genero: "F",
-  icon: "ubicacion",
-  listar: listarUbicaciones,
-  obtener: obtenerUbicacion,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
-    { key: "tipo", header: "Tipo", render: (r) => r.tipo },
-    {
-      key: "capacidad_maxima",
-      header: "Capacidad máxima",
-      num: true,
-      render: (r) => r.capacidad_maxima?.toLocaleString() ?? "—",
-    },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre ?? "—" },
-    { label: "Tipo", value: r.tipo },
-    { label: "Capacidad máxima", value: r.capacidad_maxima?.toLocaleString() ?? "—" },
-    ...filasPosicion(r),
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("ubicaciones") + "/nuevo",
-  editarHref: (id) => catalogoEditar("ubicaciones", id),
-  eliminarHref: (id) => catalogoEliminar("ubicaciones", id),
-  duplicarHref: (id) => `${catalogoLista("ubicaciones")}/nuevo?duplicarDe=${id}`,
-  desactivar: desactivarUbicacion,
-};
+function ubicacionAdapter(t: Diccionario): CatalogAdapter<Ubicacion> {
+  return {
+    titulo: t.catalogos.ubicacionesTitulo,
+    descripcion: t.catalogos.ubicacionesDesc,
+    singular: t.catalogos.ubicacionSingular,
+    genero: "F",
+    icon: "ubicacion",
+    listar: listarUbicaciones,
+    obtener: obtenerUbicacion,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, render: (r) => r.nombre ?? "—" },
+      { key: "tipo", header: t.campos.tipo, render: (r) => r.tipo },
+      {
+        key: "capacidad_maxima",
+        header: t.campos.capacidadMaxima,
+        num: true,
+        render: (r) => r.capacidad_maxima?.toLocaleString() ?? "—",
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre ?? "—" },
+      { label: t.campos.tipo, value: r.tipo },
+      { label: t.campos.capacidadMaxima, value: r.capacidad_maxima?.toLocaleString() ?? "—" },
+      ...filasPosicion(r, t),
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("ubicaciones") + "/nuevo",
+    editarHref: (id) => catalogoEditar("ubicaciones", id),
+    eliminarHref: (id) => catalogoEliminar("ubicaciones", id),
+    duplicarHref: (id) => `${catalogoLista("ubicaciones")}/nuevo?duplicarDe=${id}`,
+    desactivar: desactivarUbicacion,
+  };
+}
 
-const productoAdapter: CatalogAdapter<Producto> = {
-  titulo: "Productos",
-  descripcion: "Catálogo de productos y SKU.",
-  singular: "Producto",
-  icon: "producto",
-  listar: backend.listarProductos,
-  obtener: obtenerProducto,
-  columnas: [
-    { key: "sku", header: "SKU", code: true, sortable: true, render: (r) => r.sku },
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    {
-      key: "controla_lote",
-      header: "Control",
-      render: (r) => (
-        <div className="flex gap-1">
-          {r.controla_lote ? <Badge tone="info">Lote</Badge> : null}
-          {r.controla_vencimiento ? <Badge tone="warning">Vencimiento</Badge> : null}
-          {r.perecedero ? <Badge tone="danger">Perecedero</Badge> : null}
-        </div>
-      ),
-    },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "SKU", value: r.sku, code: true },
-    { label: "Nombre", value: r.nombre },
-    { label: "Descripción", value: r.descripcion ?? "—" },
-    {
-      label: "Categoría",
-      value: r.categoria_id ? <CategoriaRef id={r.categoria_id} /> : "—",
-    },
-    { label: "UOM base", value: <UomRef id={r.uom_base_id} /> },
-    { label: "UOM venta", value: r.uom_venta_id ? <UomRef id={r.uom_venta_id} /> : "—" },
-    { label: "UOM compra", value: r.uom_compra_id ? <UomRef id={r.uom_compra_id} /> : "—" },
-    { label: "Código de barras", value: r.codigo_barras ?? "—", code: true },
-    { label: "Peso unitario (kg)", value: r.peso_unitario ?? "—", num: true },
-    { label: "Volumen unitario (m³)", value: r.volumen_unitario ?? "—", num: true },
-    { label: "Stock mínimo", value: r.stock_minimo ?? "—", num: true },
-    { label: "Stock máximo", value: r.stock_maximo ?? "—", num: true },
-    { label: "Controla lote", value: r.controla_lote ? "Sí" : "No" },
-    { label: "Controla vencimiento", value: r.controla_vencimiento ? "Sí" : "No" },
-    { label: "Perecedero", value: r.perecedero ? "Sí" : "No" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => `${r.sku} — ${r.nombre}`,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("productos") + "/nuevo",
-  editarHref: (id) => catalogoEditar("productos", id),
-  eliminarHref: (id) => catalogoEliminar("productos", id),
-  duplicarHref: (id) => `${catalogoLista("productos")}/nuevo?duplicarDe=${id}`,
-  desactivar: desactivarProducto,
-};
+function productoAdapter(t: Diccionario): CatalogAdapter<Producto> {
+  return {
+    titulo: t.catalogos.productosTitulo,
+    descripcion: t.catalogos.productosDesc,
+    singular: t.catalogos.productoSingular,
+    icon: "producto",
+    listar: backend.listarProductos,
+    obtener: obtenerProducto,
+    columnas: [
+      { key: "sku", header: t.campos.sku, code: true, sortable: true, render: (r) => r.sku },
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      {
+        key: "controla_lote",
+        header: t.campos.control,
+        render: (r) => (
+          <div className="flex gap-1">
+            {r.controla_lote ? <Badge tone="info">{t.campos.lote}</Badge> : null}
+            {r.controla_vencimiento ? <Badge tone="warning">{t.campos.vencimiento}</Badge> : null}
+            {r.perecedero ? <Badge tone="danger">{t.campos.perecedero}</Badge> : null}
+          </div>
+        ),
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.sku, value: r.sku, code: true },
+      { label: t.campos.nombre, value: r.nombre },
+      { label: t.campos.descripcion, value: r.descripcion ?? "—" },
+      {
+        label: t.campos.categoria,
+        value: r.categoria_id ? <CategoriaRef id={r.categoria_id} /> : "—",
+      },
+      { label: t.campos.uomBase, value: <UomRef id={r.uom_base_id} /> },
+      { label: t.campos.uomVenta, value: r.uom_venta_id ? <UomRef id={r.uom_venta_id} /> : "—" },
+      { label: t.campos.uomCompra, value: r.uom_compra_id ? <UomRef id={r.uom_compra_id} /> : "—" },
+      { label: t.campos.codigoBarras, value: r.codigo_barras ?? "—", code: true },
+      { label: t.campos.pesoUnitario, value: r.peso_unitario ?? "—", num: true },
+      { label: t.campos.volumenUnitario, value: r.volumen_unitario ?? "—", num: true },
+      { label: t.campos.stockMinimo, value: r.stock_minimo ?? "—", num: true },
+      { label: t.campos.stockMaximo, value: r.stock_maximo ?? "—", num: true },
+      { label: t.campos.controlaLote, value: r.controla_lote ? t.comun.si : t.comun.no },
+      {
+        label: t.campos.controlaVencimiento,
+        value: r.controla_vencimiento ? t.comun.si : t.comun.no,
+      },
+      { label: t.campos.perecedero, value: r.perecedero ? t.comun.si : t.comun.no },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => `${r.sku} — ${r.nombre}`,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("productos") + "/nuevo",
+    editarHref: (id) => catalogoEditar("productos", id),
+    eliminarHref: (id) => catalogoEliminar("productos", id),
+    duplicarHref: (id) => `${catalogoLista("productos")}/nuevo?duplicarDe=${id}`,
+    desactivar: desactivarProducto,
+  };
+}
 
-const loteAdapter: CatalogAdapter<Lote> = {
-  titulo: "Lotes",
-  descripcion: "Lotes de producción y vencimientos.",
-  singular: "Lote",
-  icon: "lote",
-  listar: listarLotes,
-  obtener: obtenerLote,
-  columnas: [
-    { key: "numero", header: "Número", code: true, sortable: true, render: (r) => r.numero },
-    { key: "producto_id", header: "Producto", render: (r) => <ProductoRef id={r.producto_id} /> },
-    {
-      key: "fecha_vencimiento",
-      header: "Vencimiento",
-      render: (r) => (r.fecha_vencimiento ? formatearFechaCorta(r.fecha_vencimiento) : "—"),
-    },
-    { key: "origen", header: "Origen", render: (r) => r.origen ?? "—" },
-  ],
-  datosGenerales: (r) => [
-    { label: "Número", value: r.numero, code: true },
-    { label: "Producto", value: <ProductoRef id={r.producto_id} /> },
-    {
-      label: "Fecha de fabricación",
-      value: r.fecha_fabricacion ? formatearFechaCorta(r.fecha_fabricacion) : "—",
-    },
-    {
-      label: "Fecha de vencimiento",
-      value: r.fecha_vencimiento ? formatearFechaCorta(r.fecha_vencimiento) : "—",
-    },
-    { label: "Origen", value: r.origen ?? "—" },
-    { label: "Notas", value: r.notas ?? "—" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => r.numero,
-  crearHref: catalogoLista("lotes") + "/nuevo",
-  editarHref: (id) => catalogoEditar("lotes", id),
-  duplicarHref: (id) => `${catalogoLista("lotes")}/nuevo?duplicarDe=${id}`,
-};
+function loteAdapter(t: Diccionario): CatalogAdapter<Lote> {
+  return {
+    titulo: t.catalogos.lotesTitulo,
+    descripcion: t.catalogos.lotesDesc,
+    singular: t.catalogos.loteSingular,
+    icon: "lote",
+    listar: listarLotes,
+    obtener: obtenerLote,
+    columnas: [
+      {
+        key: "numero",
+        header: t.campos.numero,
+        code: true,
+        sortable: true,
+        render: (r) => r.numero,
+      },
+      {
+        key: "producto_id",
+        header: t.campos.producto,
+        render: (r) => <ProductoRef id={r.producto_id} />,
+      },
+      {
+        key: "fecha_vencimiento",
+        header: t.campos.vencimiento,
+        render: (r) => (r.fecha_vencimiento ? formatearFechaCorta(r.fecha_vencimiento) : "—"),
+      },
+      { key: "origen", header: t.campos.origen, render: (r) => r.origen ?? "—" },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.numero, value: r.numero, code: true },
+      { label: t.campos.producto, value: <ProductoRef id={r.producto_id} /> },
+      {
+        label: t.campos.fechaFabricacion,
+        value: r.fecha_fabricacion ? formatearFechaCorta(r.fecha_fabricacion) : "—",
+      },
+      {
+        label: t.campos.fechaVencimiento,
+        value: r.fecha_vencimiento ? formatearFechaCorta(r.fecha_vencimiento) : "—",
+      },
+      { label: t.campos.origen, value: r.origen ?? "—" },
+      { label: t.campos.notas, value: r.notas ?? "—" },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => r.numero,
+    crearHref: catalogoLista("lotes") + "/nuevo",
+    editarHref: (id) => catalogoEditar("lotes", id),
+    duplicarHref: (id) => `${catalogoLista("lotes")}/nuevo?duplicarDe=${id}`,
+  };
+}
 
-const categoriaAdapter: CatalogAdapter<Categoria> = {
-  titulo: "Categorías",
-  descripcion: "Clasificación de productos.",
-  singular: "Categoría",
-  genero: "F",
-  icon: "categoria",
-  listar: listarCategorias,
-  obtener: obtenerCategoria,
-  columnas: [
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    {
-      key: "parent_id",
-      header: "Categoría padre",
-      render: (r) => (r.parent_id ? <CategoriaRef id={r.parent_id} /> : "—"),
-    },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Nombre", value: r.nombre },
-    { label: "Descripción", value: r.descripcion ?? "—" },
-    { label: "Categoría padre", value: r.parent_id ? <CategoriaRef id={r.parent_id} /> : "—" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => r.nombre,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("categorias") + "/nuevo",
-  editarHref: (id) => catalogoEditar("categorias", id),
-  eliminarHref: (id) => catalogoEliminar("categorias", id),
-  desactivar: desactivarCategoria,
-};
+function categoriaAdapter(t: Diccionario): CatalogAdapter<Categoria> {
+  return {
+    titulo: t.catalogos.categoriasTitulo,
+    descripcion: t.catalogos.categoriasDesc,
+    singular: t.catalogos.categoriaSingular,
+    genero: "F",
+    icon: "categoria",
+    listar: listarCategorias,
+    obtener: obtenerCategoria,
+    columnas: [
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      {
+        key: "parent_id",
+        header: t.campos.categoriaPadre,
+        render: (r) => (r.parent_id ? <CategoriaRef id={r.parent_id} /> : "—"),
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.nombre, value: r.nombre },
+      { label: t.campos.descripcion, value: r.descripcion ?? "—" },
+      {
+        label: t.campos.categoriaPadre,
+        value: r.parent_id ? <CategoriaRef id={r.parent_id} /> : "—",
+      },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => r.nombre,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("categorias") + "/nuevo",
+    editarHref: (id) => catalogoEditar("categorias", id),
+    eliminarHref: (id) => catalogoEliminar("categorias", id),
+    desactivar: desactivarCategoria,
+  };
+}
 
-const uomAdapter: CatalogAdapter<Uom> = {
-  titulo: "Unidades de medida",
-  descripcion: "Unidades de medida de los productos.",
-  singular: "Unidad",
-  genero: "F",
-  icon: "uom",
-  listar: listarUoms,
-  obtener: obtenerUom,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    { key: "tipo", header: "Tipo", render: (r) => r.tipo },
-    { key: "factor", header: "Factor", num: true, render: (r) => r.factor },
-    {
-      key: "base",
-      header: "Base de familia",
-      render: (r) => (r.base ? <Badge tone="info">Base</Badge> : "—"),
-    },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre },
-    { label: "Tipo", value: r.tipo },
-    { label: "Factor de conversión", value: r.factor, num: true },
-    { label: "Es base de su familia", value: r.base ? "Sí" : "No" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("uoms") + "/nuevo",
-  editarHref: (id) => catalogoEditar("uoms", id),
-  eliminarHref: (id) => catalogoEliminar("uoms", id),
-  desactivar: desactivarUom,
-};
+function uomAdapter(t: Diccionario): CatalogAdapter<Uom> {
+  return {
+    titulo: t.catalogos.uomsTitulo,
+    descripcion: t.catalogos.uomsDesc,
+    singular: t.catalogos.uomSingular,
+    genero: "F",
+    icon: "uom",
+    listar: listarUoms,
+    obtener: obtenerUom,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      { key: "tipo", header: t.campos.tipo, render: (r) => r.tipo },
+      { key: "factor", header: t.campos.factor, num: true, render: (r) => r.factor },
+      {
+        key: "base",
+        header: t.campos.baseDeFamilia,
+        render: (r) => (r.base ? <Badge tone="info">Base</Badge> : "—"),
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre },
+      { label: t.campos.tipo, value: r.tipo },
+      { label: t.campos.factorConversion, value: r.factor, num: true },
+      { label: t.campos.esBaseDeFamilia, value: r.base ? t.comun.si : t.comun.no },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("uoms") + "/nuevo",
+    editarHref: (id) => catalogoEditar("uoms", id),
+    eliminarHref: (id) => catalogoEliminar("uoms", id),
+    desactivar: desactivarUom,
+  };
+}
 
-function contactoColumnas<T extends { contacto_telefono: string | null; activo: boolean }>(): Array<
-  TableColumn<T>
-> {
+function contactoColumnas<T extends { contacto_telefono: string | null; activo: boolean }>(
+  t: Diccionario,
+): Array<TableColumn<T>> {
   return [
     {
       key: "contacto_telefono",
-      header: "Teléfono",
+      header: t.campos.telefono,
       code: true,
       render: (r) => r.contacto_telefono ?? "—",
     },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
+    { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
   ];
 }
 
-function contactoDatos(r: Proveedor | Cliente): DetailItem[] {
+function contactoDatos(r: Proveedor | Cliente, t: Diccionario): DetailItem[] {
   return [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre },
-    { label: "Contacto", value: r.contacto_nombre ?? "—" },
-    { label: "Teléfono", value: r.contacto_telefono ?? "—", code: true },
-    { label: "Email", value: r.contacto_email ?? "—" },
-    { label: "Dirección", value: r.direccion ?? "—" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
+    { label: t.campos.codigo, value: r.codigo, code: true },
+    { label: t.campos.nombre, value: r.nombre },
+    { label: t.campos.contacto, value: r.contacto_nombre ?? "—" },
+    { label: t.campos.telefono, value: r.contacto_telefono ?? "—", code: true },
+    { label: t.campos.email, value: r.contacto_email ?? "—" },
+    { label: t.campos.direccion, value: r.direccion ?? "—" },
+    { label: t.campos.creado, value: formatearFecha(r.created_at) },
   ];
 }
 
-const proveedorAdapter: CatalogAdapter<Proveedor> = {
-  titulo: "Proveedores",
-  descripcion: "Proveedores de productos y materiales.",
-  singular: "Proveedor",
-  icon: "proveedor",
-  listar: listarProveedores,
-  obtener: obtenerProveedor,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    ...contactoColumnas<Proveedor>(),
-  ],
-  datosGenerales: contactoDatos,
-  tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("proveedores") + "/nuevo",
-  editarHref: (id) => catalogoEditar("proveedores", id),
-  eliminarHref: (id) => catalogoEliminar("proveedores", id),
-  desactivar: desactivarProveedor,
-};
+function proveedorAdapter(t: Diccionario): CatalogAdapter<Proveedor> {
+  return {
+    titulo: t.catalogos.proveedoresTitulo,
+    descripcion: t.catalogos.proveedoresDesc,
+    singular: t.catalogos.proveedorSingular,
+    icon: "proveedor",
+    listar: listarProveedores,
+    obtener: obtenerProveedor,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      ...contactoColumnas<Proveedor>(t),
+    ],
+    datosGenerales: (r) => contactoDatos(r, t),
+    tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("proveedores") + "/nuevo",
+    editarHref: (id) => catalogoEditar("proveedores", id),
+    eliminarHref: (id) => catalogoEliminar("proveedores", id),
+    desactivar: desactivarProveedor,
+  };
+}
 
-const clienteAdapter: CatalogAdapter<Cliente> = {
-  titulo: "Clientes",
-  descripcion: "Clientes que reciben despachos.",
-  singular: "Cliente",
-  icon: "cliente",
-  listar: listarClientes,
-  obtener: obtenerCliente,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    ...contactoColumnas<Cliente>(),
-  ],
-  datosGenerales: contactoDatos,
-  tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("clientes") + "/nuevo",
-  editarHref: (id) => catalogoEditar("clientes", id),
-  eliminarHref: (id) => catalogoEliminar("clientes", id),
-  desactivar: desactivarCliente,
-};
+function clienteAdapter(t: Diccionario): CatalogAdapter<Cliente> {
+  return {
+    titulo: t.catalogos.clientesTitulo,
+    descripcion: t.catalogos.clientesDesc,
+    singular: t.catalogos.clienteSingular,
+    icon: "cliente",
+    listar: listarClientes,
+    obtener: obtenerCliente,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      ...contactoColumnas<Cliente>(t),
+    ],
+    datosGenerales: (r) => contactoDatos(r, t),
+    tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("clientes") + "/nuevo",
+    editarHref: (id) => catalogoEditar("clientes", id),
+    eliminarHref: (id) => catalogoEliminar("clientes", id),
+    desactivar: desactivarCliente,
+  };
+}
 
-const zonaAdapter: CatalogAdapter<Zona> = {
-  titulo: "Zonas",
-  descripcion: "Divisiones lógicas o físicas dentro de un almacén.",
-  singular: "Zona",
-  genero: "F",
-  icon: "zona",
-  listar: listarZonas,
-  obtener: obtenerZona,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", sortable: true, render: (r) => r.nombre },
-    { key: "almacen_id", header: "Almacén", render: (r) => <AlmacenRef id={r.almacen_id} /> },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre },
-    { label: "Descripción", value: r.descripcion ?? "—" },
-    { label: "Almacén", value: <AlmacenRef id={r.almacen_id} /> },
-    ...filasPosicion(r),
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("zonas") + "/nuevo",
-  editarHref: (id) => catalogoEditar("zonas", id),
-  eliminarHref: (id) => catalogoEliminar("zonas", id),
-  desactivar: desactivarZona,
-};
+function zonaAdapter(t: Diccionario): CatalogAdapter<Zona> {
+  return {
+    titulo: t.catalogos.zonasTitulo,
+    descripcion: t.catalogos.zonasDesc,
+    singular: t.catalogos.zonaSingular,
+    genero: "F",
+    icon: "zona",
+    listar: listarZonas,
+    obtener: obtenerZona,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, sortable: true, render: (r) => r.nombre },
+      {
+        key: "almacen_id",
+        header: t.campos.almacen,
+        render: (r) => <AlmacenRef id={r.almacen_id} />,
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre },
+      { label: t.campos.descripcion, value: r.descripcion ?? "—" },
+      { label: t.campos.almacen, value: <AlmacenRef id={r.almacen_id} /> },
+      ...filasPosicion(r, t),
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => `${r.codigo} — ${r.nombre}`,
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("zonas") + "/nuevo",
+    editarHref: (id) => catalogoEditar("zonas", id),
+    eliminarHref: (id) => catalogoEliminar("zonas", id),
+    desactivar: desactivarZona,
+  };
+}
 
-const pasilloAdapter: CatalogAdapter<Pasillo> = {
-  titulo: "Pasillos",
-  descripcion: "Pasillos físicos que agrupan racks dentro de una zona.",
-  singular: "Pasillo",
-  icon: "zona",
-  listar: listarPasillos,
-  obtener: obtenerPasillo,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (p) => p.codigo },
-    { key: "nombre", header: "Nombre", render: (p) => p.nombre ?? "—" },
-    { key: "zona_id", header: "Zona", render: (p) => <ZonaRef id={p.zona_id} /> },
-    { key: "activo", header: "Estado", render: (p) => badgeActivo(p.activo) },
-  ],
-  datosGenerales: (p) => [
-    { label: "Código", value: p.codigo, code: true },
-    { label: "Nombre", value: p.nombre ?? "—" },
-    { label: "Zona", value: <ZonaRef id={p.zona_id} /> },
-    ...filasPosicion(p),
-    { label: "Creado", value: formatearFecha(p.created_at) },
-  ],
-  tituloDetalle: (p) => (p.nombre ? `${p.codigo} — ${p.nombre}` : p.codigo),
-  activo: (p) => p.activo,
-  crearHref: catalogoLista("pasillos") + "/nuevo",
-  editarHref: (id) => catalogoEditar("pasillos", id),
-  eliminarHref: (id) => catalogoEliminar("pasillos", id),
-  desactivar: desactivarPasillo,
-};
+function pasilloAdapter(t: Diccionario): CatalogAdapter<Pasillo> {
+  return {
+    titulo: t.catalogos.pasillosTitulo,
+    descripcion: t.catalogos.pasillosDesc,
+    singular: t.catalogos.pasilloSingular,
+    icon: "zona",
+    listar: listarPasillos,
+    obtener: obtenerPasillo,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (p) => p.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, render: (p) => p.nombre ?? "—" },
+      { key: "zona_id", header: t.campos.zona, render: (p) => <ZonaRef id={p.zona_id} /> },
+      { key: "activo", header: t.campos.estado, render: (p) => badgeActivo(p.activo, t) },
+    ],
+    datosGenerales: (p) => [
+      { label: t.campos.codigo, value: p.codigo, code: true },
+      { label: t.campos.nombre, value: p.nombre ?? "—" },
+      { label: t.campos.zona, value: <ZonaRef id={p.zona_id} /> },
+      ...filasPosicion(p, t),
+      { label: t.campos.creado, value: formatearFecha(p.created_at) },
+    ],
+    tituloDetalle: (p) => (p.nombre ? `${p.codigo} — ${p.nombre}` : p.codigo),
+    activo: (p) => p.activo,
+    crearHref: catalogoLista("pasillos") + "/nuevo",
+    editarHref: (id) => catalogoEditar("pasillos", id),
+    eliminarHref: (id) => catalogoEliminar("pasillos", id),
+    desactivar: desactivarPasillo,
+  };
+}
 
-const rackAdapter: CatalogAdapter<Rack> = {
-  titulo: "Racks",
-  descripcion: "Estructuras de almacenamiento dentro de una zona.",
-  singular: "Rack",
-  icon: "zona",
-  listar: listarRacks,
-  obtener: obtenerRack,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
-    { key: "tipo", header: "Tipo", render: (r) => r.tipo ?? "—" },
-    { key: "zona_id", header: "Zona", render: (r) => <ZonaRef id={r.zona_id} /> },
-    {
-      key: "pasillo_id",
-      header: "Pasillo",
-      render: (r) => (r.pasillo_id ? <PasilloRef id={r.pasillo_id} /> : "—"),
-    },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre ?? "—" },
-    { label: "Tipo", value: r.tipo ?? "—" },
-    { label: "Zona", value: <ZonaRef id={r.zona_id} /> },
-    {
-      label: "Pasillo",
-      value: r.pasillo_id ? <PasilloRef id={r.pasillo_id} /> : "—",
-    },
-    ...filasPosicion(r),
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("racks") + "/nuevo",
-  editarHref: (id) => catalogoEditar("racks", id),
-  eliminarHref: (id) => catalogoEliminar("racks", id),
-  desactivar: desactivarRack,
-};
+function rackAdapter(t: Diccionario): CatalogAdapter<Rack> {
+  return {
+    titulo: t.catalogos.racksTitulo,
+    descripcion: t.catalogos.racksDesc,
+    singular: t.catalogos.rackSingular,
+    icon: "zona",
+    listar: listarRacks,
+    obtener: obtenerRack,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, render: (r) => r.nombre ?? "—" },
+      { key: "tipo", header: t.campos.tipo, render: (r) => r.tipo ?? "—" },
+      { key: "zona_id", header: t.campos.zona, render: (r) => <ZonaRef id={r.zona_id} /> },
+      {
+        key: "pasillo_id",
+        header: t.campos.pasillo,
+        render: (r) => (r.pasillo_id ? <PasilloRef id={r.pasillo_id} /> : "—"),
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre ?? "—" },
+      { label: t.campos.tipo, value: r.tipo ?? "—" },
+      { label: t.campos.zona, value: <ZonaRef id={r.zona_id} /> },
+      {
+        label: t.campos.pasillo,
+        value: r.pasillo_id ? <PasilloRef id={r.pasillo_id} /> : "—",
+      },
+      ...filasPosicion(r, t),
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("racks") + "/nuevo",
+    editarHref: (id) => catalogoEditar("racks", id),
+    eliminarHref: (id) => catalogoEliminar("racks", id),
+    desactivar: desactivarRack,
+  };
+}
 
-const seccionAdapter: CatalogAdapter<Seccion> = {
-  titulo: "Secciones",
-  descripcion: "Subdivisiones de un rack (niveles, bahías).",
-  singular: "Sección",
-  genero: "F",
-  icon: "zona",
-  listar: listarSecciones,
-  obtener: obtenerSeccion,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
-    { key: "nivel", header: "Nivel", render: (r) => r.nivel ?? "—" },
-    { key: "rack_id", header: "Rack", render: (r) => <RackRef id={r.rack_id} /> },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre ?? "—" },
-    { label: "Nivel", value: r.nivel ?? "—" },
-    { label: "Rack", value: <RackRef id={r.rack_id} /> },
-    { label: "Descripción", value: r.descripcion ?? "—" },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("secciones") + "/nuevo",
-  editarHref: (id) => catalogoEditar("secciones", id),
-  eliminarHref: (id) => catalogoEliminar("secciones", id),
-  desactivar: desactivarSeccion,
-};
+function seccionAdapter(t: Diccionario): CatalogAdapter<Seccion> {
+  return {
+    titulo: t.catalogos.seccionesTitulo,
+    descripcion: t.catalogos.seccionesDesc,
+    singular: t.catalogos.seccionSingular,
+    genero: "F",
+    icon: "zona",
+    listar: listarSecciones,
+    obtener: obtenerSeccion,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, render: (r) => r.nombre ?? "—" },
+      { key: "nivel", header: t.campos.nivel, render: (r) => r.nivel ?? "—" },
+      { key: "rack_id", header: t.campos.rack, render: (r) => <RackRef id={r.rack_id} /> },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre ?? "—" },
+      { label: t.campos.nivel, value: r.nivel ?? "—" },
+      { label: t.campos.rack, value: <RackRef id={r.rack_id} /> },
+      { label: t.campos.descripcion, value: r.descripcion ?? "—" },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("secciones") + "/nuevo",
+    editarHref: (id) => catalogoEditar("secciones", id),
+    eliminarHref: (id) => catalogoEliminar("secciones", id),
+    desactivar: desactivarSeccion,
+  };
+}
 
-const cajaAdapter: CatalogAdapter<Caja> = {
-  titulo: "Cajas",
-  descripcion: "Contenedores dentro de una ubicación que agrupan stock.",
-  singular: "Caja",
-  genero: "F",
-  icon: "caja",
-  listar: listarCajas,
-  obtener: obtenerCaja,
-  columnas: [
-    { key: "codigo", header: "Código", code: true, sortable: true, render: (r) => r.codigo },
-    { key: "nombre", header: "Nombre", render: (r) => r.nombre ?? "—" },
-    {
-      key: "ubicacion_id",
-      header: "Ubicación",
-      render: (r) => <UbicacionRef id={r.ubicacion_id} />,
-    },
-    {
-      key: "producto_id",
-      header: "Producto",
-      render: (r) => (r.producto_id ? <ProductoRef id={r.producto_id} /> : "—"),
-    },
-    { key: "activo", header: "Estado", render: (r) => badgeActivo(r.activo) },
-  ],
-  datosGenerales: (r) => [
-    { label: "Código", value: r.codigo, code: true },
-    { label: "Nombre", value: r.nombre ?? "—" },
-    { label: "Ubicación", value: <UbicacionRef id={r.ubicacion_id} /> },
-    {
-      label: "Producto restringido",
-      value: r.producto_id ? <ProductoRef id={r.producto_id} /> : "—",
-    },
-    { label: "Lote restringido", value: r.lote_id ? <LoteRef id={r.lote_id} /> : "—" },
-    { label: "Etiqueta", value: r.etiqueta ?? "—", code: true },
-    { label: "Creado", value: formatearFecha(r.created_at) },
-  ],
-  tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
-  activo: (r) => r.activo,
-  crearHref: catalogoLista("cajas") + "/nuevo",
-  editarHref: (id) => catalogoEditar("cajas", id),
-  eliminarHref: (id) => catalogoEliminar("cajas", id),
-  desactivar: desactivarCaja,
-};
+function cajaAdapter(t: Diccionario): CatalogAdapter<Caja> {
+  return {
+    titulo: t.catalogos.cajasTitulo,
+    descripcion: t.catalogos.cajasDesc,
+    singular: t.catalogos.cajaSingular,
+    genero: "F",
+    icon: "caja",
+    listar: listarCajas,
+    obtener: obtenerCaja,
+    columnas: [
+      {
+        key: "codigo",
+        header: t.campos.codigo,
+        code: true,
+        sortable: true,
+        render: (r) => r.codigo,
+      },
+      { key: "nombre", header: t.campos.nombre, render: (r) => r.nombre ?? "—" },
+      {
+        key: "ubicacion_id",
+        header: t.campos.ubicacion,
+        render: (r) => <UbicacionRef id={r.ubicacion_id} />,
+      },
+      {
+        key: "producto_id",
+        header: t.campos.producto,
+        render: (r) => (r.producto_id ? <ProductoRef id={r.producto_id} /> : "—"),
+      },
+      { key: "activo", header: t.campos.estado, render: (r) => badgeActivo(r.activo, t) },
+    ],
+    datosGenerales: (r) => [
+      { label: t.campos.codigo, value: r.codigo, code: true },
+      { label: t.campos.nombre, value: r.nombre ?? "—" },
+      { label: t.campos.ubicacion, value: <UbicacionRef id={r.ubicacion_id} /> },
+      {
+        label: t.campos.productoRestringido,
+        value: r.producto_id ? <ProductoRef id={r.producto_id} /> : "—",
+      },
+      { label: t.campos.loteRestringido, value: r.lote_id ? <LoteRef id={r.lote_id} /> : "—" },
+      { label: t.campos.etiqueta, value: r.etiqueta ?? "—", code: true },
+      { label: t.campos.creado, value: formatearFecha(r.created_at) },
+    ],
+    tituloDetalle: (r) => (r.nombre ? `${r.codigo} — ${r.nombre}` : r.codigo),
+    activo: (r) => r.activo,
+    crearHref: catalogoLista("cajas") + "/nuevo",
+    editarHref: (id) => catalogoEditar("cajas", id),
+    eliminarHref: (id) => catalogoEliminar("cajas", id),
+    desactivar: desactivarCaja,
+  };
+}
 
-export const CATALOGOS: Record<string, CatalogAdapter<any>> = {
-  almacenes: almacenAdapter,
-  zonas: zonaAdapter,
-  pasillos: pasilloAdapter,
-  racks: rackAdapter,
-  secciones: seccionAdapter,
-  ubicaciones: ubicacionAdapter,
-  cajas: cajaAdapter,
-  productos: productoAdapter,
-  lotes: loteAdapter,
-  categorias: categoriaAdapter,
-  uoms: uomAdapter,
-  proveedores: proveedorAdapter,
-  clientes: clienteAdapter,
-};
+/**
+ * Slugs de los catálogos, en el orden en que aparecen en la navegación.
+ *
+ * No dependen del idioma —las URL no se traducen (SPEC §17.4)—, así que se
+ * declaran aparte: el enrutador y las migas de pan los necesitan sin tener
+ * que construir los trece adaptadores.
+ */
+export const SLUGS_CATALOGO = [
+  "almacenes",
+  "zonas",
+  "pasillos",
+  "racks",
+  "secciones",
+  "ubicaciones",
+  "cajas",
+  "productos",
+  "lotes",
+  "categorias",
+  "uoms",
+  "proveedores",
+  "clientes",
+] as const;
+
+/**
+ * Adaptadores de catálogo en el idioma activo (SPEC §17).
+ *
+ * Se construyen a partir del diccionario en vez de ser constantes: los trece
+ * catálogos comparten las mismas etiquetas de columna, así que traducirlos
+ * aquí traduce de una vez sus listados, sus fichas y sus páginas de borrado.
+ */
+export function catalogosDe(t: Diccionario): Record<string, CatalogAdapter<any>> {
+  return {
+    almacenes: almacenAdapter(t),
+    zonas: zonaAdapter(t),
+    pasillos: pasilloAdapter(t),
+    racks: rackAdapter(t),
+    secciones: seccionAdapter(t),
+    ubicaciones: ubicacionAdapter(t),
+    cajas: cajaAdapter(t),
+    productos: productoAdapter(t),
+    lotes: loteAdapter(t),
+    categorias: categoriaAdapter(t),
+    uoms: uomAdapter(t),
+    proveedores: proveedorAdapter(t),
+    clientes: clienteAdapter(t),
+  };
+}

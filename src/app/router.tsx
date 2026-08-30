@@ -10,7 +10,7 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { AYUDA_GRUPOS } from "../pages/ayuda/ayuda-data";
 import { MANUAL_PARTES } from "../pages/manual/manual-data";
 import {
-  CATALOGOS,
+  SLUGS_CATALOGO,
   CatalogDetailRoute,
   CatalogEliminarRoute,
   CatalogListRoute,
@@ -180,7 +180,7 @@ const ManualGlosarioPage = lazyPage(
 );
 const ManualPrintPage = lazyPage(() => import("../pages/manual/ManualPages"), "ManualPrintPage");
 
-const CATALOG_KEYS = Object.keys(CATALOGOS);
+const CATALOG_KEYS = [...SLUGS_CATALOGO];
 
 export const router = createBrowserRouter([
   { path: PATH.login, element: <LoginPage />, errorElement: <ErrorPage /> },

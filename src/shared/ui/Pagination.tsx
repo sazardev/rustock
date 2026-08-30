@@ -1,4 +1,5 @@
 import { cn } from "../lib/cn";
+import { useT } from "../i18n";
 import { Button } from "./Button";
 
 export interface PaginationProps {
@@ -24,10 +25,11 @@ export function Pagination({
   onPrefetch,
   className,
 }: PaginationProps) {
+  const t = useT();
   return (
     <div className={cn("pagination", className)}>
       <span className="pagination__summary">
-        Mostrando {from}-{to} de {total}
+        {t.comun.mostrando({ desde: from, hasta: to, total })}
       </span>
       <div className="pagination__controls">
         <Button
@@ -37,10 +39,10 @@ export function Pagination({
           onClick={() => onPageChange(page - 1)}
           onMouseEnter={onPrefetch && page > 1 ? () => onPrefetch(page - 1) : undefined}
         >
-          Anterior
+          {t.comun.anterior}
         </Button>
         <span className="pagination__page">
-          Página {page} de {pageCount}
+          {t.comun.pagina({ actual: page, total: pageCount })}
         </span>
         <Button
           variant="secondary"
@@ -49,7 +51,7 @@ export function Pagination({
           onClick={() => onPageChange(page + 1)}
           onMouseEnter={onPrefetch && page < pageCount ? () => onPrefetch(page + 1) : undefined}
         >
-          Siguiente
+          {t.comun.siguiente}
         </Button>
       </div>
     </div>

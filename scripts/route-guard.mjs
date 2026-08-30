@@ -52,9 +52,14 @@ for (const key of ["galeria", "noEncontrado", "accesoNoPermitido"]) {
 //    Rutas literales del nav: los catálogos (/almacenes, ...) y las de PATH resueltas
 //    (dashboard="/", movimientos, etc.). Los paths del router son hijos sin "/" inicial,
 //    así que normalizamos.
-const catalogosBlock = catalogsSource.match(/CATALOGOS[^=]*=\s*\{([\s\S]*?)\n\};/);
+// Los slugs viven en `SLUGS_CATALOGO`, una lista aparte del mapa de
+// adaptadores: las URL no se traducen (SPEC §17.4), así que no dependen del
+// idioma y el enrutador las consume sin construir los trece adaptadores.
+const catalogosBlock = catalogsSource.match(
+  /SLUGS_CATALOGO\s*=\s*\[([\s\S]*?)\]\s*as const;/,
+);
 const catalogSlugs = catalogosBlock
-  ? [...catalogosBlock[1].matchAll(/^\s*(\w+):/gm)].map((m) => m[1])
+  ? [...catalogosBlock[1].matchAll(/"(\w+)"/g)].map((m) => m[1])
   : [];
 
 for (const href of navHrefs) {

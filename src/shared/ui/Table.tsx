@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from "react";
+import { useT } from "../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "../lib/cn";
 import { Icon } from "./Icon";
@@ -66,12 +67,13 @@ export function Table<T>({
   onToggleRow,
   onToggleAll,
   actions,
-  emptyTitle = "No hay registros todavía",
+  emptyTitle,
   emptyDescription,
   emptyAction,
   loading = false,
   className,
 }: TableProps<T>) {
+  const t = useT();
   const allSelected = rows.length > 0 && rows.every((row) => selectedKeys.includes(rowKey(row)));
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualize = rows.length > VIRTUALIZE_UMBRAL && !loading;
@@ -136,7 +138,7 @@ export function Table<T>({
         onFocus={prefetch ? () => prefetch(row) : undefined}
         role={clickable ? "button" : undefined}
         tabIndex={clickable ? 0 : undefined}
-        aria-label={clickable ? "Abrir detalle" : undefined}
+        aria-label={clickable ? t.listado.abrirDetalle : undefined}
       >
         {selectable ? (
           <td className="table__select">
@@ -145,7 +147,7 @@ export function Table<T>({
               className="checkbox__input"
               checked={selected}
               onChange={() => onToggleRow?.(key)}
-              aria-label="Seleccionar fila"
+              aria-label={t.listado.seleccionarFila}
             />
           </td>
         ) : null}
@@ -184,7 +186,7 @@ export function Table<T>({
                   className="checkbox__input"
                   checked={allSelected}
                   onChange={(event) => onToggleAll?.(event.target.checked)}
-                  aria-label="Seleccionar todos"
+                  aria-label={t.listado.seleccionarTodos}
                 />
               </th>
             ) : null}
@@ -209,7 +211,9 @@ export function Table<T>({
                       type="button"
                       className="th__sort-btn"
                       onClick={() => handleSort(column)}
-                      aria-label={`Ordenar por ${typeof column.header === "string" ? column.header : column.key}`}
+                      aria-label={t.listado.ordenarPor({
+                        columna: typeof column.header === "string" ? column.header : column.key,
+                      })}
                     >
                       {column.header}
                       {renderSortIcon(column)}
@@ -253,7 +257,7 @@ export function Table<T>({
             <tr>
               <td colSpan={colSpan}>
                 <EmptyState
-                  title={emptyTitle}
+                  title={emptyTitle ?? t.listado.sinRegistrosGenerico}
                   description={emptyDescription}
                   action={emptyAction}
                 />

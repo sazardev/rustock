@@ -1,4 +1,5 @@
-import { CATALOGOS } from "../pages/catalogs";
+import { catalogosDe } from "../pages/catalogs";
+import type { Diccionario } from "../shared/i18n";
 import { MANUAL_PARTES } from "../pages/manual/manual-data";
 
 export interface Crumb {
@@ -55,7 +56,7 @@ const ACTION_LABELS: Record<string, string> = {
  *  - `/almacenes/123/editar` -> Almacenes / <detalle> / Editar
  *  - Ruta desconocida -> se usa el propio segmento como label legible.
  */
-export function crumbsFromPath(pathname: string): Crumb[] {
+export function crumbsFromPath(pathname: string, t: Diccionario): Crumb[] {
   const parts = pathname.split("/").filter(Boolean);
   const crumbs: Crumb[] = [];
 
@@ -69,13 +70,14 @@ export function crumbsFromPath(pathname: string): Crumb[] {
 
   // Sección conocida (CRUMB_MAP) o catálogo.
   const section = CRUMB_MAP.find((s) => s.segment === first);
-  const isCatalog = first in CATALOGOS;
+  const catalogos = catalogosDe(t);
+  const isCatalog = first in catalogos;
 
   if (section) {
     crumbs.push({ label: section.label, href: `/${section.segment}` });
     matched = true;
   } else if (isCatalog) {
-    const cfg = CATALOGOS[first as keyof typeof CATALOGOS];
+    const cfg = catalogos[first];
     crumbs.push({ label: cfg.titulo, href: `/${first}` });
     matched = true;
   }
@@ -87,7 +89,7 @@ export function crumbsFromPath(pathname: string): Crumb[] {
     // /seccion/:id/accion  (catálogo con detalle)
     if (isCatalog && rest.length >= 1) {
       const id = rest[0];
-      const detalle = crumbDetalleCatalogo(first, id);
+      const detalle = crumbDetalleCatalogo(first, id, t);
       if (detalle) crumbs.push(detalle);
 
       if (rest.length >= 2) {
@@ -130,8 +132,8 @@ export function crumbsFromPath(pathname: string): Crumb[] {
  * síncrona, así que aquí solo se arma un label genérico con el id — el
  * título real ya se muestra en el `PageHeader` de la página de detalle.
  */
-function crumbDetalleCatalogo(slug: string, id: string): Crumb | null {
-  const cfg = CATALOGOS[slug as keyof typeof CATALOGOS];
+function crumbDetalleCatalogo(slug: string, id: string, t: Diccionario): Crumb | null {
+  const cfg = catalogosDe(t)[slug];
   if (!cfg) return null;
   return { label: `${cfg.singular} ${id.slice(0, 8)}`, href: `/${slug}/${id}` };
 }

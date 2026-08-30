@@ -3,6 +3,7 @@ import { Breadcrumbs } from "../shared/ui";
 import type { BreadcrumbsProps } from "../shared/ui";
 import { cn } from "../shared/lib/cn";
 import { crumbsFromPath } from "./breadcrumbs";
+import { useT } from "../shared/i18n";
 import { useNavigationHistory } from "./use-navigation-history";
 
 export interface SmartBreadcrumbsProps {
@@ -20,8 +21,9 @@ export interface SmartBreadcrumbsProps {
  * navegación nunca se pierde de contexto.
  */
 export function SmartBreadcrumbs({ className, history = true }: SmartBreadcrumbsProps) {
+  const t = useT();
   const location = useLocation();
-  const crumbs = crumbsFromPath(location.pathname);
+  const crumbs = crumbsFromPath(location.pathname, t);
   const nav = useNavigationHistory();
 
   const items: BreadcrumbsProps["items"] = crumbs.map((crumb) => ({

@@ -4,6 +4,7 @@
  * un clic. Solo persiste el estado de presentación, nunca datos de negocio.
  */
 import { useState } from "react";
+import { useT } from "./i18n";
 import { Button, Input, Text } from "./ui";
 import { Icon } from "./ui";
 
@@ -71,6 +72,7 @@ export function FavoritosFiltros({
   estadoActual: () => Record<string, unknown>;
   onAplicar: (estado: Record<string, unknown>) => void;
 }) {
+  const t = useT();
   const [favoritos, setFavoritos] = useState<FavoritoFiltros[]>(() => leerFavoritos(clave));
   const [nombre, setNombre] = useState("");
 
@@ -92,8 +94,8 @@ export function FavoritosFiltros({
     <div className="favoritos">
       <div className="favoritos__guardar">
         <Input
-          aria-label="Nombre del favorito"
-          placeholder="Nombre del filtro…"
+          aria-label={t.favoritos.nombre}
+          placeholder={t.favoritos.marcador}
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           onKeyDown={(e) => {
@@ -111,7 +113,7 @@ export function FavoritosFiltros({
           disabled={!nombre.trim()}
           onClick={guardar}
         >
-          Guardar
+          {t.comun.guardar}
         </Button>
       </div>
       {favoritos.length > 0 ? (
@@ -125,7 +127,7 @@ export function FavoritosFiltros({
               <button
                 type="button"
                 className="favoritos__chip-quitar"
-                aria-label={`Quitar favorito ${f.nombre}`}
+                aria-label={t.favoritos.quitar({ nombre: f.nombre })}
                 onClick={() => quitar(f.id)}
               >
                 <Icon name="anular" size={12} aria-hidden="true" />

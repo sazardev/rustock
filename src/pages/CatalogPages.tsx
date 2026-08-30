@@ -12,6 +12,7 @@ import {
 } from "../shared/types";
 import { crearComentario, listarComentarios } from "../shared/backend";
 import { mensajeError } from "../shared/format";
+import { useT } from "../shared/i18n";
 import {
   TIPO_ETIQUETA_POR_SLUG,
   almacenMapa,
@@ -52,10 +53,6 @@ function esFemenino<T extends { id: string }>(adapter: CatalogAdapter<T>) {
   return adapter.genero === "F";
 }
 
-function articuloNuevo<T extends { id: string }>(adapter: CatalogAdapter<T>) {
-  return esFemenino(adapter) ? "Nueva" : "Nuevo";
-}
-
 function articuloPrimero<T extends { id: string }>(adapter: CatalogAdapter<T>) {
   return esFemenino(adapter) ? "la primera" : "el primer";
 }
@@ -75,6 +72,7 @@ export function CatalogListPage<T extends { id: string }>({
   adapter: CatalogAdapter<T>;
   slug: string;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -129,22 +127,24 @@ export function CatalogListPage<T extends { id: string }>({
       <PageHeader title={adapter.titulo} />
 
       {query.error ? (
-        <ErrorPanel title="No se pudo cargar el catálogo">{mensajeError(query.error)}</ErrorPanel>
+        <ErrorPanel title={t.listado.noSePudoCargar}>{mensajeError(query.error)}</ErrorPanel>
       ) : null}
 
       <FilterBar
         action={
           adapter.crearHref ? (
             <ButtonLink variant="primary" icon="agregar" href={adapter.crearHref}>
-              {articuloNuevo(adapter)} {adapter.singular.toLowerCase()}
+              {esFemenino(adapter)
+                ? t.listado.nueva({ entidad: adapter.singular.toLowerCase() })
+                : t.listado.nuevo({ entidad: adapter.singular.toLowerCase() })}
             </ButtonLink>
           ) : undefined
         }
       >
         <FilterField grow>
           <Search
-            aria-label={`Buscar ${adapter.singular.toLowerCase()}`}
-            placeholder={`Buscar ${adapter.singular.toLowerCase()}…`}
+            aria-label={t.listado.buscarAria({ entidad: adapter.singular.toLowerCase() })}
+            placeholder={t.listado.buscar({ entidad: adapter.singular.toLowerCase() })}
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -168,7 +168,7 @@ export function CatalogListPage<T extends { id: string }>({
           loading={query.isLoading}
           onRowClick={(r) => navigate(catalogoDetalle(slug, r.id))}
           prefetch={prefetchDetalle}
-          emptyTitle={`No hay ${adapter.singular.toLowerCase()} todavía`}
+          emptyTitle={t.listado.sinRegistros({ entidad: adapter.singular.toLowerCase() })}
           emptyDescription={
             adapter.crearHref
               ? `Cree ${articuloPrimero(adapter)} ${adapter.singular.toLowerCase()} para comenzar a operar.`
@@ -207,6 +207,7 @@ export function CatalogDetailPage<T extends { id: string }>({
   slug: string;
   id: string;
 }) {
+  const t = useT();
   const query = useQuery({
     queryKey: ["catalogo-detalle", slug, id],
     queryFn: () => adapter.obtener(id),
@@ -221,8 +222,8 @@ export function CatalogDetailPage<T extends { id: string }>({
   if (!row) {
     return (
       <ErrorPanel title={`${adapter.singular} no ${participioEncontrado(adapter)}`}>
-        No se encontró el registro solicitado.{" "}
-        <Link href={catalogoLista(slug)}>Volver al listado</Link>.
+        {t.listado.noSeEncontroRegistro}{" "}
+        <Link href={catalogoLista(slug)}>{t.listado.volverAlListado}</Link>.
       </ErrorPanel>
     );
   }
@@ -266,7 +267,7 @@ export function CatalogDetailPage<T extends { id: string }>({
         }
       />
 
-      <Card title="Datos generales">
+      <Card title={t.listado.datosGenerales}>
         <Card.Body>
           <DetailList items={adapter.datosGenerales(row)} />
         </Card.Body>
@@ -325,13 +326,14 @@ function entidadComentario(slug: string): string {
 }
 
 function HistorialCajaCard({ cajaId }: { cajaId: string }) {
+  const t = useT();
   const q = useQuery({
     queryKey: ["historial-caja", cajaId],
     queryFn: () => import("../shared/backend").then((m) => m.historialCaja(cajaId)),
   });
   const filas = q.data ?? [];
   return (
-    <Card title="Historial de la caja (trazabilidad §13.4)" className="mt-6">
+    <Card title={t.movimientos.historialCaja} className="mt-6">
       <Card.Body>
         {q.isLoading ? (
           <Text as="p" size="sm" color="muted">
@@ -344,15 +346,25 @@ function HistorialCajaCard({ cajaId }: { cajaId: string }) {
         ) : (
           <Table
             columns={[
-              { key: "numero", header: "Movimiento", code: true, render: (r: any) => r.numero },
+              {
+                key: "numero",
+                header: t.movimientos.singular,
+                code: true,
+                render: (r: any) => r.numero,
+              },
               { key: "tipo", header: "Tipo", render: (r: any) => r.tipo },
               {
                 key: "fecha",
-                header: "Fecha",
+                header: t.comun.fecha,
                 render: (r: any) => r.fecha_movimiento.slice(0, 10),
               },
-              { key: "rol", header: "Rol", render: (r: any) => r.rol },
-              { key: "cantidad", header: "Cantidad", num: true, render: (r: any) => r.cantidad },
+              { key: "rol", header: t.usuarios.rol, render: (r: any) => r.rol },
+              {
+                key: "cantidad",
+                header: t.comun.cantidad,
+                num: true,
+                render: (r: any) => r.cantidad,
+              },
             ]}
             rows={filas}
             rowKey={(r: any) => r.movimiento_id + r.rol}
@@ -364,6 +376,7 @@ function HistorialCajaCard({ cajaId }: { cajaId: string }) {
 }
 
 function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadId: string }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [texto, setTexto] = useState("");
@@ -380,7 +393,7 @@ function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadI
     onError: (err) => toast(mensajeError(err), "error"),
   });
   return (
-    <Card title="Comentarios" className="mt-6">
+    <Card title={t.comentarios.titulo} className="mt-6">
       <Card.Body>
         {comentariosQuery.data && comentariosQuery.data.filter((c) => !c.oculto).length > 0 ? (
           <ul className="list-none p-0 m-0 flex flex-col gap-3">
@@ -412,8 +425,8 @@ function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadI
           }}
         >
           <Textarea
-            aria-label="Nuevo comentario"
-            placeholder="Agregar un comentario…"
+            aria-label={t.comentarios.nuevo}
+            placeholder={t.comentarios.marcador}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             rows={3}
@@ -425,7 +438,7 @@ function ComentariosCatalogo({ entidad, entidadId }: { entidad: string; entidadI
               size="sm"
               disabled={!texto.trim() || comentarMut.isPending}
             >
-              {comentarMut.isPending ? "Enviando…" : "Comentar"}
+              {comentarMut.isPending ? t.comentarios.enviando : t.comentarios.enviar}
             </Button>
           </div>
         </form>
@@ -443,6 +456,7 @@ export function CatalogEliminarPage<T extends { id: string }>({
   slug: string;
   id: string;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -476,7 +490,7 @@ export function CatalogEliminarPage<T extends { id: string }>({
   if (!row) {
     return (
       <ErrorPanel title={`${adapter.singular} no ${participioEncontrado(adapter)}`}>
-        <Link href={catalogoLista(slug)}>Volver al listado</Link>
+        <Link href={catalogoLista(slug)}>{t.listado.volverAlListado}</Link>
       </ErrorPanel>
     );
   }
@@ -484,18 +498,18 @@ export function CatalogEliminarPage<T extends { id: string }>({
   return (
     <>
       <PageHeader
-        title={`Eliminar ${adapter.tituloDetalle(row)}`}
-        description="Rustock no borra físicamente entidades con historial: esta acción desactiva el registro. No se elimina su historial ni los movimientos asociados."
+        title={t.listado.eliminarEntidad({ entidad: adapter.tituloDetalle(row) })}
+        description="{t.listado.avisoDesactivacion}"
       />
 
-      <Card title="Datos generales">
+      <Card title={t.listado.datosGenerales}>
         <Card.Body>
           <DetailList items={adapter.datosGenerales(row)} />
         </Card.Body>
       </Card>
 
       {error ? (
-        <ErrorPanel title="No se pudo desactivar" className="mt-4">
+        <ErrorPanel title={t.listado.noSePudoDesactivar} className="mt-4">
           {error}
         </ErrorPanel>
       ) : null}
@@ -507,7 +521,7 @@ export function CatalogEliminarPage<T extends { id: string }>({
           onClick={() => desactivarMut.mutate()}
           disabled={desactivarMut.isPending}
         >
-          {desactivarMut.isPending ? "Desactivando…" : "Eliminar definitivamente"}
+          {desactivarMut.isPending ? t.listado.desactivando : t.listado.eliminarDefinitivamente}
         </Button>
         <Link href={catalogoDetalle(slug, id)}>Cancelar</Link>
       </div>
