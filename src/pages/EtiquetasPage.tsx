@@ -17,6 +17,7 @@ import type {
   TipoEtiqueta,
 } from "../shared/types";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   Card,
@@ -30,12 +31,15 @@ import {
   Text,
 } from "../shared/ui";
 
-const TIPOS: { valor: TipoEtiqueta; label: string }[] = [
-  { valor: "PRODUCTO", label: "Productos" },
-  { valor: "UBICACION", label: "Ubicaciones" },
-  { valor: "LOTE", label: "Lotes" },
-  { valor: "CAJA", label: "Cajas" },
-];
+/** Tipos etiquetables, en el idioma activo. */
+function tiposDe(t: Diccionario): { valor: TipoEtiqueta; label: string }[] {
+  return [
+    { valor: "PRODUCTO", label: t.etiquetas.tipos.PRODUCTO },
+    { valor: "UBICACION", label: t.etiquetas.tipos.UBICACION },
+    { valor: "LOTE", label: t.etiquetas.tipos.LOTE },
+    { valor: "CAJA", label: t.etiquetas.tipos.CAJA },
+  ];
+}
 
 /** Formatos de etiqueta habituales en almacén, en milímetros reales. */
 const FORMATOS = [
@@ -96,6 +100,7 @@ function guardarAjustes(ajustes: AjustesRecordados): void {
  * problema que el navegador ya resuelve bien.
  */
 export function EtiquetasPage() {
+  const t = useT();
   // La pantalla se puede abrir ya preparada desde cualquier módulo:
   // `/etiquetas?tipo=PRODUCTO&ids=a,b,c`. Así se imprime desde donde se está
   // trabajando, sin venir aquí a buscar otra vez lo que ya se tenía delante.
@@ -163,17 +168,16 @@ export function EtiquetasPage() {
         puerto: Number(impresoraPuerto) || 9100,
       }),
     onSuccess: (r) =>
-      setAvisoImpresora(`Enviadas ${seleccion.size} etiquetas a ${r.destino} (${r.bytes} bytes).`),
+      setAvisoImpresora(
+        t.etiquetas.enviadas({ total: seleccion.size, destino: r.destino, bytes: r.bytes }),
+      ),
     onError: (e) => setAvisoImpresora(mensajeError(e)),
   });
 
   const probar = useMutation({
     mutationFn: () =>
       probarImpresora({ host: impresoraHost.trim(), puerto: Number(impresoraPuerto) || 9100 }),
-    onSuccess: (r) =>
-      setAvisoImpresora(
-        `${r.destino} responde. Ojo: el puerto abierto no garantiza que haya papel ni que el cabezal esté bajado.`,
-      ),
+    onSuccess: (r) => setAvisoImpresora(t.etiquetas.respondeOjo({ destino: r.destino })),
     onError: (e) => setAvisoImpresora(mensajeError(e)),
   });
 
@@ -240,68 +244,64 @@ export function EtiquetasPage() {
   return (
     <>
       <PageHeader
-        title="Etiquetas"
-        description="Genera e imprime los códigos que después leerá el escáner. El código impreso es el mismo con el que Rustock encuentra la entidad."
+        title={t.etiquetas.titulo}
+        description={t.etiquetas.descripcion}
         actions={
           etiquetas.length > 0 ? (
             <Button variant="primary" icon="exportar" onClick={() => window.print()}>
-              Imprimir {etiquetas.length}
+              {t.etiquetas.imprimirN({ total: etiquetas.length })}
             </Button>
           ) : null
         }
       />
 
       <div className="etiquetas__config">
-        <Card title="Qué etiquetar">
+        <Card title={t.etiquetas.queEtiquetar}>
           <Card.Body>
             <div className="form-stack">
-              <Field label="Tipo" htmlFor="tipo">
+              <Field label={t.comun.tipo} htmlFor="tipo">
                 <Select
                   id="tipo"
                   value={tipo}
                   onChange={(e) => cambiarTipo(e.target.value as TipoEtiqueta)}
                 >
-                  {TIPOS.map((t) => (
-                    <option key={t.valor} value={t.valor}>
-                      {t.label}
+                  {tiposDe(t).map((op) => (
+                    <option key={op.valor} value={op.valor}>
+                      {op.label}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Buscar" htmlFor="busqueda" help="Por código o por nombre.">
+              <Field label={t.comun.buscar} htmlFor="busqueda" help={t.etiquetas.buscarAyuda}>
                 <Input
                   id="busqueda"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Filtrar la lista"
+                  placeholder={t.etiquetas.filtrarLista}
                 />
               </Field>
             </div>
           </Card.Body>
         </Card>
 
-        <Card title="Cómo imprimirlas">
+        <Card title={t.etiquetas.comoImprimirlas}>
           <Card.Body>
             <div className="form-stack">
               <Field
-                label="Simbología"
+                label={t.etiquetas.simbologia}
                 htmlFor="simbologia"
-                help={
-                  simbologia === "CODE128"
-                    ? "Lineal, la que lee cualquier lector de mano sin configurar nada."
-                    : "Aguanta suciedad y lecturas en ángulo; admite códigos con acentos."
-                }
+                help={simbologia === "CODE128" ? t.etiquetas.code128Ayuda : t.etiquetas.qrAyuda}
               >
                 <Select
                   id="simbologia"
                   value={simbologia}
                   onChange={(e) => setSimbologia(e.target.value as Simbologia)}
                 >
-                  <option value="CODE128">Code128 — código de barras</option>
-                  <option value="QR">QR</option>
+                  <option value="CODE128">{t.etiquetas.code128Opcion}</option>
+                  <option value="QR">{t.etiquetas.qrOpcion}</option>
                 </Select>
               </Field>
-              <Field label="Tamaño" htmlFor="formato">
+              <Field label={t.etiquetas.tamano} htmlFor="formato">
                 <Select id="formato" value={formato} onChange={(e) => setFormato(e.target.value)}>
                   {FORMATOS.map((f) => (
                     <option key={f.valor} value={f.valor}>
@@ -310,14 +310,14 @@ export function EtiquetasPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Disposición" htmlFor="disposicion">
+              <Field label={t.etiquetas.disposicion} htmlFor="disposicion">
                 <Select
                   id="disposicion"
                   value={disposicion}
                   onChange={(e) => setDisposicion(e.target.value as Disposicion)}
                 >
-                  <option value="hoja">Hoja A4 — varias etiquetas por página</option>
-                  <option value="rollo">Rollo — una etiqueta por página</option>
+                  <option value="hoja">{t.etiquetas.hojaOpcion}</option>
+                  <option value="rollo">{t.etiquetas.rolloOpcion}</option>
                 </Select>
               </Field>
             </div>
@@ -326,7 +326,7 @@ export function EtiquetasPage() {
       </div>
 
       <Card
-        title={`Selección (${seleccion.size})`}
+        title={t.etiquetas.seleccion({ total: seleccion.size })}
         actions={
           <Button
             variant="primary"
@@ -341,20 +341,20 @@ export function EtiquetasPage() {
               })
             }
           >
-            {generar.isPending ? "Generando…" : `Generar ${seleccion.size} etiquetas`}
+            {generar.isPending
+              ? t.etiquetas.generando
+              : t.etiquetas.generarN({ total: seleccion.size })}
           </Button>
         }
       >
         <Card.Body>
           {candidatos.error ? (
-            <ErrorPanel title="No se pudo cargar la lista">
+            <ErrorPanel title={t.etiquetas.noSePudoCargarLista}>
               {mensajeError(candidatos.error)}
             </ErrorPanel>
           ) : listado.length === 0 ? (
             <Text as="p" size="sm" color="muted">
-              {candidatos.isLoading
-                ? "Cargando…"
-                : "Nada con código imprimible para este tipo. Una entidad sin código no se puede escanear, así que no se ofrece para etiquetar."}
+              {candidatos.isLoading ? t.comun.cargando : t.etiquetas.sinEtiquetables}
             </Text>
           ) : (
             <>
@@ -362,7 +362,9 @@ export function EtiquetasPage() {
                 <Checkbox
                   checked={todosSeleccionados}
                   onChange={alternarTodos}
-                  label={todosSeleccionados ? "Quitar todos" : "Seleccionar todos"}
+                  label={
+                    todosSeleccionados ? t.etiquetas.quitarTodos : t.etiquetas.seleccionarTodos
+                  }
                 />
               </div>
               <ul className="etiquetas__lista">
@@ -389,18 +391,14 @@ export function EtiquetasPage() {
       </Card>
 
       {generar.error ? (
-        <ErrorPanel title="No se pudieron generar las etiquetas">
-          {mensajeError(generar.error)}
-        </ErrorPanel>
+        <ErrorPanel title={t.etiquetas.noSePudoGenerar}>{mensajeError(generar.error)}</ErrorPanel>
       ) : null}
 
       {etiquetas.length > 0 ? (
-        <Card title="Vista previa">
+        <Card title={t.etiquetas.vistaPrevia}>
           <Card.Body>
             <Text as="p" size="sm" color="muted" className="mb-4">
-              Al imprimir solo salen las etiquetas: el resto de la pantalla se oculta. Comprueba en
-              la vista previa del navegador que la escala esté al 100 % — si el sistema la reduce
-              para «ajustar a la página», las barras se estrechan y el lector puede fallar.
+              {t.etiquetas.avisoImpresion}
             </Text>
 
             <div className="etiquetas__salidas">
@@ -442,17 +440,18 @@ export function EtiquetasPage() {
             </div>
 
             {descargar.error ? (
-              <ErrorPanel title="No se pudo generar el archivo" className="mb-4">
+              <ErrorPanel title={t.etiquetas.noSePudoArchivo} className="mb-4">
                 {mensajeError(descargar.error)}
               </ErrorPanel>
             ) : null}
 
             {avisos.length > 0 ? (
               <ErrorPanel
-                title={`${avisos.length} ${avisos.length === 1 ? "etiqueta puede no leerse" : "etiquetas pueden no leerse"}`}
+                title={t.etiquetas.puedenNoLeerse({ total: avisos.length })}
                 className="mb-4"
               >
-                {avisos[0].advertencia} Afecta a: {avisos.map((a) => a.codigo).join(", ")}.
+                {avisos[0].advertencia}{" "}
+                {t.etiquetas.afectaA({ codigos: avisos.map((a) => a.codigo).join(", ") })}
               </ErrorPanel>
             ) : null}
             <div
@@ -488,7 +487,7 @@ export function EtiquetasPage() {
       ) : null}
 
       {etiquetas.length > 0 ? (
-        <Card title="Impresora de etiquetas en red">
+        <Card title={t.etiquetas.impresoraRed}>
           <Card.Body>
             <Text as="p" size="sm" color="muted" className="mb-4">
               Casi toda impresora térmica —Zebra, Honeywell, TSC, Godex y la mayoría de las
@@ -496,7 +495,7 @@ export function EtiquetasPage() {
               el diálogo del navegador, que reescala y estrecha las barras.
             </Text>
             <div className="form-grid">
-              <Field label="Dirección" htmlFor="host" help="IP o nombre de la impresora.">
+              <Field label={t.etiquetas.direccion} htmlFor="host" help={t.etiquetas.direccionAyuda}>
                 <Input
                   id="host"
                   value={impresoraHost}
@@ -505,7 +504,7 @@ export function EtiquetasPage() {
                   code
                 />
               </Field>
-              <Field label="Puerto" htmlFor="puerto">
+              <Field label={t.etiquetas.puerto} htmlFor="puerto">
                 <Input
                   id="puerto"
                   value={impresoraPuerto}
@@ -515,18 +514,18 @@ export function EtiquetasPage() {
                 />
               </Field>
               <Field
-                label="Resolución"
+                label={t.etiquetas.resolucion}
                 htmlFor="dpi"
-                help="Debe coincidir con la impresora: con el valor equivocado la etiqueta sale de otro tamaño."
+                help={t.etiquetas.resolucionAyuda}
               >
                 <Select
                   id="dpi"
                   value={dpi}
                   onChange={(e) => setDpi(e.target.value as DpiImpresora)}
                 >
-                  <option value="d203">203 dpi — la más común</option>
-                  <option value="d300">300 dpi</option>
-                  <option value="d600">600 dpi — industrial</option>
+                  <option value="d203">{t.etiquetas.dpi203}</option>
+                  <option value="d300">{t.etiquetas.dpi300}</option>
+                  <option value="d600">{t.etiquetas.dpi600}</option>
                 </Select>
               </Field>
             </div>
@@ -536,21 +535,21 @@ export function EtiquetasPage() {
                 disabled={!impresoraHost.trim() || probar.isPending}
                 onClick={() => probar.mutate()}
               >
-                {probar.isPending ? "Probando…" : "Probar conexión"}
+                {probar.isPending ? t.etiquetas.probando : t.etiquetas.probarConexion}
               </Button>
               <Button
                 variant="primary"
                 disabled={!impresoraHost.trim() || enviarAImpresora.isPending}
                 onClick={() => enviarAImpresora.mutate("ZPL")}
               >
-                {enviarAImpresora.isPending ? "Enviando…" : "Enviar en ZPL"}
+                {enviarAImpresora.isPending ? t.etiquetas.enviando : t.etiquetas.enviarZpl}
               </Button>
               <Button
                 variant="secondary"
                 disabled={!impresoraHost.trim() || enviarAImpresora.isPending}
                 onClick={() => enviarAImpresora.mutate("EPL")}
               >
-                Enviar en EPL
+                {t.etiquetas.enviarEpl}
               </Button>
             </div>
             {avisoImpresora ? (
@@ -563,29 +562,20 @@ export function EtiquetasPage() {
       ) : null}
 
       {etiquetas.length === 0 ? (
-        <Card title="Cómo funciona">
+        <Card title={t.etiquetas.comoFunciona}>
           <Card.Body>
             <ul className="etiquetas__ayuda">
               <li>
                 <Icon name="producto" size={16} aria-hidden="true" />
-                <span>
-                  Un producto se etiqueta con su código de barras comercial si lo tiene; si no, con
-                  su SKU. Ubicaciones, lotes y cajas llevan su propio código.
-                </span>
+                <span>{t.etiquetas.ayudaProducto}</span>
               </li>
               <li>
                 <Icon name="codigoBarras" size={16} aria-hidden="true" />
-                <span>
-                  Code128 es la opción por defecto: es lo que lee cualquier lector de mano. El QR se
-                  reserva para etiquetas pequeñas o códigos con caracteres que Code128 no admite.
-                </span>
+                <span>{t.etiquetas.ayudaSimbologia}</span>
               </li>
               <li>
                 <Icon name="alerta" size={16} aria-hidden="true" />
-                <span>
-                  Imprime siempre al 100 % de escala y sobre fondo blanco mate. Una etiqueta
-                  reducida o brillante es la causa más común de que un escáner no lea.
-                </span>
+                <span>{t.etiquetas.ayudaEscala}</span>
               </li>
             </ul>
           </Card.Body>

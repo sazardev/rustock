@@ -35,34 +35,34 @@ export function ReporteKardexPage() {
   });
 
   const columns: Array<TableColumn<KardexLinea>> = [
-    { key: "numero", header: "Movimiento", code: true, render: (l) => l.numero },
+    { key: "numero", header: t.reportes.kardex.movimiento, code: true, render: (l) => l.numero },
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (l) => (
         <Badge tone={TIPO_MOVIMIENTO_TONE[l.tipo]}>{t.dominio.tipoMovimiento[l.tipo]}</Badge>
       ),
     },
     {
       key: "fecha_movimiento",
-      header: "Fecha",
+      header: t.comun.fecha,
       render: (l) => formatearFecha(l.fecha_movimiento),
     },
     {
       key: "entrada",
-      header: "Entrada",
+      header: t.reportes.kardex.entrada,
       num: true,
       render: (l) => (l.entrada > 0 ? l.entrada.toLocaleString() : "—"),
     },
     {
       key: "salida",
-      header: "Salida",
+      header: t.reportes.kardex.salida,
       num: true,
       render: (l) => (l.salida > 0 ? l.salida.toLocaleString() : "—"),
     },
     {
       key: "saldo_acumulado",
-      header: "Saldo acumulado",
+      header: t.reportes.kardex.saldoAcumulado,
       num: true,
       render: (l) => l.saldo_acumulado.toLocaleString(),
     },
@@ -71,32 +71,32 @@ export function ReporteKardexPage() {
   return (
     <>
       <PageHeader
-        title="Kardex de producto"
-        description="Tarjeta de stock: movimientos y saldo acumulado por producto."
+        title={t.reportes.kardex.titulo}
+        description={t.reportes.kardex.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {productosQuery.error ? (
-        <ErrorPanel title="No se pudo cargar el catálogo de productos">
+        <ErrorPanel title={t.reportes.kardex.noSePudoCatalogo}>
           {mensajeError(productosQuery.error)}
         </ErrorPanel>
       ) : null}
       {kardexQuery.error ? (
-        <ErrorPanel title="No se pudo cargar el kardex">
+        <ErrorPanel title={t.reportes.kardex.noSePudoCargar}>
           {mensajeError(kardexQuery.error)}
         </ErrorPanel>
       ) : null}
 
       <Card
-        title="Seleccionar producto"
+        title={t.reportes.kardex.seleccionarProducto}
         actions={
           <Select
-            aria-label="Producto"
-            placeholder="Selecciona un producto"
+            aria-label={t.campos.producto}
+            placeholder={t.reportes.kardex.seleccionaUnProducto}
             value={productoId ?? ""}
             onChange={(e) => {
               const id = e.target.value;
@@ -117,8 +117,8 @@ export function ReporteKardexPage() {
             rows={kardexQuery.data ?? []}
             rowKey={(l) => l.movimiento_id}
             loading={kardexQuery.isLoading}
-            emptyTitle="Sin movimientos para este producto"
-            emptyDescription="El kardex se completa a medida que se aprueban movimientos."
+            emptyTitle={t.reportes.kardex.sinMovimientos}
+            emptyDescription={t.reportes.kardex.sinMovimientosDesc}
           />
         ) : (
           <p className="text-base text-gray-500">

@@ -68,34 +68,39 @@ export function ReportePrecisionPage() {
   }, [query.data, t.dominio.tipoSesion]);
 
   const columns: Array<TableColumn<FilaPrecision>> = [
-    { key: "numero", header: "Sesión", code: true, render: (f) => f.sesion.numero },
+    {
+      key: "numero",
+      header: t.reportes.columnas.sesion,
+      code: true,
+      render: (f) => f.sesion.numero,
+    },
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (f) => <Badge tone="info">{t.dominio.tipoSesion[f.sesion.tipo]}</Badge>,
     },
     {
       key: "fecha_fin",
-      header: "Cerrada el",
+      header: t.reportes.precision.cerradaEl,
       render: (f) => formatearFechaCorta(f.sesion.closed_at ?? f.sesion.fecha_fin),
     },
     {
       key: "precision_sku",
-      header: "Precisión SKU",
+      header: t.reportes.precision.precisionSku,
       num: true,
       render: (f) =>
         `${f.precision.precision_sku.toFixed(1)}% (${f.precision.skus_exactos}/${f.precision.skus_contados})`,
     },
     {
       key: "precision_cantidad",
-      header: "Precisión cantidad",
+      header: t.reportes.precision.precisionCantidad,
       num: true,
       render: (f) =>
         `${f.precision.precision_cantidad.toFixed(1)}% (${f.precision.unidades_correctas}/${f.precision.unidades_contadas})`,
     },
     {
       key: "exactitud_ubicacion",
-      header: "Exactitud ubicación",
+      header: t.reportes.precision.exactitudUbicacion,
       num: true,
       render: (f) =>
         `${f.precision.exactitud_ubicacion.toFixed(1)}% (${f.precision.ubicaciones_exactas}/${f.precision.ubicaciones_contadas})`,
@@ -105,28 +110,28 @@ export function ReportePrecisionPage() {
   return (
     <>
       <PageHeader
-        title="Precisión de inventario"
-        description="Exactitud por sesión de conteo cerrada y su evolución (SPEC §11.6)."
+        title={t.reportes.precision.titulo}
+        description={t.reportes.precision.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {query.error ? (
-        <ErrorPanel title="No se pudo calcular la precisión">
+        <ErrorPanel title={t.reportes.precision.noSePudoCalcular}>
           {mensajeError(query.error)}
         </ErrorPanel>
       ) : null}
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card title="Promedio por SKU">
+        <Card title={t.reportes.precision.promedioSku}>
           <Card.Body>
             <DetailList
               items={[
                 {
-                  label: "Precisión promedio",
+                  label: t.reportes.precision.precisionPromedio,
                   value: `${promedio((f) => f.precision.precision_sku).toFixed(1)}%`,
                   code: true,
                 },
@@ -134,12 +139,12 @@ export function ReportePrecisionPage() {
             />
           </Card.Body>
         </Card>
-        <Card title="Promedio por cantidad">
+        <Card title={t.reportes.precision.promedioCantidad}>
           <Card.Body>
             <DetailList
               items={[
                 {
-                  label: "Precisión promedio",
+                  label: t.reportes.precision.precisionPromedio,
                   value: `${promedio((f) => f.precision.precision_cantidad).toFixed(1)}%`,
                   code: true,
                 },
@@ -147,12 +152,12 @@ export function ReportePrecisionPage() {
             />
           </Card.Body>
         </Card>
-        <Card title="Promedio por ubicación">
+        <Card title={t.reportes.precision.promedioUbicacion}>
           <Card.Body>
             <DetailList
               items={[
                 {
-                  label: "Exactitud promedio",
+                  label: t.reportes.precision.exactitudPromedio,
                   value: `${promedio((f) => f.precision.exactitud_ubicacion).toFixed(1)}%`,
                   code: true,
                 },
@@ -164,7 +169,7 @@ export function ReportePrecisionPage() {
 
       <div className="mt-6">
         <Card
-          title="Evolución de precisión por SKU"
+          title={t.reportes.precision.evolucion}
           actions={
             <ExportButtons
               nombre={nombreExportacion("precision-inventario")}
@@ -175,7 +180,7 @@ export function ReportePrecisionPage() {
         >
           {query.isLoading ? (
             <Card.Body>
-              <p className="text-base text-gray-500">Cargando…</p>
+              <p className="text-base text-gray-500">{t.comun.cargando}</p>
             </Card.Body>
           ) : filas.length > 0 ? (
             <Card.Body>
@@ -201,15 +206,15 @@ export function ReportePrecisionPage() {
       </div>
 
       <div className="mt-6">
-        <Card title="Sesiones cerradas">
+        <Card title={t.reportes.precision.sesionesCerradas}>
           <Table
             columns={columns}
             rows={filas}
             rowKey={(f) => f.sesion.id}
             loading={query.isLoading}
             onRowClick={(f) => navigate(sesionInventarioDetalle(f.sesion.id))}
-            emptyTitle="Sin sesiones cerradas"
-            emptyDescription="La precisión aparece aquí al cerrar una sesión de inventario."
+            emptyTitle={t.reportes.precision.sinSesiones}
+            emptyDescription={t.reportes.precision.sinSesionesDesc}
           />
         </Card>
       </div>

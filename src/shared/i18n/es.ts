@@ -228,6 +228,11 @@ export const es = {
     producto: "Producto",
     productoRestringido: "Producto restringido",
     rack: "Rack",
+    subTipo: "Sub-tipo",
+    documentoReferencia: "Documento",
+    motivo: "Motivo",
+    proveedor: "Proveedor",
+    cliente: "Cliente",
     sku: "SKU",
     stockMaximo: "Stock máximo",
     stockMinimo: "Stock mínimo",
@@ -344,6 +349,8 @@ export const es = {
   // muestra como palabras. Se traducen aquí, no en el backend: el código es
   // el dato, la palabra es presentación.
   dominio: {
+    vencido: "Vencido",
+    porVencer: "Por vencer",
     tipoMovimiento: {
       ENTRADA: "Entrada",
       SALIDA: "Salida",
@@ -606,6 +613,348 @@ export const es = {
     },
   },
 
+  // ============ Escáner y etiquetas ============
+  escaner: {
+    titulo: "Escáner",
+    descripcion:
+      "Lee un código con la cámara o con el lector de mano. El escaneo no modifica nada: resuelve el código y deja constancia de la lectura.",
+    usarCamara: "Usar cámara",
+    apagarCamara: "Apagar cámara",
+    camara: "Cámara",
+    encuadra: "Encuadra el código dentro del recuadro.",
+    motorRespaldo: " Este navegador usa el decodificador de respaldo.",
+    noSePudoCamara: "No se pudo usar la cámara",
+    codigo: "Código",
+    codigoAyuda: "El lector de mano escribe aquí y pulsa Enter por su cuenta.",
+    codigoMarcador: "SKU, código de barras, ubicación, lote o caja",
+    resolver: "Resolver",
+    resolviendo: "Resolviendo…",
+    noSePudoEscanear: "No se pudo escanear",
+    ultimaLectura: "Última lectura",
+    sinCoincidencia: "Sin coincidencia",
+    avisoIlegible: (p: { fallos: number }) =>
+      `Llevas ${p.fallos} lecturas sin resolver en los últimos minutos. Si el código está impreso, puede estar dañado o mal generado: comprueba la etiqueta, y si lo está, reimprímela desde la ficha del registro.`,
+    queSePuedeLeer: "Qué se puede leer",
+    ordenDeResolucion:
+      "Un código se resuelve contra el catálogo en este orden: código de barras de producto, SKU, código de ubicación, número de lote y código de caja. La lectura queda registrada con tu usuario, tu rol y la hora — también cuando no encuentra nada.",
+    lectorDetectado:
+      "Lector de mano detectado: puedes escanear desde cualquier pantalla de Rustock, sin volver aquí.",
+    lectorNoDetectado:
+      "Si conectas un lector de mano, funciona sin configurar nada: escanea desde cualquier pantalla y Rustock reconoce la lectura por su ritmo de tecleo.",
+    registrarMovimiento: "Registrar un movimiento",
+  },
+
+  // ============ Etiquetas ============
+  etiquetas: {
+    titulo: "Etiquetas",
+    descripcion:
+      "Genera e imprime los códigos que después leerá el escáner. El código impreso es el mismo con el que Rustock encuentra la entidad.",
+    imprimirN: (p: { total: number }) => `Imprimir ${p.total}`,
+    queEtiquetar: "Qué etiquetar",
+    comoImprimirlas: "Cómo imprimirlas",
+    buscarAyuda: "Por código o por nombre.",
+    filtrarLista: "Filtrar la lista",
+    simbologia: "Simbología",
+    code128Ayuda: "Lineal, la que lee cualquier lector de mano sin configurar nada.",
+    qrAyuda: "Aguanta suciedad y lecturas en ángulo; admite códigos con acentos.",
+    code128Opcion: "Code128 — código de barras",
+    qrOpcion: "QR",
+    tamano: "Tamaño",
+    disposicion: "Disposición",
+    hojaOpcion: "Hoja A4 — varias etiquetas por página",
+    rolloOpcion: "Rollo — una etiqueta por página",
+    seleccion: (p: { total: number }) => `Selección (${p.total})`,
+    generarN: (p: { total: number }) => `Generar ${p.total} etiquetas`,
+    generando: "Generando…",
+    noSePudoCargarLista: "No se pudo cargar la lista",
+    sinEtiquetables:
+      "Nada con código imprimible para este tipo. Una entidad sin código no se puede escanear, así que no se ofrece para etiquetar.",
+    seleccionarTodos: "Seleccionar todos",
+    quitarTodos: "Quitar todos",
+    noSePudoGenerar: "No se pudieron generar las etiquetas",
+    noSePudoArchivo: "No se pudo generar el archivo",
+    vistaPrevia: "Vista previa",
+    avisoImpresion:
+      "Al imprimir solo salen las etiquetas: el resto de la pantalla se oculta. Comprueba en la vista previa del navegador que la escala esté al 100 % — si el sistema la reduce para «ajustar a la página», las barras se estrechan y el lector puede fallar.",
+    puedenNoLeerse: (p: { total: number }) =>
+      p.total === 1 ? "1 etiqueta puede no leerse" : `${p.total} etiquetas pueden no leerse`,
+    afectaA: (p: { codigos: string }) => `Afecta a: ${p.codigos}.`,
+    impresoraRed: "Impresora de etiquetas en red",
+    impresoraDesc:
+      "Casi toda impresora térmica —Zebra, Honeywell, TSC, Godex y la mayoría de las genéricas— acepta trabajos en crudo por el puerto 9100. Enviar así evita el driver y el diálogo del navegador, que reescala y estrecha las barras.",
+    direccion: "Dirección",
+    direccionAyuda: "IP o nombre de la impresora.",
+    puerto: "Puerto",
+    resolucion: "Resolución",
+    resolucionAyuda:
+      "Debe coincidir con la impresora: con el valor equivocado la etiqueta sale de otro tamaño.",
+    dpi203: "203 dpi — la más común",
+    dpi300: "300 dpi",
+    dpi600: "600 dpi — industrial",
+    probarConexion: "Probar conexión",
+    probando: "Probando…",
+    enviarZpl: "Enviar en ZPL",
+    enviarEpl: "Enviar en EPL",
+    enviando: "Enviando…",
+    enviadas: (p: { total: number; destino: string; bytes: number }) =>
+      `Enviadas ${p.total} etiquetas a ${p.destino} (${p.bytes} bytes).`,
+    respondeOjo: (p: { destino: string }) =>
+      `${p.destino} responde. Ojo: el puerto abierto no garantiza que haya papel ni que el cabezal esté bajado.`,
+    comoFunciona: "Cómo funciona",
+    ayudaProducto:
+      "Un producto se etiqueta con su código de barras comercial si lo tiene; si no, con su SKU. Ubicaciones, lotes y cajas llevan su propio código.",
+    ayudaSimbologia:
+      "Code128 es la opción por defecto: es lo que lee cualquier lector de mano. El QR se reserva para etiquetas pequeñas o códigos con caracteres que Code128 no admite.",
+    ayudaEscala:
+      "Imprime siempre al 100 % de escala y sobre fondo blanco mate. Una etiqueta reducida o brillante es la causa más común de que un escáner no lea.",
+    tipos: {
+      PRODUCTO: "Productos",
+      UBICACION: "Ubicaciones",
+      LOTE: "Lotes",
+      CAJA: "Cajas",
+    },
+  },
+
+  // ============ Panel de escaneos ============
+  panelEscaneos: {
+    titulo: "Panel de escaneos",
+    descripcion:
+      "Quién escaneó qué, cuándo y con qué resultado. Los fallos importan tanto como los aciertos: un código que nadie resuelve es una etiqueta rota, y una racha de denegados es alguien operando fuera de su rol.",
+    noSePudoCargar: "No se pudo cargar el panel",
+    resumen: "Resumen",
+    ultimas24: "Últimas 24 horas",
+    ultimos7: "Últimos 7 días",
+    ultimos30: "Últimos 30 días",
+    ultimos90: "Últimos 90 días",
+    lecturas: "Lecturas",
+    acierto: "Acierto",
+    sinCoincidencia: "Sin coincidencia",
+    denegadas: "Denegadas",
+    porCamara: "Por cámara",
+    porLector: "Por lector",
+    tiempoMedio: "Tiempo medio",
+    etiquetasARevisar: "Etiquetas a revisar",
+    sinProblematicos:
+      "Ningún código ha fallado más de una vez. Un fallo suelto es un tropiezo; lo que señala una etiqueta rota es que falle una y otra vez.",
+    intentosFueraDeRol: "Intentos fuera de rol",
+    sinDenegados: "Nadie ha intentado escanear sin permiso en este periodo.",
+    actividadPorPersona: "Actividad por persona",
+    sinLecturas: "Sin lecturas en este periodo.",
+    aQueHoras: "A qué horas se escanea",
+    lecturasPorHora: "Lecturas por hora del día",
+    horaLecturas: (p: { hora: number; total: number }) => `${p.hora}:00 — ${p.total} lecturas`,
+    ultimasLecturas: "Últimas lecturas",
+    sinLecturasTodavia: "Todavía no hay lecturas",
+    sinLecturasDesc: "Cuando alguien use el escáner, cada lectura quedará registrada aquí.",
+    cuando: "Cuándo",
+    resultado: "Resultado",
+    resolvioA: "Resolvió a",
+    origen: "Origen",
+    quien: "Quién",
+    intentos: (p: { total: number }) => `${p.total} intentos`,
+    intentosPersonas: (p: { intentos: number; personas: number }) =>
+      `${p.intentos} intentos · ${p.personas === 1 ? "1 persona" : `${p.personas} personas`}`,
+    lecturasAcierto: (p: { total: number; acierto: number }) =>
+      `${p.total} lecturas · ${p.acierto} % de acierto`,
+    resultados: {
+      RESUELTO: "Resuelto",
+      NO_ENCONTRADO: "Sin coincidencia",
+      DENEGADO: "Denegado",
+    },
+    origenes: {
+      CAMARA: "Cámara",
+      TECLADO: "Lector",
+      MANUAL: "Manual",
+    },
+  },
+
+  // ============ Reportes ============
+  reportes: {
+    titulo: "Reportes",
+    intro: "Informes operativos y de análisis del almacén.",
+    abrirReporte: "Abrir reporte",
+    volver: "Volver a reportes",
+    noSePudoCargar: "No se pudo cargar el reporte",
+    sinRegistrosCriterios: "Sin registros para los criterios",
+    ajusteFiltros: "Ajuste los filtros o registre movimientos nuevos.",
+    sinRegistrosPunto: "Sin registros para los criterios.",
+    filtrarTipo: "Filtrar por tipo",
+    filtrarSubTipo: "Filtrar por sub-tipo",
+    filtrarEstado: "Filtrar por estado",
+    filtrarProveedor: "Filtrar por proveedor",
+    filtrarCliente: "Filtrar por cliente",
+    filtrarUsuario: "Filtrar por usuario",
+    filtrarAlmacen: "Filtrar por almacén",
+    filtrarCategoria: "Filtrar por categoría",
+    filtrarEntidad: "Filtrar por entidad",
+    filtrarNivel: "Filtrar por nivel",
+    filtrarEvento: "Filtrar por tipo de evento",
+    todosTipos: "Todos los tipos",
+    todosSubTipos: "Todos los sub-tipos",
+    todosEstados: "Todos los estados",
+    todosProveedores: "Todos los proveedores",
+    todosClientes: "Todos los clientes",
+    todosUsuarios: "Todos los usuarios",
+    todosAlmacenes: "Todos los almacenes",
+    todasCategorias: "Todas las categorías",
+    todosNiveles: "Todos los niveles",
+    todosEventos: "Todos los eventos",
+    desde: "Desde",
+    hasta: "Hasta",
+
+    columnas: {
+      modulo: "Módulo",
+      entidad: "Entidad",
+      proceso: "Proceso",
+      resultado: "Resultado",
+      duracion: "Duración",
+      tenant: "Tenant",
+      sesion: "Sesión",
+      ubicaciones: "Ubicaciones",
+      unidades: "Unidades",
+      minimo: "Mínimo",
+      maximo: "Máximo",
+      actualizado: "Actualizado",
+      productos: "Productos",
+    },
+
+    fichas: {
+      movimientosDesc: "Historial de movimientos con filtros por tipo, estado y periodo.",
+      entradasDesc: "Compras, devoluciones de cliente y ajustes positivos por periodo.",
+      salidasDesc: "Despachos a cliente, devoluciones a proveedor y traslados de salida.",
+      mermasDesc: "Mermas y ajustes de stock con su motivo y totales por sub-tipo.",
+      stockDesc: "Existencias por producto, ubicación y lote, con resumen de unidades.",
+      kardexDesc: "Tarjeta de stock: movimientos y saldo acumulado de un producto.",
+      vencimientosDesc: "Lotes próximos a vencer o vencidos, por producto.",
+      precisionDesc: "Precisión por SKU, cantidad y ubicación de cada sesión cerrada.",
+      usuariosDesc: "Número de movimientos registrados por usuario y periodo.",
+      auditoriaDesc: "Quién hizo qué, filtrable por usuario, nivel y rango de fechas.",
+    },
+
+    entradas: {
+      titulo: "Entradas del periodo",
+      descripcion:
+        "Compras, devoluciones de cliente, ajustes positivos e iniciales con su proveedor.",
+    },
+    salidas: {
+      titulo: "Salidas del periodo",
+      descripcion: "Despachos a cliente, devoluciones a proveedor y traslados de salida.",
+    },
+    mermas: {
+      titulo: "Mermas y ajustes",
+      descripcion: "Mermas y ajustes de stock (positivos y negativos) con su motivo.",
+    },
+    totalesPorSubTipo: "Totales por sub-tipo",
+
+    movimientos: {
+      titulo: "Movimientos",
+      totalesPorTipo: "Totales por tipo",
+      porPeriodo: "Movimientos por periodo",
+      porDia: "movimientos por día",
+      noSePudoCargar: "No se pudieron cargar los movimientos",
+      sinMovimientos: "Sin movimientos para los criterios",
+      ubicacionOrigen: "Ubicación origen",
+      ubicacionDestino: "Ubicación destino",
+    },
+
+    stock: {
+      titulo: "Stock actual",
+      noSePudoCargar: "No se pudo cargar el stock",
+      buscarProducto: "Buscar producto",
+      buscarProductoAyuda: "Buscar por SKU o nombre de producto",
+      productosConStock: "Productos con stock",
+      ubicacionesConStock: "Ubicaciones con stock",
+      unidadesTotales: "Unidades totales",
+      porProducto: "Stock por producto",
+      saldoDerivado: "Saldo derivado",
+      sinStock: "Sin stock registrado",
+      sinExistencias: "No hay existencias para los criterios actuales.",
+      detalle: "Detalle por ubicación y lote",
+      filasDeStock: "Filas de stock",
+      sinDetalle: "Sin detalle de stock",
+      sinFilas: "No hay filas de stock para los criterios actuales.",
+    },
+
+    kardex: {
+      titulo: "Kardex de producto",
+      descripcion: "Tarjeta de stock: movimientos y saldo acumulado por producto.",
+      noSePudoCatalogo: "No se pudo cargar el catálogo de productos",
+      noSePudoCargar: "No se pudo cargar el kardex",
+      seleccionarProducto: "Seleccionar producto",
+      seleccionaUnProducto: "Selecciona un producto",
+      producto: "Producto",
+      movimiento: "Movimiento",
+      entrada: "Entrada",
+      salida: "Salida",
+      saldoAcumulado: "Saldo acumulado",
+      sinMovimientos: "Sin movimientos para este producto",
+      sinMovimientosDesc: "El kardex se completa a medida que se aprueban movimientos.",
+    },
+
+    vencimientos: {
+      titulo: "Vencimientos",
+      descripcion:
+        "Lotes vencidos o próximos a vencer, clasificados en un solo reporte por rango (SPEC §16.2).",
+      resumenPorRango: "Resumen por rango",
+      rango: "Rango",
+      lotes: "Lotes",
+      lote: "Lote",
+      vencimiento: "Vencimiento",
+      sinLotes: "Sin lotes en este rango",
+      sinLotesDesc: "No hay lotes vencidos ni próximos a vencer en el rango seleccionado.",
+      rangos: {
+        vencidos: "Vencidos",
+        proximos_30: "Próximos 30 días",
+        proximos_60: "Próximos 31-60 días",
+        proximos_90: "Próximos 61-90 días",
+      },
+    },
+
+    precision: {
+      titulo: "Precisión de inventario",
+      descripcion: "Exactitud por sesión de conteo cerrada y su evolución (SPEC §11.6).",
+      noSePudoCalcular: "No se pudo calcular la precisión",
+      exactitudPromedio: "Exactitud promedio",
+      promedioSku: "Promedio por SKU",
+      promedioCantidad: "Promedio por cantidad",
+      promedioUbicacion: "Promedio por ubicación",
+      precisionPromedio: "Precisión promedio",
+      precisionSku: "Precisión SKU",
+      precisionCantidad: "Precisión cantidad",
+      exactitudUbicacion: "Exactitud ubicación",
+      sesionesCerradas: "Sesiones cerradas",
+      cerradaEl: "Cerrada el",
+      evolucion: "Evolución de precisión por SKU",
+      sinSesiones: "Sin sesiones cerradas",
+      sinSesionesDesc: "La precisión aparece aquí al cerrar una sesión de inventario.",
+    },
+
+    usuarios: {
+      titulo: "Desempeño de usuarios",
+      noSePudoCargar: "No se pudo cargar el desempeño",
+      porUsuario: "Movimientos por usuario",
+      usuario: "Usuario",
+      movimientos: "Movimientos",
+      pctDelTotal: "% del total",
+      sinMovimientos: "Sin movimientos para los criterios",
+    },
+
+    auditoria: {
+      titulo: "Auditoría",
+      noSePudoCargar: "No se pudo cargar la auditoría",
+      buscarComando: "Buscar comando",
+      comandoEjemplo: "Comando (ej. aprobar_movimiento)",
+      entidadEjemplo: "Entidad (ej. producto, movimiento)",
+      comandoAccion: "Comando / acción",
+      comandosBackend: "Comandos del backend",
+      vistasDePagina: "Vistas de página",
+      eventos: "Eventos de auditoría",
+      fechaHora: "Fecha y hora",
+      sinEventos: "Sin eventos de auditoría",
+      sinEventosDesc: "No hay operaciones registradas para los criterios actuales.",
+    },
+  },
+
   // ============ Errores del backend (SPEC §17.3) ============
   // La clave es el código estable que devuelve Rust; nunca cambia aunque se
   // reescriba el texto.
@@ -695,18 +1044,16 @@ export const es = {
  * Forma del diccionario. Los literales se ensanchan a `string` para que otros
  * idiomas puedan traducir sin que el tipo los ate al texto castellano.
  */
-export type Diccionario = {
-  [K in keyof typeof es]: {
-    [S in keyof (typeof es)[K]]: (typeof es)[K][S] extends (...args: infer A) => string
-      ? (...args: A) => string
-      : (typeof es)[K][S] extends string
-        ? string
-        : {
-            [T in keyof (typeof es)[K][S]]: (typeof es)[K][S][T] extends (
-              ...args: infer B
-            ) => string
-              ? (...args: B) => string
-              : string;
-          };
-  };
-};
+/**
+ * Forma que debe cumplir cualquier otro idioma: la del castellano, pero con
+ * los literales relajados a `string`. Es recursiva a propósito — las secciones
+ * anidan a la profundidad que pida el dominio, y una traducción no puede
+ * quedarse corta en ninguna rama.
+ */
+type ComoEs<T> = T extends (...args: infer A) => string
+  ? (...args: A) => string
+  : T extends string
+    ? string
+    : { [K in keyof T]: ComoEs<T[K]> };
+
+export type Diccionario = ComoEs<typeof es>;

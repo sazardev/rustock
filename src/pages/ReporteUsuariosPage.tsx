@@ -81,18 +81,23 @@ export function ReporteUsuariosPage() {
   const columns: Array<TableColumn<FilaUsuario>> = [
     {
       key: "usuario_id",
-      header: "Usuario",
+      header: t.reportes.usuarios.usuario,
       render: (f) => usuarioPorId.get(f.usuario_id)?.nombre_usuario ?? f.usuario_id,
     },
     {
       key: "nombre",
-      header: "Nombre",
+      header: t.comun.nombre,
       render: (f) => usuarioPorId.get(f.usuario_id)?.nombre_completo ?? "—",
     },
-    { key: "total", header: "Movimientos", num: true, render: (f) => f.total.toLocaleString() },
+    {
+      key: "total",
+      header: t.reportes.usuarios.movimientos,
+      num: true,
+      render: (f) => f.total.toLocaleString(),
+    },
     {
       key: "pct",
-      header: "% del total",
+      header: t.reportes.usuarios.pctDelTotal,
       num: true,
       render: (f) => `${f.pct.toFixed(1)}%`,
     },
@@ -101,16 +106,18 @@ export function ReporteUsuariosPage() {
   return (
     <>
       <PageHeader
-        title="Desempeño de usuarios"
+        title={t.reportes.usuarios.titulo}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {query.error ? (
-        <ErrorPanel title="No se pudo cargar el desempeño">{mensajeError(query.error)}</ErrorPanel>
+        <ErrorPanel title={t.reportes.usuarios.noSePudoCargar}>
+          {mensajeError(query.error)}
+        </ErrorPanel>
       ) : null}
 
       <FilterBar
@@ -124,11 +131,11 @@ export function ReporteUsuariosPage() {
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por tipo"
+            aria-label={t.reportes.filtrarTipo}
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoMovimiento | "")}
           >
-            <option value="">Todos los tipos</option>
+            <option value="">{t.reportes.todosTipos}</option>
             {TIPOS.map((tipo) => (
               <option key={tipo} value={tipo}>
                 {t.dominio.tipoMovimiento[tipo]}
@@ -139,7 +146,7 @@ export function ReporteUsuariosPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Desde"
+            aria-label={t.reportes.desde}
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
           />
@@ -147,7 +154,7 @@ export function ReporteUsuariosPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Hasta"
+            aria-label={t.reportes.hasta}
             value={hasta}
             onChange={(e) => setHasta(e.target.value)}
           />
@@ -155,14 +162,14 @@ export function ReporteUsuariosPage() {
       </FilterBar>
 
       <div className="mt-6">
-        <Card title="Movimientos por usuario">
+        <Card title={t.reportes.usuarios.porUsuario}>
           <Table
             columns={columns}
             rows={filas}
             rowKey={(f) => f.usuario_id}
             loading={query.isLoading}
-            emptyTitle="Sin movimientos para los criterios"
-            emptyDescription="Ajuste los filtros o registre movimientos nuevos."
+            emptyTitle={t.reportes.movimientos.sinMovimientos}
+            emptyDescription={t.reportes.ajusteFiltros}
           />
         </Card>
       </div>

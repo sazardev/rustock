@@ -18,6 +18,7 @@ import {
   Table,
   type TableColumn,
 } from "../shared/ui";
+import { useT } from "../shared/i18n";
 import { PATH } from "../app/route-paths";
 import { formatearFecha, mensajeError } from "../shared/format";
 import { nombreExportacion } from "../shared/exportar";
@@ -27,6 +28,7 @@ const NIVELES = ["LECTURA", "ESCRITURA"];
 const TIPOS_EVENTO = ["COMANDO", "VISTA"];
 
 export function ReporteAuditoriaPage() {
+  const t = useT();
   const [usuarioId, setUsuarioId] = useState("");
   const [nivel, setNivel] = useState("");
   const [tipoEvento, setTipoEvento] = useState("");
@@ -96,18 +98,18 @@ export function ReporteAuditoriaPage() {
   const columns: Array<TableColumn<EventoAuditoria>> = [
     {
       key: "timestamp",
-      header: "Fecha y hora",
+      header: t.reportes.auditoria.fechaHora,
       render: (e) => formatearFecha(e.timestamp),
     },
     {
       key: "usuario_id",
-      header: "Usuario",
+      header: t.reportes.usuarios.usuario,
       render: (e) =>
         e.usuario_id ? (usuarioPorId.get(e.usuario_id)?.nombre_usuario ?? e.usuario_id) : "—",
     },
     {
       key: "tipo_evento",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (e) =>
         e.tipo_evento === "VISTA" ? (
           <Badge tone="info" icon="historial">
@@ -121,24 +123,24 @@ export function ReporteAuditoriaPage() {
     },
     {
       key: "accion",
-      header: "Comando / acción",
+      header: t.reportes.auditoria.comandoAccion,
       code: true,
       render: (e) => (e.tipo_evento === "VISTA" ? (e.ruta ?? e.accion) : (e.comando ?? e.accion)),
     },
     {
       key: "modulo",
-      header: "Módulo",
+      header: t.reportes.columnas.modulo,
       render: (e) => e.modulo ?? "—",
     },
     {
       key: "entidad",
-      header: "Entidad",
+      header: t.reportes.columnas.entidad,
       code: true,
       render: (e) => (e.entidad_id ? `${e.entidad} / ${e.entidad_id.slice(0, 8)}` : e.entidad),
     },
     {
       key: "proceso",
-      header: "Proceso",
+      header: t.reportes.columnas.proceso,
       render: (e) => e.proceso ?? "—",
     },
     {
@@ -148,7 +150,7 @@ export function ReporteAuditoriaPage() {
     },
     {
       key: "exito",
-      header: "Resultado",
+      header: t.reportes.columnas.resultado,
       render: (e) =>
         e.exito ? (
           <Badge tone="success" icon="aprobar">
@@ -162,14 +164,14 @@ export function ReporteAuditoriaPage() {
     },
     {
       key: "duracion_ms",
-      header: "Duración",
+      header: t.reportes.columnas.duracion,
       num: true,
       code: true,
       render: (e) => (e.duracion_ms !== null ? `${e.duracion_ms} ms` : "—"),
     },
     {
       key: "tenant",
-      header: "Tenant",
+      header: t.reportes.columnas.tenant,
       render: (e) => e.tenant ?? "—",
     },
   ];
@@ -177,16 +179,18 @@ export function ReporteAuditoriaPage() {
   return (
     <>
       <PageHeader
-        title="Auditoría"
+        title={t.reportes.auditoria.titulo}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {query.error ? (
-        <ErrorPanel title="No se pudo cargar la auditoría">{mensajeError(query.error)}</ErrorPanel>
+        <ErrorPanel title={t.reportes.auditoria.noSePudoCargar}>
+          {mensajeError(query.error)}
+        </ErrorPanel>
       ) : null}
 
       <FilterBar
@@ -200,14 +204,14 @@ export function ReporteAuditoriaPage() {
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por usuario"
+            aria-label={t.reportes.filtrarUsuario}
             value={usuarioId}
             onChange={(e) => {
               setUsuarioId(e.target.value);
               setPage(1);
             }}
           >
-            <option value="">Todos los usuarios</option>
+            <option value="">{t.reportes.todosUsuarios}</option>
             {usuarios.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.nombre_usuario}
@@ -217,31 +221,33 @@ export function ReporteAuditoriaPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por tipo de evento"
+            aria-label={t.reportes.filtrarEvento}
             value={tipoEvento}
             onChange={(e) => {
               setTipoEvento(e.target.value);
               setPage(1);
             }}
           >
-            <option value="">Todos los tipos</option>
-            {TIPOS_EVENTO.map((t) => (
-              <option key={t} value={t}>
-                {t === "VISTA" ? "Vistas de página" : "Comandos del backend"}
+            <option value="">{t.reportes.todosTipos}</option>
+            {TIPOS_EVENTO.map((evento) => (
+              <option key={evento} value={evento}>
+                {evento === "VISTA"
+                  ? t.reportes.auditoria.vistasDePagina
+                  : t.reportes.auditoria.comandosBackend}
               </option>
             ))}
           </Select>
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por nivel"
+            aria-label={t.reportes.filtrarNivel}
             value={nivel}
             onChange={(e) => {
               setNivel(e.target.value);
               setPage(1);
             }}
           >
-            <option value="">Todos los niveles</option>
+            <option value="">{t.reportes.todosNiveles}</option>
             {NIVELES.map((n) => (
               <option key={n} value={n}>
                 {n}
@@ -252,7 +258,7 @@ export function ReporteAuditoriaPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Desde"
+            aria-label={t.reportes.desde}
             value={desde}
             onChange={(e) => {
               setDesde(e.target.value);
@@ -263,7 +269,7 @@ export function ReporteAuditoriaPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Hasta"
+            aria-label={t.reportes.hasta}
             value={hasta}
             onChange={(e) => {
               setHasta(e.target.value);
@@ -274,8 +280,8 @@ export function ReporteAuditoriaPage() {
         <FilterField>
           <Input
             type="search"
-            aria-label="Buscar comando"
-            placeholder="Comando (ej. aprobar_movimiento)"
+            aria-label={t.reportes.auditoria.buscarComando}
+            placeholder={t.reportes.auditoria.comandoEjemplo}
             value={comando}
             onChange={(e) => {
               setComando(e.target.value);
@@ -286,8 +292,8 @@ export function ReporteAuditoriaPage() {
         <FilterField grow>
           <Input
             type="search"
-            aria-label="Filtrar por entidad"
-            placeholder="Entidad (ej. producto, movimiento)"
+            aria-label={t.reportes.filtrarEntidad}
+            placeholder={t.reportes.auditoria.entidadEjemplo}
             value={entidad}
             onChange={(e) => setEntidad(e.target.value)}
           />
@@ -295,14 +301,14 @@ export function ReporteAuditoriaPage() {
       </FilterBar>
 
       <div className="mt-6">
-        <Card title="Eventos de auditoría">
+        <Card title={t.reportes.auditoria.eventos}>
           <Table
             columns={columns}
             rows={eventos}
             rowKey={(e) => String(e.id)}
             loading={query.isLoading}
-            emptyTitle="Sin eventos de auditoría"
-            emptyDescription="No hay operaciones registradas para los criterios actuales."
+            emptyTitle={t.reportes.auditoria.sinEventos}
+            emptyDescription={t.reportes.auditoria.sinEventosDesc}
           />
           {listado && listado.meta.total > 0 ? (
             <Pagination

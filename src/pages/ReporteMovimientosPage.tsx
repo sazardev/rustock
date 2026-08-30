@@ -235,10 +235,10 @@ export function ReporteMovimientosPage() {
   const filas = listado?.data ?? [];
 
   const columns: Array<TableColumn<Movimiento>> = [
-    { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+    { key: "numero", header: t.campos.numero, code: true, render: (m) => m.numero },
     {
       key: "tipo",
-      header: "Tipo",
+      header: t.comun.tipo,
       render: (m) => (
         <Badge tone={TIPO_MOVIMIENTO_TONE[m.tipo]} icon={TIPO_MOVIMIENTO_ICON[m.tipo]}>
           {t.dominio.tipoMovimiento[m.tipo]}
@@ -247,31 +247,35 @@ export function ReporteMovimientosPage() {
     },
     {
       key: "sub_tipo",
-      header: "Sub-tipo",
+      header: t.campos.subTipo,
       render: (m) => t.dominio.subTipoMovimiento[m.sub_tipo],
     },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (m) => (
         <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
           {t.dominio.estadoMovimiento[m.estado]}
         </Badge>
       ),
     },
-    { key: "fecha_movimiento", header: "Fecha", render: (m) => formatearFecha(m.fecha_movimiento) },
+    {
+      key: "fecha_movimiento",
+      header: t.comun.fecha,
+      render: (m) => formatearFecha(m.fecha_movimiento),
+    },
     {
       key: "documento_referencia",
-      header: "Documento",
+      header: t.campos.documentoReferencia,
       code: true,
       render: (m) => m.documento_referencia ?? "—",
     },
     {
       key: "created_by",
-      header: "Usuario",
+      header: t.reportes.usuarios.usuario,
       render: (m) => usuarioPorId.get(m.created_by)?.nombre_usuario ?? m.created_by,
     },
-    { key: "motivo", header: "Motivo", render: (m) => m.motivo ?? "—" },
+    { key: "motivo", header: t.campos.motivo, render: (m) => m.motivo ?? "—" },
   ];
 
   const error =
@@ -286,16 +290,16 @@ export function ReporteMovimientosPage() {
   return (
     <>
       <PageHeader
-        title="Movimientos por periodo"
+        title={t.reportes.movimientos.porPeriodo}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {error ? (
-        <ErrorPanel title="No se pudieron cargar los movimientos">{mensajeError(error)}</ErrorPanel>
+        <ErrorPanel title={t.reportes.movimientos.noSePudoCargar}>{mensajeError(error)}</ErrorPanel>
       ) : null}
 
       <FilterBar
@@ -309,14 +313,14 @@ export function ReporteMovimientosPage() {
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por tipo"
+            aria-label={t.reportes.filtrarTipo}
             value={tipo}
             onChange={(e) => {
               setTipo(e.target.value as TipoMovimiento | "");
               resetearPagina();
             }}
           >
-            <option value="">Todos los tipos</option>
+            <option value="">{t.reportes.todosTipos}</option>
             {TIPOS.map((valor) => (
               <option key={valor} value={valor}>
                 {t.dominio.tipoMovimiento[valor]}
@@ -326,14 +330,14 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por sub-tipo"
+            aria-label={t.reportes.filtrarSubTipo}
             value={subTipo}
             onChange={(e) => {
               setSubTipo(e.target.value as SubTipoMovimiento | "");
               resetearPagina();
             }}
           >
-            <option value="">Todos los sub-tipos</option>
+            <option value="">{t.reportes.todosSubTipos}</option>
             {SUB_TIPOS.map((s) => (
               <option key={s} value={s}>
                 {t.dominio.subTipoMovimiento[s]}
@@ -343,14 +347,14 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por estado"
+            aria-label={t.reportes.filtrarEstado}
             value={estado}
             onChange={(e) => {
               setEstado(e.target.value as EstadoMovimiento | "");
               resetearPagina();
             }}
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t.reportes.todosEstados}</option>
             {ESTADOS.map((e) => (
               <option key={e} value={e}>
                 {t.dominio.estadoMovimiento[e]}
@@ -360,14 +364,14 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por usuario"
+            aria-label={t.reportes.filtrarUsuario}
             value={usuarioId}
             onChange={(e) => {
               setUsuarioId(e.target.value);
               resetearPagina();
             }}
           >
-            <option value="">Todos los usuarios</option>
+            <option value="">{t.reportes.todosUsuarios}</option>
             {usuarioPorId.size > 0
               ? [...usuarioPorId.values()].map((u) => (
                   <option key={u.id} value={u.id}>
@@ -379,14 +383,14 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por proveedor"
+            aria-label={t.reportes.filtrarProveedor}
             value={proveedorId}
             onChange={(e) => {
               setProveedorId(e.target.value);
               resetearPagina();
             }}
           >
-            <option value="">Todos los proveedores</option>
+            <option value="">{t.reportes.todosProveedores}</option>
             {proveedorPorId.size > 0
               ? [...proveedorPorId.values()].map((p) => (
                   <option key={p.id} value={p.id}>
@@ -398,14 +402,14 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Filtrar por cliente"
+            aria-label={t.reportes.filtrarCliente}
             value={clienteId}
             onChange={(e) => {
               setClienteId(e.target.value);
               resetearPagina();
             }}
           >
-            <option value="">Todos los clientes</option>
+            <option value="">{t.reportes.todosClientes}</option>
             {clientePorId.size > 0
               ? [...clientePorId.values()].map((c) => (
                   <option key={c.id} value={c.id}>
@@ -417,7 +421,7 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Ubicación origen"
+            aria-label={t.reportes.movimientos.ubicacionOrigen}
             value={ubicacionOrigen}
             onChange={(e) => {
               setUbicacionOrigen(e.target.value);
@@ -436,7 +440,7 @@ export function ReporteMovimientosPage() {
         </FilterField>
         <FilterField>
           <Select
-            aria-label="Ubicación destino"
+            aria-label={t.reportes.movimientos.ubicacionDestino}
             value={ubicacionDestino}
             onChange={(e) => {
               setUbicacionDestino(e.target.value);
@@ -456,7 +460,7 @@ export function ReporteMovimientosPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Desde"
+            aria-label={t.reportes.desde}
             value={desde}
             onChange={(e) => {
               setDesde(e.target.value);
@@ -467,7 +471,7 @@ export function ReporteMovimientosPage() {
         <FilterField>
           <Input
             type="date"
-            aria-label="Hasta"
+            aria-label={t.reportes.hasta}
             value={hasta}
             onChange={(e) => {
               setHasta(e.target.value);
@@ -478,10 +482,10 @@ export function ReporteMovimientosPage() {
       </FilterBar>
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card title="Totales por tipo">
+        <Card title={t.reportes.movimientos.totalesPorTipo}>
           <Card.Body>
             {resumenQuery.isLoading ? (
-              <p className="text-base text-gray-500">Cargando…</p>
+              <p className="text-base text-gray-500">{t.comun.cargando}</p>
             ) : (
               <DetailList
                 items={TIPOS.map((tipo) => ({
@@ -496,9 +500,9 @@ export function ReporteMovimientosPage() {
         <Card title={`Movimientos por día (últimos ${DIAS_CHART} días)`}>
           <Card.Body>
             {todoQuery.isLoading ? (
-              <p className="text-base text-gray-500">Cargando…</p>
+              <p className="text-base text-gray-500">{t.comun.cargando}</p>
             ) : porDia.length > 0 ? (
-              <div className="chart" role="img" aria-label="Movimientos por día">
+              <div className="chart" role="img" aria-label={t.reportes.movimientos.porDia}>
                 {porDia.map(([dia, n]) => (
                   <div
                     key={dia}
@@ -521,15 +525,15 @@ export function ReporteMovimientosPage() {
       </div>
 
       <div className="mt-6">
-        <Card title="Movimientos">
+        <Card title={t.reportes.movimientos.titulo}>
           <Table
             columns={columns}
             rows={filas}
             rowKey={(m) => m.id}
             loading={tablaQuery.isLoading}
             onRowClick={(m) => navigate(movimientoDetalle(m.id))}
-            emptyTitle="Sin movimientos para los criterios"
-            emptyDescription="Ajuste los filtros o registre movimientos nuevos."
+            emptyTitle={t.reportes.movimientos.sinMovimientos}
+            emptyDescription={t.reportes.ajusteFiltros}
           />
           {listado && listado.meta.total > 0 ? (
             <Pagination

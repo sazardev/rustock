@@ -26,8 +26,12 @@ import { ESTADO_MOVIMIENTO_TONE, formatearFecha, mensajeError } from "../shared/
 import { nombreExportacion } from "../shared/exportar";
 
 export interface ConfigReporteTipo {
-  titulo: string;
-  descripcion: string;
+  /**
+   * Sección del diccionario con el título y la descripción. La configuración
+   * es una constante de módulo que consume el router, así que no puede llevar
+   * texto ya traducido: guarda la clave y la página la resuelve al pintar.
+   */
+  textos: "entradas" | "salidas" | "mermas";
   /** Filtros base que definen el tipo de reporte (ej. `["tipo:eq:ENTRADA"]`). */
   filtrosBase: string[];
   exportarNombre: string;
@@ -36,24 +40,21 @@ export interface ConfigReporteTipo {
 }
 
 export const CONFIG_ENTRADAS: ConfigReporteTipo = {
-  titulo: "Entradas del periodo",
-  descripcion: "Compras, devoluciones de cliente, ajustes positivos e iniciales con su proveedor.",
+  textos: "entradas",
   filtrosBase: ["tipo:eq:ENTRADA"],
   exportarNombre: "entradas",
   conProveedor: true,
 };
 
 export const CONFIG_SALIDAS: ConfigReporteTipo = {
-  titulo: "Salidas del periodo",
-  descripcion: "Despachos a cliente, devoluciones a proveedor y traslados de salida.",
+  textos: "salidas",
   filtrosBase: ["tipo:eq:SALIDA"],
   exportarNombre: "salidas",
   conCliente: true,
 };
 
 export const CONFIG_MERMAS_AJUSTES: ConfigReporteTipo = {
-  titulo: "Mermas y ajustes",
-  descripcion: "Mermas y ajustes de stock (positivos y negativos) con su motivo.",
+  textos: "mermas",
   filtrosBase: ["sub_tipo:in:MERMA,AJUSTE_POSITIVO,AJUSTE_NEGATIVO"],
   exportarNombre: "mermas-ajustes",
 };
@@ -75,6 +76,7 @@ const CAMPOS_EXPORT = [
 
 export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTipo }) {
   const t = useT();
+  const textos = t.reportes[config.textos];
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [estado, setEstado] = useState<EstadoMovimiento | "">("");
@@ -163,25 +165,29 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
   const filas = listado?.data ?? [];
 
   const columns: Array<TableColumn<Movimiento>> = [
-    { key: "numero", header: "Número", code: true, render: (m) => m.numero },
+    { key: "numero", header: t.campos.numero, code: true, render: (m) => m.numero },
     {
       key: "sub_tipo",
-      header: "Sub-tipo",
+      header: t.campos.subTipo,
       render: (m) => t.dominio.subTipoMovimiento[m.sub_tipo],
     },
     {
       key: "estado",
-      header: "Estado",
+      header: t.comun.estado,
       render: (m) => (
         <Badge tone={ESTADO_MOVIMIENTO_TONE[m.estado]}>
           {t.dominio.estadoMovimiento[m.estado]}
         </Badge>
       ),
     },
-    { key: "fecha_movimiento", header: "Fecha", render: (m) => formatearFecha(m.fecha_movimiento) },
+    {
+      key: "fecha_movimiento",
+      header: t.comun.fecha,
+      render: (m) => formatearFecha(m.fecha_movimiento),
+    },
     {
       key: "documento_referencia",
-      header: "Documento",
+      header: t.campos.documentoReferencia,
       code: true,
       render: (m) => m.documento_referencia ?? "—",
     },
@@ -189,7 +195,7 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
       ? [
           {
             key: "proveedor_id",
-            header: "Proveedor",
+            header: t.campos.proveedor,
             render: (m: Movimiento) =>
               m.proveedor_id ? <ProveedorRef id={m.proveedor_id} /> : "—",
           },
@@ -199,12 +205,12 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
       ? [
           {
             key: "cliente_id",
-            header: "Cliente",
+            header: t.campos.cliente,
             render: (m: Movimiento) => (m.cliente_id ? <ClienteRef id={m.cliente_id} /> : "—"),
           },
         ]
       : []),
-    { key: "motivo", header: "Motivo", render: (m) => m.motivo ?? "—" },
+    { key: "motivo", header: t.campos.motivo, render: (m) => m.motivo ?? "—" },
   ];
 
   const error = tablaQuery.error ?? resumenQuery.error ?? todoQuery.error;
@@ -212,16 +218,17 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
   return (
     <>
       <PageHeader
-        title={config.titulo}
+        title={textos.titulo}
+        description={textos.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {error ? (
-        <ErrorPanel title="No se pudo cargar el reporte">{mensajeError(error)}</ErrorPanel>
+        <ErrorPanel title={t.reportes.noSePudoCargar}>{mensajeError(error)}</ErrorPanel>
       ) : null}
 
       <FilterBar
@@ -235,14 +242,14 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
       >
         <FilterField>
           <Select
-            aria-label="Filtrar por estado"
+            aria-label={t.reportes.filtrarEstado}
             value={estado}
             onChange={(e) => {
               setEstado(e.target.value as EstadoMovimiento | "");
               resetearPagina();
             }}
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t.reportes.todosEstados}</option>
             {(
               ["BORRADOR", "PENDIENTE_APROBACION", "APROBADO", "ANULADO"] as EstadoMovimiento[]
             ).map((e) => (
@@ -255,14 +262,14 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
         {config.conProveedor && catProveedores.data ? (
           <FilterField>
             <Select
-              aria-label="Filtrar por proveedor"
+              aria-label={t.reportes.filtrarProveedor}
               value={proveedorId}
               onChange={(e) => {
                 setProveedorId(e.target.value);
                 resetearPagina();
               }}
             >
-              <option value="">Todos los proveedores</option>
+              <option value="">{t.reportes.todosProveedores}</option>
               {esPaginado(catProveedores.data) &&
                 catProveedores.data.data.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -275,14 +282,14 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
         {config.conCliente && catClientes.data ? (
           <FilterField>
             <Select
-              aria-label="Filtrar por cliente"
+              aria-label={t.reportes.filtrarCliente}
               value={clienteId}
               onChange={(e) => {
                 setClienteId(e.target.value);
                 resetearPagina();
               }}
             >
-              <option value="">Todos los clientes</option>
+              <option value="">{t.reportes.todosClientes}</option>
               {esPaginado(catClientes.data) &&
                 catClientes.data.data.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -295,7 +302,7 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
         <FilterField>
           <Input
             type="date"
-            aria-label="Desde"
+            aria-label={t.reportes.desde}
             value={desde}
             onChange={(e) => {
               setDesde(e.target.value);
@@ -306,7 +313,7 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
         <FilterField>
           <Input
             type="date"
-            aria-label="Hasta"
+            aria-label={t.reportes.hasta}
             value={hasta}
             onChange={(e) => {
               setHasta(e.target.value);
@@ -317,10 +324,10 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
       </FilterBar>
 
       <div className="mt-6">
-        <Card title="Totales por sub-tipo">
+        <Card title={t.reportes.totalesPorSubTipo}>
           <Card.Body>
             {resumenQuery.isLoading ? (
-              <p className="text-base text-gray-500">Cargando…</p>
+              <p className="text-base text-gray-500">{t.comun.cargando}</p>
             ) : totales.length > 0 ? (
               <DetailList
                 items={totales.map((fila) => ({
@@ -333,22 +340,22 @@ export function ReporteMovimientosTipoPage({ config }: { config: ConfigReporteTi
                 }))}
               />
             ) : (
-              <p className="text-base text-gray-500">Sin registros para los criterios.</p>
+              <p className="text-base text-gray-500">{t.reportes.sinRegistrosPunto}</p>
             )}
           </Card.Body>
         </Card>
       </div>
 
       <div className="mt-6">
-        <Card title={config.titulo}>
+        <Card title={textos.titulo}>
           <Table
             columns={columns}
             rows={filas}
             rowKey={(m) => m.id}
             loading={tablaQuery.isLoading}
             onRowClick={(m) => navigate(movimientoDetalle(m.id))}
-            emptyTitle="Sin registros para los criterios"
-            emptyDescription="Ajuste los filtros o registre movimientos nuevos."
+            emptyTitle={t.reportes.sinRegistrosCriterios}
+            emptyDescription={t.reportes.ajusteFiltros}
           />
           {listado && listado.meta.total > 0 ? (
             <Pagination

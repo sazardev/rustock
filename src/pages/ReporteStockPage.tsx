@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
+import { useT } from "../shared/i18n";
 import {
   listarAlmacenes,
   listarCategorias,
@@ -72,6 +73,7 @@ function almacenDeUbicacion(
 }
 
 export function ReporteStockPage() {
+  const t = useT();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
@@ -242,27 +244,37 @@ export function ReporteStockPage() {
     },
     {
       key: "nombre",
-      header: "Producto",
+      header: t.campos.producto,
       render: (f) => productoPorId.get(f.producto_id)?.nombre ?? "—",
     },
-    { key: "ubicaciones", header: "Ubicaciones", num: true, render: (f) => f.ubicaciones },
+    {
+      key: "ubicaciones",
+      header: t.reportes.columnas.ubicaciones,
+      num: true,
+      render: (f) => f.ubicaciones,
+    },
     { key: "lotes", header: "Lotes", num: true, render: (f) => f.lotes },
-    { key: "unidades", header: "Unidades", num: true, render: (f) => f.unidades.toLocaleString() },
+    {
+      key: "unidades",
+      header: t.reportes.columnas.unidades,
+      num: true,
+      render: (f) => f.unidades.toLocaleString(),
+    },
     {
       key: "minimo",
-      header: "Mínimo",
+      header: t.reportes.columnas.minimo,
       num: true,
       render: (f) => productoPorId.get(f.producto_id)?.stock_minimo?.toLocaleString() ?? "—",
     },
     {
       key: "maximo",
-      header: "Máximo",
+      header: t.reportes.columnas.maximo,
       num: true,
       render: (f) => productoPorId.get(f.producto_id)?.stock_maximo?.toLocaleString() ?? "—",
     },
     {
       key: "estado_stock",
-      header: "Estado",
+      header: t.comun.estado,
       render: (f) => {
         const p = productoPorId.get(f.producto_id);
         const minimo = p?.stock_minimo;
@@ -279,15 +291,19 @@ export function ReporteStockPage() {
   ];
 
   const columnasDetalle: Array<TableColumn<Saldo>> = [
-    { key: "producto_id", header: "Producto", render: (s) => <ProductoRef id={s.producto_id} /> },
+    {
+      key: "producto_id",
+      header: t.campos.producto,
+      render: (s) => <ProductoRef id={s.producto_id} />,
+    },
     {
       key: "ubicacion_id",
-      header: "Ubicación",
+      header: t.campos.ubicacion,
       render: (s) => <UbicacionRef id={s.ubicacion_id} />,
     },
     {
       key: "almacen",
-      header: "Almacén",
+      header: t.campos.almacen,
       render: (s) => {
         const almacen = almacenPorUbicacion.get(s.ubicacion_id);
         return almacen ? (almacenPorId.get(almacen)?.codigo ?? "—") : "—";
@@ -295,13 +311,18 @@ export function ReporteStockPage() {
     },
     {
       key: "lote_id",
-      header: "Lote",
+      header: t.reportes.vencimientos.lote,
       render: (s) => (s.lote_id ? <LoteRef id={s.lote_id} /> : "—"),
     },
-    { key: "cantidad", header: "Cantidad", num: true, render: (s) => s.cantidad.toLocaleString() },
+    {
+      key: "cantidad",
+      header: t.comun.cantidad,
+      num: true,
+      render: (s) => s.cantidad.toLocaleString(),
+    },
     {
       key: "updated_at",
-      header: "Actualizado",
+      header: t.reportes.columnas.actualizado,
       render: (s) => new Date(s.updated_at).toLocaleDateString(),
     },
   ];
@@ -311,40 +332,56 @@ export function ReporteStockPage() {
   return (
     <>
       <PageHeader
-        title="Stock actual"
+        title={t.reportes.stock.titulo}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={PATH.reportes}>
-            Volver a reportes
+            {t.reportes.volver}
           </ButtonLink>
         }
       />
 
       {error ? (
-        <ErrorPanel title="No se pudo cargar el stock">{mensajeError(error)}</ErrorPanel>
+        <ErrorPanel title={t.reportes.stock.noSePudoCargar}>{mensajeError(error)}</ErrorPanel>
       ) : null}
 
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card title="Productos con stock">
+        <Card title={t.reportes.stock.productosConStock}>
           <Card.Body>
             <DetailList
               items={[
-                { label: "Productos", value: productosConStock.toLocaleString(), code: true },
-                { label: "Unidades totales", value: totalUnidades.toLocaleString(), code: true },
+                {
+                  label: t.reportes.columnas.productos,
+                  value: productosConStock.toLocaleString(),
+                  code: true,
+                },
+                {
+                  label: t.reportes.stock.unidadesTotales,
+                  value: totalUnidades.toLocaleString(),
+                  code: true,
+                },
               ]}
             />
           </Card.Body>
         </Card>
-        <Card title="Ubicaciones con stock">
+        <Card title={t.reportes.stock.ubicacionesConStock}>
           <Card.Body>
             <DetailList
               items={[
-                { label: "Ubicaciones", value: ubicacionesConStock.toLocaleString(), code: true },
-                { label: "Filas de stock", value: filtrados.length.toLocaleString(), code: true },
+                {
+                  label: t.reportes.columnas.ubicaciones,
+                  value: ubicacionesConStock.toLocaleString(),
+                  code: true,
+                },
+                {
+                  label: t.reportes.stock.filasDeStock,
+                  value: filtrados.length.toLocaleString(),
+                  code: true,
+                },
               ]}
             />
           </Card.Body>
         </Card>
-        <Card title="Saldo derivado">
+        <Card title={t.reportes.stock.saldoDerivado}>
           <Card.Body>
             <p className="text-sm text-gray-500">
               El saldo se calcula exclusivamente desde movimientos aprobados. Toda alteración de
@@ -367,19 +404,19 @@ export function ReporteStockPage() {
           <FilterField grow>
             <Input
               type="search"
-              aria-label="Buscar producto"
-              placeholder="Buscar por SKU o nombre de producto"
+              aria-label={t.reportes.stock.buscarProducto}
+              placeholder={t.reportes.stock.buscarProductoAyuda}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </FilterField>
           <FilterField>
             <Select
-              aria-label="Filtrar por categoría"
+              aria-label={t.reportes.filtrarCategoria}
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
             >
-              <option value="">Todas las categorías</option>
+              <option value="">{t.reportes.todasCategorias}</option>
               {categoriaPorId.size > 0
                 ? [...categoriaPorId.values()].map((c) => (
                     <option key={c.id} value={c.id}>
@@ -391,11 +428,11 @@ export function ReporteStockPage() {
           </FilterField>
           <FilterField>
             <Select
-              aria-label="Filtrar por almacén"
+              aria-label={t.reportes.filtrarAlmacen}
               value={almacenId}
               onChange={(e) => setAlmacenId(e.target.value)}
             >
-              <option value="">Todos los almacenes</option>
+              <option value="">{t.reportes.todosAlmacenes}</option>
               {almacenPorId.size > 0
                 ? [...almacenPorId.values()].map((a) => (
                     <option key={a.id} value={a.id}>
@@ -409,29 +446,29 @@ export function ReporteStockPage() {
       </div>
 
       <div className="mt-6">
-        <Card title="Stock por producto">
+        <Card title={t.reportes.stock.porProducto}>
           <Table
             columns={columnasProducto}
             rows={porProducto}
             rowKey={(f) => f.producto_id}
             loading={saldosQuery.isLoading || productosQuery.isLoading}
             onRowClick={(f) => navigate(catalogoDetalle("productos", f.producto_id))}
-            emptyTitle="Sin stock registrado"
-            emptyDescription="No hay existencias para los criterios actuales."
+            emptyTitle={t.reportes.stock.sinStock}
+            emptyDescription={t.reportes.stock.sinExistencias}
           />
         </Card>
       </div>
 
       <div className="mt-6">
-        <Card title="Detalle por ubicación y lote">
+        <Card title={t.reportes.stock.detalle}>
           <Table
             columns={columnasDetalle}
             rows={filtrados}
             rowKey={(s) => `${s.ubicacion_id}-${s.producto_id}-${s.lote_id ?? ""}`}
             loading={saldosQuery.isLoading}
             onRowClick={(s) => navigate(catalogoDetalle("ubicaciones", s.ubicacion_id))}
-            emptyTitle="Sin detalle de stock"
-            emptyDescription="No hay filas de stock para los criterios actuales."
+            emptyTitle={t.reportes.stock.sinDetalle}
+            emptyDescription={t.reportes.stock.sinFilas}
           />
         </Card>
       </div>

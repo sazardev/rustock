@@ -13,6 +13,7 @@ import {
   type Decodificador,
 } from "../shared/escaner";
 import { mensajeError } from "../shared/format";
+import { useT } from "../shared/i18n";
 import { useCapturaEscaneo } from "../shared/useEscanerGlobal";
 import { useEscanerGlobal } from "../shared/escaner-global";
 import { PATH } from "../app/route-paths";
@@ -59,6 +60,7 @@ const TIPO_ICONO: Record<string, "producto" | "ubicacion" | "lote" | "caja"> = {
  * deja constancia del intento y ofrece a dónde ir.
  */
 export function EscanearPage() {
+  const t = useT();
   const [searchParams] = useSearchParams();
   const proposito = (searchParams.get("proposito") as PropositoEscaneo | null) ?? "CONSULTA";
 
@@ -193,8 +195,8 @@ export function EscanearPage() {
   return (
     <>
       <PageHeader
-        title="Escáner"
-        description="Lee un código con la cámara o con el lector de mano. El escaneo no modifica nada: resuelve el código y deja constancia de la lectura."
+        title={t.escaner.titulo}
+        description={t.escaner.descripcion}
         actions={
           soportaCamara() ? (
             <Button
@@ -205,18 +207,16 @@ export function EscanearPage() {
                 setCamaraActiva((v) => !v);
               }}
             >
-              {camaraActiva ? "Apagar cámara" : "Usar cámara"}
+              {camaraActiva ? t.escaner.apagarCamara : t.escaner.usarCamara}
             </Button>
           ) : null
         }
       />
 
-      {errorCamara ? (
-        <ErrorPanel title="No se pudo usar la cámara">{errorCamara}</ErrorPanel>
-      ) : null}
+      {errorCamara ? <ErrorPanel title={t.escaner.noSePudoCamara}>{errorCamara}</ErrorPanel> : null}
 
       {camaraActiva ? (
-        <Card title="Cámara">
+        <Card title={t.escaner.camara}>
           <Card.Body>
             <div className="escaner__visor">
               <video ref={videoRef} className="escaner__video" muted playsInline />
@@ -224,14 +224,14 @@ export function EscanearPage() {
             </div>
             <canvas ref={lienzoRef} className="escaner__lienzo" aria-hidden="true" />
             <Text as="p" size="sm" color="muted" className="mt-2">
-              Encuadra el código dentro del recuadro.
-              {motor === "wasm" ? " Este navegador usa el decodificador de respaldo." : ""}
+              {t.escaner.encuadra}
+              {motor === "wasm" ? t.escaner.motorRespaldo : ""}
             </Text>
           </Card.Body>
         </Card>
       ) : null}
 
-      <Card title="Código">
+      <Card title={t.escaner.codigo}>
         <Card.Body>
           <form
             className="form-stack"
@@ -240,18 +240,14 @@ export function EscanearPage() {
               enviar(codigo, "TECLADO");
             }}
           >
-            <Field
-              label="Código"
-              htmlFor="codigo"
-              help="El lector de mano escribe aquí y pulsa Enter por su cuenta."
-            >
+            <Field label={t.escaner.codigo} htmlFor="codigo" help={t.escaner.codigoAyuda}>
               <Input
                 id="codigo"
                 ref={entradaRef}
                 value={codigo}
                 autoComplete="off"
                 code
-                placeholder="SKU, código de barras, ubicación, lote o caja"
+                placeholder={t.escaner.codigoMarcador}
                 onChange={(e) => setCodigo(e.target.value)}
               />
             </Field>
@@ -261,7 +257,7 @@ export function EscanearPage() {
                 variant="primary"
                 disabled={mutacion.isPending || !codigo.trim()}
               >
-                {mutacion.isPending ? "Resolviendo…" : "Resolver"}
+                {mutacion.isPending ? t.escaner.resolviendo : t.escaner.resolver}
               </Button>
             </div>
           </form>
@@ -269,11 +265,11 @@ export function EscanearPage() {
       </Card>
 
       {mutacion.error ? (
-        <ErrorPanel title="No se pudo escanear">{mensajeError(mutacion.error)}</ErrorPanel>
+        <ErrorPanel title={t.escaner.noSePudoEscanear}>{mensajeError(mutacion.error)}</ErrorPanel>
       ) : null}
 
       {ultimo ? (
-        <Card title="Última lectura">
+        <Card title={t.escaner.ultimaLectura}>
           <Card.Body>
             <div className="escaner__resultado">
               <Icon
@@ -284,7 +280,7 @@ export function EscanearPage() {
               />
               <div className="escaner__resultado-texto">
                 <Badge tone={resuelto ? "success" : "warning"}>
-                  {resuelto ? resuelto.tipo : "Sin coincidencia"}
+                  {resuelto ? resuelto.tipo : t.escaner.sinCoincidencia}
                 </Badge>
                 <p className="escaner__resultado-etiqueta">
                   {resuelto ? resuelto.etiqueta : ultimo.motivo}
@@ -315,30 +311,24 @@ export function EscanearPage() {
 
             {avisoIlegible ? (
               <Text as="p" size="sm" color="muted" className="mt-4">
-                Llevas {ultimo?.fallos_recientes} lecturas sin resolver en los últimos minutos. Si
-                el código está impreso, puede estar dañado o mal generado: comprueba la etiqueta, y
-                si lo está, reimprímela desde la ficha del registro.
+                {t.escaner.avisoIlegible({ fallos: ultimo?.fallos_recientes ?? 0 })}
               </Text>
             ) : null}
           </Card.Body>
         </Card>
       ) : null}
 
-      <Card title="Qué se puede leer">
+      <Card title={t.escaner.queSePuedeLeer}>
         <Card.Body>
           <Text as="p" size="sm" color="muted">
-            Un código se resuelve contra el catálogo en este orden: código de barras de producto,
-            SKU, código de ubicación, número de lote y código de caja. La lectura queda registrada
-            con tu usuario, tu rol y la hora — también cuando no encuentra nada.
+            {t.escaner.ordenDeResolucion}
           </Text>
           <Text as="p" size="sm" color="muted" className="mt-2">
-            {lectorDetectado
-              ? "Lector de mano detectado: puedes escanear desde cualquier pantalla de Rustock, sin volver aquí."
-              : "Si conectas un lector de mano, funciona sin configurar nada: escanea desde cualquier pantalla y Rustock reconoce la lectura por su ritmo de tecleo."}
+            {lectorDetectado ? t.escaner.lectorDetectado : t.escaner.lectorNoDetectado}
           </Text>
           <div className="mt-4">
             <ButtonLink variant="secondary" href={PATH.movimientosNuevo}>
-              Registrar un movimiento
+              {t.escaner.registrarMovimiento}
             </ButtonLink>
           </div>
         </Card.Body>
