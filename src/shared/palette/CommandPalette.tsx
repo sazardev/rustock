@@ -25,7 +25,13 @@ import type { BuscarItem } from "../types";
 import { Icon, useToast, type IconName } from "../ui";
 import { useT, type Diccionario } from "../i18n";
 import { usePalette } from "./palette-store";
-import { comandosPalette, leerRecientes, registrarReciente, type ComandoPalette } from "./commands";
+import {
+  comandosPalette,
+  leerRecientes,
+  registrarReciente,
+  type ComandoPalette,
+  type GrupoComando,
+} from "./commands";
 import { indiceResaltado, puntuacionCandidato } from "./fuzzy";
 import {
   catalogoDetalle,
@@ -38,23 +44,29 @@ import { ESTADO_MOVIMIENTO_LABEL, TIPO_MOVIMIENTO_LABEL } from "../format";
 const DEBOUNCE_MS = 250;
 const MINIMO_DATOS = 2;
 
-/** Presentación de cada grupo de datos devuelto por el backend. */
-const GRUPO_DATOS: Record<string, { etiqueta: string; icono: IconName }> = {
-  productos: { etiqueta: "Productos", icono: "producto" },
-  ubicaciones: { etiqueta: "Ubicaciones", icono: "ubicacion" },
-  lotes: { etiqueta: "Lotes", icono: "lote" },
-  proveedores: { etiqueta: "Proveedores", icono: "proveedor" },
-  clientes: { etiqueta: "Clientes", icono: "cliente" },
-  almacenes: { etiqueta: "Almacenes", icono: "almacen" },
-  categorias: { etiqueta: "Categorías", icono: "categoria" },
-  uoms: { etiqueta: "Unidades de medida", icono: "uom" },
-  movimientos: { etiqueta: "Movimientos", icono: "movements" },
-  sesiones_inventario: { etiqueta: "Sesiones de inventario", icono: "inventario" },
-  alertas: { etiqueta: "Alertas", icono: "alerta" },
+/** Icono de cada grupo de datos devuelto por el backend. La etiqueta visible
+ *  sale del diccionario: la clave del recurso es la que da el backend. */
+const ICONO_DATOS: Record<string, IconName> = {
+  productos: "producto",
+  ubicaciones: "ubicacion",
+  lotes: "lote",
+  proveedores: "proveedor",
+  clientes: "cliente",
+  almacenes: "almacen",
+  categorias: "categoria",
+  uoms: "uom",
+  movimientos: "movements",
+  sesiones_inventario: "inventario",
+  alertas: "alerta",
 };
 
-function etiquetaGrupo(recurso: string): string {
-  return GRUPO_DATOS[recurso]?.etiqueta ?? recurso;
+/** Etiqueta visible de un grupo de comandos estáticos. */
+function etiquetaComando(t: Diccionario, clave: string): string {
+  return t.palette.grupos[clave as GrupoComando] ?? clave;
+}
+
+function etiquetaGrupo(t: Diccionario, recurso: string): string {
+  return t.palette.datos[recurso as keyof typeof t.palette.datos] ?? recurso;
 }
 
 /** Ruta de detalle exacta de un dato devuelto por `buscar` (DESIGN §5.5). */
@@ -131,16 +143,22 @@ interface FilaPalette {
   href: string;
 }
 
-/** Intención heurística de la consulta: qué grupo priorizar al ordenar. */
-function intencionConsulta(consulta: string): string | null {
+/**
+ * Intención heurística de la consulta: qué grupo priorizar al ordenar.
+ * Reconoce las dos lenguas de la interfaz, porque quien escribe «how to» y
+ * quien escribe «cómo» buscan lo mismo.
+ */
+function intencionConsulta(consulta: string): GrupoComando | null {
   const q = consulta.toLowerCase();
-  const acciones = /crear|nuevo|agregar|alta|registrar|dar de alta/.test(q);
+  const acciones = /crear|nuevo|agregar|alta|registrar|dar de alta|create|new|add|register/.test(q);
   const ayuda =
-    /como|qu[eé] es|gu[ií]a|ayuda|proceso|c[oó]mo|para qu[eé]|explicar|aprender|tutorial/.test(q);
-  const datos = /reporte|informe|lista|analizar|total|c[ua]nto/.test(q);
-  if (ayuda) return "Ayuda";
-  if (acciones) return "Acciones";
-  if (datos) return "Páginas";
+    /como|qu[eé] es|gu[ií]a|ayuda|proceso|c[oó]mo|para qu[eé]|explicar|aprender|tutorial|how|what is|guide|help|process|learn|explain/.test(
+      q,
+    );
+  const datos = /reporte|informe|lista|analizar|total|c[ua]nto|report|list|analyse|analyze/.test(q);
+  if (ayuda) return "ayuda";
+  if (acciones) return "acciones";
+  if (datos) return "paginas";
   return null;
 }
 
@@ -152,15 +170,17 @@ function boostRecientes(id: string, recientes: ReturnType<typeof leerRecientes>)
 /** Ordena dentro de cada grupo y, al agrupar, coloca primero el grupo de
  *  mayor intención cuando la consulta la sugiere. */
 function ordenarPorGrupo(
-  grupos: Array<{ titulo: string; filas: FilaPalette[] }>,
-  intencion: string | null,
+  grupos: Array<{ clave: string; titulo: string; filas: FilaPalette[] }>,
+  intencion: GrupoComando | null,
 ): Array<{ titulo: string; filas: FilaPalette[] }> {
-  if (!intencion) return grupos;
-  return grupos.toSorted((a, b) => {
-    const pa = a.titulo === intencion ? 0 : 1;
-    const pb = b.titulo === intencion ? 0 : 1;
-    return pa - pb;
-  });
+  const ordenados = intencion
+    ? grupos.toSorted((a, b) => {
+        const pa = a.clave === intencion ? 0 : 1;
+        const pb = b.clave === intencion ? 0 : 1;
+        return pa - pb;
+      })
+    : grupos;
+  return ordenados.map(({ titulo, filas }) => ({ titulo, filas }));
 }
 
 function comandoAFila(c: ComandoPalette): FilaPalette {
@@ -177,10 +197,10 @@ function comandoAFila(c: ComandoPalette): FilaPalette {
 function datoAFila(t: Diccionario, recurso: string, item: BuscarItem): FilaPalette {
   return {
     id: `${recurso}:${item.id}`,
-    grupo: etiquetaGrupo(recurso),
+    grupo: etiquetaGrupo(t, recurso),
     titulo: item.titulo,
     subtitulo: subtituloDeDato(t, recurso, item),
-    icono: GRUPO_DATOS[recurso]?.icono ?? "buscar",
+    icono: ICONO_DATOS[recurso] ?? "buscar",
     href: hrefDeDato(recurso, item),
   };
 }
@@ -264,7 +284,7 @@ export function CommandPalette() {
     if (!consulta.trim()) {
       if (recientes.length > 0) {
         gruposEstaticos.push({
-          titulo: "Recientes",
+          titulo: t.palette.recientes,
           filas: recientes.map((r) => ({
             id: r.id,
             grupo: r.grupo,
@@ -282,7 +302,9 @@ export function CommandPalette() {
         arr.push(f);
         porGrupo.set(f.grupo, arr);
       }
-      for (const [titulo, filas] of porGrupo) gruposEstaticos.push({ titulo, filas });
+      for (const [clave, filas] of porGrupo) {
+        gruposEstaticos.push({ titulo: etiquetaComando(t, clave), filas });
+      }
     } else {
       const intencion = intencionConsulta(consulta);
       const puntuados = comandos
@@ -305,14 +327,18 @@ export function CommandPalette() {
         arr.push(f);
         porGrupo.set(f.grupo, arr);
       }
-      const agrupados = [...porGrupo.entries()].map(([titulo, filas]) => ({ titulo, filas }));
+      const agrupados = [...porGrupo.entries()].map(([clave, filas]) => ({
+        clave,
+        titulo: etiquetaComando(t, clave),
+        filas,
+      }));
       gruposEstaticos.push(...ordenarPorGrupo(agrupados, intencion));
     }
 
     const gruposDatos: Array<{ titulo: string; filas: FilaPalette[] }> = [];
     for (const g of datosQuery.data?.grupos ?? []) {
       const filas = g.items.map((item) => datoAFila(t, g.recurso, item));
-      if (filas.length > 0) gruposDatos.push({ titulo: etiquetaGrupo(g.recurso), filas });
+      if (filas.length > 0) gruposDatos.push({ titulo: etiquetaGrupo(t, g.recurso), filas });
     }
 
     return [...gruposEstaticos, ...gruposDatos];
@@ -447,7 +473,7 @@ export function CommandPalette() {
       <button
         type="button"
         className="palette__scrim"
-        aria-label="Cerrar búsqueda"
+        aria-label={t.palette.cerrarBusqueda}
         onClick={cerrar}
         tabIndex={-1}
       />
@@ -455,7 +481,7 @@ export function CommandPalette() {
         className="palette__panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Buscar en todo Rustock"
+        aria-label={t.shell.buscarGlobal}
       >
         <div className="palette__bar">
           <Icon name="buscar" size={18} className="palette__bar-icono" aria-hidden="true" />
@@ -463,8 +489,8 @@ export function CommandPalette() {
             ref={inputRef}
             className="palette__input"
             type="text"
-            placeholder="Busca en todo: páginas, procesos, guías, productos, movimientos…"
-            aria-label="Buscar en todo Rustock"
+            placeholder={t.palette.marcador}
+            aria-label={t.shell.buscarGlobal}
             role="combobox"
             aria-expanded="true"
             aria-controls="palette-lista"
@@ -506,7 +532,7 @@ export function CommandPalette() {
                     </span>
                     <span className="palette__item-texto">
                       <span className="palette__item-titulo">
-                        {fila.grupo === "Recientes" || consultaActiva === "" ? (
+                        {consultaActiva === "" ? (
                           fila.titulo
                         ) : (
                           <TituloResaltado titulo={fila.titulo} consulta={consultaActiva} />
@@ -566,7 +592,7 @@ export function CommandPalette() {
                 </span>
               </>
             ) : (
-              "Sin coincidencias"
+              t.palette.sinCoincidencias
             )}
           </span>
           <span className="palette__footer-atajos">

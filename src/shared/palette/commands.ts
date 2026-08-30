@@ -19,7 +19,12 @@ import { PATH, ayudaModulo, catalogoNuevo } from "../../app/route-paths";
 import { AYUDA_GRUPOS, GLOSARIO, textoModulo } from "../../pages/ayuda/ayuda-data";
 import { MANUAL_GLOSARIO, MANUAL_PARTES, textoManual } from "../../pages/manual/manual-data";
 
-export type GrupoComando = "Páginas" | "Acciones" | "Ayuda" | "Manual";
+/**
+ * Clave estable del grupo. No es lo que se muestra: la etiqueta visible sale
+ * del diccionario al pintar, para que el agrupado y la heurística de intención
+ * no dependan del idioma activo.
+ */
+export type GrupoComando = "paginas" | "acciones" | "ayuda" | "manual";
 
 export interface ComandoPalette {
   id: string;
@@ -37,88 +42,92 @@ const ROL_OPERACION = new Set(["ADMIN", "GERENTE", "ENCARGADO_ALMACEN", "OPERADO
 const ROL_CATALOGO = new Set(["ADMIN", "GERENTE", "ENCARGADO_ALMACEN"]);
 const ROL_ADMIN = new Set(["ADMIN"]);
 
-const REPORTES: Array<ComandoPalette> = [
-  {
-    id: "pagina:reporte-stock",
-    titulo: "Reporte de stock",
-    subtitulo: "Saldos por producto, ubicación y lote",
-    icono: "reportes",
-    grupo: "Páginas",
-    href: PATH.reporteStock,
-  },
-  {
-    id: "pagina:reporte-movimientos",
-    titulo: "Reporte de movimientos",
-    subtitulo: "Entradas, salidas, traslados y ajustes por periodo",
-    icono: "reportes",
-    grupo: "Páginas",
-    href: PATH.reporteMovimientos,
-  },
-  {
-    id: "pagina:reporte-entradas",
-    titulo: "Reporte de entradas",
-    subtitulo: "Compras y recepciones por proveedor",
-    icono: "entrada",
-    grupo: "Páginas",
-    href: PATH.reporteEntradas,
-  },
-  {
-    id: "pagina:reporte-salidas",
-    titulo: "Reporte de salidas",
-    subtitulo: "Despachos por cliente",
-    icono: "salida",
-    grupo: "Páginas",
-    href: PATH.reporteSalidas,
-  },
-  {
-    id: "pagina:reporte-mermas",
-    titulo: "Reporte de mermas y ajustes",
-    subtitulo: "Pérdidas y correcciones de stock",
-    icono: "ajuste",
-    grupo: "Páginas",
-    href: PATH.reporteMermasAjustes,
-  },
-  {
-    id: "pagina:reporte-vencimientos",
-    titulo: "Reporte de vencimientos",
-    subtitulo: "Lotes por vencer y vencidos",
-    icono: "calendario",
-    grupo: "Páginas",
-    href: PATH.reporteVencimientos,
-  },
-  {
-    id: "pagina:reporte-kardex",
-    titulo: "Reporte kardex",
-    subtitulo: "Tarjeta de stock de un producto o lote",
-    icono: "historial",
-    grupo: "Páginas",
-    href: PATH.reporteKardex,
-  },
-  {
-    id: "pagina:reporte-precision",
-    titulo: "Reporte de precisión",
-    subtitulo: "Exactitud de las sesiones de inventario",
-    icono: "inventario",
-    grupo: "Páginas",
-    href: PATH.reportePrecision,
-  },
-  {
-    id: "pagina:reporte-auditoria",
-    titulo: "Reporte de auditoría",
-    subtitulo: "Quién hizo qué en el sistema",
-    icono: "historial",
-    grupo: "Páginas",
-    href: PATH.reporteAuditoria,
-  },
-  {
-    id: "pagina:reporte-usuarios",
-    titulo: "Reporte de usuarios",
-    subtitulo: "Desempeño por usuario y periodo",
-    icono: "usuario",
-    grupo: "Páginas",
-    href: PATH.reporteUsuarios,
-  },
-];
+/** Los diez reportes, en el idioma activo. */
+function reportes(t: Diccionario): ComandoPalette[] {
+  const r = t.palette.reportes;
+  return [
+    {
+      id: "pagina:reporte-stock",
+      titulo: r.stock,
+      subtitulo: r.stockDesc,
+      icono: "reportes",
+      grupo: "paginas",
+      href: PATH.reporteStock,
+    },
+    {
+      id: "pagina:reporte-movimientos",
+      titulo: r.movimientos,
+      subtitulo: r.movimientosDesc,
+      icono: "reportes",
+      grupo: "paginas",
+      href: PATH.reporteMovimientos,
+    },
+    {
+      id: "pagina:reporte-entradas",
+      titulo: r.entradas,
+      subtitulo: r.entradasDesc,
+      icono: "entrada",
+      grupo: "paginas",
+      href: PATH.reporteEntradas,
+    },
+    {
+      id: "pagina:reporte-salidas",
+      titulo: r.salidas,
+      subtitulo: r.salidasDesc,
+      icono: "salida",
+      grupo: "paginas",
+      href: PATH.reporteSalidas,
+    },
+    {
+      id: "pagina:reporte-mermas",
+      titulo: r.mermas,
+      subtitulo: r.mermasDesc,
+      icono: "ajuste",
+      grupo: "paginas",
+      href: PATH.reporteMermasAjustes,
+    },
+    {
+      id: "pagina:reporte-vencimientos",
+      titulo: r.vencimientos,
+      subtitulo: r.vencimientosDesc,
+      icono: "calendario",
+      grupo: "paginas",
+      href: PATH.reporteVencimientos,
+    },
+    {
+      id: "pagina:reporte-kardex",
+      titulo: r.kardex,
+      subtitulo: r.kardexDesc,
+      icono: "historial",
+      grupo: "paginas",
+      href: PATH.reporteKardex,
+    },
+    {
+      id: "pagina:reporte-precision",
+      titulo: r.precision,
+      subtitulo: r.precisionDesc,
+      icono: "inventario",
+      grupo: "paginas",
+      href: PATH.reportePrecision,
+    },
+    {
+      id: "pagina:reporte-auditoria",
+      titulo: r.auditoria,
+      subtitulo: r.auditoriaDesc,
+      icono: "historial",
+      grupo: "paginas",
+      href: PATH.reporteAuditoria,
+    },
+    {
+      id: "pagina:reporte-usuarios",
+      titulo: r.usuarios,
+      subtitulo: r.usuariosDesc,
+      icono: "usuario",
+      grupo: "paginas",
+      href: PATH.reporteUsuarios,
+    },
+  ];
+}
 
 /** Páginas: navegación real del sidebar + destinos fuera de él. */
 function paginas(t: Diccionario): ComandoPalette[] {
@@ -127,42 +136,43 @@ function paginas(t: Diccionario): ComandoPalette[] {
     titulo: item.label,
     subtitulo: item.descripcion,
     icono: item.icon,
-    grupo: "Páginas" as const,
+    grupo: "paginas" as const,
     href: item.href,
   }));
   const extras: ComandoPalette[] = [
     {
       id: "pagina:perfil",
-      titulo: "Perfil",
-      subtitulo: "Cuenta, preferencias y cambio de contraseña",
+      titulo: t.palette.perfil,
+      subtitulo: t.palette.perfilDesc,
       icono: "usuario",
-      grupo: "Páginas",
+      grupo: "paginas",
       href: PATH.perfil,
     },
     {
       id: "pagina:glosario",
-      titulo: "Glosario de términos",
-      subtitulo: "Definiciones de SKU, UOM, lote, FEFO y más",
+      titulo: t.palette.glosario,
+      subtitulo: t.palette.glosarioDesc,
       icono: "ayuda",
-      grupo: "Páginas",
+      grupo: "paginas",
       href: PATH.ayudaGlosario,
     },
-    ...REPORTES,
+    ...reportes(t),
   ];
   return [...delNav, ...extras];
 }
 
 /** Acciones de creación, gatadas por rol. */
-function acciones(rolCodigo: string | undefined): ComandoPalette[] {
+function acciones(rolCodigo: string | undefined, t: Diccionario): ComandoPalette[] {
+  const a = t.palette.acciones2;
   const permite = (roles: Set<string>) => (rolCodigo ? roles.has(rolCodigo) : false);
   const todas: Array<{ comando: ComandoPalette; roles: Set<string> }> = [
     {
       comando: {
         id: "accion:movimiento",
-        titulo: "Nuevo movimiento",
-        subtitulo: "Entrada, salida, traslado o ajuste de stock",
+        titulo: a.movimiento,
+        subtitulo: a.movimientoDesc,
         icono: "movements",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: PATH.movimientosNuevo,
       },
       roles: ROL_OPERACION,
@@ -170,10 +180,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:inventario",
-        titulo: "Nueva sesión de inventario",
-        subtitulo: "Conteo completo o cíclico",
+        titulo: a.inventario,
+        subtitulo: a.inventarioDesc,
         icono: "inventario",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: PATH.inventarioNuevo,
       },
       roles: ROL_OPERACION,
@@ -181,9 +191,9 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:almacen",
-        titulo: "Nuevo almacén",
+        titulo: a.almacen,
         icono: "almacen",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("almacenes"),
       },
       roles: ROL_CATALOGO,
@@ -191,10 +201,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:zona",
-        titulo: "Nueva zona",
-        subtitulo: "División del almacén",
+        titulo: a.zona,
+        subtitulo: a.zonaDesc,
         icono: "zona",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: "/zonas/nuevo",
       },
       roles: ROL_CATALOGO,
@@ -202,10 +212,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:rack",
-        titulo: "Nuevo rack",
-        subtitulo: "Estructura dentro de una zona",
+        titulo: a.rack,
+        subtitulo: a.rackDesc,
         icono: "zona",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: "/racks/nuevo",
       },
       roles: ROL_CATALOGO,
@@ -213,10 +223,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:seccion",
-        titulo: "Nueva sección",
-        subtitulo: "Subdivisión de un rack",
+        titulo: a.seccion,
+        subtitulo: a.seccionDesc,
         icono: "zona",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: "/secciones/nuevo",
       },
       roles: ROL_CATALOGO,
@@ -224,10 +234,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:ubicacion",
-        titulo: "Nueva ubicación",
-        subtitulo: "Punto de almacenamiento direccionable",
+        titulo: a.ubicacion,
+        subtitulo: a.ubicacionDesc,
         icono: "ubicacion",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("ubicaciones"),
       },
       roles: ROL_CATALOGO,
@@ -235,10 +245,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:producto",
-        titulo: "Nuevo producto",
-        subtitulo: "SKU, unidad de medida y controles",
+        titulo: a.producto,
+        subtitulo: a.productoDesc,
         icono: "producto",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("productos"),
       },
       roles: ROL_CATALOGO,
@@ -246,10 +256,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:lote",
-        titulo: "Nuevo lote",
-        subtitulo: "Lote de un producto que controla lote",
+        titulo: a.lote,
+        subtitulo: a.loteDesc,
         icono: "lote",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("lotes"),
       },
       roles: ROL_CATALOGO,
@@ -257,10 +267,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:categoria",
-        titulo: "Nueva categoría",
-        subtitulo: "Clasificación jerárquica",
+        titulo: a.categoria,
+        subtitulo: a.categoriaDesc,
         icono: "categoria",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("categorias"),
       },
       roles: ROL_CATALOGO,
@@ -268,10 +278,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:uom",
-        titulo: "Nueva unidad de medida",
-        subtitulo: "UOM y factor de conversión",
+        titulo: a.uom,
+        subtitulo: a.uomDesc,
         icono: "uom",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("uoms"),
       },
       roles: ROL_CATALOGO,
@@ -279,10 +289,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:proveedor",
-        titulo: "Nuevo proveedor",
-        subtitulo: "Origen de compras y recepciones",
+        titulo: a.proveedor,
+        subtitulo: a.proveedorDesc,
         icono: "proveedor",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("proveedores"),
       },
       roles: ROL_CATALOGO,
@@ -290,10 +300,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:cliente",
-        titulo: "Nuevo cliente",
-        subtitulo: "Destino de despachos",
+        titulo: a.cliente,
+        subtitulo: a.clienteDesc,
         icono: "cliente",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: catalogoNuevo("clientes"),
       },
       roles: ROL_CATALOGO,
@@ -301,10 +311,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:usuario",
-        titulo: "Nuevo usuario",
-        subtitulo: "Cuenta con rol y permisos",
+        titulo: a.usuario,
+        subtitulo: a.usuarioDesc,
         icono: "usuario",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: "/usuarios/nuevo",
       },
       roles: ROL_ADMIN,
@@ -312,10 +322,10 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
     {
       comando: {
         id: "accion:sucursal",
-        titulo: "Nueva sucursal",
-        subtitulo: "Punto de operación de la empresa",
+        titulo: a.sucursal,
+        subtitulo: a.sucursalDesc,
         icono: "ubicacion",
-        grupo: "Acciones",
+        grupo: "acciones",
         href: "/sucursales/nuevo",
       },
       roles: ROL_ADMIN,
@@ -325,13 +335,13 @@ function acciones(rolCodigo: string | undefined): ComandoPalette[] {
 }
 
 /** Ayuda: guías de módulo + procesos del negocio + términos del glosario. */
-function palabrasAyuda(): ComandoPalette[] {
+function palabrasAyuda(t: Diccionario): ComandoPalette[] {
   const modulos: ComandoPalette[] = AYUDA_GRUPOS.flatMap((g) => g.modulos).map((m) => ({
     id: `ayuda:${m.id}`,
     titulo: m.titulo,
-    subtitulo: `Guía de uso · ${m.resumen}`,
+    subtitulo: t.palette.guiaDeUso({ resumen: m.resumen }),
     icono: m.icono,
-    grupo: "Ayuda",
+    grupo: "ayuda",
     href: ayudaModulo(m.id),
     keywords: [
       m.resumen,
@@ -343,27 +353,27 @@ function palabrasAyuda(): ComandoPalette[] {
       .filter(Boolean)
       .join(" "),
   }));
-  const glosario: ComandoPalette[] = GLOSARIO.map((t) => ({
-    id: `glosario:${t.id}`,
-    titulo: t.termino,
-    subtitulo: t.definicion,
+  const glosario: ComandoPalette[] = GLOSARIO.map((termino) => ({
+    id: `glosario:${termino.id}`,
+    titulo: termino.termino,
+    subtitulo: termino.definicion,
     icono: "historial",
-    grupo: "Ayuda",
-    href: `${PATH.ayudaGlosario}#${t.id}`,
-    keywords: t.definicion,
+    grupo: "ayuda",
+    href: `${PATH.ayudaGlosario}#${termino.id}`,
+    keywords: termino.definicion,
   }));
   return [...modulos, ...glosario];
 }
 
 /** Manual: capítulos + glosario (indexado igual que Ayuda, pero grupo Manual). */
-function palabrasManual(): ComandoPalette[] {
+function palabrasManual(t: Diccionario): ComandoPalette[] {
   const capitulos: ComandoPalette[] = MANUAL_PARTES.flatMap((parte) => parte.capitulos).map(
     (c) => ({
       id: `manual:${c.id}`,
       titulo: c.titulo,
-      subtitulo: `Manual · ${c.resumen}`,
+      subtitulo: t.palette.delManual({ resumen: c.resumen }),
       icono: c.icono,
-      grupo: "Manual",
+      grupo: "manual",
       href: `/manual/${c.id}`,
       keywords: [
         c.resumen,
@@ -376,23 +386,23 @@ function palabrasManual(): ComandoPalette[] {
         .join(" "),
     }),
   );
-  const glosario: ComandoPalette[] = MANUAL_GLOSARIO.map((t) => ({
-    id: `manual-glosario:${t.id}`,
-    titulo: t.termino,
-    subtitulo: t.definicion,
+  const glosario: ComandoPalette[] = MANUAL_GLOSARIO.map((termino) => ({
+    id: `manual-glosario:${termino.id}`,
+    titulo: termino.termino,
+    subtitulo: termino.definicion,
     icono: "historial",
-    grupo: "Manual",
-    href: `/manual/m08-glosario#${t.id}`,
-    keywords: t.definicion,
+    grupo: "manual",
+    href: `/manual/m08-glosario#${termino.id}`,
+    keywords: termino.definicion,
   }));
   const imprimir: ComandoPalette = {
     id: "manual:imprimir",
-    titulo: "Imprimir manual completo (PDF)",
-    subtitulo: "Todo el manual en un solo documento A4, listo para Guardar como PDF",
+    titulo: t.palette.imprimirManual,
+    subtitulo: t.palette.imprimirManualDesc,
     icono: "ayuda",
-    grupo: "Manual",
+    grupo: "manual",
     href: "/manual/imprimir",
-    keywords: "imprimir pdf todo documento completo portada indice a4 guardar como pdf",
+    keywords: t.palette.imprimirManualKeywords,
   };
   return [...capitulos, ...glosario, imprimir];
 }
@@ -405,9 +415,9 @@ export function comandosPalette(
 ): ComandoPalette[] {
   return [
     ...paginas(t),
-    ...acciones(rolCodigo),
-    ...(mostrarAyuda ? palabrasAyuda() : []),
-    ...palabrasManual(),
+    ...acciones(rolCodigo, t),
+    ...(mostrarAyuda ? palabrasAyuda(t) : []),
+    ...palabrasManual(t),
   ];
 }
 
