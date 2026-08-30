@@ -8,6 +8,18 @@ y el versionado [SemVer](https://semver.org/lang/es/).
 
 ### Bug Fixes
 
+- **i18n:** Seis fugas y dos bugs que solo salen usando la app
+
+- Dos fallos de lógica encontrados ejercitando las reglas de negocio
+
+- **i18n:** El aviso de sesión cerrada llevaba el enum en crudo
+
+- Una fuga en Configuración y el Manual decía lo que la app no hace
+
+## [0.5.0] - 2026-08-30
+
+### Bug Fixes
+
 - **tests:** Quita conversiones inútiles que clippy 1.98 rechaza
 
 - **css:** Define las variantes responsivas de rejilla que faltaban
