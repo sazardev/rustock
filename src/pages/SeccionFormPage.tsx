@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { esPaginado } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -31,19 +32,24 @@ import {
   Textarea,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().optional(),
-  nivel: z.string().optional(),
-  descripcion: z.string().optional(),
-  rack_id: z.string().trim().min(1, "Selecciona un rack"),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().optional(),
+    nivel: z.string().optional(),
+    descripcion: z.string().optional(),
+    rack_id: z.string().trim().min(1, t.formularios.seleccionaRack),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_RACKS = ["racks", "selector"] as const;
 
 export function SeccionFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -135,25 +141,29 @@ export function SeccionFormPage() {
   });
 
   if (esEdicion && seccionQuery.isLoading) {
-    return <PageHeader title="Editar sección" description="Cargando…" />;
+    return <PageHeader title={t.formularios.seccion.editar} description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar sección — ${seccionQuery.data?.codigo ?? ""}` : "Nueva sección"}
+        title={
+          esEdicion
+            ? `${t.formularios.seccion.editar} — ${seccionQuery.data?.codigo ?? ""}`
+            : t.formularios.seccion.nueva
+        }
         description={
           retornaAFormulario
-            ? "Crea la sección y vuelve al formulario anterior con ella seleccionada."
-            : "Una sección es una subdivisión de un rack (niveles, pasillos, bahías)."
+            ? t.formularios.seccion.volverConSeleccion
+            : t.formularios.seccion.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar la sección" className="mb-4">
+              <ErrorPanel title={t.formularios.seccion.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -163,26 +173,27 @@ export function SeccionFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={
-                  esEdicion
-                    ? "El código no se puede modificar."
-                    : "Único dentro del almacén (ej. RACK-A1-N2)."
-                }
+                help={esEdicion ? t.formularios.codigoInmutable : t.formularios.seccion.codigoAyuda}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre">
+              <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field label="Nivel" htmlFor="nivel">
                 <Input id="nivel" placeholder="Nivel A, B, C…" {...register("nivel")} />
               </Field>
-              <Field label="Rack" htmlFor="rack_id" required error={errors.rack_id?.message}>
+              <Field
+                label={t.campos.rack}
+                htmlFor="rack_id"
+                required
+                error={errors.rack_id?.message}
+              >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="rack_id"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       disabled={esEdicion}
                       {...register("rack_id")}
                     >
@@ -196,13 +207,13 @@ export function SeccionFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="rack_id" rutaNueva={catalogoNuevo("racks")}>
-                      Nuevo rack
+                      {t.formularios.rack.nuevo}
                     </CrearRapido>
                   ) : null}
                 </div>
               </Field>
             </FormGrid>
-            <Field label="Descripción" htmlFor="descripcion">
+            <Field label={t.comun.descripcion} htmlFor="descripcion">
               <Textarea id="descripcion" rows={3} {...register("descripcion")} />
             </Field>
           </Card.Body>
@@ -210,7 +221,11 @@ export function SeccionFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear sección"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.seccion.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -222,7 +237,7 @@ export function SeccionFormPage() {
                   : catalogoLista("secciones")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { esPaginado } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -31,20 +32,25 @@ import {
   Textarea,
 } from "../shared/ui";
 
-const esquema = z.object({
-  numero: z.string().trim().min(1, "El número de lote es obligatorio"),
-  producto_id: z.string().trim().min(1, "El producto es obligatorio"),
-  fecha_fabricacion: z.string().optional(),
-  fecha_vencimiento: z.string().optional(),
-  origen: z.string().optional(),
-  notas: z.string().optional(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    numero: z.string().trim().min(1, t.formularios.lote.numeroObligatorio),
+    producto_id: z.string().trim().min(1, t.formularios.lote.productoObligatorio),
+    fecha_fabricacion: z.string().optional(),
+    fecha_vencimiento: z.string().optional(),
+    origen: z.string().optional(),
+    notas: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_PRODUCTOS = ["productos", "selector"] as const;
 
 export function LoteFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const [searchParams] = useSearchParams();
@@ -169,7 +175,7 @@ export function LoteFormPage() {
     if (productoSeleccionado?.controla_vencimiento && !v.fecha_vencimiento) {
       setFieldError("fecha_vencimiento", {
         type: "custom",
-        message: "Este producto controla vencimiento: la fecha es obligatoria",
+        message: t.formularios.lote.vencimientoObligatorio,
       });
       return;
     }
@@ -202,7 +208,7 @@ export function LoteFormPage() {
   });
 
   if (esEdicion && loteQuery.isLoading) {
-    return <PageHeader title="Editar lote" description="Cargando…" />;
+    return <PageHeader title={t.formularios.lote.editar} description="Cargando…" />;
   }
 
   return (
@@ -210,25 +216,25 @@ export function LoteFormPage() {
       <PageHeader
         title={
           esEdicion
-            ? `Editar lote — ${loteQuery.data?.numero ?? ""}`
+            ? `${t.formularios.lote.editar} — ${loteQuery.data?.numero ?? ""}`
             : duplicarDe
-              ? "Duplicar lote"
-              : "Nuevo lote"
+              ? t.formularios.lote.duplicar
+              : t.formularios.lote.nuevo
         }
         description={
           retornaAFormulario
-            ? "Crea el lote y vuelve al formulario anterior con él seleccionado."
+            ? t.formularios.lote.volverConSeleccion
             : duplicarDe
-              ? "Los datos del lote original están precargados. Define un número nuevo (único por producto)."
-              : "Un lote agrupa unidades con origen y fecha comunes; los productos que controlan lote lo exigen en todo movimiento."
+              ? t.formularios.lote.duplicarDesc
+              : t.formularios.lote.descripcion
         }
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el lote" className="mb-4">
+              <ErrorPanel title={t.formularios.lote.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -238,7 +244,7 @@ export function LoteFormPage() {
                 htmlFor="numero"
                 required
                 error={errors.numero?.message}
-                help={esEdicion ? "El número de lote no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.lote.numeroInmutable : undefined}
               >
                 <Input id="numero" code disabled={esEdicion} {...register("numero")} />
               </Field>
@@ -247,13 +253,13 @@ export function LoteFormPage() {
                 htmlFor="producto_id"
                 required
                 error={errors.producto_id?.message}
-                help={esEdicion ? "El producto no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.lote.productoInmutable : undefined}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="producto_id"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       disabled={esEdicion}
                       {...register("producto_id")}
                     >
@@ -271,16 +277,16 @@ export function LoteFormPage() {
                   ) : null}
                 </div>
               </Field>
-              <Field label="Fecha de fabricación" htmlFor="fecha_fabricacion">
+              <Field label={t.formularios.lote.fechaFabricacion} htmlFor="fecha_fabricacion">
                 <Input id="fecha_fabricacion" type="date" {...register("fecha_fabricacion")} />
               </Field>
               <Field
-                label="Fecha de vencimiento"
+                label={t.formularios.lote.fechaVencimiento}
                 htmlFor="fecha_vencimiento"
                 error={errors.fecha_vencimiento?.message}
                 help={
                   productoSeleccionado?.controla_vencimiento
-                    ? "Este producto controla vencimiento: la fecha es obligatoria."
+                    ? t.formularios.lote.vencimientoAyuda
                     : undefined
                 }
               >
@@ -290,7 +296,7 @@ export function LoteFormPage() {
                 <Input id="origen" {...register("origen")} />
               </Field>
             </FormGrid>
-            <Field label="Notas" htmlFor="notas">
+            <Field label={t.comun.notas} htmlFor="notas">
               <Textarea id="notas" rows={3} {...register("notas")} />
             </Field>
           </Card.Body>
@@ -298,7 +304,11 @@ export function LoteFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear lote"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.lote.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -310,7 +320,7 @@ export function LoteFormPage() {
                   : catalogoLista("lotes")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

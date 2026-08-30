@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { PosicionFormCard } from "../shared/posicion-form-card";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -39,19 +40,24 @@ import {
   useToast,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().optional(),
-  tipo: z.string().optional(),
-  zona_id: z.string().trim().min(1, "Selecciona una zona"),
-  pasillo_id: z.string().optional(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().optional(),
+    tipo: z.string().optional(),
+    zona_id: z.string().trim().min(1, t.formularios.seleccionaZona),
+    pasillo_id: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_ZONAS = ["zonas", "selector"] as const;
 
 export function RackFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -163,31 +169,35 @@ export function RackFormPage() {
     }) => moverRack(id as string, pos),
     onSuccess: () => {
       invalidarRecurso(queryClient, "racks", "rack");
-      toast("Posición guardada.", "success");
+      toast(t.formularios.posicionGuardada, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
 
   if (esEdicion && rackQuery.isLoading) {
-    return <PageHeader title="Editar rack" description="Cargando…" />;
+    return <PageHeader title={t.formularios.rack.editar} description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar rack — ${rackQuery.data?.codigo ?? ""}` : "Nuevo rack"}
+        title={
+          esEdicion
+            ? `${t.formularios.rack.editar} — ${rackQuery.data?.codigo ?? ""}`
+            : t.formularios.rack.nuevo
+        }
         description={
           retornaAFormulario
-            ? "Crea el rack y vuelve al formulario anterior con él seleccionado."
-            : "Un rack es una estructura de almacenamiento dentro de una zona (estantería, pallet, nevera…)."
+            ? t.formularios.rack.volverConSeleccion
+            : t.formularios.rack.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el rack" className="mb-4">
+              <ErrorPanel title={t.formularios.rack.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -197,26 +207,27 @@ export function RackFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={
-                  esEdicion
-                    ? "El código no se puede modificar."
-                    : "Único dentro del almacén (ej. RACK-A1)."
-                }
+                help={esEdicion ? t.formularios.codigoInmutable : t.formularios.rack.codigoAyuda}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre">
+              <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Tipo" htmlFor="tipo">
+              <Field label={t.comun.tipo} htmlFor="tipo">
                 <Input id="tipo" placeholder="Estantería, pallet, nevera…" {...register("tipo")} />
               </Field>
-              <Field label="Zona" htmlFor="zona_id" required error={errors.zona_id?.message}>
+              <Field
+                label={t.campos.zona}
+                htmlFor="zona_id"
+                required
+                error={errors.zona_id?.message}
+              >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="zona_id"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       disabled={esEdicion}
                       {...register("zona_id")}
                     >
@@ -229,19 +240,15 @@ export function RackFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="zona_id" rutaNueva={catalogoNuevo("zonas")}>
-                      Nueva zona
+                      {t.formularios.zona.nueva}
                     </CrearRapido>
                   ) : null}
                 </div>
               </Field>
-              <Field
-                label="Pasillo"
-                htmlFor="pasillo_id"
-                help="Opcional: agrupa el rack dentro de un pasillo de esta zona."
-              >
+              <Field label="Pasillo" htmlFor="pasillo_id" help={t.formularios.rack.pasilloAyuda}>
                 <Select
                   id="pasillo_id"
-                  placeholder="Sin pasillo"
+                  placeholder={t.formularios.rack.sinPasillo}
                   disabled={!zonaIdActual}
                   {...register("pasillo_id")}
                 >
@@ -258,7 +265,11 @@ export function RackFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear rack"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.rack.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -270,7 +281,7 @@ export function RackFormPage() {
                   : catalogoLista("racks")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

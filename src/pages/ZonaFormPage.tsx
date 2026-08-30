@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { PosicionFormCard } from "../shared/posicion-form-card";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -33,18 +34,23 @@ import {
   useToast,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
-  descripcion: z.string().optional(),
-  almacen_id: z.string().trim().min(1, "Selecciona un almacén"),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().trim().min(1, t.formularios.nombreObligatorio),
+    descripcion: z.string().optional(),
+    almacen_id: z.string().trim().min(1, t.formularios.seleccionaAlmacen),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_ALMACENES = ["almacenes", "selector"] as const;
 
 export function ZonaFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -140,31 +146,35 @@ export function ZonaFormPage() {
     }) => moverZona(id as string, pos),
     onSuccess: () => {
       invalidarRecurso(queryClient, "zonas", "zona");
-      toast("Posición guardada.", "success");
+      toast(t.formularios.posicionGuardada, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
 
   if (esEdicion && zonaQuery.isLoading) {
-    return <PageHeader title="Editar zona" description="Cargando…" />;
+    return <PageHeader title={t.formularios.zona.editar} description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar zona — ${zonaQuery.data?.codigo ?? ""}` : "Nueva zona"}
+        title={
+          esEdicion
+            ? `${t.formularios.zona.editar} — ${zonaQuery.data?.codigo ?? ""}`
+            : t.formularios.zona.nueva
+        }
         description={
           retornaAFormulario
-            ? "Crea la zona y vuelve al formulario anterior con ella seleccionada."
-            : "Una zona es una división lógica o física del almacén (ej. Frío, Picking, Recepción)."
+            ? t.formularios.zona.volverConSeleccion
+            : t.formularios.zona.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar la zona" className="mb-4">
+              <ErrorPanel title={t.formularios.zona.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -174,15 +184,16 @@ export function ZonaFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={
-                  esEdicion
-                    ? "El código no se puede modificar."
-                    : "Único dentro del almacén (ej. Z-01)."
-                }
+                help={esEdicion ? t.formularios.codigoInmutable : t.formularios.zona.codigoAyuda}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+              <Field
+                label={t.comun.nombre}
+                htmlFor="nombre"
+                required
+                error={errors.nombre?.message}
+              >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field
@@ -195,7 +206,7 @@ export function ZonaFormPage() {
                   <div className="flex-1">
                     <Select
                       id="almacen_id"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       disabled={esEdicion}
                       {...register("almacen_id")}
                     >
@@ -214,7 +225,7 @@ export function ZonaFormPage() {
                 </div>
               </Field>
             </FormGrid>
-            <Field label="Descripción" htmlFor="descripcion">
+            <Field label={t.comun.descripcion} htmlFor="descripcion">
               <Textarea id="descripcion" rows={3} {...register("descripcion")} />
             </Field>
           </Card.Body>
@@ -222,7 +233,11 @@ export function ZonaFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear zona"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.zona.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -234,7 +249,7 @@ export function ZonaFormPage() {
                   : catalogoLista("zonas")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

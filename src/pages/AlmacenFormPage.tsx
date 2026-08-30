@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { usePeticionCreacion, urlConRegreso, urlConSeleccion } from "../shared/creacion-rapida";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   ButtonLink,
@@ -22,16 +23,21 @@ import {
   Textarea,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
-  descripcion: z.string().optional(),
-  direccion: z.string().optional(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().trim().min(1, t.formularios.nombreObligatorio),
+    descripcion: z.string().optional(),
+    direccion: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 export function AlmacenFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -93,25 +99,29 @@ export function AlmacenFormPage() {
   });
 
   if (esEdicion && almacenQuery.isLoading) {
-    return <PageHeader title="Editar almacén" description="Cargando…" />;
+    return <PageHeader title={t.formularios.almacen.editar} description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar almacén — ${almacenQuery.data?.codigo ?? ""}` : "Nuevo almacén"}
+        title={
+          esEdicion
+            ? `${t.formularios.almacen.editar} — ${almacenQuery.data?.codigo ?? ""}`
+            : t.formularios.almacen.nuevo
+        }
         description={
           retornaAFormulario
-            ? "Crea el almacén y vuelve al formulario anterior con él seleccionado."
-            : "Un almacén es la raíz del árbol físico: toda la operación pertenece a exactamente un almacén."
+            ? t.formularios.almacen.volverConSeleccion
+            : t.formularios.almacen.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el almacén" className="mb-4">
+              <ErrorPanel title={t.formularios.almacen.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -121,18 +131,23 @@ export function AlmacenFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={esEdicion ? "El código no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.codigoInmutable : undefined}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+              <Field
+                label={t.comun.nombre}
+                htmlFor="nombre"
+                required
+                error={errors.nombre?.message}
+              >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field label="Dirección" htmlFor="direccion">
                 <Input id="direccion" {...register("direccion")} />
               </Field>
             </FormGrid>
-            <Field label="Descripción" htmlFor="descripcion">
+            <Field label={t.comun.descripcion} htmlFor="descripcion">
               <Textarea id="descripcion" rows={3} {...register("descripcion")} />
             </Field>
           </Card.Body>
@@ -140,7 +155,11 @@ export function AlmacenFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear almacén"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.almacen.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -152,7 +171,7 @@ export function AlmacenFormPage() {
                   : catalogoLista("almacenes")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

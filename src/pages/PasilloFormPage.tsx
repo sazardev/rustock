@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { PosicionFormCard } from "../shared/posicion-form-card";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -38,17 +39,22 @@ import {
   useToast,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().optional(),
-  zona_id: z.string().trim().min(1, "Selecciona una zona"),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().optional(),
+    zona_id: z.string().trim().min(1, t.formularios.seleccionaZona),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_ZONAS = ["zonas", "selector"] as const;
 
 export function PasilloFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -131,31 +137,35 @@ export function PasilloFormPage() {
     }) => moverPasillo(id as string, pos),
     onSuccess: () => {
       invalidarRecurso(queryClient, "pasillos", "pasillo");
-      toast("Posición guardada.", "success");
+      toast(t.formularios.posicionGuardada, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
 
   if (esEdicion && pasilloQuery.isLoading) {
-    return <PageHeader title="Editar pasillo" description="Cargando…" />;
+    return <PageHeader title={t.formularios.pasillo.editar} description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar pasillo — ${pasilloQuery.data?.codigo ?? ""}` : "Nuevo pasillo"}
+        title={
+          esEdicion
+            ? `${t.formularios.pasillo.editar} — ${pasilloQuery.data?.codigo ?? ""}`
+            : t.formularios.pasillo.nuevo
+        }
         description={
           retornaAFormulario
-            ? "Crea el pasillo y vuelve al formulario anterior con él seleccionado."
-            : "Un pasillo agrupa racks dentro de una zona (un pasillo físico transitable)."
+            ? t.formularios.pasillo.volverConSeleccion
+            : t.formularios.pasillo.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el pasillo" className="mb-4">
+              <ErrorPanel title={t.formularios.pasillo.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -165,23 +175,24 @@ export function PasilloFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={
-                  esEdicion
-                    ? "El código no se puede modificar."
-                    : "Único dentro del almacén (ej. PAS-01)."
-                }
+                help={esEdicion ? t.formularios.codigoInmutable : t.formularios.pasillo.codigoAyuda}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre">
+              <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Zona" htmlFor="zona_id" required error={errors.zona_id?.message}>
+              <Field
+                label={t.campos.zona}
+                htmlFor="zona_id"
+                required
+                error={errors.zona_id?.message}
+              >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="zona_id"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       disabled={esEdicion}
                       {...register("zona_id")}
                     >
@@ -194,7 +205,7 @@ export function PasilloFormPage() {
                   </div>
                   {!esEdicion ? (
                     <CrearRapido campo="zona_id" rutaNueva={catalogoNuevo("zonas")}>
-                      Nueva zona
+                      {t.formularios.zona.nueva}
                     </CrearRapido>
                   ) : null}
                 </div>
@@ -205,7 +216,11 @@ export function PasilloFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear pasillo"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.pasillo.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -217,7 +232,7 @@ export function PasilloFormPage() {
                   : catalogoLista("pasillos")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

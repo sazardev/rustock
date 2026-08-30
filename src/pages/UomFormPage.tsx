@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +23,7 @@ import {
   Select,
 } from "../shared/ui";
 import type { TipoUom } from "../shared/types";
+import { useT, type Diccionario } from "../shared/i18n";
 
 const TIPOS: Array<{ valor: TipoUom; etiqueta: string }> = [
   { valor: "UNIDAD", etiqueta: "Unidad" },
@@ -32,21 +33,26 @@ const TIPOS: Array<{ valor: TipoUom; etiqueta: string }> = [
   { valor: "SUPERFICIE", etiqueta: "Superficie" },
 ];
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
-  tipo: z.string().trim().min(1, "El tipo es obligatorio"),
-  factor: z
-    .string()
-    .trim()
-    .min(1, "El factor de conversión es obligatorio")
-    .refine((v) => Number(v) >= 1, "El factor debe ser mayor o igual a 1"),
-  base: z.boolean(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().trim().min(1, t.formularios.nombreObligatorio),
+    tipo: z.string().trim().min(1, t.formularios.tipoObligatorio),
+    factor: z
+      .string()
+      .trim()
+      .min(1, t.formularios.uom.factorObligatorio)
+      .refine((v) => Number(v) >= 1, t.formularios.uom.factorMinimo),
+    base: z.boolean(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 export function UomFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -114,7 +120,7 @@ export function UomFormPage() {
   });
 
   if (esEdicion && uomQuery.isLoading) {
-    return <PageHeader title="Editar unidad de medida" description="Cargando…" />;
+    return <PageHeader title={t.formularios.uom.editar} description="Cargando…" />;
   }
 
   return (
@@ -122,21 +128,19 @@ export function UomFormPage() {
       <PageHeader
         title={
           esEdicion
-            ? `Editar unidad de medida — ${uomQuery.data?.codigo ?? ""}`
-            : "Nueva unidad de medida"
+            ? `${t.formularios.uom.editar} — ${uomQuery.data?.codigo ?? ""}`
+            : t.formularios.uom.nueva
         }
         description={
-          retornaAFormulario
-            ? "Crea la UOM y vuelve al formulario anterior con ella seleccionada."
-            : "La UOM base es la unidad más pequeña gestionable; las demás se expresan como factor de conversión hacia la base de su familia."
+          retornaAFormulario ? t.formularios.uom.volverConSeleccion : t.formularios.uom.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar la unidad de medida" className="mb-4">
+              <ErrorPanel title={t.formularios.uom.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -146,14 +150,19 @@ export function UomFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={esEdicion ? "El código no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.codigoInmutable : undefined}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+              <Field
+                label={t.comun.nombre}
+                htmlFor="nombre"
+                required
+                error={errors.nombre?.message}
+              >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Tipo" htmlFor="tipo" required error={errors.tipo?.message}>
+              <Field label={t.comun.tipo} htmlFor="tipo" required error={errors.tipo?.message}>
                 <Select id="tipo" {...register("tipo")}>
                   {TIPOS.map((t) => (
                     <option key={t.valor} value={t.valor}>
@@ -163,17 +172,17 @@ export function UomFormPage() {
                 </Select>
               </Field>
               <Field
-                label="Factor de conversión"
+                label={t.formularios.uom.factor}
                 htmlFor="factor"
                 required
                 error={errors.factor?.message}
-                help="Cuántas unidades base equivale esta UOM (1 = la base de su familia)."
+                help={t.formularios.uom.factorAyuda}
               >
                 <Input id="factor" type="number" min="1" step="1" number {...register("factor")} />
               </Field>
             </FormGrid>
             <div className="mt-4">
-              <Checkbox id="base" label="Es la unidad base de su familia" {...register("base")} />
+              <Checkbox id="base" label={t.formularios.uom.esBase} {...register("base")} />
             </div>
           </Card.Body>
         </Card>
@@ -183,8 +192,8 @@ export function UomFormPage() {
             {guardarMut.isPending
               ? "Guardando…"
               : esEdicion
-                ? "Guardar cambios"
-                : "Crear unidad de medida"}
+                ? t.formularios.guardarCambios
+                : t.formularios.uom.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -196,7 +205,7 @@ export function UomFormPage() {
                   : catalogoLista("uoms")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

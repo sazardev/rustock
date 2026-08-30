@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { esPaginado } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -36,17 +37,22 @@ import {
   Textarea,
 } from "../shared/ui";
 
-const esquema = z.object({
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
-  parent_id: z.string().optional(),
-  descripcion: z.string().optional(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    nombre: z.string().trim().min(1, t.formularios.nombreObligatorio),
+    parent_id: z.string().optional(),
+    descripcion: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_CATEGORIAS = ["categorias", "selector"] as const;
 
 export function CategoriaFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -133,44 +139,51 @@ export function CategoriaFormPage() {
   });
 
   if (esEdicion && categoriaQuery.isLoading) {
-    return <PageHeader title="Editar categoría" description="Cargando…" />;
+    return <PageHeader title={t.formularios.categoria.editar} description="Cargando…" />;
   }
 
   return (
     <>
       <PageHeader
         title={
-          esEdicion ? `Editar categoría — ${categoriaQuery.data?.nombre ?? ""}` : "Nueva categoría"
+          esEdicion
+            ? `${t.formularios.categoria.editar} — ${categoriaQuery.data?.nombre ?? ""}`
+            : t.formularios.categoria.nueva
         }
         description={
           retornaAFormulario
-            ? "Crea la categoría y vuelve al formulario anterior con ella seleccionada."
-            : "Las categorías clasifican productos y pueden organizarse en jerarquía de árbol."
+            ? t.formularios.categoria.volverConSeleccion
+            : t.formularios.categoria.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar la categoría" className="mb-4">
+              <ErrorPanel title={t.formularios.categoria.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
             <FormGrid columns={2}>
-              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+              <Field
+                label={t.comun.nombre}
+                htmlFor="nombre"
+                required
+                error={errors.nombre?.message}
+              >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field
-                label="Categoría padre"
+                label={t.formularios.categoria.padre}
                 htmlFor="parent_id"
-                help="Si no se indica, la categoría queda en la raíz del árbol."
+                help={t.formularios.categoria.padreAyuda}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="parent_id"
-                      placeholder="Sin categoría (raíz)"
+                      placeholder={t.formularios.categoria.sinPadre}
                       {...register("parent_id")}
                     >
                       {padresPosibles.map((c) => (
@@ -188,7 +201,7 @@ export function CategoriaFormPage() {
                 </div>
               </Field>
             </FormGrid>
-            <Field label="Descripción" htmlFor="descripcion">
+            <Field label={t.comun.descripcion} htmlFor="descripcion">
               <Textarea id="descripcion" rows={3} {...register("descripcion")} />
             </Field>
           </Card.Body>
@@ -199,8 +212,8 @@ export function CategoriaFormPage() {
             {guardarMut.isPending
               ? "Guardando…"
               : esEdicion
-                ? "Guardar cambios"
-                : "Crear categoría"}
+                ? t.formularios.guardarCambios
+                : t.formularios.categoria.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -212,7 +225,7 @@ export function CategoriaFormPage() {
                   : catalogoLista("categorias")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

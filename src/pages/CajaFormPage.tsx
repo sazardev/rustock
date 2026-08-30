@@ -16,6 +16,7 @@ import { esPaginado, type Producto } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -37,22 +38,27 @@ import {
   Select,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().optional(),
-  ubicacion_id: z.string().trim().min(1, "Selecciona una ubicación"),
-  producto_id: z.string().optional(),
-  lote_id: z.string().optional(),
-  etiqueta: z.string().optional(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().optional(),
+    ubicacion_id: z.string().trim().min(1, t.formularios.seleccionaUbicacion),
+    producto_id: z.string().optional(),
+    lote_id: z.string().optional(),
+    etiqueta: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_PRODUCTOS = ["productos", "selector-caja"] as const;
 const INVALIDAR_UBICACIONES = ["ubicaciones", "selector-caja"] as const;
 const INVALIDAR_LOTES = ["lotes", "por-producto"] as const;
 
 export function CajaFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -186,7 +192,7 @@ export function CajaFormPage() {
   });
 
   if (esEdicion && cajaQuery.isLoading) {
-    return <PageHeader title="Editar caja" description="Cargando…" />;
+    return <PageHeader title={t.formularios.caja.editar} description="Cargando…" />;
   }
 
   function onSubmit(v: FormValues) {
@@ -204,19 +210,23 @@ export function CajaFormPage() {
   return (
     <>
       <PageHeader
-        title={esEdicion ? `Editar caja — ${cajaQuery.data?.codigo ?? ""}` : "Nueva caja"}
+        title={
+          esEdicion
+            ? `${t.formularios.caja.editar} — ${cajaQuery.data?.codigo ?? ""}`
+            : t.formularios.caja.nueva
+        }
         description={
           retornaAFormulario
-            ? "Crea la caja y vuelve al formulario anterior con ella seleccionada."
-            : "La caja agrupa stock de un producto/lote dentro de una ubicación. Si se fija producto o lote, solo admite ese contenido (SPEC §3.6)."
+            ? t.formularios.caja.volverConSeleccion
+            : t.formularios.caja.descripcion
         }
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar la caja" className="mb-4">
+              <ErrorPanel title={t.formularios.caja.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -226,17 +236,17 @@ export function CajaFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={esEdicion ? "El código no se puede modificar." : "Único dentro del almacén."}
+                help={esEdicion ? t.formularios.codigoInmutable : t.formularios.caja.codigoAyuda}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre">
+              <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
               <Field label="Etiqueta" htmlFor="etiqueta">
                 <Input
                   id="etiqueta"
-                  placeholder="Código de barras / etiqueta…"
+                  placeholder={t.formularios.caja.marcadorCodigo}
                   {...register("etiqueta")}
                 />
               </Field>
@@ -250,7 +260,7 @@ export function CajaFormPage() {
                   <div className="flex-1">
                     <Select
                       id="ubicacion_id"
-                      placeholder="Selecciona"
+                      placeholder={t.formularios.selecciona}
                       disabled={esEdicion}
                       {...register("ubicacion_id")}
                     >
@@ -272,7 +282,7 @@ export function CajaFormPage() {
                 label="Producto (opcional)"
                 htmlFor="producto_id"
                 error={errors.producto_id?.message}
-                help="Si se define, la caja solo admite ese producto."
+                help={t.formularios.caja.productoAyuda}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
@@ -282,7 +292,7 @@ export function CajaFormPage() {
                       render={({ field }) => (
                         <Select
                           id="producto_id"
-                          placeholder="Sin restricción de producto"
+                          placeholder={t.formularios.caja.sinRestriccionProducto}
                           disabled={esEdicion}
                           {...field}
                         >
@@ -309,7 +319,7 @@ export function CajaFormPage() {
                   htmlFor="lote_id"
                   required
                   error={errors.lote_id?.message}
-                  help="El producto controla lote: la caja solo admite ese lote."
+                  help={t.formularios.caja.loteAyuda}
                 >
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
@@ -319,7 +329,7 @@ export function CajaFormPage() {
                         render={({ field }) => (
                           <Select
                             id="lote_id"
-                            placeholder="Selecciona"
+                            placeholder={t.formularios.selecciona}
                             disabled={esEdicion}
                             {...field}
                           >
@@ -350,7 +360,11 @@ export function CajaFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear caja"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.caja.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -362,7 +376,7 @@ export function CajaFormPage() {
                   : catalogoLista("cajas")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

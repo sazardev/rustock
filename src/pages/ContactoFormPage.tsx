@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { usePeticionCreacion, urlConRegreso, urlConSeleccion } from "../shared/creacion-rapida";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   ButtonLink,
@@ -29,42 +30,49 @@ import {
   Textarea,
 } from "../shared/ui";
 
-const esquema = z.object({
-  codigo: z.string().trim().min(1, "El código es obligatorio"),
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
-  contacto_nombre: z.string().optional(),
-  contacto_telefono: z.string().optional(),
-  contacto_email: z.string().optional(),
-  direccion: z.string().optional(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
+    nombre: z.string().trim().min(1, t.formularios.nombreObligatorio),
+    contacto_nombre: z.string().optional(),
+    contacto_telefono: z.string().optional(),
+    contacto_email: z.string().optional(),
+    direccion: z.string().optional(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
-const CONFIG = {
-  proveedor: {
-    slug: "proveedores",
-    singular: "Proveedor",
-    singularMin: "proveedor",
-    titulo:
-      "Proveedores de productos y materiales; las entradas de compra los referencian como origen.",
-  },
-  cliente: {
-    slug: "clientes",
-    singular: "Cliente",
-    singularMin: "cliente",
-    titulo: "Clientes que reciben despachos; las salidas los referencian como destino.",
-  },
-} as const;
+/** Proveedores y clientes comparten formulario; solo cambian los textos. */
+function configDe(t: Diccionario) {
+  return {
+    proveedor: {
+      slug: "proveedores",
+      singular: t.campos.proveedor,
+      singularMin: t.campos.proveedor.toLocaleLowerCase(),
+      titulo: t.formularios.contacto.proveedorDesc,
+    },
+    cliente: {
+      slug: "clientes",
+      singular: t.campos.cliente,
+      singularMin: t.campos.cliente.toLocaleLowerCase(),
+      titulo: t.formularios.contacto.clienteDesc,
+    },
+  } as const;
+}
 
-type TipoEntidad = keyof typeof CONFIG;
+type TipoEntidad = keyof ReturnType<typeof configDe>;
 
 export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const cfg = CONFIG[tipo];
+  const cfg = configDe(t)[tipo];
   const { volver, campo } = usePeticionCreacion();
   const retornaAFormulario = !esEdicion && Boolean(volver && campo);
 
@@ -156,7 +164,7 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
               <ErrorPanel title={`No se pudo guardar el ${cfg.singularMin}`} className="mb-4">
@@ -169,7 +177,7 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={esEdicion ? "El código no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.codigoInmutable : undefined}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
@@ -197,7 +205,7 @@ export function ContactoFormPage({ tipo }: { tipo: TipoEntidad }) {
             {guardarMut.isPending
               ? "Guardando…"
               : esEdicion
-                ? "Guardar cambios"
+                ? t.formularios.guardarCambios
                 : `Crear ${cfg.singularMin}`}
           </Button>
           <ButtonLink

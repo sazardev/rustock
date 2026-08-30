@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -8,6 +8,7 @@ import { crearUsuario, editarUsuario, listarRoles, obtenerUsuario } from "../sha
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   ButtonLink,
@@ -21,29 +22,26 @@ import {
   Select,
 } from "../shared/ui";
 
-const esquema = z.object({
-  nombre_usuario: z
-    .string()
-    .trim()
-    .min(1, "El usuario es obligatorio")
-    .regex(/^[a-z0-9_.-]+$/i, "Solo letras, números, punto, guion y guion bajo"),
-  nombre_completo: z.string().trim().min(1, "El nombre completo es obligatorio"),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
-  password: z.string().min(8, "Mínimo 8 caracteres").optional().or(z.literal("")),
-  rol_id: z.string().min(1, "Selecciona un rol"),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    nombre_usuario: z
+      .string()
+      .trim()
+      .min(1, t.formularios.usuario.usuarioObligatorio)
+      .regex(/^[a-z0-9_.-]+$/i, t.formularios.usuario.usuarioFormato),
+    nombre_completo: z.string().trim().min(1, t.formularios.usuario.nombreCompletoObligatorio),
+    email: z.string().email(t.formularios.usuario.emailInvalido).optional().or(z.literal("")),
+    password: z.string().min(8, "Mínimo 8 caracteres").optional().or(z.literal("")),
+    rol_id: z.string().min(1, t.formularios.seleccionaRol),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
-
-const ROL_LABEL: Record<string, string> = {
-  ADMIN: "Administrador",
-  GERENTE: "Gerente",
-  ENCARGADO_ALMACEN: "Encargado de almacén",
-  OPERADOR: "Operador",
-  LECTOR: "Lector",
-};
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 export function UsuarioFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
@@ -116,12 +114,12 @@ export function UsuarioFormPage() {
   });
 
   if (esEdicion && entidadQuery.isLoading) {
-    return <PageHeader title="Editar usuario" description="Cargando…" />;
+    return <PageHeader title={t.formularios.usuario.editar} description="Cargando…" />;
   }
 
   function onSubmit(v: FormValues) {
     if (!esEdicion && !v.password) {
-      setError("La contraseña es obligatoria al crear un usuario");
+      setError(t.formularios.usuario.passwordObligatoria);
       return;
     }
     guardarMut.mutate(v);
@@ -132,17 +130,17 @@ export function UsuarioFormPage() {
       <PageHeader
         title={
           esEdicion
-            ? `Editar usuario — ${entidadQuery.data?.nombre_usuario ?? ""}`
-            : "Nuevo usuario"
+            ? `${t.formularios.usuario.editar} — ${entidadQuery.data?.nombre_usuario ?? ""}`
+            : t.formularios.usuario.nuevo
         }
-        description="Las cuentas acceden con su usuario y contraseña; el rol define sus permisos."
+        description={t.formularios.usuario.descripcion}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Card title="Datos de la cuenta">
+        <Card title={t.formularios.usuario.datos}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el usuario" className="mb-4">
+              <ErrorPanel title={t.formularios.usuario.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -152,7 +150,7 @@ export function UsuarioFormPage() {
                 htmlFor="nombre_usuario"
                 required
                 error={errors.nombre_usuario?.message}
-                help={esEdicion ? "El nombre de usuario no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.usuario.usuarioInmutable : undefined}
               >
                 <Input
                   id="nombre_usuario"
@@ -162,7 +160,7 @@ export function UsuarioFormPage() {
                 />
               </Field>
               <Field
-                label="Nombre completo"
+                label={t.formularios.usuario.nombreCompleto}
                 htmlFor="nombre_completo"
                 required
                 error={errors.nombre_completo?.message}
@@ -177,15 +175,15 @@ export function UsuarioFormPage() {
                 htmlFor="rol_id"
                 required
                 error={errors.rol_id?.message}
-                help="El rol define los permisos del usuario."
+                help={t.formularios.usuario.rolAyuda}
               >
                 <Select
                   id="rol_id"
-                  placeholder="Selecciona un rol"
+                  placeholder={t.formularios.seleccionaRol}
                   options={
                     rolesQuery.data?.map((r) => ({
                       value: r.id,
-                      label: ROL_LABEL[r.codigo] ?? r.codigo,
+                      label: t.roles[r.codigo as keyof typeof t.roles] ?? r.codigo,
                     })) ?? []
                   }
                   {...register("rol_id")}
@@ -197,7 +195,7 @@ export function UsuarioFormPage() {
                   htmlFor="password"
                   required
                   error={errors.password?.message}
-                  help="Mínimo 8 caracteres. El usuario la puede cambiar después en su perfil."
+                  help={t.formularios.usuario.passwordAyuda}
                 >
                   <Input id="password" type="password" {...register("password")} />
                 </Field>
@@ -208,13 +206,17 @@ export function UsuarioFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear usuario"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.usuario.crear}
           </Button>
           <ButtonLink
             variant="secondary"
             href={esEdicion ? catalogoDetalle("usuarios", id as string) : catalogoLista("usuarios")}
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

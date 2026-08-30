@@ -18,6 +18,7 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { PosicionFormCard } from "../shared/posicion-form-card";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -51,35 +52,38 @@ const TIPOS_UBICACION: Array<{ valor: TipoUbicacion; etiqueta: string }> = [
   { valor: "EXPEDICION", etiqueta: "Expedición" },
 ];
 
-const TIPOS_PADRE = [
-  { valor: "zona", etiqueta: "Zona" },
-  { valor: "rack", etiqueta: "Rack" },
-  { valor: "seccion", etiqueta: "Sección" },
-] as const;
+/** Los tres contenedores de los que puede colgar una ubicación. */
+function tiposPadreDe(t: Diccionario) {
+  return [
+    { valor: "zona", etiqueta: t.campos.zona },
+    { valor: "rack", etiqueta: t.campos.rack },
+    { valor: "seccion", etiqueta: t.campos.seccion },
+  ] as const;
+}
 
 const INVALIDAR_ZONAS = ["zonas", "selector"] as const;
 const INVALIDAR_RACKS = ["racks", "selector"] as const;
 const INVALIDAR_SECCIONES = ["secciones", "selector"] as const;
 
-function crearEsquema(requierePadre: boolean) {
+function crearEsquema(requierePadre: boolean, t: Diccionario) {
   return z
     .object({
-      codigo: z.string().trim().min(1, "El código es obligatorio"),
+      codigo: z.string().trim().min(1, t.formularios.codigoObligatorio),
       nombre: z.string().optional(),
-      tipo: z.string().trim().min(1, "El tipo es obligatorio"),
+      tipo: z.string().trim().min(1, t.formularios.tipoObligatorio),
       tipo_padre: z.string(),
       padre_id: z.string(),
       capacidad_maxima: z
         .string()
         .optional()
-        .refine((v) => !v || Number(v) >= 0, "La capacidad no puede ser negativa"),
+        .refine((v) => !v || Number(v) >= 0, t.formularios.ubicacion.capacidadNegativa),
     })
     .superRefine((v, ctx) => {
       if (requierePadre && !v.padre_id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["padre_id"],
-          message: "Seleccione el contenedor padre",
+          message: t.formularios.ubicacion.seleccioneContenedor,
         });
       }
     });
@@ -88,6 +92,7 @@ function crearEsquema(requierePadre: boolean) {
 type FormValues = z.infer<ReturnType<typeof crearEsquema>>;
 
 export function UbicacionFormPage() {
+  const t = useT();
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const [searchParams] = useSearchParams();
@@ -126,7 +131,7 @@ export function UbicacionFormPage() {
     enabled: !esEdicion,
   });
 
-  const esquema = useMemo(() => crearEsquema(!esEdicion), [esEdicion]);
+  const esquema = useMemo(() => crearEsquema(!esEdicion, t), [esEdicion, t]);
 
   const {
     control,
@@ -160,7 +165,7 @@ export function UbicacionFormPage() {
   );
 
   // Creación rápida del contenedor: el contenedor creado queda seleccionado
-  // y su tipo se fija en "Ubicado en" (zona, rack o sección).
+  // y su tipo se fija en t.formularios.ubicacion.ubicadoEn (zona, rack o sección).
   useSeleccionCreada(
     "zona_id",
     (nuevoId) => {
@@ -220,10 +225,10 @@ export function UbicacionFormPage() {
         : "seccion_id";
   const contenedorEtiqueta =
     tipoPadreVigente === "zona"
-      ? "Nueva zona"
+      ? t.formularios.ubicacion.nuevaZona
       : tipoPadreVigente === "rack"
-        ? "Nuevo rack"
-        : "Nueva sección";
+        ? t.formularios.ubicacion.nuevoRack
+        : t.formularios.ubicacion.nuevaSeccion;
 
   useEffect(() => {
     const u = ubicacionQuery.data;
@@ -297,13 +302,13 @@ export function UbicacionFormPage() {
     }) => moverUbicacion(id as string, pos),
     onSuccess: () => {
       invalidarRecurso(queryClient, "ubicaciones", "ubicacion");
-      toast("Posición guardada.", "success");
+      toast(t.formularios.posicionGuardada, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
 
   if (esEdicion && ubicacionQuery.isLoading) {
-    return <PageHeader title="Editar ubicación" description="Cargando…" />;
+    return <PageHeader title={t.formularios.ubicacion.editar} description="Cargando…" />;
   }
 
   return (
@@ -311,23 +316,23 @@ export function UbicacionFormPage() {
       <PageHeader
         title={
           esEdicion
-            ? `Editar ubicación — ${ubicacionQuery.data?.codigo ?? ""}`
+            ? `${t.formularios.ubicacion.editar} — ${ubicacionQuery.data?.codigo ?? ""}`
             : duplicarDe
-              ? "Duplicar ubicación"
-              : "Nueva ubicación"
+              ? t.formularios.ubicacion.duplicar
+              : t.formularios.ubicacion.nueva
         }
         description={
           retornaAFormulario
-            ? "Crea la ubicación y vuelve al formulario anterior con ella seleccionada."
-            : "La ubicación es el punto direccionable donde vive el stock. Cuelga de exactamente una zona, rack o sección."
+            ? t.formularios.ubicacion.volverConSeleccion
+            : t.formularios.ubicacion.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar la ubicación" className="mb-4">
+              <ErrorPanel title={t.formularios.ubicacion.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -337,14 +342,14 @@ export function UbicacionFormPage() {
                 htmlFor="codigo"
                 required
                 error={errors.codigo?.message}
-                help={esEdicion ? "El código no se puede modificar." : "Ej.: RACK-A1-N2-P3"}
+                help={esEdicion ? t.formularios.codigoInmutable : "Ej.: RACK-A1-N2-P3"}
               >
                 <Input id="codigo" code disabled={esEdicion} {...register("codigo")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre">
+              <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Tipo" htmlFor="tipo" required error={errors.tipo?.message}>
+              <Field label={t.comun.tipo} htmlFor="tipo" required error={errors.tipo?.message}>
                 <Select id="tipo" {...register("tipo")}>
                   {TIPOS_UBICACION.map((t) => (
                     <option key={t.valor} value={t.valor}>
@@ -354,7 +359,7 @@ export function UbicacionFormPage() {
                 </Select>
               </Field>
               <Field
-                label="Capacidad máxima"
+                label={t.formularios.ubicacion.capacidadMaxima}
                 htmlFor="capacidad_maxima"
                 error={errors.capacidad_maxima?.message}
               >
@@ -369,14 +374,14 @@ export function UbicacionFormPage() {
               </Field>
               {!esEdicion ? (
                 <>
-                  <Field label="Contenedor padre" htmlFor="tipo_padre">
+                  <Field label={t.formularios.ubicacion.contenedorPadre} htmlFor="tipo_padre">
                     <Select
                       id="tipo_padre"
                       {...register("tipo_padre", {
                         onChange: () => setValue("padre_id", ""),
                       })}
                     >
-                      {TIPOS_PADRE.map((t) => (
+                      {tiposPadreDe(t).map((t) => (
                         <option key={t.valor} value={t.valor}>
                           {t.etiqueta}
                         </option>
@@ -384,7 +389,7 @@ export function UbicacionFormPage() {
                     </Select>
                   </Field>
                   <Field
-                    label="Ubicado en"
+                    label={t.formularios.ubicacion.ubicadoEn}
                     htmlFor="padre_id"
                     required
                     error={errors.padre_id?.message}
@@ -395,7 +400,7 @@ export function UbicacionFormPage() {
                           control={control}
                           name="padre_id"
                           render={({ field }) => (
-                            <Select id="padre_id" placeholder="Selecciona" {...field}>
+                            <Select id="padre_id" placeholder={t.formularios.selecciona} {...field}>
                               {opcionesPadre.map((o) => (
                                 <option key={o.id} value={o.id}>
                                   {o.etiqueta}
@@ -421,8 +426,8 @@ export function UbicacionFormPage() {
             {guardarMut.isPending
               ? "Guardando…"
               : esEdicion
-                ? "Guardar cambios"
-                : "Crear ubicación"}
+                ? t.formularios.guardarCambios
+                : t.formularios.ubicacion.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -434,7 +439,7 @@ export function UbicacionFormPage() {
                   : catalogoLista("ubicaciones")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

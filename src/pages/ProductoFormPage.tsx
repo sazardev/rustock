@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { esPaginado } from "../shared/types";
 import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -37,25 +38,28 @@ import {
   Select,
 } from "../shared/ui";
 
-const esquema = z.object({
-  sku: z.string().trim().min(1, "El SKU es obligatorio"),
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
-  descripcion: z.string().optional(),
-  categoria_id: z.string().optional(),
-  uom_base_id: z.string().trim().min(1, "La unidad de medida base es obligatoria"),
-  uom_venta_id: z.string().optional(),
-  uom_compra_id: z.string().optional(),
-  codigo_barras: z.string().optional(),
-  peso_unitario: z.string().optional(),
-  volumen_unitario: z.string().optional(),
-  stock_minimo: z.string().optional(),
-  stock_maximo: z.string().optional(),
-  controla_lote: z.boolean(),
-  controla_vencimiento: z.boolean(),
-  perecedero: z.boolean(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    sku: z.string().trim().min(1, t.formularios.producto.skuObligatorio),
+    nombre: z.string().trim().min(1, t.formularios.nombreObligatorio),
+    descripcion: z.string().optional(),
+    categoria_id: z.string().optional(),
+    uom_base_id: z.string().trim().min(1, t.formularios.producto.uomObligatoria),
+    uom_venta_id: z.string().optional(),
+    uom_compra_id: z.string().optional(),
+    codigo_barras: z.string().optional(),
+    peso_unitario: z.string().optional(),
+    volumen_unitario: z.string().optional(),
+    stock_minimo: z.string().optional(),
+    stock_maximo: z.string().optional(),
+    controla_lote: z.boolean(),
+    controla_vencimiento: z.boolean(),
+    perecedero: z.boolean(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_UOMS = ["uoms", "selector"] as const;
 const INVALIDAR_CATEGORIAS = ["categorias", "selector"] as const;
@@ -85,6 +89,8 @@ function numeroONull(valor: string | undefined): number | null {
 }
 
 export function ProductoFormPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id } = useParams<{ id?: string }>();
   const esEdicion = Boolean(id);
   const [searchParams] = useSearchParams();
@@ -278,7 +284,7 @@ export function ProductoFormPage() {
   });
 
   if (esEdicion && productoQuery.isLoading) {
-    return <PageHeader title="Editar producto" description="Cargando…" />;
+    return <PageHeader title={t.formularios.producto.editar} description="Cargando…" />;
   }
 
   return (
@@ -286,25 +292,25 @@ export function ProductoFormPage() {
       <PageHeader
         title={
           esEdicion
-            ? `Editar producto — ${productoQuery.data?.sku ?? ""}`
+            ? `${t.formularios.producto.editar} — ${productoQuery.data?.sku ?? ""}`
             : duplicarDe
               ? `Duplicar producto — ${origenQuery.data?.sku ?? ""}`
-              : "Nuevo producto"
+              : t.formularios.producto.nuevo
         }
         description={
           retornaAFormulario
-            ? "Crea el producto y vuelve al formulario anterior con él seleccionado."
+            ? t.formularios.producto.volverConSeleccion
             : duplicarDe
-              ? "Los datos del producto original están precargados. Define un SKU nuevo (debe ser único)."
-              : "El SKU y la unidad de medida base son inmutables una vez creado el producto."
+              ? t.formularios.producto.duplicarDesc
+              : t.formularios.producto.descripcion
         }
       />
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo guardar el producto" className="mb-4">
+              <ErrorPanel title={t.formularios.producto.noSePudoGuardar} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -312,15 +318,20 @@ export function ProductoFormPage() {
               <Field label="SKU" htmlFor="sku" required error={errors.sku?.message}>
                 <Input id="sku" code disabled={esEdicion} {...register("sku")} />
               </Field>
-              <Field label="Nombre" htmlFor="nombre" required error={errors.nombre?.message}>
+              <Field
+                label={t.comun.nombre}
+                htmlFor="nombre"
+                required
+                error={errors.nombre?.message}
+              >
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Categoría" htmlFor="categoria_id">
+              <Field label={t.campos.categoria} htmlFor="categoria_id">
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="categoria_id"
-                      placeholder="Sin categoría"
+                      placeholder={t.formularios.producto.sinCategoria}
                       {...register("categoria_id")}
                     >
                       {categorias.map((c) => (
@@ -342,7 +353,7 @@ export function ProductoFormPage() {
                 htmlFor="uom_base_id"
                 required
                 error={errors.uom_base_id?.message}
-                help={esEdicion ? "La unidad de medida base no se puede modificar." : undefined}
+                help={esEdicion ? t.formularios.producto.uomInmutable : undefined}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
@@ -352,7 +363,7 @@ export function ProductoFormPage() {
                       render={({ field }) => (
                         <Select
                           id="uom_base_id"
-                          placeholder="Selecciona"
+                          placeholder={t.formularios.selecciona}
                           disabled={esEdicion}
                           {...field}
                         >
@@ -372,12 +383,12 @@ export function ProductoFormPage() {
                   ) : null}
                 </div>
               </Field>
-              <Field label="UOM de venta" htmlFor="uom_venta_id">
+              <Field label={t.formularios.producto.uomVenta} htmlFor="uom_venta_id">
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="uom_venta_id"
-                      placeholder="Igual que la base"
+                      placeholder={t.formularios.producto.igualQueLaBase}
                       {...register("uom_venta_id")}
                     >
                       {uoms.map((u) => (
@@ -394,12 +405,12 @@ export function ProductoFormPage() {
                   ) : null}
                 </div>
               </Field>
-              <Field label="UOM de compra" htmlFor="uom_compra_id">
+              <Field label={t.formularios.producto.uomCompra} htmlFor="uom_compra_id">
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       id="uom_compra_id"
-                      placeholder="Igual que la base"
+                      placeholder={t.formularios.producto.igualQueLaBase}
                       {...register("uom_compra_id")}
                     >
                       {uoms.map((u) => (
@@ -417,15 +428,13 @@ export function ProductoFormPage() {
                 </div>
               </Field>
               <Field
-                label="Código de barras"
+                label={t.formularios.producto.codigoBarras}
                 htmlFor="codigo_barras"
-                help={
-                  codigoEscaneado ? "Precargado desde el código que acabas de escanear." : undefined
-                }
+                help={codigoEscaneado ? t.formularios.producto.codigoBarrasPrecargado : undefined}
               >
                 <Input id="codigo_barras" code {...register("codigo_barras")} />
               </Field>
-              <Field label="Peso unitario (kg)" htmlFor="peso_unitario">
+              <Field label={t.formularios.producto.pesoUnitario} htmlFor="peso_unitario">
                 <Input
                   id="peso_unitario"
                   type="number"
@@ -435,7 +444,7 @@ export function ProductoFormPage() {
                   {...register("peso_unitario")}
                 />
               </Field>
-              <Field label="Volumen unitario (m³)" htmlFor="volumen_unitario">
+              <Field label={t.formularios.producto.volumenUnitario} htmlFor="volumen_unitario">
                 <Input
                   id="volumen_unitario"
                   type="number"
@@ -445,7 +454,7 @@ export function ProductoFormPage() {
                   {...register("volumen_unitario")}
                 />
               </Field>
-              <Field label="Stock mínimo" htmlFor="stock_minimo">
+              <Field label={t.formularios.producto.stockMinimo} htmlFor="stock_minimo">
                 <Input
                   id="stock_minimo"
                   type="number"
@@ -455,7 +464,7 @@ export function ProductoFormPage() {
                   {...register("stock_minimo")}
                 />
               </Field>
-              <Field label="Stock máximo" htmlFor="stock_maximo">
+              <Field label={t.formularios.producto.stockMaximo} htmlFor="stock_maximo">
                 <Input
                   id="stock_maximo"
                   type="number"
@@ -470,18 +479,18 @@ export function ProductoFormPage() {
             <div className="mt-4 flex flex-col gap-2">
               <Checkbox
                 id="controla_lote"
-                label="Controla lote (todo movimiento exige lote)"
+                label={t.formularios.producto.controlaLote}
                 disabled={controlaVencimiento}
                 {...register("controla_lote")}
               />
               <Checkbox
                 id="controla_vencimiento"
-                label="Controla vencimiento (implica controlar lote)"
+                label={t.formularios.producto.controlaVencimiento}
                 {...register("controla_vencimiento")}
               />
               <Checkbox
                 id="perecedero"
-                label="Perecedero (aplica FEFO en salidas)"
+                label={t.formularios.producto.perecedero}
                 {...register("perecedero")}
               />
             </div>
@@ -490,7 +499,11 @@ export function ProductoFormPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear producto"}
+            {guardarMut.isPending
+              ? "Guardando…"
+              : esEdicion
+                ? t.formularios.guardarCambios
+                : t.formularios.producto.crear}
           </Button>
           <ButtonLink
             variant="secondary"
@@ -502,7 +515,7 @@ export function ProductoFormPage() {
                   : catalogoLista("productos")
             }
           >
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>
