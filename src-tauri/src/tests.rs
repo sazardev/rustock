@@ -2793,6 +2793,48 @@ fn traslado_intra_almacen_genera_un_solo_movimiento() {
 }
 
 #[test]
+fn traslado_a_la_misma_ubicacion_se_rechaza() {
+    // Restar y sumar lo mismo no mueve nada, pero dejaría un hecho vacío en
+    // un historial inmutable. El formulario ya lo impedía; la regla tiene que
+    // vivir aquí (STACK §1), no solo en el frontend.
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen_id, ubi1, _ubi2) = crear_arbol(&conn);
+    let (_uom, prod) = crear_uom_y_producto(&conn);
+    entrar_stock(&conn, &ubi1, &prod, None, 10);
+
+    let nuevo = NuevoMovimiento {
+        tipo: "TRASLADO".into(),
+        sub_tipo: "TRASLADO_SALIDA".into(),
+        fecha_movimiento: None,
+        motivo: None,
+        origen_ubicacion_id: Some(ubi1.clone()),
+        destino_ubicacion_id: Some(ubi1.clone()),
+        proveedor_id: None,
+        cliente_id: None,
+        sesion_inventario_id: None,
+        documento_referencia: None,
+        notas: None,
+        created_by: "admin".into(),
+        lineas: vec![NuevaLinea {
+            costo_unitario: None,
+            producto_id: prod,
+            lote_id: None,
+            cantidad: 1,
+            origen_ubicacion_id: Some(ubi1.clone()),
+            destino_ubicacion_id: Some(ubi1),
+            caja_origen_id: None,
+            caja_destino_id: None,
+        }],
+    };
+
+    let error = nuevo
+        .validar()
+        .expect_err("misma ubicación debe rechazarse");
+    assert_eq!(error.codigo(), "CAMPO_INVALIDO");
+}
+
+#[test]
 fn traslado_inter_almacen_genera_dos_movimientos_ligados() {
     let db = setup();
     let conn = db.conn();

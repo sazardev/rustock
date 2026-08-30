@@ -264,6 +264,23 @@ impl NuevoMovimiento {
             )));
         }
 
+        // Un traslado a la misma ubicación no mueve nada: restaría y sumaría
+        // lo mismo. No corrompe el saldo, pero deja un hecho vacío en un
+        // historial que es inmutable, así que se rechaza aquí y no solo en el
+        // formulario (STACK §1: la regla vive en Rust).
+        if tipo == TipoMovimiento::Traslado {
+            for linea in &self.lineas {
+                match (&linea.origen_ubicacion_id, &linea.destino_ubicacion_id) {
+                    (Some(origen), Some(destino)) if origen == destino => {
+                        return Err(AppError::CampoInvalido(
+                            "origen y destino no pueden ser la misma ubicación".into(),
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         // Ajustes y mermas: motivo obligatorio (SPEC §7.4, §8.4, §8.5, §10.3).
         let requiere_motivo = matches!(
             subtipo,

@@ -9,6 +9,7 @@ import * as backend from "../shared/backend";
 import { useSession } from "../shared/session";
 import { useT } from "../shared/i18n";
 import { AuthShell, Button, ErrorPanel, Field, Input, Link, PasswordInput } from "../shared/ui";
+import { mensajeError } from "../shared/format";
 
 /** El esquema recibe el diccionario para que los errores salgan traducidos. */
 function esquemaDe(t: ReturnType<typeof useT>) {
@@ -55,7 +56,7 @@ export function BootstrapAdminPage() {
       await iniciarSesion(valores.nombre_usuario, valores.password);
       navigate(PATH.dashboard, { replace: true });
     } catch (err) {
-      setError(String(err));
+      setError(mensajeError(err));
     }
   }
 
