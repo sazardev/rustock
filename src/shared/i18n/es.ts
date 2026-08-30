@@ -221,6 +221,8 @@ export const es = {
     notas: "Notas",
     numero: "Número",
     origen: "Origen",
+    pais: "País",
+    ciudad: "Ciudad",
     pasillo: "Pasillo",
     perecedero: "Perecedero",
     pesoUnitario: "Peso unitario (kg)",
@@ -953,6 +955,172 @@ export const es = {
       sinEventos: "Sin eventos de auditoría",
       sinEventosDesc: "No hay operaciones registradas para los criterios actuales.",
     },
+  },
+
+  // ============ Configuración ============
+  configuracion: {
+    titulo: "Configuración",
+    intro: "Parámetros de la instalación.",
+    descripcion:
+      "Datos de tu empresa, ubicación, archivos y parámetros globales. Solo el administrador los edita.",
+    sinPermiso: "No tienes permiso para ver la configuración",
+    noSePudoGuardar: "No se pudo guardar la configuración",
+    guardada: "Configuración guardada",
+    guardar: "Guardar configuración",
+
+    datosEmpresa: "Datos de la empresa",
+    codigoAyuda: "Identificador de la instalación.",
+    paisAyuda: "Se usa para sugerir la ubicación.",
+    seleccionaPais: "Selecciona un país",
+    direccionSucursal: "Dirección de la sucursal principal",
+    codigoPostal: "Código postal",
+
+    datosFiscales: "Datos fiscales",
+    razonSocial: "Razón social",
+    razonSocialAyuda: "Nombre legal de la empresa.",
+    documentoFiscal: "Documento fiscal",
+    documentoFiscalAyuda: "RUC, NIT, RFC o equivalente.",
+    direccionFiscal: "Dirección fiscal",
+
+    contacto: "Contacto",
+    telefono: "Teléfono",
+    emailContacto: "Email de contacto",
+    sitioWeb: "Sitio web",
+
+    ubicacionMapa: "Ubicación y mapa",
+    ubicacionIntro:
+      "Detecta tu ubicación con el navegador o escríbela a mano. El mapa muestra la sucursal principal; el enlace abre las coordenadas en Google Maps.",
+    latitud: "Latitud",
+    latitudAyuda: "Entre -90 y 90.",
+    longitud: "Longitud",
+    longitudAyuda: "Entre -180 y 180.",
+    detectando: "Detectando…",
+    detectarUbicacion: "Detectar mi ubicación",
+    ubicacionDetectada: "Ubicación detectada",
+    sinGeolocalizacion: "Este navegador no expone geolocalización",
+    noSePudoUbicacion: "No se pudo obtener la ubicación. Revisa los permisos del navegador.",
+    abrirGoogleMaps: "Abrir en Google Maps",
+    mapaSucursal: "Mapa de la sucursal principal",
+    agregaCoordenadas: "Agrega las coordenadas para ver el mapa aquí.",
+
+    parametrosGenerales: "Parámetros generales",
+    zonaHoraria: "Zona horaria",
+    zonaHorariaAyuda: "Hora de las fechas en reportes y alertas (SPEC §14.4).",
+    seleccionaZonaHoraria: "Selecciona una zona horaria",
+    formatoFecha: "Formato de fecha",
+    formatoFechaAyuda: "Formato en que se muestran las fechas (DESIGN §9.2).",
+    seleccionaFormato: "Selecciona un formato",
+    diasAvisoVencimiento: "Días de aviso de vencimiento",
+    diasAvisoAyuda: "Horizonte de la alerta «lote por vencer» (SPEC §17.1).",
+    stockMinimoDefecto: "Stock mínimo por defecto",
+    stockMinimoAyuda: "Umbral de stock bajo para productos sin stock_minimo propio.",
+    sinValor: "Sin valor",
+    debeSerEntero: "Debe ser un entero no negativo",
+    debeSerNumero: "Debe ser un número",
+
+    politicaOperacion: "Política de operación",
+    requerirAprobacion: "Requerir aprobación de movimientos",
+    requerirAprobacionAyuda:
+      "Con esto activado, los movimientos nacen en borrador y pasan por aprobación (SPEC §6.2). Si se desactiva, el flujo de aprobación deja de ser obligatorio y el sistema lo permite según el rol de cada usuario.",
+
+    apariencia: "Apariencia",
+    aparienciaIntro:
+      "Paleta global de la interfaz y modo claro u oscuro (DESIGN §3.1). Los usuarios sin preferencia propia heredan esta apariencia; cada quien puede cambiarla en",
+    miPerfil: "Mi perfil",
+    paleta: "Paleta de colores",
+    paletaAyuda: "La vista previa se aplica al instante; se guarda con el botón de abajo.",
+    paletaAria: "Paleta de colores de la interfaz",
+    modoColor: "Modo de color",
+    modoColorAria: "Modo de color de la interfaz",
+    seleccionaPaleta: "Selecciona una paleta",
+
+    logoEmpresa: "Logo de la empresa",
+    logoActualizado: "Logo actualizado",
+    subiendo: "Subiendo…",
+    cambiarLogo: "Cambiar logo",
+    subirLogo: "Subir logo",
+    logoAyuda: "PNG, JPG o SVG, máximo 2 MB. Se muestra en esta página y en los encabezados.",
+    noSePudoLeerArchivo: "No se pudo leer el archivo",
+
+    documentosEmpresa: "Documentos de la empresa",
+    subirDocumento: "Subir documento",
+    documentosAyuda:
+      "Facturas, certificados o cualquier archivo de la empresa. Máximo 10 MB por documento.",
+    documentoSubido: "Documento subido",
+    documentoEliminado: "Documento eliminado",
+    sinDocumentos: "Aún no hay documentos.",
+
+    aplicacion: "Aplicación",
+    yaInstalada:
+      "Rustock ya está instalado en este dispositivo: se abre en su propia ventana, arranca sin esperar a la red y conserva la sesión entre usos.",
+    invitacionInstalar:
+      "Instale Rustock en este dispositivo para abrirlo en su propia ventana, con arranque inmediato y sin la barra del navegador.",
+    instalarRustock: "Instalar Rustock",
+    sinInstalacion:
+      "Este navegador no ofrece la instalación de Rustock como aplicación. En Chrome o Edge aparecerá aquí un botón para instalarla en el dispositivo.",
+  },
+
+  // ============ Mi perfil ============
+  perfil: {
+    titulo: "Mi perfil",
+    descripcion: "Tus datos, tus preferencias de presentación y tu contraseña.",
+    cerrarSesion: "Cerrar sesión",
+    datos: "Datos",
+    usuario: "Usuario",
+    nombreCompleto: "Nombre completo",
+    email: "Email",
+    rol: "Rol",
+
+    contrasena: "Contraseña",
+    contrasenaIntro: "La contraseña se usa para iniciar sesión en esta instalación.",
+    actual: "Contraseña actual",
+    nueva: "Contraseña nueva",
+    confirmar: "Confirmar contraseña nueva",
+    cambiando: "Cambiando…",
+    cambiar: "Cambiar contraseña",
+    actualizada: "Contraseña actualizada",
+    ingresaActual: "Ingresa tu contraseña actual",
+    minimoOcho: "La contraseña debe tener al menos 8 caracteres",
+    confirmaNueva: "Confirma la nueva contraseña",
+    noCoinciden: "Las contraseñas no coinciden",
+
+    preferencias: "Preferencias",
+    preferenciasGuardadas: "Preferencias guardadas",
+    noSePudieronGuardar: "No se pudieron guardar las preferencias",
+    guardarPreferencias: "Guardar preferencias",
+    tamanoFuente: "Tamaño de fuente",
+    tamanoFuenteAyuda: "Escala toda la interfaz.",
+    zonaHoraria: "Zona horaria",
+    zonaHorariaAyuda: "Fechas y horas en reportes.",
+    formatoFecha: "Formato de fecha",
+    heredarEmpresa: "Heredar de la empresa",
+    ayudaEnPalette: "Mostrar sugerencias de Ayuda en la búsqueda rápida (Ctrl+K)",
+    ayudaEnPaletteDesc:
+      "Incluye guías de módulos, procesos del negocio y términos del glosario en los resultados del command palette, para aprender mientras trabajas.",
+    ayudaActivada:
+      "Ayuda activada en la búsqueda rápida: verás sugerencias de guías y glosario en Ctrl+K.",
+    ayudaDesactivada:
+      "Ayuda desactivada en la búsqueda rápida: las sugerencias de guías y glosario ya no aparecerán en Ctrl+K.",
+    zonaHeredada: "Zona horaria: se usa la de la empresa.",
+    zonaPropia: "Zona horaria propia definida.",
+    formatoHeredado: "Formato de fecha: se usa el de la empresa.",
+    formatoPropio: "Formato de fecha propio definido.",
+
+    apariencia: "Apariencia",
+    aparienciaIntro:
+      "Elige la paleta de colores y el modo claro u oscuro. El cambio se aplica y se guarda al instante, sin necesidad del botón de preferencias de abajo.",
+    paleta: "Paleta de colores",
+    paletaAria: "Paleta de colores de la interfaz",
+    paletaHeredada: "Se usa la paleta elegida por la empresa.",
+    modoColor: "Modo de color",
+    modoColorAria: "Modo de color de la interfaz",
+    modoHeredado: "Se usa el modo elegido por la empresa.",
+
+    ordenPanel: "Orden del panel lateral",
+    ordenPanelIntro:
+      "Arrastra con las flechas la posición de cada sección dentro de su grupo. El cambio se aplica al guardar.",
+    subir: (p: { nombre: string }) => `Subir ${p.nombre}`,
+    bajar: (p: { nombre: string }) => `Bajar ${p.nombre}`,
   },
 
   // ============ Errores del backend (SPEC §17.3) ============

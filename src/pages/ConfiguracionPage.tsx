@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -22,6 +22,7 @@ import {
 import { mensajeError } from "../shared/format";
 import { usePreferencias } from "../shared/preferencias";
 import { useTema } from "../shared/tema";
+import { useT, type Diccionario } from "../shared/i18n";
 import { PATH } from "../app/route-paths";
 import { usePwa } from "../shared/pwa";
 import {
@@ -43,50 +44,59 @@ import {
 } from "../shared/ui";
 import type { ArchivoEmpresa } from "../shared/types";
 
-const entero = z
-  .string()
-  .refine(
-    (v) => v === "" || (Number.isInteger(Number(v)) && Number(v) >= 0),
-    "Debe ser un entero no negativo",
-  );
+/**
+ * El esquema depende del idioma: los mensajes de validación se pintan tal cual
+ * en el campo, así que se construyen con el diccionario activo en vez de vivir
+ * como literales de módulo.
+ */
+function esquemaDe(t: Diccionario) {
+  const entero = z
+    .string()
+    .refine(
+      (v) => v === "" || (Number.isInteger(Number(v)) && Number(v) >= 0),
+      t.configuracion.debeSerEntero,
+    );
+  const numero = z
+    .string()
+    .refine((v) => v === "" || !Number.isNaN(Number(v)), t.configuracion.debeSerNumero);
 
-const numero = z.string().refine((v) => v === "" || !Number.isNaN(Number(v)), "Debe ser un número");
+  return z.object({
+    nombre: z.string().optional(),
+    codigo: z.string().optional(),
+    descripcion: z.string().optional(),
+    pais: z.string().optional(),
+    ciudad: z.string().optional(),
+    direccion: z.string().optional(),
+    codigo_postal: z.string().optional(),
+    razon_social: z.string().optional(),
+    documento_fiscal: z.string().optional(),
+    direccion_fiscal: z.string().optional(),
+    telefono: z.string().optional(),
+    email_contacto: z.string().optional(),
+    sitio_web: z.string().optional(),
+    latitud: numero,
+    longitud: numero,
+    zona_horaria: z.string().min(1, t.configuracion.seleccionaZonaHoraria),
+    formato_fecha: z.string().min(1, t.configuracion.seleccionaFormato),
+    dias_aviso_vencimiento: entero,
+    requiere_aprobacion: z.boolean(),
+    stock_minimo_default: entero.optional(),
+    tema_id: z.string().min(1, t.configuracion.seleccionaPaleta),
+    modo_oscuro: z.boolean(),
+  });
+}
 
-const esquema = z.object({
-  nombre: z.string().optional(),
-  codigo: z.string().optional(),
-  descripcion: z.string().optional(),
-  pais: z.string().optional(),
-  ciudad: z.string().optional(),
-  direccion: z.string().optional(),
-  codigo_postal: z.string().optional(),
-  razon_social: z.string().optional(),
-  documento_fiscal: z.string().optional(),
-  direccion_fiscal: z.string().optional(),
-  telefono: z.string().optional(),
-  email_contacto: z.string().optional(),
-  sitio_web: z.string().optional(),
-  latitud: numero,
-  longitud: numero,
-  zona_horaria: z.string().min(1, "Selecciona una zona horaria"),
-  formato_fecha: z.string().min(1, "Selecciona un formato"),
-  dias_aviso_vencimiento: entero,
-  requiere_aprobacion: z.boolean(),
-  stock_minimo_default: entero.optional(),
-  tema_id: z.string().min(1, "Selecciona una paleta"),
-  modo_oscuro: z.boolean(),
-});
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
-type FormValues = z.infer<typeof esquema>;
-
-function fileToBase64(file: File): Promise<string> {
+/** El mensaje llega de fuera: el helper es de módulo y no tiene diccionario. */
+function fileToBase64(file: File, mensajeFallo: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => {
       const result = typeof reader.result === "string" ? reader.result : "";
       resolve(result.split(",")[1] ?? "");
     });
-    reader.addEventListener("error", () => reject(new Error("No se pudo leer el archivo")));
+    reader.addEventListener("error", () => reject(new Error(mensajeFallo)));
     reader.readAsDataURL(file);
   });
 }
@@ -104,6 +114,8 @@ function osmEmbedUrl(lat: number, lng: number): string {
  * Todo lo edita el ADMIN (`configuracion:ver/editar`).
  */
 export function ConfiguracionPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +240,7 @@ export function ConfiguracionPage() {
       // Si el ADMIN no tiene preferencia propia, su tema hereda de la empresa:
       // se recargan las preferencias para re-aplicar la apariencia al instante.
       void usePreferencias.getState().refrescar();
-      toast("Configuración guardada", "success");
+      toast(t.configuracion.guardada, "success");
     },
     onError: (err) => setError(mensajeError(err)),
   });
@@ -243,7 +255,7 @@ export function ConfiguracionPage() {
 
   function detectarUbicacion() {
     if (!("geolocation" in navigator)) {
-      setError("Este navegador no expone geolocalización");
+      setError(t.configuracion.sinGeolocalizacion);
       return;
     }
     setDetectando(true);
@@ -256,11 +268,11 @@ export function ConfiguracionPage() {
           shouldValidate: true,
         });
         setDetectando(false);
-        toast("Ubicación detectada", "success");
+        toast(t.configuracion.ubicacionDetectada, "success");
       },
       () => {
         setDetectando(false);
-        setError("No se pudo obtener la ubicación. Revisa los permisos del navegador.");
+        setError(t.configuracion.noSePudoUbicacion);
       },
       { enableHighAccuracy: true, timeout: 10_000 },
     );
@@ -269,7 +281,7 @@ export function ConfiguracionPage() {
   // ---- Logo ----
   const logoSubida = useMutation({
     mutationFn: async (file: File) => {
-      const datos_base64 = await fileToBase64(file);
+      const datos_base64 = await fileToBase64(file, t.configuracion.noSePudoLeerArchivo);
       return subirArchivoEmpresa({
         nombre: file.name,
         tipo: "LOGO",
@@ -279,7 +291,7 @@ export function ConfiguracionPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["archivo-logo"] });
-      toast("Logo actualizado", "success");
+      toast(t.configuracion.logoActualizado, "success");
       if (logoInputRef.current) logoInputRef.current.value = "";
     },
     onError: (err) => setError(mensajeError(err)),
@@ -288,7 +300,7 @@ export function ConfiguracionPage() {
   // ---- Documentos ----
   const docSubida = useMutation({
     mutationFn: async (file: File) => {
-      const datos_base64 = await fileToBase64(file);
+      const datos_base64 = await fileToBase64(file, t.configuracion.noSePudoLeerArchivo);
       return subirArchivoEmpresa({
         nombre: file.name,
         tipo: "DOCUMENTO",
@@ -298,7 +310,7 @@ export function ConfiguracionPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["archivos-empresa"] });
-      toast("Documento subido", "success");
+      toast(t.configuracion.documentoSubido, "success");
       if (docInputRef.current) docInputRef.current.value = "";
     },
     onError: (err) => setError(mensajeError(err)),
@@ -307,7 +319,7 @@ export function ConfiguracionPage() {
     mutationFn: (id: string) => eliminarArchivoEmpresa(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["archivos-empresa"] });
-      toast("Documento eliminado", "success");
+      toast(t.configuracion.documentoEliminado, "success");
     },
     onError: (err) => setError(mensajeError(err)),
   });
@@ -315,17 +327,17 @@ export function ConfiguracionPage() {
   const documentos = (docsQuery.data ?? []).filter((a) => a.tipo === "DOCUMENTO");
 
   if (isLoading) {
-    return <PageHeader title="Configuración" description="Cargando…" />;
+    return <PageHeader title={t.configuracion.titulo} description={t.comun.cargando} />;
   }
   if (!config && !isLoading) {
     return (
       <>
-        <PageHeader title="Configuración" description="Parámetros de la instalación." />
-        <ErrorPanel title="No tienes permiso para ver la configuración">
+        <PageHeader title={t.configuracion.titulo} description={t.configuracion.intro} />
+        <ErrorPanel title={t.configuracion.sinPermiso}>
           La configuración de la empresa la gestiona el administrador. Tus preferencias personales
           están en{" "}
           <ButtonLink variant="link" href={PATH.perfil}>
-            Mi perfil
+            {t.configuracion.miPerfil}
           </ButtonLink>
           .
         </ErrorPanel>
@@ -336,8 +348,8 @@ export function ConfiguracionPage() {
   return (
     <>
       <PageHeader
-        title="Configuración"
-        description="Datos de tu empresa, ubicación, archivos y parámetros globales. Solo el administrador los edita."
+        title={t.configuracion.titulo}
+        description={t.configuracion.descripcion}
         actions={
           <div className="flex items-center gap-2">
             <ButtonLink variant="secondary" href="/configuracion/importar">
@@ -355,22 +367,26 @@ export function ConfiguracionPage() {
 
       <form onSubmit={handleSubmit((v) => guardarMut.mutate(v))} noValidate>
         {error ? (
-          <ErrorPanel title="No se pudo guardar la configuración" className="mb-4">
+          <ErrorPanel title={t.configuracion.noSePudoGuardar} className="mb-4">
             {error}
           </ErrorPanel>
         ) : null}
 
-        <Card title="Datos de la empresa">
+        <Card title={t.configuracion.datosEmpresa}>
           <Card.Body>
             <FormGrid columns={2}>
-              <Field label="Nombre" htmlFor="nombre">
+              <Field label={t.comun.nombre} htmlFor="nombre">
                 <Input id="nombre" {...register("nombre")} />
               </Field>
-              <Field label="Código" htmlFor="codigo" help="Identificador de la instalación.">
+              <Field label={t.comun.codigo} htmlFor="codigo" help={t.configuracion.codigoAyuda}>
                 <Input id="codigo" code {...register("codigo")} />
               </Field>
-              <Field label="País" htmlFor="pais" help="Se usa para sugerir la ubicación.">
-                <Select id="pais" placeholder="Selecciona un país" {...register("pais")}>
+              <Field label={t.campos.pais} htmlFor="pais" help={t.configuracion.paisAyuda}>
+                <Select
+                  id="pais"
+                  placeholder={t.configuracion.seleccionaPais}
+                  {...register("pais")}
+                >
                   {PAISES.map((p) => (
                     <option key={p} value={p}>
                       {p}
@@ -378,78 +394,83 @@ export function ConfiguracionPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Ciudad" htmlFor="ciudad">
+              <Field label={t.campos.ciudad} htmlFor="ciudad">
                 <Input id="ciudad" {...register("ciudad")} />
               </Field>
-              <Field label="Dirección de la sucursal principal" htmlFor="direccion">
+              <Field label={t.configuracion.direccionSucursal} htmlFor="direccion">
                 <Input id="direccion" {...register("direccion")} />
               </Field>
-              <Field label="Código postal" htmlFor="codigo_postal">
+              <Field label={t.configuracion.codigoPostal} htmlFor="codigo_postal">
                 <Input id="codigo_postal" code {...register("codigo_postal")} />
               </Field>
-              <Field label="Descripción" htmlFor="descripcion" className="lg:col-span-2">
+              <Field label={t.comun.descripcion} htmlFor="descripcion" className="lg:col-span-2">
                 <Textarea id="descripcion" rows={2} {...register("descripcion")} />
               </Field>
             </FormGrid>
           </Card.Body>
         </Card>
 
-        <Card title="Datos fiscales" className="mt-6">
+        <Card title={t.configuracion.datosFiscales} className="mt-6">
           <Card.Body>
             <FormGrid columns={2}>
-              <Field label="Razón social" htmlFor="razon_social" help="Nombre legal de la empresa.">
+              <Field
+                label={t.configuracion.razonSocial}
+                htmlFor="razon_social"
+                help={t.configuracion.razonSocialAyuda}
+              >
                 <Input id="razon_social" {...register("razon_social")} />
               </Field>
               <Field
-                label="Documento fiscal"
+                label={t.configuracion.documentoFiscal}
                 htmlFor="documento_fiscal"
-                help="RUC, NIT, RFC o equivalente."
+                help={t.configuracion.documentoFiscalAyuda}
               >
                 <Input id="documento_fiscal" code {...register("documento_fiscal")} />
               </Field>
-              <Field label="Dirección fiscal" htmlFor="direccion_fiscal" className="lg:col-span-2">
+              <Field
+                label={t.configuracion.direccionFiscal}
+                htmlFor="direccion_fiscal"
+                className="lg:col-span-2"
+              >
                 <Input id="direccion_fiscal" {...register("direccion_fiscal")} />
               </Field>
             </FormGrid>
           </Card.Body>
         </Card>
 
-        <Card title="Contacto" className="mt-6">
+        <Card title={t.configuracion.contacto} className="mt-6">
           <Card.Body>
             <FormGrid columns={2}>
-              <Field label="Teléfono" htmlFor="telefono">
+              <Field label={t.configuracion.telefono} htmlFor="telefono">
                 <Input id="telefono" code {...register("telefono")} />
               </Field>
-              <Field label="Email de contacto" htmlFor="email_contacto">
+              <Field label={t.configuracion.emailContacto} htmlFor="email_contacto">
                 <Input id="email_contacto" type="email" {...register("email_contacto")} />
               </Field>
-              <Field label="Sitio web" htmlFor="sitio_web">
+              <Field label={t.configuracion.sitioWeb} htmlFor="sitio_web">
                 <Input id="sitio_web" {...register("sitio_web")} />
               </Field>
             </FormGrid>
           </Card.Body>
         </Card>
 
-        <Card title="Ubicación y mapa" className="mt-6">
+        <Card title={t.configuracion.ubicacionMapa} className="mt-6">
           <Card.Body>
-            <p className="mb-4 text-sm text-gray-600">
-              Detecta tu ubicación con el navegador o escríbela a mano. El mapa muestra la sucursal
-              principal; el enlace abre las coordenadas en Google Maps.
-            </p>
+            <p className="mb-4 text-sm text-gray-600">{t.configuracion.ubicacionIntro}</p>
             <FormGrid columns={2}>
               <Field
-                label="Latitud"
+                label={t.configuracion.latitud}
                 htmlFor="latitud"
                 error={errors.latitud?.message}
-                help="Entre -90 y 90."
+                help={t.configuracion.latitudAyuda}
               >
                 <Input id="latitud" number {...register("latitud")} />
               </Field>
               <Field
-                label="Longitud"
+                label={t.configuracion.longitud}
                 htmlFor="longitud"
                 error={errors.longitud?.message}
-                help="Entre -180 y 180."
+                help={t.configuracion.longitudAyuda}
               >
                 <Input id="longitud" number {...register("longitud")} />
               </Field>
@@ -462,21 +483,21 @@ export function ConfiguracionPage() {
                 onClick={detectarUbicacion}
               >
                 <Icon name="ubicacion" size={16} aria-hidden="true" />
-                {detectando ? "Detectando…" : "Detectar mi ubicación"}
+                {detectando ? t.configuracion.detectando : t.configuracion.detectarUbicacion}
               </Button>
               {hayCoordenadas ? (
                 <ButtonLink
                   variant="ghost"
                   href={`https://www.google.com/maps?q=${latitud},${longitud}`}
                 >
-                  Abrir en Google Maps
+                  {t.configuracion.abrirGoogleMaps}
                 </ButtonLink>
               ) : null}
             </div>
             {hayCoordenadas ? (
               <div className="mt-4 overflow-hidden rounded-lg border border-gray-200">
                 <iframe
-                  title="Mapa de la sucursal principal"
+                  title={t.configuracion.mapaSucursal}
                   src={osmEmbedUrl(latitud, longitud)}
                   className="h-72 w-full"
                   loading="lazy"
@@ -484,22 +505,20 @@ export function ConfiguracionPage() {
                 />
               </div>
             ) : (
-              <p className="mt-4 text-xs text-gray-500">
-                Agrega las coordenadas para ver el mapa aquí.
-              </p>
+              <p className="mt-4 text-xs text-gray-500">{t.configuracion.agregaCoordenadas}</p>
             )}
           </Card.Body>
         </Card>
 
-        <Card title="Parámetros generales" className="mt-6">
+        <Card title={t.configuracion.parametrosGenerales} className="mt-6">
           <Card.Body>
             <FormGrid columns={2}>
               <Field
-                label="Zona horaria"
+                label={t.configuracion.zonaHoraria}
                 htmlFor="zona_horaria"
                 required
                 error={errors.zona_horaria?.message}
-                help="Hora de las fechas en reportes y alertas (SPEC §14.4)."
+                help={t.configuracion.zonaHorariaAyuda}
               >
                 <Select
                   id="zona_horaria"
@@ -511,11 +530,11 @@ export function ConfiguracionPage() {
                 />
               </Field>
               <Field
-                label="Formato de fecha"
+                label={t.configuracion.formatoFecha}
                 htmlFor="formato_fecha"
                 required
                 error={errors.formato_fecha?.message}
-                help="Formato en que se muestran las fechas (DESIGN §9.2)."
+                help={t.configuracion.formatoFechaAyuda}
               >
                 <Select
                   id="formato_fecha"
@@ -527,11 +546,11 @@ export function ConfiguracionPage() {
                 />
               </Field>
               <Field
-                label="Días de aviso de vencimiento"
+                label={t.configuracion.diasAvisoVencimiento}
                 htmlFor="dias_aviso_vencimiento"
                 required
                 error={errors.dias_aviso_vencimiento?.message}
-                help="Horizonte de la alerta 'lote por vencer' (SPEC §17.1)."
+                help={t.configuracion.diasAvisoAyuda}
               >
                 <Input
                   id="dias_aviso_vencimiento"
@@ -541,16 +560,16 @@ export function ConfiguracionPage() {
                 />
               </Field>
               <Field
-                label="Stock mínimo por defecto"
+                label={t.configuracion.stockMinimoDefecto}
                 htmlFor="stock_minimo_default"
                 error={errors.stock_minimo_default?.message}
-                help="Umbral de stock bajo para productos sin stock_minimo propio."
+                help={t.configuracion.stockMinimoAyuda}
               >
                 <Input
                   id="stock_minimo_default"
                   number
                   min={0}
-                  placeholder="Sin valor"
+                  placeholder={t.configuracion.sinValor}
                   {...register("stock_minimo_default")}
                 />
               </Field>
@@ -558,39 +577,36 @@ export function ConfiguracionPage() {
           </Card.Body>
         </Card>
 
-        <Card title="Política de operación" className="mt-6">
+        <Card title={t.configuracion.politicaOperacion} className="mt-6">
           <Card.Body>
             <label className="flex items-start gap-3">
               <input type="checkbox" className="mt-1" {...register("requiere_aprobacion")} />
               <span>
                 <span className="block text-sm font-medium text-gray-700">
-                  Requerir aprobación de movimientos
+                  {t.configuracion.requerirAprobacion}
                 </span>
                 <span className="block text-xs text-gray-500">
-                  Con esto activado, los movimientos nacen en borrador y pasan por aprobación (SPEC
-                  §6.2). Si se desactiva, el flujo de aprobación deja de ser obligatorio y el
-                  sistema lo permite según el rol de cada usuario.
+                  {t.configuracion.requerirAprobacionAyuda}
                 </span>
               </span>
             </label>
           </Card.Body>
         </Card>
 
-        <Card title="Apariencia" className="mt-6">
+        <Card title={t.configuracion.apariencia} className="mt-6">
           <Card.Body>
             <p className="mb-4 text-sm text-gray-600">
-              Paleta global de la interfaz y modo claro u oscuro (DESIGN §3.1). Los usuarios sin
-              preferencia propia heredan esta apariencia; cada quien puede cambiarla en{" "}
+              {t.configuracion.aparienciaIntro}{" "}
               <ButtonLink variant="link" href={PATH.perfil}>
-                Mi perfil
+                {t.configuracion.miPerfil}
               </ButtonLink>
               .
             </p>
             <FormGrid columns={1}>
               <Field
-                label="Paleta de colores"
+                label={t.configuracion.paleta}
                 htmlFor="paleta"
-                help="La vista previa se aplica al instante; se guarda con el botón de abajo."
+                help={t.configuracion.paletaAyuda}
               >
                 <PaletaPicker
                   temas={temasQuery.data ?? []}
@@ -599,17 +615,17 @@ export function ConfiguracionPage() {
                     setValue("tema_id", id, { shouldValidate: true });
                     void useTema.getState().previsualizar(id, watch("modo_oscuro"));
                   }}
-                  ariaLabel="Paleta de colores de la interfaz"
+                  ariaLabel={t.configuracion.paletaAria}
                 />
               </Field>
-              <Field label="Modo de color" htmlFor="modo">
+              <Field label={t.configuracion.modoColor} htmlFor="modo">
                 <ModoPicker
                   seleccionado={watch("modo_oscuro") ? "OSCURO" : "CLARO"}
                   onSeleccionar={(m) => {
                     setValue("modo_oscuro", m === "OSCURO", { shouldValidate: true });
                     void useTema.getState().previsualizar(watch("tema_id"), m === "OSCURO");
                   }}
-                  ariaLabel="Modo de color de la interfaz"
+                  ariaLabel={t.configuracion.modoColorAria}
                 />
               </Field>
             </FormGrid>
@@ -618,21 +634,21 @@ export function ConfiguracionPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>
-            {guardarMut.isPending ? "Guardando…" : "Guardar configuración"}
+            {guardarMut.isPending ? t.comun.guardando : t.configuracion.guardar}
           </Button>
           <ButtonLink variant="secondary" href={PATH.dashboard}>
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>
 
-      <Card title="Logo de la empresa" className="mt-6">
+      <Card title={t.configuracion.logoEmpresa} className="mt-6">
         <Card.Body>
           <div className="flex items-center gap-6">
             {logoQuery.data ? (
               <img
                 src={`data:${logoQuery.data.mime};base64,${logoQuery.data.datos_base64}`}
-                alt="Logo de la empresa"
+                alt={t.configuracion.logoEmpresa}
                 className="h-20 w-20 rounded-lg border border-gray-200 object-contain"
               />
             ) : (
@@ -658,20 +674,18 @@ export function ConfiguracionPage() {
                 onClick={() => logoInputRef.current?.click()}
               >
                 {logoSubida.isPending
-                  ? "Subiendo…"
+                  ? t.configuracion.subiendo
                   : logoQuery.data
-                    ? "Cambiar logo"
-                    : "Subir logo"}
+                    ? t.configuracion.cambiarLogo
+                    : t.configuracion.subirLogo}
               </Button>
-              <p className="mt-2 text-xs text-gray-500">
-                PNG, JPG o SVG, máximo 2 MB. Se muestra en esta página y en los encabezados.
-              </p>
+              <p className="mt-2 text-xs text-gray-500">{t.configuracion.logoAyuda}</p>
             </div>
           </div>
         </Card.Body>
       </Card>
 
-      <Card title="Documentos de la empresa" className="mt-6">
+      <Card title={t.configuracion.documentosEmpresa} className="mt-6">
         <Card.Body>
           <input
             ref={docInputRef}
@@ -689,11 +703,9 @@ export function ConfiguracionPage() {
             onClick={() => docInputRef.current?.click()}
           >
             <Icon name="agregar" size={16} aria-hidden="true" />
-            {docSubida.isPending ? "Subiendo…" : "Subir documento"}
+            {docSubida.isPending ? t.configuracion.subiendo : t.configuracion.subirDocumento}
           </Button>
-          <p className="mt-2 text-xs text-gray-500">
-            Facturas, certificados o cualquier archivo de la empresa. Máximo 10 MB por documento.
-          </p>
+          <p className="mt-2 text-xs text-gray-500">{t.configuracion.documentosAyuda}</p>
           {documentos.length > 0 ? (
             <ul className="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-200">
               {documentos.map((doc: ArchivoEmpresa) => (
@@ -702,7 +714,7 @@ export function ConfiguracionPage() {
                   <span className="flex-1 font-mono text-sm text-gray-700">{doc.nombre}</span>
                   <span className="text-xs text-gray-500">{formatearTamano(doc.tamano)}</span>
                   <ButtonLink variant="ghost" href={`/configuracion/archivos/${doc.id}/ver`}>
-                    Ver
+                    {t.comun.ver}
                   </ButtonLink>
                   <Button
                     type="button"
@@ -710,13 +722,13 @@ export function ConfiguracionPage() {
                     disabled={docEliminar.isPending}
                     onClick={() => docEliminar.mutate(doc.id)}
                   >
-                    Eliminar
+                    {t.comun.eliminar}
                   </Button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-4 text-sm text-gray-500">Aún no hay documentos.</p>
+            <p className="mt-4 text-sm text-gray-500">{t.configuracion.sinDocumentos}</p>
           )}
         </Card.Body>
       </Card>
@@ -732,38 +744,30 @@ export function ConfiguracionPage() {
  * un banner que interrumpe la operación (DESIGN §5.1).
  */
 function AplicacionCard() {
+  const t = useT();
   const instalable = usePwa((s) => s.instalable);
   const instalada = usePwa((s) => s.instalada);
   const instalar = usePwa((s) => s.instalar);
 
   return (
-    <Card title="Aplicación" className="mt-6">
+    <Card title={t.configuracion.aplicacion} className="mt-6">
       <Card.Body>
         {instalada ? (
-          <p className="text-sm text-gray-500">
-            Rustock ya está instalado en este dispositivo: se abre en su propia ventana, arranca sin
-            esperar a la red y conserva la sesión entre usos.
-          </p>
+          <p className="text-sm text-gray-500">{t.configuracion.yaInstalada}</p>
         ) : instalable ? (
           <div className="flex items-center gap-4 flex-wrap">
-            <p className="text-sm text-gray-500 flex-1">
-              Instale Rustock en este dispositivo para abrirlo en su propia ventana, con arranque
-              inmediato y sin la barra del navegador.
-            </p>
+            <p className="text-sm text-gray-500 flex-1">{t.configuracion.invitacionInstalar}</p>
             <Button
               type="button"
               variant="secondary"
               icon="instalar"
               onClick={() => void instalar()}
             >
-              Instalar Rustock
+              {t.configuracion.instalarRustock}
             </Button>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">
-            Este navegador no ofrece la instalación de Rustock como aplicación. En Chrome o Edge
-            aparecerá aquí un botón para instalarla en el dispositivo.
-          </p>
+          <p className="text-sm text-gray-500">{t.configuracion.sinInstalacion}</p>
         )}
       </Card.Body>
     </Card>

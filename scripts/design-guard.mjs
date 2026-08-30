@@ -52,6 +52,14 @@ const COLOR_LITERAL_RE =
   /(?:#[0-9a-fA-F]{3,8}\b|rgba?\s*\([^)]*\)|hsla?\s*\([^)]*\))/g;
 const INLINE_STYLE_COLOR_RE = /style\s*=\s*\{[^}]*?(?:#[0-9a-fA-F]{3,8}\b|rgba?\s*\()/;
 
+/** Vacía el contenido de las cadenas para que solo quede el código. */
+function sinCadenas(line) {
+  return line
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+    .replace(/`(?:[^`\\$]|\\.|\$(?!\{))*`/g, "``");
+}
+
 const ALLOWED_SHADOWS = [
   "none",
   "var(--shadow-xs)",
@@ -189,7 +197,9 @@ for (const filePath of FILES) {
       if (EMOJI_RE.test(line)) {
         errors.push(`${ctx(i)} — emoji detectado en UI (DESIGN §1.1, tolerancia cero)`);
       }
-      if (NATIVE_DIALOG_RE.test(line)) {
+      // Solo el código cuenta: una frase como «la alerta (SPEC §17.1)» dentro
+      // de una cadena traducida no abre ninguna ventana del navegador.
+      if (NATIVE_DIALOG_RE.test(sinCadenas(line))) {
         errors.push(`${ctx(i)} — alert/confirm/prompt prohibido (DESIGN §5.1, cero modales)`);
       }
       if (LUCIDE_IMPORT_RE.test(line)) {

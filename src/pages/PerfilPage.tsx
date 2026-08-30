@@ -19,7 +19,7 @@ import { useTema } from "../shared/tema";
 import { useSession } from "../shared/session";
 import { mensajeError } from "../shared/format";
 import { itemsDeNav } from "../app/nav";
-import { useT } from "../shared/i18n";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   Card,
@@ -39,29 +39,25 @@ import {
 } from "../shared/ui";
 import type { IconName } from "../shared/ui";
 
-const esquemaPassword = z
-  .object({
-    password_actual: z.string().min(1, "Ingresa tu contraseña actual"),
-    password_nueva: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
-    confirmacion: z.string().min(1, "Confirma la nueva contraseña"),
-  })
-  .refine((v) => v.password_nueva === v.confirmacion, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmacion"],
-  });
+/** Los mensajes se pintan en el campo, así que el esquema sigue al idioma. */
+function esquemaPasswordDe(t: Diccionario) {
+  return z
+    .object({
+      password_actual: z.string().min(1, t.perfil.ingresaActual),
+      password_nueva: z.string().min(8, t.perfil.minimoOcho),
+      confirmacion: z.string().min(1, t.perfil.confirmaNueva),
+    })
+    .refine((v) => v.password_nueva === v.confirmacion, {
+      message: t.perfil.noCoinciden,
+      path: ["confirmacion"],
+    });
+}
 
-type FormPassword = z.infer<typeof esquemaPassword>;
-
-const ROL_LABEL: Record<string, string> = {
-  ADMIN: "Administrador",
-  GERENTE: "Gerente",
-  ENCARGADO_ALMACEN: "Encargado de almacén",
-  OPERADOR: "Operador",
-  LECTOR: "Lector",
-};
+type FormPassword = z.infer<ReturnType<typeof esquemaPasswordDe>>;
 
 export function PerfilPage() {
   const t = useT();
+  const esquemaPassword = useMemo(() => esquemaPasswordDe(t), [t]);
   const usuario = useSession((s) => s.usuario);
   const cerrarSesion = useSession((s) => s.cerrarSesion);
   const preferencias = usePreferencias((s) => s.resueltas);
@@ -170,14 +166,9 @@ export function PerfilPage() {
       const ayudaPalette = (document.getElementById("ayuda_en_palette") as HTMLInputElement | null)
         ?.checked;
       if (ayudaPalette !== undefined && ayudaPalette !== preferencias?.ayuda_en_palette) {
-        toast(
-          ayudaPalette
-            ? "Ayuda activada en la búsqueda rápida: verás sugerencias de guías y glosario en Ctrl+K."
-            : "Ayuda desactivada en la búsqueda rápida: las sugerencias de guías y glosario ya no aparecerán en Ctrl+K.",
-          "success",
-        );
+        toast(ayudaPalette ? t.perfil.ayudaActivada : t.perfil.ayudaDesactivada, "success");
       } else {
-        toast("Preferencias guardadas", "success");
+        toast(t.perfil.preferenciasGuardadas, "success");
       }
     },
     onError: (err) => setError(mensajeError(err)),
@@ -192,7 +183,7 @@ export function PerfilPage() {
     mutationFn: (v: FormPassword) => cambiarPassword(v.password_actual, v.password_nueva),
     onSuccess: () => {
       passwordForm.reset();
-      toast("Contraseña actualizada", "success");
+      toast(t.perfil.actualizada, "success");
     },
     onError: (err) => setError(mensajeError(err)),
   });
@@ -271,41 +262,39 @@ export function PerfilPage() {
   return (
     <>
       <PageHeader
-        title="Mi perfil"
-        description="Tus datos, tus preferencias de presentación y tu contraseña."
+        title={t.perfil.titulo}
+        description={t.perfil.descripcion}
         actions={
           <Button type="button" variant="secondary" icon="cerrarSesion" onClick={handleLogout}>
-            Cerrar sesión
+            {t.perfil.cerrarSesion}
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card title="Datos">
+        <Card title={t.perfil.datos}>
           <Card.Body>
             <DetailList
               items={[
-                { label: "Usuario", value: usuario?.nombre_usuario ?? "—" },
-                { label: "Nombre completo", value: usuario?.nombre_completo ?? "—" },
-                { label: "Email", value: usuario?.email ?? "—" },
+                { label: t.perfil.usuario, value: usuario?.nombre_usuario ?? "—" },
+                { label: t.perfil.nombreCompleto, value: usuario?.nombre_completo ?? "—" },
+                { label: t.perfil.email, value: usuario?.email ?? "—" },
                 {
-                  label: "Rol",
-                  value: ROL_LABEL[usuario?.rol_id ?? ""] ?? "—",
+                  label: t.perfil.rol,
+                  value: t.roles[usuario?.rol_id as keyof typeof t.roles] ?? "—",
                 },
               ]}
             />
           </Card.Body>
         </Card>
 
-        <Card title="Contraseña">
+        <Card title={t.perfil.contrasena}>
           <Card.Body>
-            <p className="mb-4 text-sm text-gray-600">
-              La contraseña se usa para iniciar sesión en esta instalación.
-            </p>
+            <p className="mb-4 text-sm text-gray-600">{t.perfil.contrasenaIntro}</p>
             <form onSubmit={passwordForm.handleSubmit((v) => cambiarPassMut.mutate(v))} noValidate>
               <FormGrid columns={1}>
                 <Field
-                  label="Contraseña actual"
+                  label={t.perfil.actual}
                   htmlFor="password_actual"
                   error={passwordForm.formState.errors.password_actual?.message}
                 >
@@ -316,7 +305,7 @@ export function PerfilPage() {
                   />
                 </Field>
                 <Field
-                  label="Contraseña nueva"
+                  label={t.perfil.nueva}
                   htmlFor="password_nueva"
                   error={passwordForm.formState.errors.password_nueva?.message}
                 >
@@ -327,7 +316,7 @@ export function PerfilPage() {
                   />
                 </Field>
                 <Field
-                  label="Confirmar contraseña nueva"
+                  label={t.perfil.confirmar}
                   htmlFor="confirmacion"
                   error={passwordForm.formState.errors.confirmacion?.message}
                 >
@@ -340,7 +329,7 @@ export function PerfilPage() {
               </FormGrid>
               <FormActions>
                 <Button type="submit" variant="primary" disabled={cambiarPassMut.isPending}>
-                  {cambiarPassMut.isPending ? "Cambiando…" : "Cambiar contraseña"}
+                  {cambiarPassMut.isPending ? t.perfil.cambiando : t.perfil.cambiar}
                 </Button>
               </FormActions>
             </form>
@@ -348,15 +337,19 @@ export function PerfilPage() {
         </Card>
       </div>
 
-      <Card title="Preferencias" className="mt-6">
+      <Card title={t.perfil.preferencias} className="mt-6">
         <Card.Body>
           {error ? (
-            <ErrorPanel title="No se pudieron guardar las preferencias" className="mb-4">
+            <ErrorPanel title={t.perfil.noSePudieronGuardar} className="mb-4">
               {error}
             </ErrorPanel>
           ) : null}
           <FormGrid columns={2}>
-            <Field label="Tamaño de fuente" htmlFor="tamano_fuente" help="Escala toda la interfaz.">
+            <Field
+              label={t.perfil.tamanoFuente}
+              htmlFor="tamano_fuente"
+              help={t.perfil.tamanoFuenteAyuda}
+            >
               <Select
                 id="tamano_fuente"
                 defaultValue={preferencias?.tamano_fuente ?? "MEDIA"}
@@ -366,12 +359,16 @@ export function PerfilPage() {
                 }))}
               />
             </Field>
-            <Field label="Zona horaria" htmlFor="zona_horaria" help="Fechas y horas en reportes.">
+            <Field
+              label={t.perfil.zonaHoraria}
+              htmlFor="zona_horaria"
+              help={t.perfil.zonaHorariaAyuda}
+            >
               <Select
                 id="zona_horaria"
                 defaultValue={preferencias?.zona_horaria ?? ""}
                 options={[
-                  { value: "", label: "Heredar de la empresa" },
+                  { value: "", label: t.perfil.heredarEmpresa },
                   ...ZONAS_HORARIAS.map((z) => ({
                     value: z,
                     label: ZONA_HORARIA_LABEL[z] ?? z,
@@ -379,12 +376,12 @@ export function PerfilPage() {
                 ]}
               />
             </Field>
-            <Field label="Formato de fecha" htmlFor="formato_fecha">
+            <Field label={t.perfil.formatoFecha} htmlFor="formato_fecha">
               <Select
                 id="formato_fecha"
                 defaultValue={preferencias?.formato_fecha ?? ""}
                 options={[
-                  { value: "", label: "Heredar de la empresa" },
+                  { value: "", label: t.perfil.heredarEmpresa },
                   ...(Object.keys(FORMATO_FECHA_LABEL) as FormatoFecha[]).map((k) => ({
                     value: k,
                     label: FORMATO_FECHA_LABEL[k],
@@ -397,35 +394,25 @@ export function PerfilPage() {
             <Checkbox
               id="ayuda_en_palette"
               defaultChecked={preferencias?.ayuda_en_palette ?? true}
-              label="Mostrar sugerencias de Ayuda en la búsqueda rápida (Ctrl+K)"
+              label={t.perfil.ayudaEnPalette}
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Incluye guías de módulos, procesos del negocio y términos del glosario en los
-              resultados del command palette, para aprender mientras trabajas.
-            </p>
+            <p className="mt-1 text-xs text-gray-500">{t.perfil.ayudaEnPaletteDesc}</p>
           </div>
           <p className="mt-4 text-xs text-gray-500">
-            {heredaZona
-              ? "Zona horaria: se usa la de la empresa."
-              : "Zona horaria propia definida."}{" "}
-            {heredaFormato
-              ? "Formato de fecha: se usa el de la empresa."
-              : "Formato de fecha propio definido."}
+            {heredaZona ? t.perfil.zonaHeredada : t.perfil.zonaPropia}{" "}
+            {heredaFormato ? t.perfil.formatoHeredado : t.perfil.formatoPropio}
           </p>
         </Card.Body>
       </Card>
 
-      <Card title="Apariencia" className="mt-6">
+      <Card title={t.perfil.apariencia} className="mt-6">
         <Card.Body>
-          <p className="mb-4 text-sm text-gray-600">
-            Elige la paleta de colores y el modo claro u oscuro. El cambio se aplica y se guarda al
-            instante, sin necesidad del botón de preferencias de abajo.
-          </p>
+          <p className="mb-4 text-sm text-gray-600">{t.perfil.aparienciaIntro}</p>
           <FormGrid columns={1}>
             <Field
-              label="Paleta de colores"
+              label={t.perfil.paleta}
               htmlFor="paleta"
-              help={paletaSel === null ? "Se usa la paleta elegida por la empresa." : undefined}
+              help={paletaSel === null ? t.perfil.paletaHeredada : undefined}
             >
               <PaletaPicker
                 temas={temasQuery.data ?? []}
@@ -441,13 +428,13 @@ export function PerfilPage() {
                   previewTema(null, modoSel);
                   guardarApariencia(null, modoSel);
                 }}
-                ariaLabel="Paleta de colores de la interfaz"
+                ariaLabel={t.perfil.paletaAria}
               />
             </Field>
             <Field
-              label="Modo de color"
+              label={t.perfil.modoColor}
               htmlFor="modo"
-              help={modoSel === null ? "Se usa el modo elegido por la empresa." : undefined}
+              help={modoSel === null ? t.perfil.modoHeredado : undefined}
             >
               <ModoPicker
                 seleccionado={modoSel}
@@ -462,19 +449,16 @@ export function PerfilPage() {
                   previewTema(paletaSel, null);
                   guardarApariencia(paletaSel, null);
                 }}
-                ariaLabel="Modo de color de la interfaz"
+                ariaLabel={t.perfil.modoColorAria}
               />
             </Field>
           </FormGrid>
         </Card.Body>
       </Card>
 
-      <Card title="Orden del panel lateral" className="mt-6">
+      <Card title={t.perfil.ordenPanel} className="mt-6">
         <Card.Body>
-          <p className="mb-4 text-sm text-gray-600">
-            Arrastra con las flechas la posición de cada sección dentro de su grupo. El cambio se
-            aplica al guardar.
-          </p>
+          <p className="mb-4 text-sm text-gray-600">{t.perfil.ordenPanelIntro}</p>
           {grupos.map((grupo) => (
             <div key={grupo.titulo} className="mb-4">
               <h3 className="mb-2 text-xs font-semibold uppercase text-gray-500">{grupo.titulo}</h3>
@@ -487,7 +471,7 @@ export function PerfilPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label={`Subir ${item.label}`}
+                      aria-label={t.perfil.subir({ nombre: item.label })}
                       disabled={idx === 0}
                       onClick={() => moverItem(item.href, -1)}
                     >
@@ -497,7 +481,7 @@ export function PerfilPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label={`Bajar ${item.label}`}
+                      aria-label={t.perfil.bajar({ nombre: item.label })}
                       disabled={idx === arr.length - 1}
                       onClick={() => moverItem(item.href, 1)}
                     >
@@ -515,7 +499,7 @@ export function PerfilPage() {
               disabled={guardarPrefsMut.isPending}
               onClick={() => guardarPrefsMut.mutate()}
             >
-              {guardarPrefsMut.isPending ? "Guardando…" : "Guardar preferencias"}
+              {guardarPrefsMut.isPending ? t.comun.guardando : t.perfil.guardarPreferencias}
             </Button>
           </FormActions>
         </Card.Body>
