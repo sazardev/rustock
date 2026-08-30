@@ -13,6 +13,8 @@ const CHROME = process.env.CHROME ?? "google-chrome-stable";
 const FRONT = process.env.RUSTOCK_FRONT ?? "http://localhost:6821";
 const API = process.env.RUSTOCK_API ?? "http://127.0.0.1:1421/api";
 const SALIDA = process.env.SALIDA ?? "/tmp/rustock-capturas";
+/** Idioma con el que se pinta la app (RUSTOCK_IDIOMA=en para revisar el inglés). */
+const IDIOMA = process.env.RUSTOCK_IDIOMA ?? "es";
 const PERFIL = `${SALIDA}/perfil`;
 
 const RUTAS = process.argv.slice(2).length
@@ -60,6 +62,7 @@ for (const ruta of RUTAS) {
     semilla,
     `<!doctype html><meta charset="utf-8"><script>
        sessionStorage.setItem(${JSON.stringify("rustock.sesion")}, ${JSON.stringify(t)});
+       localStorage.setItem(${JSON.stringify("rustock.idioma")}, ${JSON.stringify(IDIOMA)});
        location.replace(${JSON.stringify(ruta)});
      </script>`,
   );
