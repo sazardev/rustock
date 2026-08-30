@@ -186,7 +186,10 @@ const CATALOGOS_ESPERADOS = [
   "proveedores",
   "clientes",
 ];
-const catalogBlock = catalogSrc.match(/CATALOGOS[^=]*=\s*\{([\s\S]*?)\n\};/);
+// Los adaptadores dejaron de ser una constante al traducirse: hoy los
+// construye `catalogosDe(t)` a partir del diccionario. Se lee el `return {…}`
+// de esa función, que es donde vive la lista real de catálogos.
+const catalogBlock = catalogSrc.match(/catalogosDe\([^)]*\)[^{]*\{\s*return \{([\s\S]*?)\n  \};/);
 const catalogSlugs = catalogBlock
   ? [...catalogBlock[1].matchAll(/^\s*(\w+):/gm)].map((m) => m[1])
   : [];

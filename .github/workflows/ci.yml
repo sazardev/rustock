@@ -1,0 +1,61 @@
+# Integración continua de Rustock.
+#
+# Ejecuta en el servidor exactamente los mismos guardas que lefthook exige en
+# local (AGENTS.md: la disciplina no es negociable). Si algo pasa aquí y falla
+# en tu máquina —o al revés— es que los dos lados se han desincronizado, y eso
+# es en sí mismo un fallo que arreglar.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+# Un push nuevo sobre la misma rama cancela la ejecución anterior: nadie espera
+# por un resultado que ya no corresponde al código.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (tipos, lint, guardas, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+      - run: npm ci
+      # `verify` encadena typecheck, lint, design-guard, route-guard,
+      # i18n-guard, la auditoría y el build. Es el mismo comando que se usa a
+      # mano, así que no hay una lista que mantener por duplicado aquí.
+      - run: npm run verify
+      - run: npm run format:check
+
+  backend:
+    name: Backend (fmt, clippy, tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      # Tauri necesita las cabeceras de GTK/WebKit para compilar, aun cuando
+      # los tests no abren ninguna ventana.
+      - name: Dependencias de sistema de Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo fmt --check -- --config format_code_in_doc_comments=false
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test

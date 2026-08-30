@@ -55,6 +55,10 @@ Env for backend: `RUSTOCK_SEED=1` (seed, debug only), `RUSTOCK_WEB_ONLY=1`, `RUS
 - `pre-push` (sequential): `typecheck`, `build`, `oxlint src`, `design-guard`, `route-guard`, `cargo fmt --all --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo check --all-targets`.
 - `commit-msg`: `scripts/check-commit.mjs` — Conventional Commits `feat|fix|perf|refactor|docs|test|build|ci|chore|revert|style|wip`. Ex `feat(movimientos): agrega traslados`.
 
+### CI (GitHub Actions)
+
+`.github/workflows/ci.yml` runs on push to `main`, on `v*` tags and on PRs, in two jobs: **frontend** (`npm ci` → `npm run verify` → `npm run format:check`) and **backend** (`cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, with the GTK/WebKit headers Tauri needs to compile). It deliberately calls the same commands as lefthook rather than restating the list — if CI and local ever disagree, that divergence is itself the bug.
+
 Version in 3 places synced: `package.json` + `src-tauri/Cargo.toml` + `src-tauri/tauri.conf.json`. Use `npm run release:patch|minor|major` (`scripts/release.mjs`), never hand-edit. `git-cliff` (`cliff.toml`) → `CHANGELOG.md`.
 
 ## Toolchain quirks

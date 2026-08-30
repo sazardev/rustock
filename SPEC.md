@@ -992,6 +992,7 @@ Además: acierto global, reparto entre cámara y lector de mano, tiempo medio de
 
 - `activo`/`estado` gobiernan visibilidad y operación.
 - El historial nunca se purga de forma automática.
+- **Nunca cero administradores.** El sistema rechaza (`UltimoAdmin`) toda operación que dejaría la instalación sin ningún ADMIN activo: desactivar al último administrador, y también quitarle el rol ADMIN al editarlo. Son la misma pérdida por dos puertas —sin `usuario:editar` no queda nadie que pueda reponer la cuenta, y la instalación solo se recupera tocando la base a mano—, así que ambas se comprueban en `repo::seguridad`, no en el formulario.
 
 ### 14.6 Concurrencia
 
