@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useT } from "../shared/i18n";
+import { useT, type Diccionario } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { Controller, useFieldArray, useForm, useWatch, type Control } from "react-hook-form";
@@ -61,29 +61,34 @@ function useOfrecerAprobar() {
   return Boolean(requiereAprobacion === false && puedoAprobar.data);
 }
 
-export const TIPOS: Array<{ value: TipoMovimiento; label: string }> = [
-  { value: "ENTRADA", label: "Entrada" },
-  { value: "SALIDA", label: "Salida" },
-  { value: "TRASLADO", label: "Traslado" },
-  { value: "AJUSTE", label: "Ajuste" },
-];
+/** Los cuatro tipos de movimiento, en el idioma activo. */
+export function tiposDe(t: Diccionario): Array<{ value: TipoMovimiento; label: string }> {
+  return TIPOS_VALORES.map((value) => ({ value, label: t.dominio.tipoMovimiento[value] }));
+}
 
-const SUB_TIPOS: Record<string, Array<{ value: SubTipoMovimiento; label: string }>> = {
-  ENTRADA: [
-    { value: "COMPRA", label: "Recepción de compra" },
-    { value: "DEVOLUCION_CLIENTE", label: "Devolución de cliente" },
-    { value: "INICIAL", label: "Entrada inicial (apertura)" },
-  ],
-  SALIDA: [
-    { value: "CLIENTE", label: "Despacho a cliente" },
-    { value: "DEVOLUCION_PROVEEDOR", label: "Devolución a proveedor" },
-    { value: "MERMA", label: "Merma" },
-  ],
-  AJUSTE: [
-    { value: "AJUSTE_POSITIVO", label: "Ajuste positivo (sobrante)" },
-    { value: "AJUSTE_NEGATIVO", label: "Ajuste negativo (faltante)" },
-  ],
+/** Solo los valores: se usan para validar el parámetro de la URL, sin idioma. */
+export const TIPOS_VALORES: TipoMovimiento[] = ["ENTRADA", "SALIDA", "TRASLADO", "AJUSTE"];
+
+/** Solo los sub-tipos que una persona elige a mano: los de traslado los
+ *  genera el backend por su cuenta. */
+type SubTipoElegible = keyof Diccionario["movForm"]["subTipoOpcion"];
+
+const SUB_TIPOS_VALORES: Record<string, SubTipoElegible[]> = {
+  ENTRADA: ["COMPRA", "DEVOLUCION_CLIENTE", "INICIAL"],
+  SALIDA: ["CLIENTE", "DEVOLUCION_PROVEEDOR", "MERMA"],
+  AJUSTE: ["AJUSTE_POSITIVO", "AJUSTE_NEGATIVO"],
 };
+
+/** Sub-tipos válidos para un tipo, ya etiquetados. */
+function subTiposDe(
+  t: Diccionario,
+  tipo: string,
+): Array<{ value: SubTipoMovimiento; label: string }> {
+  return (SUB_TIPOS_VALORES[tipo] ?? []).map((value) => ({
+    value,
+    label: t.movForm.subTipoOpcion[value],
+  }));
+}
 
 const REQUIERE_MOTIVO: SubTipoMovimiento[] = ["AJUSTE_POSITIVO", "AJUSTE_NEGATIVO", "MERMA"];
 const REQUIERE_PROVEEDOR: SubTipoMovimiento[] = ["COMPRA", "DEVOLUCION_PROVEEDOR"];
@@ -601,7 +606,7 @@ export function MovimientoGenericoForm({
     guardarMut.mutate(valores);
   }
 
-  const subTipoOpciones = SUB_TIPOS[tipo] ?? [];
+  const subTipoOpciones = subTiposDe(t, tipo);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>

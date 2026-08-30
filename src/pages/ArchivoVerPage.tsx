@@ -4,6 +4,7 @@ import { obtenerArchivoEmpresa } from "../shared/backend";
 import { mensajeError } from "../shared/format";
 import { PATH } from "../app/route-paths";
 import { ButtonLink, Card, ErrorPanel, PageHeader } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 /**
  * Página de visualización de un archivo de la empresa (logo o documento).
@@ -11,6 +12,7 @@ import { ButtonLink, Card, ErrorPanel, PageHeader } from "../shared/ui";
  * con el enlace de abajo (data URL generado desde el backend).
  */
 export function ArchivoVerPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const query = useQuery({
     queryKey: ["archivo-empresa", id],
@@ -25,8 +27,8 @@ export function ArchivoVerPage() {
   if (!archivo) {
     return (
       <>
-        <PageHeader title="Archivo" description="No se encontró el archivo." />
-        <ErrorPanel title="Archivo no encontrado">
+        <PageHeader title="Archivo" description={t.paginas.archivoNoEncontradoDesc} />
+        <ErrorPanel title={t.paginas.archivoNoEncontrado}>
           <ButtonLink variant="link" href={PATH.configuracion}>
             Volver a configuración
           </ButtonLink>
@@ -57,7 +59,7 @@ export function ArchivoVerPage() {
       />
 
       {query.error ? (
-        <ErrorPanel title="No se pudo cargar el archivo">{mensajeError(query.error)}</ErrorPanel>
+        <ErrorPanel title={t.paginas.noSePudoCargarArchivo}>{mensajeError(query.error)}</ErrorPanel>
       ) : null}
 
       <Card>

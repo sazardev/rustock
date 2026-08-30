@@ -4,11 +4,11 @@ import { useSearchParams } from "react-router";
 import { listarLineasMovimiento, obtenerMovimiento } from "../shared/backend";
 import { esPaginado, type TipoMovimiento } from "../shared/types";
 import { Button, Card, Icon, PageHeader } from "../shared/ui";
-import { MovimientoGenericoForm, TIPOS, TrasladoForm } from "./movimiento-form";
+import { MovimientoGenericoForm, TIPOS_VALORES, tiposDe, TrasladoForm } from "./movimiento-form";
 import { useT } from "../shared/i18n";
 
 function tipoValido(valor: string | null): TipoMovimiento | null {
-  return TIPOS.some((t) => t.value === valor) ? (valor as TipoMovimiento) : null;
+  return TIPOS_VALORES.includes(valor as TipoMovimiento) ? (valor as TipoMovimiento) : null;
 }
 
 export function MovimientoNuevoPage() {
@@ -68,16 +68,19 @@ export function MovimientoNuevoPage() {
       <Card title={t.movimientoAcciones.tipoDeMovimiento} className="mb-6">
         <Card.Body>
           <div className="flex gap-2">
-            {TIPOS.map((t) => (
+            {tiposDe(t).map((op) => (
               <Button
-                key={t.value}
+                key={op.value}
                 type="button"
-                variant={tipo === t.value ? "primary" : "secondary"}
-                onClick={() => cambiarTipo(t.value)}
+                variant={tipo === op.value ? "primary" : "secondary"}
+                onClick={() => cambiarTipo(op.value)}
                 disabled={Boolean(duplicarDe)}
               >
-                <Icon name={t.value === "TRASLADO" ? "traslado" : "movements"} aria-hidden="true" />
-                {t.label}
+                <Icon
+                  name={op.value === "TRASLADO" ? "traslado" : "movements"}
+                  aria-hidden="true"
+                />
+                {op.label}
               </Button>
             ))}
           </div>

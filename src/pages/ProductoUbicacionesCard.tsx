@@ -1,5 +1,5 @@
 /**
- * Tarjeta "Dónde está": en qué ubicaciones/almacenes tiene stock un producto,
+ * Tarjeta t.mapa3d.dondeEsta: en qué ubicaciones/almacenes tiene stock un producto,
  * con link directo al mapa (resaltando la ubicación). Cierra el círculo con
  * `ContenidoInventarioCard` (que va del mapa hacia el contenido) — esta va
  * del producto hacia el mapa.
@@ -25,6 +25,7 @@ import {
 import { Card, Link, Table, type TableColumn, Text } from "../shared/ui";
 import { AlmacenRef, LoteRef, UbicacionRef } from "../shared/refs";
 import { almacenMapa } from "../app/route-paths";
+import { useT } from "../shared/i18n";
 
 /** Resuelve el almacén de una ubicación caminando el árbol (SPEC §3.13) —
  * mismo criterio que `ReporteStockPage.tsx:almacenDeUbicacion`. */
@@ -56,6 +57,7 @@ interface FilaUbicacion {
 }
 
 export function ProductoUbicacionesCard({ row }: { row: Producto }) {
+  const t = useT();
   const saldosQ = useQuery({
     queryKey: ["producto-ubicaciones", "saldos", row.id],
     queryFn: () => listarSaldos(undefined, row.id),
@@ -161,7 +163,7 @@ export function ProductoUbicacionesCard({ row }: { row: Producto }) {
   ];
 
   return (
-    <Card title="Dónde está" className="mt-6">
+    <Card title={t.mapa3d.dondeEsta} className="mt-6">
       <Card.Body>
         {cargando ? (
           <Text as="p" size="sm" color="muted">
@@ -172,7 +174,7 @@ export function ProductoUbicacionesCard({ row }: { row: Producto }) {
             columns={columnas}
             rows={filas}
             rowKey={(f) => `${f.ubicacion_id}-${f.lote_id ?? "sin-lote"}`}
-            emptyTitle="Este producto no tiene stock en ninguna ubicación"
+            emptyTitle={t.mapa3d.sinStockEnUbicaciones}
           />
         )}
       </Card.Body>

@@ -431,6 +431,16 @@ export const es = {
 
   // ============ Formulario de movimiento ============
   movForm: {
+    subTipoOpcion: {
+      COMPRA: "Recepción de compra",
+      DEVOLUCION_CLIENTE: "Devolución de cliente",
+      INICIAL: "Entrada inicial (apertura)",
+      CLIENTE: "Despacho a cliente",
+      DEVOLUCION_PROVEEDOR: "Devolución a proveedor",
+      MERMA: "Merma",
+      AJUSTE_POSITIVO: "Ajuste positivo (sobrante)",
+      AJUSTE_NEGATIVO: "Ajuste negativo (faltante)",
+    },
     datosDelMovimiento: "Datos del movimiento",
     lineas: "Líneas",
     fechaDelMovimiento: "Fecha del movimiento",
@@ -1903,6 +1913,50 @@ export const es = {
         "No se encontró ninguna cámara en este dispositivo. Usa el lector de mano o escribe el código.",
       generico: "No se pudo abrir la cámara. Usa el lector de mano o escribe el código.",
     },
+  },
+
+  // ============ Mapa 3D y paneles del mapa ============
+  mapa3d: {
+    descripcion:
+      "Arrastra sobre el piso para reposicionar, rota/haz zoom con el mouse, o selecciona un nodo para ver y editar sus detalles.",
+    pantallaCompleta: "Pantalla completa",
+    caminando: "Caminando: WASD te mueve, Esc para salir.",
+    salirDeCaminar: "Salir de caminar",
+    cambioDeshecho: "Cambio deshecho.",
+    cambioRehecho: "Cambio rehecho.",
+    elementoDesactivado: "Elemento desactivado.",
+    ubicacionesDesdeCatalogo: "Las ubicaciones se gestionan desde su catálogo.",
+    nodoSeleccionado: "Nodo seleccionado",
+    cerrarSeleccion: "Cerrar selección",
+    creadoPor: "Creado por",
+    actualizadoPor: "Actualizado por",
+    ubicacionEnMapa: "Ubicación en el mapa",
+    vistaEntorno: "Vista del entorno inmediato en el mapa",
+    sinStockAqui: "Sin stock registrado aquí",
+    arbolFisico: "Árbol físico",
+    dondeEsta: "Dónde está",
+    sinStockEnUbicaciones: "Este producto no tiene stock en ninguna ubicación",
+  },
+
+  // ============ Páginas de estado y navegación ============
+  paginas: {
+    archivoNoEncontrado: "Archivo no encontrado",
+    archivoNoEncontradoDesc: "No se encontró el archivo.",
+    noSePudoCargarArchivo: "No se pudo cargar el archivo",
+    paginaAnterior: "Página anterior",
+    paginaSiguiente: "Página siguiente",
+    volverPaginaAnterior: "Volver a la página anterior",
+    avanzarPaginaSiguiente: "Avanzar a la siguiente página",
+    errorServidor: "Error del servidor",
+    errorInesperado: "Ocurrió un error inesperado. Intente nuevamente.",
+    reintentandoConexion: "Reintentando conexión",
+    noEncontrada: "Página no encontrada",
+    noEncontradaDesc: "La página que busca no existe o fue movida.",
+    accesoNoPermitido: "Acceso no permitido",
+    accesoNoPermitidoDesc: "Su rol no tiene permiso para acceder a esta sección.",
+    galeriaDiseno: "Galería de diseño",
+    galeriaDisenoDesc: "Componentes y tokens del sistema de diseño",
+    paginaDeError: "Página de error de ejemplo",
   },
 
   // ============ Errores del backend (SPEC §17.3) ============

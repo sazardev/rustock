@@ -1,5 +1,5 @@
 /**
- * Tarjeta "Ubicación en el mapa": mini-vista de solo lectura (sin drag/zoom)
+ * Tarjeta t.mapa3d.ubicacionEnMapa: mini-vista de solo lectura (sin drag/zoom)
  * con los hermanos directos del nodo (mismo tipo + mismo padre inmediato),
  * más la lista de apilado vertical (mismo pos_x/pos_y, distinto pos_z) para
  * responder "qué hay encima/debajo de esto". Se inserta en el detalle de
@@ -23,6 +23,7 @@ import {
 import { esPaginado, type Pasillo, type Rack, type Ubicacion, type Zona } from "../shared/types";
 import { Card, Icon, Link, Text } from "../shared/ui";
 import { almacenMapa, catalogoDetalle } from "../app/route-paths";
+import { useT } from "../shared/i18n";
 
 type TipoContexto = "zona" | "pasillo" | "rack" | "ubicacion";
 
@@ -45,6 +46,7 @@ const SIN_DATOS: never[] = [];
 const TOLERANCIA_MISMA_POSICION = 15;
 
 export function MapaContextoCard({ tipo, row }: Props) {
+  const t = useT();
   // 1) Resolver la cadena hacia arriba hasta la zona (y de ahí el almacén).
   const seccionId = tipo === "ubicacion" ? row.seccion_id : null;
   const seccionQ = useQuery({
@@ -146,7 +148,7 @@ export function MapaContextoCard({ tipo, row }: Props) {
 
   if (cargando) {
     return (
-      <Card title="Ubicación en el mapa" className="mt-6">
+      <Card title={t.mapa3d.ubicacionEnMapa} className="mt-6">
         <Card.Body>
           <Text as="p" size="sm" color="muted">
             Cargando…
@@ -174,7 +176,7 @@ export function MapaContextoCard({ tipo, row }: Props) {
       : null;
 
   return (
-    <Card title="Ubicación en el mapa" className="mt-6">
+    <Card title={t.mapa3d.ubicacionEnMapa} className="mt-6">
       <Card.Body>
         {row.pos_x === null || row.pos_y === null ? (
           <Text as="p" size="sm" color="muted" className="mb-3">
@@ -233,6 +235,7 @@ function NodoLink({ tipo, nodo }: { tipo: TipoContexto; nodo: NodoSimple }) {
 
 /** Vista cenital fija (sin pan/zoom/drag) de un nodo y sus hermanos. */
 function MiniMapa({ hermanos, actualId }: { hermanos: NodoSimple[]; actualId: string }) {
+  const t = useT();
   const xs = hermanos.map((h) => h.pos_x!);
   const ys = hermanos.map((h) => h.pos_y!);
   const minX = Math.min(...xs) - 40;
@@ -247,7 +250,7 @@ function MiniMapa({ hermanos, actualId }: { hermanos: NodoSimple[]; actualId: st
       className="mapa-contexto__lienzo"
       viewBox={`${minX} ${minY} ${ancho} ${alto}`}
       role="img"
-      aria-label="Vista del entorno inmediato en el mapa"
+      aria-label={t.mapa3d.vistaEntorno}
     >
       {hermanos.map((h) => (
         <g key={h.id} transform={`translate(${h.pos_x}, ${h.pos_y})`}>

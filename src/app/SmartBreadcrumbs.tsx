@@ -40,8 +40,8 @@ export function SmartBreadcrumbs({ className, history = true }: SmartBreadcrumbs
             className="breadcrumbs__history-btn"
             onClick={nav.back}
             disabled={!nav.canGoBack}
-            aria-label="Volver a la página anterior"
-            title="Página anterior"
+            aria-label={t.paginas.volverPaginaAnterior}
+            title={t.paginas.paginaAnterior}
           >
             <BreadcrumbIcon dir="prev" />
           </button>
@@ -50,8 +50,8 @@ export function SmartBreadcrumbs({ className, history = true }: SmartBreadcrumbs
             className="breadcrumbs__history-btn"
             onClick={nav.forward}
             disabled={!nav.canGoForward}
-            aria-label="Avanzar a la siguiente página"
-            title="Página siguiente"
+            aria-label={t.paginas.avanzarPaginaSiguiente}
+            title={t.paginas.paginaSiguiente}
           >
             <BreadcrumbIcon dir="next" />
           </button>

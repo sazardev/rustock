@@ -17,6 +17,7 @@ import {
 import { Card, Link, Text } from "../shared/ui";
 import { catalogoDetalle, catalogoNuevo } from "../app/route-paths";
 import { formatearFecha } from "../shared/format";
+import { useT } from "../shared/i18n";
 
 /**
  * Árbol físico navegable de un almacén (SPEC §3.13): Almacén → Zona → Rack →
@@ -24,6 +25,7 @@ import { formatearFecha } from "../shared/format";
  * se cargan con filtros por padre (no se trae todo el catálogo).
  */
 export function ArbolAlmacen({ almacenId }: { almacenId: string }) {
+  const t = useT();
   const zonasQ = useQuery({
     queryKey: ["arbol-almacen", "zonas", almacenId],
     queryFn: () =>
@@ -107,7 +109,7 @@ export function ArbolAlmacen({ almacenId }: { almacenId: string }) {
     );
 
   return (
-    <Card title="Árbol físico" className="mt-6">
+    <Card title={t.mapa3d.arbolFisico} className="mt-6">
       <Card.Body>
         {cargando ? (
           <Text as="p" size="sm" color="muted">

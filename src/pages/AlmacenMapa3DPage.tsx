@@ -46,6 +46,7 @@ import {
 import { useTema } from "../shared/tema";
 import { NodoSeleccionadoPanel } from "./NodoSeleccionadoPanel";
 import type { PosicionValores } from "../shared/posicion-form-card";
+import { useT } from "../shared/i18n";
 
 /** Preferencias de vista del 3D, por navegador (patrón de recientes del
  * command palette): qué etiquetas se ven y si la escena auto-rota. */
@@ -117,6 +118,7 @@ function tieneWebGL(): boolean {
 }
 
 export function AlmacenMapa3DPage() {
+  const t = useT();
   const { id: almacenId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const resaltarId = searchParams.get("resaltar");
@@ -153,7 +155,7 @@ export function AlmacenMapa3DPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mapa-almacen"] });
       setSeleccionadoId(null);
-      toast("Elemento desactivado.", "success");
+      toast(t.mapa3d.elementoDesactivado, "success");
     },
     onError: (err) => toast(mensajeError(err), "error"),
   });
@@ -554,7 +556,7 @@ export function AlmacenMapa3DPage() {
   const duplicarSeleccionado = () => {
     if (!seleccionado || seleccionado.pos_x === null || seleccionado.pos_y === null) return;
     if (seleccionado.tipo === "ubicacion") {
-      toast("Las ubicaciones se gestionan desde su catálogo.", "error");
+      toast(t.mapa3d.ubicacionesDesdeCatalogo, "error");
       return;
     }
     const destino = posicionLibreCercana(
@@ -615,7 +617,7 @@ export function AlmacenMapa3DPage() {
         profundidad: e.antes.profundidad,
       },
     });
-    toast("Cambio deshecho.", "success");
+    toast(t.mapa3d.cambioDeshecho, "success");
   }
 
   function rehacer() {
@@ -652,7 +654,7 @@ export function AlmacenMapa3DPage() {
         profundidad: e.despues.profundidad,
       },
     });
-    toast("Cambio rehecho.", "success");
+    toast(t.mapa3d.cambioRehecho, "success");
   }
 
   const ALTURA_OJOS = 1.7;
@@ -670,7 +672,7 @@ export function AlmacenMapa3DPage() {
       controls.object.position.set(cx, ALTURA_OJOS, cz + 14);
       controls.update();
       setCaminando(true);
-      toast("Caminando: WASD te mueve, Esc para salir.", "success");
+      toast(t.mapa3d.caminando, "success");
     } else {
       setCaminando(false);
       encuadrarTodo();
@@ -777,7 +779,7 @@ export function AlmacenMapa3DPage() {
       <>
         <PageHeader
           title="Mapa 3D"
-          description="Arrastra sobre el piso para reposicionar, rota/haz zoom con el mouse, o selecciona un nodo para ver y editar sus detalles."
+          description={t.mapa3d.descripcion}
           actions={
             <ButtonLink variant="ghost" icon="ubicacion" href={almacenMapa(almacenId ?? "")}>
               Volver al mapa 2D
@@ -909,7 +911,7 @@ export function AlmacenMapa3DPage() {
             icon="caminar"
             onClick={alternarCaminar}
           >
-            {caminando ? "Salir de caminar" : "Caminar"}
+            {caminando ? t.mapa3d.salirDeCaminar : "Caminar"}
           </Button>
           <Button
             variant={mostrarGrilla ? "secondary" : "ghost"}
@@ -944,7 +946,7 @@ export function AlmacenMapa3DPage() {
             icon={pantallaCompleta ? "salirPantallaCompleta" : "pantallaCompleta"}
             onClick={alternarPantallaCompleta}
           >
-            {pantallaCompleta ? "Salir" : "Pantalla completa"}
+            {pantallaCompleta ? "Salir" : t.mapa3d.pantallaCompleta}
           </Button>
         </div>
       </div>

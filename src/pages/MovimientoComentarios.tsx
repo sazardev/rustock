@@ -8,8 +8,10 @@ import { crearComentario, listarComentarios } from "../shared/backend";
 import { UsuarioNombre } from "../shared/refs";
 import { formatearFecha, mensajeError } from "../shared/format";
 import { Badge, Button, Card, Text, Textarea, useToast } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 export function MovimientoComentarios({ movimientoId }: { movimientoId: string }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [textoComentario, setTextoComentario] = useState("");
@@ -72,8 +74,8 @@ export function MovimientoComentarios({ movimientoId }: { movimientoId: string }
             }}
           >
             <Textarea
-              aria-label="Nuevo comentario"
-              placeholder="Agregar un comentario…"
+              aria-label={t.comentarios.nuevo}
+              placeholder={t.comentarios.marcador}
               value={textoComentario}
               onChange={(e) => setTextoComentario(e.target.value)}
               rows={3}

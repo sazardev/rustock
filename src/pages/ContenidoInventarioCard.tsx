@@ -11,6 +11,7 @@ import { listarRacks, listarSaldos, listarSecciones, listarUbicaciones } from ".
 import { esPaginado, type Pasillo, type Rack, type Ubicacion, type Zona } from "../shared/types";
 import { Card, Table, type TableColumn, Text } from "../shared/ui";
 import { LoteRef, ProductoRef, UbicacionRef } from "../shared/refs";
+import { useT } from "../shared/i18n";
 
 type TipoContenido = "zona" | "pasillo" | "rack" | "ubicacion";
 
@@ -30,6 +31,7 @@ interface FilaContenido {
 const SIN_DATOS: never[] = [];
 
 export function ContenidoInventarioCard({ tipo, row }: Props) {
+  const t = useT();
   // Descendientes según el tipo (mismo patrón OR de filtros usado en
   // ArbolAlmacen.tsx/AlmacenMapaPage.tsx para resolver el árbol físico).
   const racksQ = useQuery({
@@ -136,7 +138,7 @@ export function ContenidoInventarioCard({ tipo, row }: Props) {
             columns={columnas}
             rows={filas}
             rowKey={(f) => `${f.ubicacion_id}-${f.producto_id}-${f.lote_id ?? "sin-lote"}`}
-            emptyTitle="Sin stock registrado aquí"
+            emptyTitle={t.mapa3d.sinStockAqui}
           />
         )}
       </Card.Body>

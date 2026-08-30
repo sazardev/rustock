@@ -1,6 +1,8 @@
 import { Button, Card, EmptyState, useToast } from "../shared/ui";
+import { useT } from "../shared/i18n";
 
 export function ErrorPage() {
+  const t = useT();
   const { toast } = useToast();
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -8,13 +10,13 @@ export function ErrorPage() {
         <Card.Body>
           <EmptyState
             icon="alerta"
-            title="Error del servidor"
-            description="Ocurrió un error inesperado. Intente nuevamente."
+            title={t.paginas.errorServidor}
+            description={t.paginas.errorInesperado}
             action={
               <Button
                 variant="primary"
                 icon="refrescar"
-                onClick={() => toast("Reintentando conexión", "default")}
+                onClick={() => toast(t.paginas.reintentandoConexion, "default")}
               >
                 Reintentar
               </Button>

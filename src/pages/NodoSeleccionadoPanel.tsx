@@ -14,6 +14,7 @@ import { catalogoDetalle, catalogoEliminar } from "../app/route-paths";
 import { formatearFecha } from "../shared/format";
 import { UsuarioNombre } from "../shared/refs";
 import { SLUG_POR_TIPO, type NodoMapa, type TipoNodo } from "./mapa-almacen-datos";
+import { useT } from "../shared/i18n";
 
 const ETIQUETA_TIPO: Record<TipoNodo, string> = {
   zona: "Zona",
@@ -38,6 +39,7 @@ export function NodoSeleccionadoPanel({
   onDuplicar?: () => void;
   duplicando?: boolean;
 }) {
+  const t = useT();
   const zonaQ = useQuery({
     queryKey: ["panel-nodo", "zona", nodo?.id],
     queryFn: () => obtenerZona(nodo?.id as string),
@@ -62,7 +64,7 @@ export function NodoSeleccionadoPanel({
   if (!nodo) {
     return (
       <div className="mapa-almacen-3d__panel">
-        <Card title="Nodo seleccionado">
+        <Card title={t.mapa3d.nodoSeleccionado}>
           <Card.Body>
             <Text as="p" size="sm" color="muted">
               Selecciona un nodo del mapa para ver sus detalles.
@@ -82,7 +84,7 @@ export function NodoSeleccionadoPanel({
             variant="ghost"
             size="icon"
             icon="cerrarPanel"
-            aria-label="Cerrar selección"
+            aria-label={t.mapa3d.cerrarSeleccion}
             onClick={onCerrar}
           />
         }
@@ -168,6 +170,7 @@ function ContenidoDeNodo(
     | { tipo: "rack"; entidad: Rack }
     | { tipo: "ubicacion"; entidad: Ubicacion },
 ) {
+  const t = useT();
   const entidad: EntidadConAuditoria = props.entidad;
   return (
     <>
@@ -186,11 +189,11 @@ function ContenidoDeNodo(
               { label: "Creado", value: formatearFecha(entidad.created_at) },
               { label: "Actualizado", value: formatearFecha(entidad.updated_at) },
               {
-                label: "Creado por",
+                label: t.mapa3d.creadoPor,
                 value: entidad.created_by ? <UsuarioNombre id={entidad.created_by} /> : "—",
               },
               {
-                label: "Actualizado por",
+                label: t.mapa3d.actualizadoPor,
                 value: entidad.updated_by ? <UsuarioNombre id={entidad.updated_by} /> : "—",
               },
             ]}

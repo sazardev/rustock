@@ -228,16 +228,16 @@ export function AppLayout() {
                   title: t.nav.grupos.sistema,
                   items: [
                     {
-                      label: "Galería de diseño",
+                      label: t.paginas.galeriaDiseno,
                       href: DESIGN_HREF,
                       icon: "dashboard",
-                      descripcion: "Componentes y tokens del sistema de diseño",
+                      descripcion: t.paginas.galeriaDisenoDesc,
                     },
                     {
                       label: "No encontrado",
                       href: "/no-encontrado",
                       icon: "alerta",
-                      descripcion: "Página de error de ejemplo",
+                      descripcion: t.paginas.paginaDeError,
                     },
                   ],
                 },
