@@ -17,6 +17,7 @@ import { generarLayoutBase, obtenerAlmacen } from "../shared/backend";
 import { invalidarRecurso } from "../shared/invalidar";
 import { almacenMapa } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   ButtonLink,
@@ -41,28 +42,31 @@ const numeroRango = (campo: string, min: number, max: number) =>
       return Number.isFinite(n) && n >= min && n <= max;
     }, `Entre ${min} y ${max} unidades`);
 
-const esquema = z.object({
-  ancho_recinto: numeroRango("El ancho", 200, 100000),
-  profundo_recinto: numeroRango("La profundidad", 200, 100000),
-  pasillos: z
-    .string()
-    .trim()
-    .min(1, "Los pasillos son obligatorios")
-    .refine((v) => {
-      const n = Number(v);
-      return Number.isInteger(n) && n >= 1 && n <= 12;
-    }, "Entre 1 y 12 pasillos"),
-  racks_por_bloque: z
-    .string()
-    .trim()
-    .min(1, "Los racks por bloque son obligatorios")
-    .refine((v) => {
-      const n = Number(v);
-      return Number.isInteger(n) && n >= 1 && n <= 20;
-    }, "Entre 1 y 20 racks por bloque"),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    ancho_recinto: numeroRango("El ancho", 200, 100000),
+    profundo_recinto: numeroRango("La profundidad", 200, 100000),
+    pasillos: z
+      .string()
+      .trim()
+      .min(1, t.asistenteMapa.pasillosObligatorios)
+      .refine((v) => {
+        const n = Number(v);
+        return Number.isInteger(n) && n >= 1 && n <= 12;
+      }, "Entre 1 y 12 pasillos"),
+    racks_por_bloque: z
+      .string()
+      .trim()
+      .min(1, t.asistenteMapa.racksObligatorios)
+      .refine((v) => {
+        const n = Number(v);
+        return Number.isInteger(n) && n >= 1 && n <= 20;
+      }, t.asistenteMapa.racksRango),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 /** Misma fórmula que `mapa.rs` (MARGEN_RECINTO / GAP_RACKS). */
 const MARGEN = 20;
@@ -120,6 +124,8 @@ const TRAZO: Record<PiezaPreview["tipo"], string> = {
 };
 
 export function MapaAsistentePage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const { id: almacenId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -147,7 +153,7 @@ export function MapaAsistentePage() {
   });
 
   const valores = watch();
-  const parsed = useMemo(() => esquema.safeParse(valores), [valores]);
+  const parsed = useMemo(() => esquema.safeParse(valores), [esquema, valores]);
   const piezas = useMemo(() => {
     if (!parsed.success) return [];
     const v = parsed.data;
@@ -182,9 +188,9 @@ export function MapaAsistentePage() {
     <>
       <PageHeader
         title={
-          almacenQ.data ? `Prototipar almacén — ${almacenQ.data.codigo}` : "Prototipar almacén"
+          almacenQ.data ? `Prototipar almacén — ${almacenQ.data.codigo}` : t.asistenteMapa.titulo
         }
-        description="Genera el layout base del almacén y ajústalo después en el mapa. Solo disponible si el almacén aún no tiene zonas."
+        description={t.asistenteMapa.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={almacenMapa(almacenId)}>
             Volver al mapa
@@ -192,7 +198,7 @@ export function MapaAsistentePage() {
         }
       />
       <div className="asistente-layout">
-        <Card title="Medidas del recinto">
+        <Card title={t.asistenteMapa.medidas}>
           <Card.Body>
             <form
               onSubmit={handleSubmit((v) => {
@@ -207,14 +213,14 @@ export function MapaAsistentePage() {
             >
               <FormGrid columns={2}>
                 <Field
-                  label="Ancho del recinto"
+                  label={t.asistenteMapa.ancho}
                   htmlFor="ancho_recinto"
                   error={errors.ancho_recinto?.message}
                 >
                   <Input id="ancho_recinto" type="number" number {...register("ancho_recinto")} />
                 </Field>
                 <Field
-                  label="Profundidad del recinto"
+                  label={t.asistenteMapa.profundidad}
                   htmlFor="profundo_recinto"
                   error={errors.profundo_recinto?.message}
                 >
@@ -226,17 +232,17 @@ export function MapaAsistentePage() {
                   />
                 </Field>
                 <Field
-                  label="Pasillos paralelos"
+                  label={t.asistenteMapa.pasillos}
                   htmlFor="pasillos"
-                  help="1 a 12. Entre ellos se generan los bloques de racks."
+                  help={t.asistenteMapa.pasillosAyuda}
                   error={errors.pasillos?.message}
                 >
                   <Input id="pasillos" type="number" number {...register("pasillos")} />
                 </Field>
                 <Field
-                  label="Racks por bloque"
+                  label={t.asistenteMapa.racksPorBloque}
                   htmlFor="racks_por_bloque"
-                  help="Racks apilados en cada bloque entre pasillos (1 a 20)."
+                  help={t.asistenteMapa.racksAyuda}
                   error={errors.racks_por_bloque?.message}
                 >
                   <Input
@@ -261,7 +267,7 @@ export function MapaAsistentePage() {
                   icon="agregar"
                   disabled={muyPequeno || mut.isPending}
                 >
-                  {mut.isPending ? "Generando…" : "Generar layout base"}
+                  {mut.isPending ? "Generando…" : t.asistenteMapa.generar}
                 </Button>
               </FormActions>
             </form>
@@ -274,7 +280,7 @@ export function MapaAsistentePage() {
           </Card.Body>
         </Card>
 
-        <Card title="Vista previa">
+        <Card title={t.asistenteMapa.vistaPrevia}>
           <Card.Body>
             {!muyPequeno ? (
               <svg

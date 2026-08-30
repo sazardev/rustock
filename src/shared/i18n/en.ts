@@ -1584,6 +1584,132 @@ export const en: Diccionario = {
     },
   },
 
+  alertas: {
+    noSePudoCargar: "Could not load the alerts",
+    filtrarPorEstado: "Filter by status",
+    sinAlertas: "No alerts in this state",
+    sinAlertasDesc: "Stock levels are within the configured thresholds.",
+    tipos: {
+      STOCK_BAJO: "Low stock",
+      STOCK_EXCEDIDO: "Stock over maximum",
+      LOTE_POR_VENCER: "Lot expiring soon",
+      LOTE_VENCIDO: "Expired lot",
+      UBICACION_SOBRECAPACIDAD: "Location over capacity",
+      MOVIMIENTO_PENDIENTE: "Pending movement",
+      DIFERENCIA_INVENTARIO: "Inventory discrepancy",
+    },
+    remedios: {
+      STOCK_BAJO: "record an inbound movement or raise the product’s minimum stock",
+      STOCK_EXCEDIDO: "record an outbound movement or raise the product’s maximum stock",
+      LOTE_POR_VENCER: "issue the lot before it expires",
+      LOTE_VENCIDO: "write the lot off as shrinkage or an adjustment",
+      UBICACION_SOBRECAPACIDAD: "move stock out of the location",
+      MOVIMIENTO_PENDIENTE: "approve the pending movement",
+      DIFERENCIA_INVENTARIO: "close or reconcile the inventory session",
+    },
+  },
+
+  inventarioNuevo: {
+    titulo: "New inventory session",
+    descripcion:
+      "A session formalises the counting process; if you set a start date it becomes IN PROGRESS and already accepts counts.",
+    noSePudoCrear: "Could not create the session",
+    crear: "Create session",
+    alcanceAyuda: "Criterion for the cycle count: zone, category, location, etc.",
+    fechaInicioAyuda: "Empty = stays PLANNED (does not accept counts yet).",
+    conteoCiego: "Blind count (the system balance is hidden from the counter)",
+    dobleConteo: "Require double count (every discrepancy needs a second count)",
+  },
+
+  conteos: {
+    titulo: "Record counts",
+    descripcion: "Record the physical count by location, product and lot.",
+    noAdmite: "This session does not accept counts",
+    noSePudoRegistrar: "Could not record the count",
+    nuevo: "New count",
+    registrar: "Record count",
+    deEstaSesion: "Counts in this session",
+    sinConteos: "No counts yet",
+    cantidadContada: "Counted quantity",
+    ceroAusente: "0 = product absent from this location.",
+    numeroConteo: "Count no.",
+    marcadorNota: "E.g. damaged box",
+    ciegoActivo: "Blind count on: the system balance is hidden while recording.",
+  },
+
+  cierreInventario: {
+    titulo: "Close session",
+    noEncontrada: "Session not found",
+    noSePuedeCerrar: "Cannot be closed",
+    noSePudoCerrar: "Could not close the session",
+    aviso:
+      "On closing, adjustments for the detected discrepancies are generated automatically. Once closed, the session accepts no further counts.",
+    diferencias: "Discrepancies that will generate adjustments on closing",
+    sinDiferencias: "No pending discrepancies",
+    sinDiferenciasDesc: "Every count matches the system balance; no adjustment will be generated.",
+    saldoSistema: "System stock",
+    ajusteQueSeGenerara: "Adjustment to be generated",
+    entradaPorAjuste: "Inbound adjustment",
+    salidaPorAjuste: "Outbound adjustment",
+  },
+
+  passwordUsuario: {
+    titulo: "Change password",
+    descripcion: "Set a new password. The user can change it later from their profile.",
+    noEncontrado: "User not found",
+    noEncontradoDesc: "User not found.",
+    noSePudoCambiar: "Could not change the password",
+    actualizada: "Password updated",
+    nueva: "New password",
+    confirmar: "Confirm new password",
+    guardar: "Save password",
+  },
+
+  usuarioDetalle: {
+    noEncontrado: "User not found",
+    noEncontradoDesc: "The account was not found.",
+    datosGenerales: "General details",
+    nombreCompleto: "Full name",
+    ultimoAcceso: "Last sign-in",
+    actividadReciente: "Recent activity",
+    noSePudoActividad: "Could not load the activity",
+    sinActividad: "No activity recorded",
+    sinActividadDesc: "This account has not performed any operations yet.",
+  },
+
+  asistenteMapa: {
+    titulo: "Prototype warehouse",
+    descripcion:
+      "Generate the warehouse’s base layout and fine-tune it afterwards on the map. Only available while the warehouse has no zones.",
+    medidas: "Enclosure dimensions",
+    ancho: "Enclosure width",
+    profundidad: "Enclosure depth",
+    pasillos: "Parallel aisles",
+    pasillosAyuda: "1 to 12. Rack blocks are generated between them.",
+    pasillosObligatorios: "The aisles are required",
+    racksPorBloque: "Racks per block",
+    racksAyuda: "Racks stacked in each block between aisles (1 to 20).",
+    racksObligatorios: "The racks per block are required",
+    racksRango: "Between 1 and 20 racks per block",
+    vistaPrevia: "Preview",
+    generar: "Generate base layout",
+  },
+
+  importar: {
+    titulo: "Bulk import",
+    descripcion:
+      "Load products, locations or opening stock from a CSV. Every row is validated against the system rules and errors are reported per row.",
+    tipoDeDatos: "Data type",
+    stockInicial: "Opening stock",
+    origen: "Data source",
+    cabeceraAyuda: "The first row is the header. Separate with comma, semicolon or tab.",
+    pegaCsv: "Paste or type the CSV content to preview it.",
+    sinResultados: "No results",
+    sinFilas: "There are no rows to import.",
+    sinFilasDatos: "No data rows found (a header plus data is expected).",
+    importado: "Imported",
+  },
+
   errores: {
     SALDO_INSUFICIENTE: (p) =>
       `Insufficient stock in ${p.ubicacion}: ${p.disponible} available, ${p.intentado} attempted.`,

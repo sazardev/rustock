@@ -20,14 +20,18 @@ import {
 } from "../shared/ui";
 import type { ResultadoImportacion } from "../shared/types";
 import { PATH } from "../app/route-paths";
+import { useT, type Diccionario } from "../shared/i18n";
 
 type TipoImportacion = "PRODUCTOS" | "UBICACIONES" | "STOCK_INICIAL";
 
-const TIPOS: Array<{ valor: TipoImportacion; etiqueta: string }> = [
-  { valor: "PRODUCTOS", etiqueta: "Productos" },
-  { valor: "UBICACIONES", etiqueta: "Ubicaciones" },
-  { valor: "STOCK_INICIAL", etiqueta: "Stock inicial" },
-];
+/** Los tres tipos importables, en el idioma activo. */
+function tiposDe(t: Diccionario): Array<{ valor: TipoImportacion; etiqueta: string }> {
+  return [
+    { valor: "PRODUCTOS", etiqueta: t.palette.datos.productos },
+    { valor: "UBICACIONES", etiqueta: t.palette.datos.ubicaciones },
+    { valor: "STOCK_INICIAL", etiqueta: t.importar.stockInicial },
+  ];
+}
 
 const ENCABEZADOS: Record<TipoImportacion, string> = {
   PRODUCTOS:
@@ -89,6 +93,7 @@ function parsearCsv(csv: string): Record<string, unknown>[] {
  * devuelve un resultado por fila (válida insertada / error corregible).
  */
 export function ImportarPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [tipo, setTipo] = useState<TipoImportacion>("PRODUCTOS");
   const [texto, setTexto] = useState("");
@@ -98,12 +103,12 @@ export function ImportarPage() {
   function previsualizar() {
     setError(null);
     if (!texto.trim()) {
-      setError("Pega o escribe el contenido del CSV para previsualizarlo.");
+      setError(t.importar.pegaCsv);
       return;
     }
     const filas = parsearCsv(texto);
     if (filas.length === 0) {
-      setError("No se encontraron filas de datos (se espera una cabecera + datos).");
+      setError(t.importar.sinFilasDatos);
       return;
     }
     setPreview(filas);
@@ -123,7 +128,7 @@ export function ImportarPage() {
   const importarMut = useMutation({
     mutationFn: () => {
       const filas = preview.length > 0 ? preview : parsearCsv(texto);
-      if (filas.length === 0) throw new Error("No hay filas para importar.");
+      if (filas.length === 0) throw new Error(t.importar.sinFilas);
       return importarDatos(tipo, filas);
     },
     onSuccess: (resultados) => {
@@ -147,7 +152,11 @@ export function ImportarPage() {
       key: "ok",
       header: "Estado",
       render: (r) =>
-        r.ok ? <Badge tone="success">Importado</Badge> : <Badge tone="danger">Error</Badge>,
+        r.ok ? (
+          <Badge tone="success">{t.importar.importado}</Badge>
+        ) : (
+          <Badge tone="danger">Error</Badge>
+        ),
     },
     { key: "id", header: "Id", code: true, render: (r) => r.id ?? "—" },
     { key: "error", header: "Detalle", render: (r) => r.error ?? "—" },
@@ -155,12 +164,9 @@ export function ImportarPage() {
 
   return (
     <>
-      <PageHeader
-        title="Importación masiva"
-        description="Carga productos, ubicaciones o stock inicial desde un CSV. Cada fila se valida contra las reglas del sistema y los errores se reportan por fila."
-      />
+      <PageHeader title={t.importar.titulo} description={t.importar.descripcion} />
 
-      <Card title="Origen de los datos">
+      <Card title={t.importar.origen}>
         <Card.Body>
           {error ? (
             <ErrorPanel title="Importación" className="mb-4">
@@ -168,9 +174,9 @@ export function ImportarPage() {
             </ErrorPanel>
           ) : null}
           <div className="flex items-end gap-3">
-            <Field label="Tipo de datos">
+            <Field label={t.importar.tipoDeDatos}>
               <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoImportacion)}>
-                {TIPOS.map((t) => (
+                {tiposDe(t).map((t) => (
                   <option key={t.valor} value={t.valor}>
                     {t.etiqueta}
                   </option>
@@ -182,11 +188,7 @@ export function ImportarPage() {
             </Button>
           </div>
           <div className="mt-4">
-            <Field
-              label="Contenido CSV"
-              htmlFor="csv"
-              help="La primera fila es la cabecera. Separa con coma, punto y coma o tabulador."
-            >
+            <Field label="Contenido CSV" htmlFor="csv" help={t.importar.cabeceraAyuda}>
               <Textarea
                 id="csv"
                 rows={10}
@@ -231,7 +233,7 @@ export function ImportarPage() {
               columns={columnasResultado}
               rows={resultados}
               rowKey={(r) => String(r.fila)}
-              emptyTitle="Sin resultados"
+              emptyTitle={t.importar.sinResultados}
             />
             {mal > 0 ? (
               <Text size="sm" color="muted" as="p" className="mt-3">

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { PATH, sesionInventarioDetalle } from "../app/route-paths";
 import { catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { CrearRapido, usePreservarFormulario, useSeleccionCreada } from "../shared/creacion-rapida";
+import { useT, type Diccionario } from "../shared/i18n";
 import {
   Button,
   ButtonLink,
@@ -32,20 +33,25 @@ function ahoraLocal(): string {
   return d.toISOString().slice(0, 16);
 }
 
-const esquema = z.object({
-  tipo: z.enum(["COMPLETO", "CICLICO"]),
-  almacen_id: z.string().trim().min(1, "Selecciona un almacén"),
-  alcance: z.string().optional(),
-  fecha_inicio: z.string().optional(),
-  conteo_ciego: z.boolean(),
-  exige_doble_conteo: z.boolean(),
-});
+/** El esquema sigue al idioma: sus mensajes se pintan tal cual en el campo. */
+function esquemaDe(t: Diccionario) {
+  return z.object({
+    tipo: z.enum(["COMPLETO", "CICLICO"]),
+    almacen_id: z.string().trim().min(1, t.formularios.seleccionaAlmacen),
+    alcance: z.string().optional(),
+    fecha_inicio: z.string().optional(),
+    conteo_ciego: z.boolean(),
+    exige_doble_conteo: z.boolean(),
+  });
+}
 
-type FormValues = z.infer<typeof esquema>;
+type FormValues = z.infer<ReturnType<typeof esquemaDe>>;
 
 const INVALIDAR_ALMACENES = ["almacenes", "selector"] as const;
 
 export function InventarioNuevoPage() {
+  const t = useT();
+  const esquema = useMemo(() => esquemaDe(t), [t]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -110,16 +116,13 @@ export function InventarioNuevoPage() {
 
   return (
     <>
-      <PageHeader
-        title="Nueva sesión de inventario"
-        description="Una sesión formaliza el proceso de contar; si defines fecha de inicio queda EN_CURSO y ya admite conteos."
-      />
+      <PageHeader title={t.inventarioNuevo.titulo} description={t.inventarioNuevo.descripcion} />
 
       <form onSubmit={handleSubmit((v) => crearMut.mutate(v))} noValidate>
-        <Card title="Datos generales">
+        <Card title={t.formularios.datosGenerales}>
           <Card.Body>
             {error ? (
-              <ErrorPanel title="No se pudo crear la sesión" className="mb-4">
+              <ErrorPanel title={t.inventarioNuevo.noSePudoCrear} className="mb-4">
                 {error}
               </ErrorPanel>
             ) : null}
@@ -151,17 +154,13 @@ export function InventarioNuevoPage() {
                   </CrearRapido>
                 </div>
               </Field>
-              <Field
-                label="Alcance"
-                htmlFor="alcance"
-                help="Criterio del conteo cíclico: zona, categoría, ubicación, etc."
-              >
+              <Field label="Alcance" htmlFor="alcance" help={t.inventarioNuevo.alcanceAyuda}>
                 <Input id="alcance" {...register("alcance")} />
               </Field>
               <Field
-                label="Fecha de inicio"
+                label={t.sesionInventario.fechaInicio}
                 htmlFor="fecha_inicio"
-                help="Vacío = queda PLANEADA (no admite conteos todavía)."
+                help={t.inventarioNuevo.fechaInicioAyuda}
               >
                 <Input id="fecha_inicio" type="datetime-local" {...register("fecha_inicio")} />
               </Field>
@@ -170,12 +169,12 @@ export function InventarioNuevoPage() {
             <div className="mt-4 flex flex-col gap-2">
               <Checkbox
                 id="conteo_ciego"
-                label="Conteo ciego (no muestra el saldo del sistema al contador)"
+                label={t.inventarioNuevo.conteoCiego}
                 {...register("conteo_ciego")}
               />
               <Checkbox
                 id="exige_doble_conteo"
-                label="Exige doble conteo (toda diferencia requiere un segundo conteo)"
+                label={t.inventarioNuevo.dobleConteo}
                 {...register("exige_doble_conteo")}
               />
             </div>
@@ -184,10 +183,10 @@ export function InventarioNuevoPage() {
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || crearMut.isPending}>
-            {crearMut.isPending ? "Creando…" : "Crear sesión"}
+            {crearMut.isPending ? "Creando…" : t.inventarioNuevo.crear}
           </Button>
           <ButtonLink variant="secondary" href={PATH.inventario}>
-            Cancelar
+            {t.comun.cancelar}
           </ButtonLink>
         </FormActions>
       </form>

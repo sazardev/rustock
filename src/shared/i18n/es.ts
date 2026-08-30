@@ -1643,6 +1643,142 @@ export const es = {
     },
   },
 
+  // ============ Alertas ============
+  alertas: {
+    noSePudoCargar: "No se pudieron cargar las alertas",
+    filtrarPorEstado: "Filtrar por estado",
+    sinAlertas: "Sin alertas en este estado",
+    sinAlertasDesc: "Los niveles de stock están dentro de los umbrales configurados.",
+    tipos: {
+      STOCK_BAJO: "Stock bajo",
+      STOCK_EXCEDIDO: "Stock excedido",
+      LOTE_POR_VENCER: "Lote por vencer",
+      LOTE_VENCIDO: "Lote vencido",
+      UBICACION_SOBRECAPACIDAD: "Ubicación sobrecapacidad",
+      MOVIMIENTO_PENDIENTE: "Movimiento pendiente",
+      DIFERENCIA_INVENTARIO: "Diferencia de inventario",
+    },
+    remedios: {
+      STOCK_BAJO: "registra una entrada o sube el stock mínimo del producto",
+      STOCK_EXCEDIDO: "registra una salida o sube el stock máximo del producto",
+      LOTE_POR_VENCER: "da salida al lote antes del vencimiento",
+      LOTE_VENCIDO: "da de baja el lote por merma o ajuste",
+      UBICACION_SOBRECAPACIDAD: "traslada stock fuera de la ubicación",
+      MOVIMIENTO_PENDIENTE: "aprueba el movimiento pendiente",
+      DIFERENCIA_INVENTARIO: "cierra o concilia la sesión de inventario",
+    },
+  },
+
+  // ============ Nueva sesión de inventario ============
+  inventarioNuevo: {
+    titulo: "Nueva sesión de inventario",
+    descripcion:
+      "Una sesión formaliza el proceso de contar; si defines fecha de inicio queda EN_CURSO y ya admite conteos.",
+    noSePudoCrear: "No se pudo crear la sesión",
+    crear: "Crear sesión",
+    alcanceAyuda: "Criterio del conteo cíclico: zona, categoría, ubicación, etc.",
+    fechaInicioAyuda: "Vacío = queda PLANEADA (no admite conteos todavía).",
+    conteoCiego: "Conteo ciego (no muestra el saldo del sistema al contador)",
+    dobleConteo: "Exige doble conteo (toda diferencia requiere un segundo conteo)",
+  },
+
+  // ============ Conteos de inventario ============
+  conteos: {
+    titulo: "Registrar conteos",
+    descripcion: "Captura el conteo físico por ubicación, producto y lote.",
+    noAdmite: "Esta sesión no admite conteos",
+    noSePudoRegistrar: "No se pudo registrar el conteo",
+    nuevo: "Nuevo conteo",
+    registrar: "Registrar conteo",
+    deEstaSesion: "Conteos de esta sesión",
+    sinConteos: "Sin conteos todavía",
+    cantidadContada: "Cantidad contada",
+    ceroAusente: "0 = producto ausente en esta ubicación.",
+    numeroConteo: "N.º de conteo",
+    marcadorNota: "Ej. caja dañada",
+    ciegoActivo: "Conteo ciego activo: el saldo del sistema no se muestra durante la captura.",
+  },
+
+  // ============ Cierre de sesión de inventario ============
+  cierreInventario: {
+    titulo: "Cerrar sesión",
+    noEncontrada: "Sesión no encontrada",
+    noSePuedeCerrar: "No se puede cerrar",
+    noSePudoCerrar: "No se pudo cerrar la sesión",
+    aviso:
+      "Al cerrar, se generan automáticamente los ajustes de las diferencias detectadas. Una vez cerrada, la sesión no admite más conteos.",
+    diferencias: "Diferencias que generarán ajustes al cerrar",
+    sinDiferencias: "Sin diferencias pendientes",
+    sinDiferenciasDesc:
+      "Todos los conteos coinciden con el saldo del sistema; no se generará ningún ajuste.",
+    saldoSistema: "Saldo sistema",
+    ajusteQueSeGenerara: "Ajuste que se generará",
+    entradaPorAjuste: "Entrada por ajuste",
+    salidaPorAjuste: "Salida por ajuste",
+  },
+
+  // ============ Contraseña de otro usuario ============
+  passwordUsuario: {
+    titulo: "Cambiar contraseña",
+    descripcion:
+      "Asigna una nueva contraseña. El usuario la podrá cambiar después desde su perfil.",
+    noEncontrado: "Usuario no encontrado",
+    noEncontradoDesc: "Usuario no encontrado.",
+    noSePudoCambiar: "No se pudo cambiar la contraseña",
+    actualizada: "Contraseña actualizada",
+    nueva: "Contraseña nueva",
+    confirmar: "Confirmar contraseña nueva",
+    guardar: "Guardar contraseña",
+  },
+
+  // ============ Detalle de usuario ============
+  usuarioDetalle: {
+    noEncontrado: "Usuario no encontrado",
+    noEncontradoDesc: "No se encontró la cuenta.",
+    datosGenerales: "Datos generales",
+    nombreCompleto: "Nombre completo",
+    ultimoAcceso: "Último acceso",
+    actividadReciente: "Actividad reciente",
+    noSePudoActividad: "No se pudo cargar la actividad",
+    sinActividad: "Sin actividad registrada",
+    sinActividadDesc: "Esta cuenta aún no ha ejecutado operaciones.",
+  },
+
+  // ============ Asistente de mapa ============
+  asistenteMapa: {
+    titulo: "Prototipar almacén",
+    descripcion:
+      "Genera el layout base del almacén y ajústalo después en el mapa. Solo disponible si el almacén aún no tiene zonas.",
+    medidas: "Medidas del recinto",
+    ancho: "Ancho del recinto",
+    profundidad: "Profundidad del recinto",
+    pasillos: "Pasillos paralelos",
+    pasillosAyuda: "1 a 12. Entre ellos se generan los bloques de racks.",
+    pasillosObligatorios: "Los pasillos son obligatorios",
+    racksPorBloque: "Racks por bloque",
+    racksAyuda: "Racks apilados en cada bloque entre pasillos (1 a 20).",
+    racksObligatorios: "Los racks por bloque son obligatorios",
+    racksRango: "Entre 1 y 20 racks por bloque",
+    vistaPrevia: "Vista previa",
+    generar: "Generar layout base",
+  },
+
+  // ============ Importación masiva ============
+  importar: {
+    titulo: "Importación masiva",
+    descripcion:
+      "Carga productos, ubicaciones o stock inicial desde un CSV. Cada fila se valida contra las reglas del sistema y los errores se reportan por fila.",
+    tipoDeDatos: "Tipo de datos",
+    stockInicial: "Stock inicial",
+    origen: "Origen de los datos",
+    cabeceraAyuda: "La primera fila es la cabecera. Separa con coma, punto y coma o tabulador.",
+    pegaCsv: "Pega o escribe el contenido del CSV para previsualizarlo.",
+    sinResultados: "Sin resultados",
+    sinFilas: "No hay filas para importar.",
+    sinFilasDatos: "No se encontraron filas de datos (se espera una cabecera + datos).",
+    importado: "Importado",
+  },
+
   // ============ Errores del backend (SPEC §17.3) ============
   // La clave es el código estable que devuelve Rust; nunca cambia aunque se
   // reescriba el texto.

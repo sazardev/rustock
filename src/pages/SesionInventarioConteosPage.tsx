@@ -31,6 +31,7 @@ import { PATH, sesionInventarioDetalle } from "../app/route-paths";
 import { catalogoNuevo } from "../app/route-paths";
 import { formatearFecha, mensajeError } from "../shared/format";
 import { CrearRapido, usePreservarFormulario, useSeleccionCreada } from "../shared/creacion-rapida";
+import { useT } from "../shared/i18n";
 
 const VACIO = {
   ubicacion_id: "",
@@ -47,6 +48,7 @@ const INVALIDAR_PRODUCTOS = ["productos", "selector-conteo"] as const;
 const INVALIDAR_LOTES = ["lotes", "por-producto"] as const;
 
 export function SesionInventarioConteosPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
   const location = useLocation();
@@ -146,12 +148,8 @@ export function SesionInventarioConteosPage() {
   return (
     <>
       <PageHeader
-        title="Registrar conteos"
-        description={
-          sesion?.conteo_ciego
-            ? "Conteo ciego activo: el saldo del sistema no se muestra durante la captura."
-            : "Captura el conteo físico por ubicación, producto y lote."
-        }
+        title={t.conteos.titulo}
+        description={sesion?.conteo_ciego ? t.conteos.ciegoActivo : t.conteos.descripcion}
         actions={
           <ButtonLink variant="secondary" icon="atras" href={sesionInventarioDetalle(sesionId)}>
             Volver a la sesión
@@ -160,16 +158,16 @@ export function SesionInventarioConteosPage() {
       />
 
       {sesion && !puedeContar ? (
-        <ErrorPanel title="Esta sesión no admite conteos">
+        <ErrorPanel title={t.conteos.noAdmite}>
           Solo se pueden registrar conteos mientras la sesión está EN_CURSO. Estado actual:{" "}
           {sesion.estado}. <Link href={sesionInventarioDetalle(sesionId)}>Volver a la sesión</Link>.
         </ErrorPanel>
       ) : null}
 
-      <Card title="Nuevo conteo">
+      <Card title={t.conteos.nuevo}>
         <Card.Body>
           {error ? (
-            <ErrorPanel title="No se pudo registrar el conteo" className="mb-4">
+            <ErrorPanel title={t.conteos.noSePudoRegistrar} className="mb-4">
               {error}
             </ErrorPanel>
           ) : null}
@@ -240,10 +238,10 @@ export function SesionInventarioConteosPage() {
               </Field>
             ) : null}
             <Field
-              label="Cantidad contada"
+              label={t.conteos.cantidadContada}
               htmlFor="conteo-cantidad"
               required
-              help="0 = producto ausente en esta ubicación."
+              help={t.conteos.ceroAusente}
             >
               <Input
                 id="conteo-cantidad"
@@ -255,7 +253,7 @@ export function SesionInventarioConteosPage() {
                 onChange={(e) => setForm({ ...form, cantidad_contada: e.target.value })}
               />
             </Field>
-            <Field label="N.º de conteo" htmlFor="conteo-numero" required>
+            <Field label={t.conteos.numeroConteo} htmlFor="conteo-numero" required>
               <Input
                 id="conteo-numero"
                 type="number"
@@ -269,7 +267,7 @@ export function SesionInventarioConteosPage() {
             <Field label="Nota" htmlFor="conteo-nota">
               <Input
                 id="conteo-nota"
-                placeholder="Ej. caja dañada"
+                placeholder={t.conteos.marcadorNota}
                 value={form.nota}
                 onChange={(e) => setForm({ ...form, nota: e.target.value })}
               />
@@ -288,20 +286,20 @@ export function SesionInventarioConteosPage() {
               }
               onClick={() => registrarMut.mutate()}
             >
-              {registrarMut.isPending ? "Registrando…" : "Registrar conteo"}
+              {registrarMut.isPending ? "Registrando…" : t.conteos.registrar}
             </Button>
           </FormActions>
         </Card.Body>
       </Card>
 
       <div className="mt-6">
-        <Card title="Conteos de esta sesión">
+        <Card title={t.conteos.deEstaSesion}>
           <Table
             columns={columns}
             rows={conteosQuery.data ?? []}
             rowKey={(c) => c.id}
             loading={conteosQuery.isLoading}
-            emptyTitle="Sin conteos todavía"
+            emptyTitle={t.conteos.sinConteos}
           />
         </Card>
       </div>

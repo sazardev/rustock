@@ -16,6 +16,7 @@ import {
   type TableColumn,
 } from "../shared/ui";
 import type { EventoAuditoria } from "../shared/audit";
+import { useT } from "../shared/i18n";
 
 const ROL_LABEL: Record<string, string> = {
   ADMIN: "Administrador",
@@ -26,6 +27,7 @@ const ROL_LABEL: Record<string, string> = {
 };
 
 export function UsuarioDetallePage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const usuarioActual = useSession((s) => s.usuario);
 
@@ -58,8 +60,8 @@ export function UsuarioDetallePage() {
   if (!usuario) {
     return (
       <>
-        <PageHeader title="Usuario" description="No se encontró la cuenta." />
-        <ErrorPanel title="Usuario no encontrado">
+        <PageHeader title="Usuario" description={t.usuarioDetalle.noEncontradoDesc} />
+        <ErrorPanel title={t.usuarioDetalle.noEncontrado}>
           <ButtonLink variant="link" href={catalogoLista("usuarios")}>
             Volver al listado de usuarios
           </ButtonLink>
@@ -119,19 +121,19 @@ export function UsuarioDetallePage() {
         }
       />
 
-      <Card title="Datos generales">
+      <Card title={t.usuarioDetalle.datosGenerales}>
         <Card.Body>
           <DetailList
             items={[
               { label: "Usuario", value: usuario.nombre_usuario },
-              { label: "Nombre completo", value: usuario.nombre_completo },
+              { label: t.usuarioDetalle.nombreCompleto, value: usuario.nombre_completo },
               { label: "Email", value: usuario.email ?? "—" },
               {
                 label: "Rol",
                 value: rol ? (ROL_LABEL[rol.codigo] ?? rol.codigo) : "—",
               },
               {
-                label: "Último acceso",
+                label: t.usuarioDetalle.ultimoAcceso,
                 value: usuario.ultimo_acceso_at ? formatearFecha(usuario.ultimo_acceso_at) : "—",
               },
             ]}
@@ -151,10 +153,10 @@ export function UsuarioDetallePage() {
         </Card.Body>
       </Card>
 
-      <Card title="Actividad reciente" className="mt-6">
+      <Card title={t.usuarioDetalle.actividadReciente} className="mt-6">
         {historialQuery.error ? (
           <Card.Body>
-            <ErrorPanel title="No se pudo cargar la actividad">
+            <ErrorPanel title={t.usuarioDetalle.noSePudoActividad}>
               {mensajeError(historialQuery.error)}
             </ErrorPanel>
           </Card.Body>
@@ -166,8 +168,8 @@ export function UsuarioDetallePage() {
             }
             rowKey={(e) => String(e.id)}
             loading={historialQuery.isLoading}
-            emptyTitle="Sin actividad registrada"
-            emptyDescription="Esta cuenta aún no ha ejecutado operaciones."
+            emptyTitle={t.usuarioDetalle.sinActividad}
+            emptyDescription={t.usuarioDetalle.sinActividadDesc}
           />
         )}
       </Card>

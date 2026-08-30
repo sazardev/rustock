@@ -21,7 +21,14 @@ interface ReglaModulo {
   modulo: string;
 }
 
-/** Mapeo ruta → módulo de la aplicación (nav, DESIGN §4.3). */
+/**
+ * Mapeo ruta → módulo de la aplicación (nav, DESIGN §4.3).
+ *
+ * Estos nombres **no se traducen**: se escriben en el registro de auditoría y
+ * se leen de vuelta como valores de filtro. Traducirlos partiría el historial
+ * en dos —unas filas «Movimientos», otras «Movements»— y dejaría de poder
+ * agruparse. Son datos, como los códigos de enum, no texto de interfaz.
+ */
 const REGLAS_MODULO: ReglaModulo[] = [
   { prefijo: "/dashboard", modulo: "Dashboard" },
   { prefijo: "/movimientos", modulo: "Movimientos" },

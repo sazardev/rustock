@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../shared/i18n";
+import { useT, type Diccionario } from "../shared/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ignorarAlerta, listarAlertas } from "../shared/backend";
 import type { Alerta, EstadoAlerta } from "../shared/types";
@@ -36,15 +36,9 @@ const ESTADOS: Array<{ value: EstadoAlerta; label: string }> = [
 
 /** Cómo se resuelve de verdad cada alerta (SPEC §17.2): la resolución es la
  * acción de negocio que elimina la causa, no el botón. */
-const GUIA_RESOLUCION: Record<string, string> = {
-  STOCK_BAJO: "registra una entrada o sube el stock mínimo del producto",
-  STOCK_EXCEDIDO: "registra una salida o sube el stock máximo del producto",
-  UBICACION_SOBRECAPACIDAD: "traslada stock fuera de la ubicación",
-  LOTE_POR_VENCER: "da salida al lote antes del vencimiento",
-  LOTE_VENCIDO: "da de baja el lote por merma o ajuste",
-  DIFERENCIA_INVENTARIO: "cierra o concilia la sesión de inventario",
-  MOVIMIENTO_PENDIENTE: "aprueba el movimiento pendiente",
-};
+function guiaResolucion(t: Diccionario, tipo: string): string | undefined {
+  return t.alertas.remedios[tipo as keyof typeof t.alertas.remedios];
+}
 
 /** Enlaza la entidad de la alerta a su página de detalle para actuar sobre
  * la causa raíz (DESIGN §5.5: todo dato identificable es un enlace). */
@@ -91,7 +85,7 @@ export function AlertasPage() {
       );
       invalidar();
       const alerta = (alertasQuery.data ?? []).find((a) => a.id === id);
-      const guia = alerta ? GUIA_RESOLUCION[alerta.tipo] : undefined;
+      const guia = alerta ? guiaResolucion(t, alerta.tipo) : undefined;
       toast(
         guia
           ? `Alerta archivada: ya no aparecerá en "Abiertas". Para resolverla de raíz, ${guia}.`
@@ -138,15 +132,13 @@ export function AlertasPage() {
       <PageHeader title="Alertas" />
 
       {alertasQuery.error ? (
-        <ErrorPanel title="No se pudieron cargar las alertas">
-          {mensajeError(alertasQuery.error)}
-        </ErrorPanel>
+        <ErrorPanel title={t.alertas.noSePudoCargar}>{mensajeError(alertasQuery.error)}</ErrorPanel>
       ) : null}
 
       <Card
         actions={
           <Select
-            aria-label="Filtrar por estado"
+            aria-label={t.alertas.filtrarPorEstado}
             value={estado}
             onChange={(e) => setEstado(e.target.value as EstadoAlerta)}
           >
@@ -163,8 +155,8 @@ export function AlertasPage() {
           rows={alertasQuery.data ?? []}
           rowKey={(a) => a.id}
           loading={alertasQuery.isLoading}
-          emptyTitle="Sin alertas en este estado"
-          emptyDescription="Los niveles de stock están dentro de los umbrales configurados."
+          emptyTitle={t.alertas.sinAlertas}
+          emptyDescription={t.alertas.sinAlertasDesc}
           actions={
             estado === "ABIERTA"
               ? (a) => (

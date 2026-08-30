@@ -39,7 +39,6 @@ import {
   sesionInventarioDetalle,
   PATH,
 } from "../../app/route-paths";
-import { ESTADO_MOVIMIENTO_LABEL, TIPO_MOVIMIENTO_LABEL } from "../format";
 
 const DEBOUNCE_MS = 250;
 const MINIMO_DATOS = 2;
@@ -108,9 +107,9 @@ function subtituloDeDato(t: Diccionario, recurso: string, item: BuscarItem): str
     const tipo = item.datos?.tipo;
     const estado = item.datos?.estado;
     return [
-      tipo && (t.dominio.tipoMovimiento[tipo as keyof typeof TIPO_MOVIMIENTO_LABEL] ?? tipo),
+      tipo && (t.dominio.tipoMovimiento[tipo as keyof typeof t.dominio.tipoMovimiento] ?? tipo),
       estado &&
-        (t.dominio.estadoMovimiento[estado as keyof typeof ESTADO_MOVIMIENTO_LABEL] ?? estado),
+        (t.dominio.estadoMovimiento[estado as keyof typeof t.dominio.estadoMovimiento] ?? estado),
     ]
       .filter(Boolean)
       .join(" · ");

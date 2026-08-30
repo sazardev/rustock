@@ -17,7 +17,6 @@ import type {
   EstadoMovimiento,
   EstadoSesionInventario,
   SeveridadAlerta,
-  SubTipoMovimiento,
   TipoMovimiento,
 } from "./types";
 
@@ -89,14 +88,6 @@ export function formatearFechaCorta(iso: string | null): string {
   return construirFecha(d, opcionesFecha(), false);
 }
 
-export const TIPO_MOVIMIENTO_LABEL: Record<TipoMovimiento, string> = {
-  ENTRADA: "Entrada",
-  SALIDA: "Salida",
-  TRASLADO: "Traslado",
-  AJUSTE: "Ajuste",
-  CONSUMO: "Consumo",
-};
-
 export const TIPO_MOVIMIENTO_TONE: Record<TipoMovimiento, BadgeTone> = {
   ENTRADA: "success",
   SALIDA: "danger",
@@ -113,26 +104,6 @@ export const TIPO_MOVIMIENTO_ICON: Record<TipoMovimiento, IconName> = {
   CONSUMO: "salida",
 };
 
-export const SUB_TIPO_MOVIMIENTO_LABEL: Record<SubTipoMovimiento, string> = {
-  COMPRA: "Compra",
-  DEVOLUCION_CLIENTE: "Devolución de cliente",
-  AJUSTE_POSITIVO: "Ajuste positivo",
-  INICIAL: "Inicial",
-  TRASLADO_ENTRADA: "Traslado (entrada)",
-  CLIENTE: "Cliente",
-  DEVOLUCION_PROVEEDOR: "Devolución a proveedor",
-  MERMA: "Merma",
-  AJUSTE_NEGATIVO: "Ajuste negativo",
-  TRASLADO_SALIDA: "Traslado (salida)",
-};
-
-export const ESTADO_MOVIMIENTO_LABEL: Record<EstadoMovimiento, string> = {
-  BORRADOR: "Borrador",
-  PENDIENTE_APROBACION: "Pendiente de aprobación",
-  APROBADO: "Aprobado",
-  ANULADO: "Anulado",
-};
-
 export const ESTADO_MOVIMIENTO_TONE: Record<EstadoMovimiento, BadgeTone> = {
   BORRADOR: "neutral",
   PENDIENTE_APROBACION: "warning",
@@ -146,33 +117,10 @@ export const SEVERIDAD_ALERTA_TONE: Record<SeveridadAlerta, BadgeTone> = {
   ALTA: "danger",
 };
 
-export const ESTADO_ALERTA_LABEL: Record<EstadoAlerta, string> = {
-  ABIERTA: "Abierta",
-  RESUELTA: "Resuelta",
-  IGNORADA: "Archivada",
-};
-
 export const ESTADO_ALERTA_TONE: Record<EstadoAlerta, BadgeTone> = {
   ABIERTA: "danger",
   RESUELTA: "success",
   IGNORADA: "neutral",
-};
-
-export const TIPO_ALERTA_LABEL: Record<string, string> = {
-  STOCK_BAJO: "Stock bajo",
-  STOCK_EXCEDIDO: "Stock excedido",
-  UBICACION_SOBRECAPACIDAD: "Ubicación sobrecapacidad",
-  LOTE_POR_VENCER: "Lote por vencer",
-  LOTE_VENCIDO: "Lote vencido",
-  DIFERENCIA_INVENTARIO: "Diferencia de inventario",
-  MOVIMIENTO_PENDIENTE: "Movimiento pendiente",
-};
-
-export const ESTADO_SESION_LABEL: Record<EstadoSesionInventario, string> = {
-  PLANEADA: "Planeada",
-  EN_CURSO: "En curso",
-  CERRADA: "Cerrada",
-  ANULADA: "Anulada",
 };
 
 export const ESTADO_SESION_TONE: Record<EstadoSesionInventario, BadgeTone> = {
@@ -180,17 +128,6 @@ export const ESTADO_SESION_TONE: Record<EstadoSesionInventario, BadgeTone> = {
   EN_CURSO: "info",
   CERRADA: "success",
   ANULADA: "danger",
-};
-
-export const TIPO_SESION_LABEL: Record<string, string> = {
-  COMPLETO: "Completo",
-  CICLICO: "Cíclico",
-};
-
-export const TIPO_DIFERENCIA_LABEL: Record<string, string> = {
-  conciliado: "Conciliado",
-  sobrante: "Sobrante",
-  faltante: "Faltante",
 };
 
 export const TIPO_DIFERENCIA_TONE: Record<string, BadgeTone> = {

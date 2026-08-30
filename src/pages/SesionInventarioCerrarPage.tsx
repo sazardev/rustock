@@ -61,28 +61,35 @@ export function SesionInventarioCerrarPage() {
       render: (d) => <UbicacionRef id={d.ubicacion_id} />,
     },
     { key: "producto_id", header: "Producto", render: (d) => <ProductoRef id={d.producto_id} /> },
-    { key: "saldo_sistema", header: "Saldo sistema", num: true, render: (d) => d.saldo_sistema },
+    {
+      key: "saldo_sistema",
+      header: t.cierreInventario.saldoSistema,
+      num: true,
+      render: (d) => d.saldo_sistema,
+    },
     { key: "cantidad_contada", header: "Contado", num: true, render: (d) => d.cantidad_contada },
     { key: "diferencia", header: "Diferencia", num: true, render: (d) => d.diferencia },
     {
       key: "tipo",
-      header: "Ajuste que se generará",
+      header: t.cierreInventario.ajusteQueSeGenerara,
       render: (d) => (
         <Badge tone={TIPO_DIFERENCIA_TONE[d.tipo]}>
-          {d.tipo === "sobrante" ? "Entrada por ajuste" : "Salida por ajuste"} (
-          {t.dominio.tipoDiferencia[d.tipo]})
+          {d.tipo === "sobrante"
+            ? t.cierreInventario.entradaPorAjuste
+            : t.cierreInventario.salidaPorAjuste}{" "}
+          ({t.dominio.tipoDiferencia[d.tipo]})
         </Badge>
       ),
     },
   ];
 
   if (sesionQuery.isLoading) {
-    return <PageHeader title="Cerrar sesión" description="Cargando…" />;
+    return <PageHeader title={t.cierreInventario.titulo} description="Cargando…" />;
   }
 
   if (!sesion) {
     return (
-      <ErrorPanel title="Sesión no encontrada">
+      <ErrorPanel title={t.cierreInventario.noEncontrada}>
         <Link href={PATH.inventario}>Volver al listado</Link>
       </ErrorPanel>
     );
@@ -92,33 +99,30 @@ export function SesionInventarioCerrarPage() {
 
   return (
     <>
-      <PageHeader
-        title={`Cerrar sesión ${sesion.numero}`}
-        description="Al cerrar, se generan automáticamente los ajustes de las diferencias detectadas. Una vez cerrada, la sesión no admite más conteos."
-      />
+      <PageHeader title={`Cerrar sesión ${sesion.numero}`} description={t.cierreInventario.aviso} />
 
       {!puedeCerrar ? (
-        <ErrorPanel title="No se puede cerrar">
+        <ErrorPanel title={t.cierreInventario.noSePuedeCerrar}>
           Esta sesión está en estado {t.dominio.estadoSesion[sesion.estado]}; solo las sesiones
           EN_CURSO pueden cerrarse.
         </ErrorPanel>
       ) : null}
 
       {error ? (
-        <ErrorPanel title="No se pudo cerrar la sesión" className="mt-4">
+        <ErrorPanel title={t.cierreInventario.noSePudoCerrar} className="mt-4">
           {error}
         </ErrorPanel>
       ) : null}
 
       <div className="mt-4">
-        <Card title="Diferencias que generarán ajustes al cerrar">
+        <Card title={t.cierreInventario.diferencias}>
           <Table
             columns={columns}
             rows={diferenciasNoConciliadas}
             rowKey={(d) => `${d.ubicacion_id}-${d.producto_id}-${d.lote_id ?? ""}`}
             loading={diferenciasQuery.isLoading}
-            emptyTitle="Sin diferencias pendientes"
-            emptyDescription="Todos los conteos coinciden con el saldo del sistema; no se generará ningún ajuste."
+            emptyTitle={t.cierreInventario.sinDiferencias}
+            emptyDescription={t.cierreInventario.sinDiferenciasDesc}
           />
         </Card>
       </div>
@@ -130,7 +134,7 @@ export function SesionInventarioCerrarPage() {
           onClick={() => cerrarMut.mutate()}
           disabled={!puedeCerrar || cerrarMut.isPending}
         >
-          {cerrarMut.isPending ? "Cerrando…" : "Cerrar sesión"}
+          {cerrarMut.isPending ? "Cerrando…" : t.cierreInventario.titulo}
         </Button>
         <Link href={sesionInventarioDetalle(sesionId)}>Cancelar</Link>
       </div>
