@@ -4,6 +4,19 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [0.7.0] - 2026-08-31
+
+### Documentación
+
+- **postgres:** El plan medido para soportar otro motor, y por qué no está hecho
+
+
+### Features
+
+- **permisos:** La interfaz deja de ofrecer lo que el rol no puede hacer
+
+- **backup:** Copias automáticas con réplica, y binarios para las tres plataformas
+
 ## [0.6.0] - 2026-08-31
 
 ### Features
