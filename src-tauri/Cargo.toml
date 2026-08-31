@@ -1,6 +1,6 @@
 [package]
 name = "rustock"
-version = "0.7.1"
+version = "0.8.0"
 description = "Rustock — WMS self-hosted: inventario, movimientos y trazabilidad de almacén"
 authors = ["Omar Sazar <cerberusprogrammer@gmail.com>"]
 edition = "2024"
