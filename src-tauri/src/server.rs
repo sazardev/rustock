@@ -268,9 +268,12 @@ fn manejar(
         s.procedencia.ip = cliente.ip.clone();
         s.procedencia.agente = cliente.agente.clone();
     }
-    let ambito = Arc::new(SesionState::desde_cliente(
+    let ambito = Arc::new(SesionState::desde(
         sesion_previa.clone(),
-        crate::domain::seguridad::Desde::anonimo(cliente.ip.clone(), cliente.agente.clone()),
+        Some(crate::domain::seguridad::Desde::anonimo(
+            cliente.ip.clone(),
+            cliente.agente.clone(),
+        )),
     ));
 
     let resultado = despachar(db, &ambito, &comando, &args, &cliente);

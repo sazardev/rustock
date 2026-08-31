@@ -126,21 +126,16 @@ impl SesionState {
     /// Estado ya poblado. Lo usa el servidor HTTP para dar a cada petición la
     /// sesión de su propio cliente, de modo que todo el despacho siga
     /// llamando a `sesion.usuario_id()` sin saber que hay varias sesiones.
-    pub fn desde(sesion: Option<SesionActiva>) -> Self {
-        Self {
-            activa: Mutex::new(sesion),
-            anonima: None,
-        }
-    }
-
-    /// Igual, recordando de dónde viene la petición aunque no haya sesión.
-    pub fn desde_cliente(
+    ///
+    /// `anonima` recuerda de dónde llega la petición aunque no haya sesión: sin
+    /// eso, un intento de acceso rechazado se registraría sin IP.
+    pub fn desde(
         sesion: Option<SesionActiva>,
-        anonima: crate::domain::seguridad::Desde,
+        anonima: Option<crate::domain::seguridad::Desde>,
     ) -> Self {
         Self {
             activa: Mutex::new(sesion),
-            anonima: Some(anonima),
+            anonima,
         }
     }
 

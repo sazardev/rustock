@@ -7224,11 +7224,11 @@ fn cada_cliente_http_tiene_su_propia_sesion() {
     );
 
     // El ámbito por petición se construye desde la sesión del cliente.
-    let ambito = SesionState::desde(registro.obtener(&token_b));
+    let ambito = SesionState::desde(registro.obtener(&token_b), None);
     assert_eq!(ambito.usuario_id().expect("autenticado"), "id-operador");
 
     // Sin token no hay sesión: nunca se hereda la de otro.
-    let anonimo = SesionState::desde(None);
+    let anonimo = SesionState::desde(None, None);
     assert!(matches!(
         anonimo.usuario_id(),
         Err(crate::error::AppError::NoAutenticado)
@@ -7241,7 +7241,7 @@ fn un_token_desconocido_no_da_acceso() {
 
     let registro = RegistroSesiones::default();
     assert!(registro.obtener("token-inventado").is_none());
-    let ambito = SesionState::desde(registro.obtener("token-inventado"));
+    let ambito = SesionState::desde(registro.obtener("token-inventado"), None);
     assert!(ambito.usuario_id().is_err());
 }
 
@@ -9072,16 +9072,19 @@ fn un_intento_denegado_queda_auditado_con_su_procedencia() {
         .expect("lector")
     };
 
-    let sesion = std::sync::Arc::new(SesionState::desde(Some(SesionActiva {
-        usuario_id: lector.id.clone(),
-        nombre_usuario: "lector_auditado".into(),
-        rol_codigo: "LECTOR".into(),
-        procedencia: Procedencia::http(
-            "s-denegada".into(),
-            Some("203.0.113.5".into()),
-            Some("curl/8".into()),
-        ),
-    })));
+    let sesion = std::sync::Arc::new(SesionState::desde(
+        Some(SesionActiva {
+            usuario_id: lector.id.clone(),
+            nombre_usuario: "lector_auditado".into(),
+            rol_codigo: "LECTOR".into(),
+            procedencia: Procedencia::http(
+                "s-denegada".into(),
+                Some("203.0.113.5".into()),
+                Some("curl/8".into()),
+            ),
+        }),
+        None,
+    ));
 
     // Un LECTOR no puede crear almacenes: el despacho debe rechazarlo…
     let r = crate::server::despachar(
