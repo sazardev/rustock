@@ -152,12 +152,12 @@ export function LandingPage() {
               </span>
             </div>
             <h1 className="landing__hero-title landing__hero-item landing__hero-item--1">
-              Tu almacén, <span className="landing__hero-accent">bajo control</span>
-              <span className="landing__hero-sub"> de verdad.</span>
+              {t.landing.pagina.heroTitulo1}
+              <span className="landing__hero-accent">{t.landing.pagina.heroTituloAcento}</span>
+              <span className="landing__hero-sub">{t.landing.pagina.heroTitulo2}</span>
             </h1>
             <p className="landing__lead landing__hero-item landing__hero-item--2">
-              {t.landing.pagina.heroLead} Rust, un archivo SQLite, trazabilidad inmutable.{" "}
-              <strong>{t.landing.pagina.heroLeadFuerte}</strong>
+              {t.landing.pagina.heroLead} <strong>{t.landing.pagina.heroLeadFuerte}</strong>
             </p>
             <div className="landing__cta landing__hero-item landing__hero-item--3">
               <ButtonLink variant="primary" href={PATH.configurarAdministrador}>
@@ -168,8 +168,7 @@ export function LandingPage() {
               </ButtonLink>
             </div>
             <p className="landing__hero-nota landing__hero-item landing__hero-item--3">
-              <Icon name="aprobar" size={14} aria-hidden="true" /> Sin tarjeta &middot; Instalación
-              en 3 minutos &middot; Tus datos nunca salen de tu equipo &middot; 26 guías incluidas
+              <Icon name="aprobar" size={14} aria-hidden="true" /> {t.landing.pagina.heroNota}
             </p>
 
             {/* Maqueta del producto */}
@@ -403,8 +402,7 @@ export function LandingPage() {
               ))}
             </div>
             <p className="landing__garantia">
-              <Icon name="aprobar" size={14} aria-hidden="true" /> Garantía implícita: si no
-              controla tu almacén, no lo uses. Tus datos, tu decisión.
+              <Icon name="aprobar" size={14} aria-hidden="true" /> {t.landing.pagina.garantia}
             </p>
           </div>
         </section>

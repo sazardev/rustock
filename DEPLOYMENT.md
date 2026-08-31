@@ -21,6 +21,11 @@ cuánta gente lo va a usar.
 Las dos comparten la misma base de datos y las mismas reglas de negocio. La
 diferencia es el transporte, no el comportamiento.
 
+El paquete `.deb` de 0.7.0 se ha instalado y abierto: la ventana arranca, crea
+el administrador por IPC de Tauri —no por HTTP— y el dashboard responde. El
+paquete declara `libwebkit2gtk-4.1-0` y `libgtk-3-0`, y no deja ninguna
+biblioteca sin resolver.
+
 ---
 
 ## 2. Arranque mínimo
@@ -195,13 +200,36 @@ creías), deja la restauración preparada y devuelve las instrucciones. Después
 
 ```bash
 systemctl stop rustock
-mv ~/.local/share/com.rustock.app/rustock.db.restaurar \
-   ~/.local/share/com.rustock.app/rustock.db
+cd ~/.local/share/com.rustock.app
+mv rustock.db.restaurar rustock.db
+rm -f rustock.db-wal rustock.db-shm   # sobras de la base anterior
 systemctl start rustock
 ```
 
 Intercambiar el fichero bajo un pool de conexiones abiertas es justo el tipo de
 listeza que corrompe una base, así que Rustock se niega a hacerlo por ti.
+
+El `rm` del `-wal` y el `-shm` es higiene, no un requisito: cada WAL lleva una
+marca que lo ata a su base, y SQLite descarta el que no le corresponde
+(comprobado dejándolo a propósito: la restauración salió correcta igual).
+Borrarlos evita arrastrar cientos de kilobytes de un fichero que ya no
+describe nada.
+
+### Ensayo completo, hecho
+
+El ciclo se ha probado de punta a punta sobre una instalación con datos, no
+solo en los tests:
+
+| | Productos | Movimientos | Saldo |
+|---|---|---|---|
+| Estado A, antes de copiar | 4 | 7 | 13 465 |
+| Estado B, tras seguir operando | 7 | 7 | 13 465 |
+| **Tras restaurar la copia de A** | **4** | **7** | **13 465** |
+| Tras deshacer con la copia de seguridad automática | 7 | 7 | 13 465 |
+
+Los tres productos creados después de la copia desaparecen al restaurar y
+vuelven al deshacer. `PRAGMA integrity_check` y `PRAGMA foreign_key_check`
+salen limpios en ambas direcciones.
 
 ### Comprueba que tus copias sirven
 

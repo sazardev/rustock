@@ -2151,10 +2151,32 @@ export const es = {
       iniciarSesion: "Iniciar sesión",
       seccionesAria: "Secciones de la página",
       enlacesPie: "Enlaces del pie",
+      /** Textos de la maqueta del producto del hero: son datos de ejemplo,
+       *  pero se ven en pantalla, así que se traducen como todo lo demás. */
+      maqueta: {
+        skusActivos: "SKU activos",
+        unidades: "unidades",
+        alertas: "alertas",
+        precision: "precisión",
+        entradaCompra: "Entrada · Compra",
+        salidaCliente: "Salida · Cliente",
+        trasladoInterno: "Traslado · Interno",
+        ajusteSobrante: "Ajuste · Sobrante",
+      },
       heroBadge: "Self-hosted — sin nube · Sin suscripción",
       heroTitulo: "Rustock — WMS self-hosted para control total de tu almacén",
+      // El titular va partido en tres para poder acentuar el centro; se guarda
+      // troceado y no como una frase con marcas, porque el orden de las partes
+      // cambia entre lenguas y una plantilla con HTML dentro no se traduce bien.
+      heroTitulo1: "Tu almacén, ",
+      heroTituloAcento: "bajo control",
+      heroTitulo2: " de verdad.",
+      heroNota:
+        "Sin tarjeta · Instalación en 3 minutos · Tus datos nunca salen de tu equipo · 26 guías incluidas",
+      garantia:
+        "Garantía implícita: si no controla tu almacén, no lo uses. Tus datos, tu decisión.",
       heroLead:
-        "Rustock reemplaza Excel y el SaaS que te alquila el acceso. Una sola aplicación en",
+        "Rustock reemplaza Excel y el SaaS que te alquila el acceso. Una sola aplicación en Rust, un archivo SQLite, trazabilidad inmutable.",
       heroLeadFuerte: "Cada unidad tiene su historia.",
       ctaAdminGratis: "Configurar el administrador — gratis",
       verCaracteristicas: "Ver características",

@@ -2069,10 +2069,29 @@ export const en: Diccionario = {
       iniciarSesion: "Sign in",
       seccionesAria: "Page sections",
       enlacesPie: "Footer links",
+      /** Textos de la maqueta del producto del hero: son datos de ejemplo,
+       *  pero se ven en pantalla, así que se traducen como todo lo demás. */
+      maqueta: {
+        skusActivos: "active SKUs",
+        unidades: "units",
+        alertas: "alerts",
+        precision: "accuracy",
+        entradaCompra: "Inbound · Purchase",
+        salidaCliente: "Outbound · Customer",
+        trasladoInterno: "Transfer · Internal",
+        ajusteSobrante: "Adjustment · Overage",
+      },
       heroBadge: "Self-hosted — no cloud · No subscription",
       heroTitulo: "Rustock — self-hosted WMS for full control of your warehouse",
+      heroTitulo1: "Your warehouse, ",
+      heroTituloAcento: "under control",
+      heroTitulo2: " for real.",
+      heroNota:
+        "No card · Installed in 3 minutes · Your data never leaves your machine · 26 guides included",
+      garantia:
+        "Implicit guarantee: if it does not put your warehouse under control, do not use it. Your data, your call.",
       heroLead:
-        "Rustock replaces Excel and the SaaS that rents you access. A single application in",
+        "Rustock replaces Excel and the SaaS that rents you access. A single application in Rust, one SQLite file, immutable traceability.",
       heroLeadFuerte: "Every unit has its story.",
       ctaAdminGratis: "Set up the administrator — free",
       verCaracteristicas: "See the features",

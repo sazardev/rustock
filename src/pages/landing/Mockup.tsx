@@ -1,17 +1,20 @@
 import { Badge, Icon, type IconName } from "../../shared/ui";
-import { useT } from "../../shared/i18n";
+import { useT, type Diccionario } from "../../shared/i18n";
 
 interface Kpi {
   valor: string;
   etiqueta: string;
 }
 
-const KPIS_MOCK: Kpi[] = [
-  { valor: "4", etiqueta: "SKUs activos" },
-  { valor: "13,465", etiqueta: "unidades" },
-  { valor: "4", etiqueta: "alertas" },
-  { valor: "98.2%", etiqueta: "precisión" },
-];
+/** Los KPI de la maqueta, en el idioma activo. */
+function kpisDe(t: Diccionario): Kpi[] {
+  return [
+    { valor: "4", etiqueta: t.landing.pagina.maqueta.skusActivos },
+    { valor: "13,465", etiqueta: t.landing.pagina.maqueta.unidades },
+    { valor: "4", etiqueta: t.landing.pagina.maqueta.alertas },
+    { valor: "98.2%", etiqueta: t.landing.pagina.maqueta.precision },
+  ];
+}
 
 interface FilaMock {
   numero: string;
@@ -22,40 +25,43 @@ interface FilaMock {
   estadoTono: "success" | "warning";
 }
 
-const MOVIMIENTOS_MOCK: FilaMock[] = [
-  {
-    numero: "MOV-2026-000001",
-    icono: "entrada",
-    tipo: "Entrada · Compra",
-    cantidad: "+480",
-    estado: "Aprobado",
-    estadoTono: "success",
-  },
-  {
-    numero: "MOV-2026-000002",
-    icono: "salida",
-    tipo: "Salida · Cliente",
-    cantidad: "-12",
-    estado: "Aprobado",
-    estadoTono: "success",
-  },
-  {
-    numero: "MOV-2026-000003",
-    icono: "traslado",
-    tipo: "Traslado · Interno",
-    cantidad: "8",
-    estado: "Aprobado",
-    estadoTono: "success",
-  },
-  {
-    numero: "MOV-2026-000004",
-    icono: "ajuste",
-    tipo: "Ajuste · Sobrante",
-    cantidad: "+5",
-    estado: "Pendiente",
-    estadoTono: "warning",
-  },
-];
+/** Las filas de ejemplo, en el idioma activo. */
+function movimientosDe(t: Diccionario): FilaMock[] {
+  return [
+    {
+      numero: "MOV-2026-000001",
+      icono: "entrada",
+      tipo: t.landing.pagina.maqueta.entradaCompra,
+      cantidad: "+480",
+      estado: t.dominio.estadoMovimiento.APROBADO,
+      estadoTono: "success",
+    },
+    {
+      numero: "MOV-2026-000002",
+      icono: "salida",
+      tipo: t.landing.pagina.maqueta.salidaCliente,
+      cantidad: "-12",
+      estado: t.dominio.estadoMovimiento.APROBADO,
+      estadoTono: "success",
+    },
+    {
+      numero: "MOV-2026-000003",
+      icono: "traslado",
+      tipo: t.landing.pagina.maqueta.trasladoInterno,
+      cantidad: "8",
+      estado: t.dominio.estadoMovimiento.APROBADO,
+      estadoTono: "success",
+    },
+    {
+      numero: "MOV-2026-000004",
+      icono: "ajuste",
+      tipo: t.landing.pagina.maqueta.ajusteSobrante,
+      cantidad: "+5",
+      estado: t.dominio.estadoMovimiento.PENDIENTE_APROBACION,
+      estadoTono: "warning",
+    },
+  ];
+}
 
 /**
  * Mockup — maqueta estática de la interfaz del producto (solo presentación visual,
@@ -79,7 +85,7 @@ export function Mockup() {
       </div>
 
       <div className="landing__mock-kpis">
-        {KPIS_MOCK.map((kpi) => (
+        {kpisDe(t).map((kpi) => (
           <div key={kpi.etiqueta} className="landing__mock-kpi">
             <span className="landing__mock-kpi-value">{kpi.valor}</span>
             <span className="landing__mock-kpi-label">{kpi.etiqueta}</span>
@@ -89,12 +95,12 @@ export function Mockup() {
 
       <div className="landing__mock-table">
         <div className="landing__mock-row landing__mock-row--head" aria-hidden="true">
-          <span>Movimiento</span>
-          <span className="landing__mock-tipo">Tipo</span>
-          <span className="landing__mock-cantidad">Cantidad</span>
-          <span>Estado</span>
+          <span>{t.campos.movimiento}</span>
+          <span className="landing__mock-tipo">{t.comun.tipo}</span>
+          <span className="landing__mock-cantidad">{t.comun.cantidad}</span>
+          <span>{t.comun.estado}</span>
         </div>
-        {MOVIMIENTOS_MOCK.map((fila) => (
+        {movimientosDe(t).map((fila) => (
           <div key={fila.numero} className="landing__mock-row">
             <span className="landing__mock-numero">{fila.numero}</span>
             <span className="landing__mock-tipo">
