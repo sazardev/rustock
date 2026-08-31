@@ -121,6 +121,7 @@ npm run tauri build
 - **STACK.md** — stack y reglas de rendimiento.
 - **INSTALACION.md** — guía detallada de instalación.
 - **DEPLOYMENT.md** — puesta en producción: configuración, red y TLS, copias de seguridad, systemd.
+- **POSTGRES.md** — por qué Rustock usa SQLite y qué costaría soportar PostgreSQL.
 
 Para agentes de IA y crawlers:
 

@@ -278,8 +278,10 @@ Dicho aquí para que nadie lo descubra en producción:
 - **Solo SQLite.** `datos.motor` acepta únicamente `sqlite`. PostgreSQL está
   declarado en la configuración para que un fichero existente siga siendo
   válido el día que exista, pero pedirlo falla al arrancar con un mensaje
-  claro. La capa de datos son 439 sentencias SQL contra `rusqlite`; portarla es
-  un proyecto en sí mismo, no un cambio de driver.
+  claro. La capa de datos son 389 sentencias SQL y 233 firmas contra
+  `rusqlite`; portarla es un proyecto en sí mismo, no un cambio de driver — el
+  plan medido y por fases está en [POSTGRES.md](POSTGRES.md). Para la mayoría
+  de instalaciones SQLite no es la opción pobre, es la correcta.
 - **Sin alta disponibilidad.** Una instancia atendiendo, un fichero. Hay
   réplica de las copias (punto 5), que es recuperación ante desastre, no
   continuidad: si el equipo cae, Rustock deja de estar disponible hasta que lo
