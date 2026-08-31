@@ -4,6 +4,17 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [0.8.1] - 2026-08-31
+
+### Documentación
+
+- **manual:** Guía de DevOps dentro de la aplicación, y arregla la migración
+
+
+### Refactor
+
+- **sesion:** Un solo constructor de SesionState
+
 ## [0.8.0] - 2026-08-31
 
 ### Features
