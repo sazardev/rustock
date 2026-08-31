@@ -72,12 +72,38 @@ pub fn iniciar_con(db: Arc<DbState>, config: Config) {
             eprintln!("[server] AVISO: {aviso}");
         }
 
-        let cors = Cors {
+        // Tantos hilos como conexiones tenga el pool: más no servirían de nada
+        // —esperarían por una conexión libre— y menos dejarían el pool ocioso.
+        //
+        // Antes había un solo hilo atendiendo en serie, y eso significaba que
+        // *cualquier* operación lenta congelaba a todo el mundo: durante una
+        // copia de seguridad de segundo y medio, una simple lectura pasaba de
+        // 0,9 ms a 1,49 s porque esperaba su turno. Con copias programadas, el
+        // almacén entero se paraba en cada una.
+        let hilos = config.datos.pool.max(1);
+        let cors = Arc::new(Cors {
             base: cabeceras_cors(&config),
             config,
-        };
-        for request in server.incoming_requests() {
-            manejar(&db, &registro, &cors, request);
+        });
+        let server = Arc::new(server);
+
+        let mut obreros = Vec::with_capacity(hilos);
+        for _ in 0..hilos {
+            let server = Arc::clone(&server);
+            let db = Arc::clone(&db);
+            let registro = Arc::clone(&registro);
+            let cors = Arc::clone(&cors);
+            obreros.push(std::thread::spawn(move || {
+                // `incoming_requests` sobre un `Server` compartido reparte las
+                // peticiones entre quien esté libre: es el modelo que tiny_http
+                // documenta para servir en paralelo.
+                for request in server.incoming_requests() {
+                    manejar(&db, &registro, &cors, request);
+                }
+            }));
+        }
+        for obrero in obreros {
+            let _ = obrero.join();
         }
     });
 }

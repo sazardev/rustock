@@ -288,14 +288,39 @@ WantedBy=multi-user.target
 
 ## 8. Dimensionar
 
-`datos.pool` es el número de conexiones simultáneas. SQLite en WAL admite
-varios lectores a la vez y serializa las escrituras por su cuenta, así que
-subirlo da concurrencia real de lectura. Ocho cubre de sobra un almacén con
-decenas de terminales.
+`datos.pool` es el número de conexiones simultáneas **y también el de hilos que
+atienden peticiones**: más hilos que conexiones solo esperarían turno, y menos
+dejarían conexiones ociosas. Ocho cubre de sobra un almacén con decenas de
+terminales.
 
 Si aparecen errores de *database is locked* con mucha carga de escritura, sube
 `busy_timeout_ms` antes que el pool: el problema es la espera, no las
 conexiones.
+
+### Medido, no estimado
+
+Prueba de carga real contra el binario de release, con sesiones concurrentes
+haciendo lo que hace un turno —listados, dashboard, y una salida de stock del
+**mismo hueco** para forzar la carrera— y comprobando al final que el saldo
+cuadra:
+
+| Usuarios a la vez | Peticiones/s | p95 lectura | p95 escritura | Errores | Saldo |
+|---|---|---|---|---|---|
+| 5 | 1 277 | 4–9 ms | 4–5 ms | 0 | cuadra al dígito |
+| 25 | 1 243 | 26–30 ms | 26–28 ms | 0 | cuadra al dígito |
+
+El techo (~1 250 operaciones/s) lo pone SQLite serializando escrituras, no el
+número de clientes: por eso 25 usuarios rinden casi lo mismo que 5. Para
+situarlo, una persona en el almacén hace del orden de una acción cada diez
+segundos.
+
+La comprobación que importa no es la velocidad sino la última columna: 12 768
+salidas concurrentes del mismo hueco dejaron el saldo exacto (41 280 − 12 768 =
+28 512), sin un solo negativo, y `PRAGMA integrity_check` limpio después.
+
+El punto más lento es `obtener_dashboard` (41 ms de media con 25 usuarios,
+frente a 15 ms del resto). Es el que más agrega; si algún día molesta, es el
+primero a mirar.
 
 ---
 
