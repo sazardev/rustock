@@ -86,7 +86,11 @@ if (!changelogOnly) {
 }
 
 // --- regenerate changelog ---
-run(`npx git-cliff --output CHANGELOG.md`);
+// `--tag` le dice a git-cliff bajo qué versión agrupar los commits que todavía
+// no tienen etiqueta. Sin esto acaban en «[Unreleased]», porque el tag de git
+// no existe aún cuando se genera el changelog: el commit de release tiene que
+// incluirlo ya escrito, y no se puede etiquetar antes de crear ese commit.
+run(`npx git-cliff${wantTag ? ` --tag v${next}` : ""} --output CHANGELOG.md`);
 console.log("CHANGELOG.md regenerado.");
 
 // --- tag ---
