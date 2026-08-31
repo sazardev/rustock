@@ -4,6 +4,24 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [0.5.2] - 2026-08-31
+
+### Bug Fixes
+
+- **seguridad:** Impide dejar el sistema sin administradores por cambio de rol
+
+- **release:** El changelog agrupaba cada versión bajo «Unreleased»
+
+
+### CI
+
+- Añade GitHub Actions y arregla el falso positivo del auditor
+
+
+### Documentación
+
+- **changelog:** Agrupa los arreglos bajo 0.5.1
+
 ## [0.5.1] - 2026-08-30
 
 ### Bug Fixes
