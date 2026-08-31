@@ -284,6 +284,12 @@ pub struct EventoAuditoria {
     pub hora_local: Option<i64>,
     /// Día de la semana local (1=lunes ... 7=domingo).
     pub dia_semana: Option<i64>,
+    /// Sesión que hizo esto: agrupa todo lo de una misma visita.
+    pub sesion_id: Option<String>,
+    /// IP desde la que llegó. Vacía en la ventana de escritorio.
+    pub ip: Option<String>,
+    /// `User-Agent` del cliente: una pista sobre el equipo, no una identidad.
+    pub agente: Option<String>,
 }
 
 /// Datos que el frontend envía al registrar la visita a una página
@@ -399,6 +405,7 @@ impl EventoAuditoria {
             None,
             None,
             None,
+            None,
         )
     }
 
@@ -427,17 +434,51 @@ impl EventoAuditoria {
         duracion_vista_ms: Option<i64>,
         hora_local: Option<i64>,
         dia_semana: Option<i64>,
+        desde: Option<&Desde>,
     ) -> crate::error::AppResult<()> {
         let ts = ahora();
+        let (sesion_id, ip, agente) = match desde {
+            Some(d) => (d.sesion_id.as_ref(), d.ip.as_ref(), d.agente.as_ref()),
+            None => (None, None, None),
+        };
         conn.execute(
-            "INSERT INTO auditoria (usuario_id, accion, entidad, entidad_id, antes, despues, timestamp, origen, comando, duracion_ms, exito, nivel, tipo_evento, ruta, modulo, proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
+            "INSERT INTO auditoria (usuario_id, accion, entidad, entidad_id, antes, despues, timestamp, origen, comando, duracion_ms, exito, nivel, tipo_evento, ruta, modulo, proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana, sesion_id, ip, agente)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
             rusqlite::params![
                 usuario_id, accion, entidad, entidad_id, antes, despues, ts, origen,
                 comando, duracion_ms, exito as i64, nivel, tipo_evento, ruta, modulo,
-                proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana
+                proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana,
+                sesion_id, ip, agente
             ],
         )?;
         Ok(())
+    }
+}
+
+/// Desde dónde se hizo algo, para el registro de auditoría.
+///
+/// Es una copia de los datos de `sesion::Procedencia` que no dependen de la
+/// capa de transporte: `domain` no debe saber que existe un servidor HTTP, solo
+/// que un evento viene de algún sitio identificable.
+#[derive(Debug, Clone, Default)]
+pub struct Desde {
+    /// Une todo lo que hizo alguien entre que entró y salió.
+    ///
+    /// `None` cuando todavía no hay sesión: un intento de acceso fallido o una
+    /// llamada anónima al API no pertenecen a ninguna visita, pero **sí** hay
+    /// que registrar desde dónde llegaron. Es justo lo que interesa vigilar.
+    pub sesion_id: Option<String>,
+    pub ip: Option<String>,
+    pub agente: Option<String>,
+}
+
+impl Desde {
+    /// Procedencia de alguien que aún no tiene sesión.
+    pub fn anonimo(ip: Option<String>, agente: Option<String>) -> Self {
+        Self {
+            sesion_id: None,
+            ip,
+            agente,
+        }
     }
 }

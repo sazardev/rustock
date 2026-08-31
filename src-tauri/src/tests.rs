@@ -1158,14 +1158,23 @@ fn historial_registra_invocaciones_con_metricas() {
     let (_, prod) = crear_uom_y_producto(&conn);
 
     // Simular una invocación de escritura registrada con métricas.
-    repo::auditoria::registrar_invocacion(&conn, Some("admin"), "crear_movimiento", 12, true, None)
-        .expect("registrar");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some("admin"),
+        "crear_movimiento",
+        12,
+        true,
+        None,
+        None,
+    )
+    .expect("registrar");
     repo::auditoria::registrar_invocacion(
         &conn,
         Some("admin"),
         "aprobar_movimiento",
         3,
         true,
+        None,
         None,
     )
     .expect("registrar");
@@ -1176,6 +1185,7 @@ fn historial_registra_invocaciones_con_metricas() {
         1,
         false,
         None,
+        None,
     )
     .expect("registrar");
 
@@ -1183,6 +1193,9 @@ fn historial_registra_invocaciones_con_metricas() {
     let hist = repo::auditoria::listar_historial(
         &conn,
         Some("admin"),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -5772,6 +5785,7 @@ fn registrar_vista_guarda_metadata_tenant_y_tiempo_local() {
                 "navegador": "webkit", "plataforma": "linux", "pantalla": "1920x1080"
             })),
         },
+        None,
     )
     .expect("vista registrada");
 
@@ -5781,6 +5795,9 @@ fn registrar_vista_guarda_metadata_tenant_y_tiempo_local() {
         None,
         None,
         Some("VISTA"),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -5826,6 +5843,7 @@ fn registrar_vista_guarda_metadata_tenant_y_tiempo_local() {
             dia_semana: None,
             cliente_info: None,
         },
+        None,
     )
     .expect("vista 2");
     let hist = repo::auditoria::listar_historial(
@@ -5835,6 +5853,9 @@ fn registrar_vista_guarda_metadata_tenant_y_tiempo_local() {
         None,
         Some("VISTA"),
         Some("Dashboard"),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -5866,6 +5887,7 @@ fn registrar_vista_rechaza_ruta_vacia_y_tiempo_local_invalido() {
             dia_semana: None,
             cliente_info: None,
         },
+        None,
     );
     assert!(
         err.is_ok(),
@@ -5893,10 +5915,26 @@ fn registrar_vista_rechaza_ruta_vacia_y_tiempo_local_invalido() {
 fn invocaciones_de_comando_se_etiquetan_con_modulo_y_proceso() {
     let db = setup();
     let conn = db.conn();
-    repo::auditoria::registrar_invocacion(&conn, Some("admin"), "crear_movimiento", 12, true, None)
-        .expect("invocación");
-    repo::auditoria::registrar_invocacion(&conn, Some("admin"), "listar_productos", 2, true, None)
-        .expect("invocación");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some("admin"),
+        "crear_movimiento",
+        12,
+        true,
+        None,
+        None,
+    )
+    .expect("invocación");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some("admin"),
+        "listar_productos",
+        2,
+        true,
+        None,
+        None,
+    )
+    .expect("invocación");
 
     let hist = repo::auditoria::listar_historial(
         &conn,
@@ -5904,6 +5942,9 @@ fn invocaciones_de_comando_se_etiquetan_con_modulo_y_proceso() {
         None,
         None,
         Some("COMANDO"),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -5962,11 +6003,20 @@ fn metricas_actividad_agrega_por_modulo_hora_usuario_y_proceso() {
                 dia_semana: Some(2),
                 cliente_info: None,
             },
+            None,
         )
         .expect("vista");
     }
-    repo::auditoria::registrar_invocacion(&conn, Some(&admin), "aprobar_movimiento", 5, true, None)
-        .expect("invocación");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some(&admin),
+        "aprobar_movimiento",
+        5,
+        true,
+        None,
+        None,
+    )
+    .expect("invocación");
 
     let m = repo::auditoria::metricas_actividad(&conn, None, None, None).expect("métricas");
     assert!(m.resumen.total_vistas >= 2);
@@ -6028,6 +6078,7 @@ fn listar_historial_pagina_y_filtra_por_tipo_modulo_y_rango() {
                 dia_semana: Some(1),
                 cliente_info: None,
             },
+            None,
         )
         .expect("vista");
     }
@@ -6039,6 +6090,9 @@ fn listar_historial_pagina_y_filtra_por_tipo_modulo_y_rango() {
         None,
         None,
         Some("VISTA"),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -6068,6 +6122,9 @@ fn listar_historial_pagina_y_filtra_por_tipo_modulo_y_rango() {
         None,
         None,
         None,
+        None,
+        None,
+        None,
         3,
         10,
     )
@@ -6084,6 +6141,9 @@ fn listar_historial_pagina_y_filtra_por_tipo_modulo_y_rango() {
         None,
         Some("VISTA"),
         Some("Productos"),
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -6107,6 +6167,9 @@ fn listar_historial_pagina_y_filtra_por_tipo_modulo_y_rango() {
         None,
         None,
         Some("2099-01-01T00:00:00"),
+        None,
+        None,
+        None,
         None,
         1,
         50,
@@ -7128,11 +7191,13 @@ fn cada_cliente_http_tiene_su_propia_sesion() {
         usuario_id: "id-admin".into(),
         nombre_usuario: "admin".into(),
         rol_codigo: "ADMIN".into(),
+        procedencia: crate::sesion::Procedencia::escritorio(),
     });
     let token_b = registro.abrir(SesionActiva {
         usuario_id: "id-operador".into(),
         nombre_usuario: "operador".into(),
         rol_codigo: "OPERADOR".into(),
+        procedencia: crate::sesion::Procedencia::escritorio(),
     });
 
     assert_eq!(registro.abiertas(), 2);
@@ -8199,6 +8264,7 @@ fn una_sesion_caduca_por_inactividad_y_se_renueva_al_usarla() {
         usuario_id: "u1".into(),
         nombre_usuario: "admin".into(),
         rol_codigo: "ADMIN".into(),
+        procedencia: crate::sesion::Procedencia::escritorio(),
     };
 
     // TTL diminuto para no dormir el test más de lo imprescindible.
@@ -8233,6 +8299,7 @@ fn con_ttl_cero_las_sesiones_no_caducan() {
         usuario_id: "u1".into(),
         nombre_usuario: "admin".into(),
         rol_codigo: "ADMIN".into(),
+        procedencia: crate::sesion::Procedencia::escritorio(),
     });
     std::thread::sleep(std::time::Duration::from_millis(50));
     assert!(
@@ -8706,4 +8773,356 @@ fn una_replica_en_el_mismo_disco_que_las_copias_avisa() {
         ..config.clone()
     };
     assert!(!bueno.advertencias().iter().any(|a| a.contains("réplica")));
+}
+
+// ============ Trazabilidad: desde dónde se hizo cada cosa ============
+
+#[test]
+fn cada_evento_guarda_desde_donde_se_hizo_y_la_sesion_lo_agrupa() {
+    use crate::domain::seguridad::Desde;
+
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let visita = Desde {
+        sesion_id: Some("sesion-abc".into()),
+        ip: Some("192.168.1.44".into()),
+        agente: Some("Mozilla/5.0 (terminal del muelle)".into()),
+    };
+
+    repo::auditoria::registrar_sesion_abierta(&conn, &admin, "http", &visita).expect("apertura");
+    for cmd in ["listar_productos", "crear_movimiento", "aprobar_movimiento"] {
+        repo::auditoria::registrar_invocacion(
+            &conn,
+            Some(&admin),
+            cmd,
+            4,
+            true,
+            Some("http"),
+            Some(&visita),
+        )
+        .expect("invocación");
+    }
+
+    // Filtrar por la sesión reconstruye la visita entera: la apertura más todo
+    // lo que se hizo después. Ese es el hilo del que se tira al investigar.
+    let hist = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some("sesion-abc"),
+        None,
+        None,
+        1,
+        50,
+    )
+    .expect("historial");
+    assert_eq!(hist.data.len(), 4, "apertura + tres comandos");
+    assert!(
+        hist.data
+            .iter()
+            .all(|e| e.ip.as_deref() == Some("192.168.1.44")),
+        "todos los eventos llevan la IP desde la que se hicieron"
+    );
+    assert!(
+        hist.data.iter().any(|e| e.accion == "abrir_sesion"),
+        "la apertura de sesión queda registrada"
+    );
+
+    // Y filtrar por IP responde «¿quién entró desde este equipo?».
+    let por_ip = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some("192.168.1.44"),
+        None,
+        1,
+        50,
+    )
+    .expect("por ip");
+    assert_eq!(por_ip.data.len(), 4);
+
+    // Una IP que nadie usó no devuelve nada: el filtro filtra de verdad.
+    let vacio = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some("10.0.0.1"),
+        None,
+        1,
+        50,
+    )
+    .expect("otra ip");
+    assert!(vacio.data.is_empty());
+}
+
+#[test]
+fn las_sesiones_se_reconstruyen_con_quien_desde_donde_y_que_hizo() {
+    use crate::domain::seguridad::Desde;
+
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let muelle = Desde {
+        sesion_id: Some("s-muelle".into()),
+        ip: Some("10.0.0.7".into()),
+        agente: Some("Chrome/140".into()),
+    };
+    repo::auditoria::registrar_sesion_abierta(&conn, &admin, "http", &muelle).expect("apertura");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some(&admin),
+        "listar_productos",
+        2,
+        true,
+        Some("http"),
+        Some(&muelle),
+    )
+    .expect("lectura");
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some(&admin),
+        "crear_movimiento",
+        9,
+        true,
+        Some("http"),
+        Some(&muelle),
+    )
+    .expect("escritura");
+    // Un intento denegado: es justo lo que interesa vigilar.
+    repo::auditoria::registrar_invocacion(
+        &conn,
+        Some(&admin),
+        "crear_usuario",
+        1,
+        false,
+        Some("http"),
+        Some(&muelle),
+    )
+    .expect("fallo");
+
+    // Otra visita distinta, desde la ventana de escritorio.
+    let oficina = Desde {
+        sesion_id: Some("s-oficina".into()),
+        ip: None,
+        agente: None,
+    };
+    repo::auditoria::registrar_sesion_abierta(&conn, &admin, "escritorio", &oficina)
+        .expect("apertura 2");
+
+    let sesiones =
+        repo::auditoria::listar_sesiones(&conn, None, None, None, None, 50).expect("sesiones");
+    assert_eq!(sesiones.len(), 2, "dos visitas distintas, no una mezcla");
+
+    let m = sesiones
+        .iter()
+        .find(|s| s.sesion_id == "s-muelle")
+        .expect("la del muelle");
+    assert_eq!(m.eventos, 4);
+    assert_eq!(
+        m.escrituras, 2,
+        "crear y el intento de crear usuario cuentan como escritura"
+    );
+    assert_eq!(
+        m.fallos, 1,
+        "el intento denegado se ve sin abrir el detalle"
+    );
+    assert_eq!(m.ip.as_deref(), Some("10.0.0.7"));
+    assert_eq!(m.ips_distintas, 1, "la sesión no cambió de sitio");
+    assert_eq!(m.origen.as_deref(), Some("http"));
+    assert_eq!(
+        m.nombre_usuario.as_deref(),
+        Some("admin"),
+        "se resuelve el nombre, no solo el id"
+    );
+
+    let o = sesiones
+        .iter()
+        .find(|s| s.sesion_id == "s-oficina")
+        .expect("la de oficina");
+    assert_eq!(o.origen.as_deref(), Some("escritorio"));
+    assert!(
+        o.ip.is_none(),
+        "en la ventana nativa no hay red de por medio"
+    );
+
+    // Filtrar por IP deja solo la visita que vino de ahí.
+    let solo_muelle =
+        repo::auditoria::listar_sesiones(&conn, None, Some("10.0.0.7"), None, None, 50)
+            .expect("por ip");
+    assert_eq!(solo_muelle.len(), 1);
+    assert_eq!(solo_muelle[0].sesion_id, "s-muelle");
+}
+
+#[test]
+fn una_sesion_usada_desde_dos_ips_queda_señalada() {
+    use crate::domain::seguridad::Desde;
+
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    // El mismo identificador de sesión visto desde dos sitios: puede ser un
+    // portátil que cambió de wifi, o un token copiado. La auditoría no juzga,
+    // pero tiene que dejarlo a la vista para que alguien lo mire.
+    for ip in ["10.0.0.7", "203.0.113.9"] {
+        repo::auditoria::registrar_invocacion(
+            &conn,
+            Some(&admin),
+            "listar_saldos",
+            1,
+            true,
+            Some("http"),
+            Some(&Desde {
+                sesion_id: Some("s-viajera".into()),
+                ip: Some(ip.into()),
+                agente: Some("Chrome/140".into()),
+            }),
+        )
+        .expect("invocación");
+    }
+
+    let sesiones =
+        repo::auditoria::listar_sesiones(&conn, None, None, None, None, 50).expect("sesiones");
+    let v = sesiones
+        .iter()
+        .find(|s| s.sesion_id == "s-viajera")
+        .expect("la viajera");
+    assert_eq!(
+        v.ips_distintas, 2,
+        "dos IPs en una misma sesión tienen que verse"
+    );
+}
+
+#[test]
+fn el_identificador_de_sesion_no_es_el_token() {
+    use crate::sesion::{Procedencia, RegistroSesiones, SesionActiva};
+
+    // Quien pueda leer la auditoría no debe poder robar sesiones vivas: el
+    // `sesion_id` que se registra es propio y no tiene nada que ver con el
+    // token que autentica.
+    let registro = RegistroSesiones::desde_minutos(60);
+    let procedencia = Procedencia::http("s-propia".into(), Some("10.0.0.7".into()), None);
+    let token = registro.abrir(SesionActiva {
+        usuario_id: "u1".into(),
+        nombre_usuario: "admin".into(),
+        rol_codigo: "ADMIN".into(),
+        procedencia,
+    });
+
+    let viva = registro.obtener(&token).expect("sesión viva");
+    assert_eq!(viva.procedencia.sesion_id, "s-propia");
+    assert_ne!(
+        viva.procedencia.sesion_id, token,
+        "el id de auditoría nunca puede ser el token de sesión"
+    );
+}
+
+#[test]
+fn un_intento_denegado_queda_auditado_con_su_procedencia() {
+    use crate::sesion::{Procedencia, SesionActiva, SesionState};
+    use serde_json::json;
+
+    // SPEC §4.5 promete auditar también los intentos denegados. Durante un
+    // tiempo no fue verdad: el `?` del cuerpo de `con_auditoria!` salía de la
+    // función entera y se saltaba el registro, así que justo los eventos que
+    // hay que vigilar —permiso denegado, acceso sin sesión— no dejaban rastro.
+    let db = setup();
+    let lector = {
+        let conn = db.conn();
+        repo::seguridad::crear_usuario(
+            &conn,
+            &NuevoUsuario {
+                nombre_usuario: "lector_auditado".into(),
+                nombre_completo: "Lector".into(),
+                email: None,
+                password: "pass12345".into(),
+                rol_id: id_rol(&conn, "LECTOR"),
+                created_by: Some("admin".into()),
+            },
+        )
+        .expect("lector")
+    };
+
+    let sesion = std::sync::Arc::new(SesionState::desde(Some(SesionActiva {
+        usuario_id: lector.id.clone(),
+        nombre_usuario: "lector_auditado".into(),
+        rol_codigo: "LECTOR".into(),
+        procedencia: Procedencia::http(
+            "s-denegada".into(),
+            Some("203.0.113.5".into()),
+            Some("curl/8".into()),
+        ),
+    })));
+
+    // Un LECTOR no puede crear almacenes: el despacho debe rechazarlo…
+    let r = crate::server::despachar(
+        &db,
+        &sesion,
+        "crear_almacen",
+        &json!({ "nuevo": { "codigo": "ZZ", "nombre": "Prohibido" } }),
+        &crate::server::DatosCliente {
+            ip: None,
+            agente: None,
+        },
+    );
+    assert!(matches!(r, Err(crate::error::AppError::SinPermiso(_))));
+
+    // …y el rechazo tiene que estar en el registro, con quién y desde dónde.
+    let conn = db.conn();
+    let hist = repo::auditoria::listar_historial(
+        &conn,
+        None,
+        Some("crear_almacen"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(false),
+        None,
+        None,
+        None,
+        None,
+        None,
+        1,
+        10,
+    )
+    .expect("historial");
+    let evento = hist
+        .data
+        .first()
+        .expect("el intento denegado tiene que estar registrado");
+    assert!(!evento.exito);
+    assert_eq!(evento.usuario_id.as_deref(), Some(lector.id.as_str()));
+    assert_eq!(evento.ip.as_deref(), Some("203.0.113.5"));
+    assert_eq!(evento.sesion_id.as_deref(), Some("s-denegada"));
 }

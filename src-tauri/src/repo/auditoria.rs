@@ -143,6 +143,7 @@ pub fn registrar_invocacion(
     duracion_ms: i64,
     exito: bool,
     origen: Option<&str>,
+    desde: Option<&crate::domain::seguridad::Desde>,
 ) -> AppResult<()> {
     let tenant = tenant_actual(conn)?;
     EventoAuditoria::registrar_detallado(
@@ -167,6 +168,7 @@ pub fn registrar_invocacion(
         None,
         None,
         None,
+        desde,
     )
 }
 
@@ -177,6 +179,7 @@ pub fn registrar_vista(
     conn: &Connection,
     usuario_id: &str,
     vista: &RegistrarVista,
+    desde: Option<&crate::domain::seguridad::Desde>,
 ) -> AppResult<()> {
     let tenant = tenant_actual(conn)?;
     // Los metadatos del evento combinan lo que envía la UI con la info de
@@ -215,6 +218,7 @@ pub fn registrar_vista(
         vista.duracion_vista_ms,
         vista.hora_local,
         vista.dia_semana,
+        desde,
     )
 }
 
@@ -237,6 +241,9 @@ pub fn listar_historial(
     exito: Option<bool>,
     desde: Option<&str>,
     hasta: Option<&str>,
+    sesion_id: Option<&str>,
+    ip: Option<&str>,
+    origen: Option<&str>,
     page: i64,
     page_size: i64,
 ) -> AppResult<Paginado<EventoAuditoria>> {
@@ -269,6 +276,11 @@ pub fn listar_historial(
     cond_eq!("modulo", modulo);
     cond_eq!("ruta", ruta);
     cond_eq!("proceso", proceso);
+    // Las tres preguntas de una investigación: «reconstruye esta visita»,
+    // «¿quién entró desde esta IP?» y «¿esto vino de la ventana o del navegador?».
+    cond_eq!("sesion_id", sesion_id);
+    cond_eq!("ip", ip);
+    cond_eq!("origen", origen);
     if let Some(e) = exito {
         where_clauses.push(format!("exito = ?{}", params.len() + 1));
         params.push((if e { 1 } else { 0 }).into());
@@ -296,7 +308,8 @@ pub fn listar_historial(
     let mut stmt = conn.prepare(&format!(
         "SELECT id, usuario_id, accion, entidad, entidad_id, antes, despues, timestamp,
                 origen, comando, duracion_ms, exito, nivel, tipo_evento, ruta, modulo,
-                proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana
+                proceso, metadatos, tenant, duracion_vista_ms, hora_local, dia_semana,
+                sesion_id, ip, agente
          FROM auditoria{where_sql}
          ORDER BY timestamp DESC, id DESC
          LIMIT ?{} OFFSET ?{}",
@@ -988,6 +1001,9 @@ fn map_evento(r: &rusqlite::Row<'_>) -> rusqlite::Result<EventoAuditoria> {
         duracion_vista_ms: r.get(19)?,
         hora_local: r.get(20)?,
         dia_semana: r.get(21)?,
+        sesion_id: r.get(22)?,
+        ip: r.get(23)?,
+        agente: r.get(24)?,
     })
 }
 
@@ -1025,4 +1041,158 @@ pub fn usuario_de_payload(serde_value: &serde_json::Value) -> Option<String> {
 #[allow(dead_code)]
 pub fn error_a_texto(e: &AppError) -> String {
     e.to_string()
+}
+
+/// Registra que alguien abrió sesión, con desde dónde.
+///
+/// Es el ancla de la trazabilidad: fija en un solo evento quién entró, cuándo,
+/// desde qué IP y con qué cliente. Todo lo que haga después comparte el mismo
+/// `sesion_id`, así que reconstruir una visita es filtrar por ese identificador
+/// en vez de cruzar horas y usuarios a ojo.
+pub fn registrar_sesion_abierta(
+    conn: &Connection,
+    usuario_id: &str,
+    origen: &str,
+    desde: &crate::domain::seguridad::Desde,
+) -> AppResult<()> {
+    let tenant = tenant_actual(conn)?;
+    EventoAuditoria::registrar_detallado(
+        conn,
+        Some(usuario_id),
+        "abrir_sesion",
+        "sesion",
+        desde.sesion_id.as_deref(),
+        None,
+        None,
+        Some(origen),
+        Some("login"),
+        None,
+        true,
+        "SEGURIDAD",
+        "SESION",
+        None,
+        Some("Seguridad"),
+        Some("acceso"),
+        None,
+        tenant.as_deref(),
+        None,
+        None,
+        None,
+        Some(desde),
+    )
+}
+
+// ============ Sesiones: quién estuvo dentro y desde dónde ============
+
+/// Una visita completa: quién entró, desde dónde, cuándo, y qué hizo.
+///
+/// Se reconstruye agrupando la auditoría por `sesion_id` en vez de guardarse
+/// aparte. Así no hay dos verdades que puedan discrepar: la tabla de eventos
+/// **es** el registro, y esto solo es una forma de leerlo.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SesionAuditada {
+    pub sesion_id: String,
+    pub usuario_id: Option<String>,
+    pub nombre_usuario: Option<String>,
+    /// `escritorio` o `http`.
+    pub origen: Option<String>,
+    /// Última IP vista en la sesión. Si cambió durante la visita,
+    /// `ips_distintas` es mayor que 1 y conviene mirar el detalle.
+    pub ip: Option<String>,
+    pub ips_distintas: i64,
+    pub agente: Option<String>,
+    pub inicio: String,
+    pub fin: String,
+    /// Minutos entre el primer y el último evento.
+    pub duracion_min: i64,
+    pub eventos: i64,
+    /// Acciones que cambian datos (crear, editar, aprobar, anular…).
+    pub escrituras: i64,
+    /// Intentos rechazados: permisos denegados y reglas incumplidas.
+    pub fallos: i64,
+}
+
+/// Reconstruye las sesiones del periodo, de la más reciente a la más antigua.
+pub fn listar_sesiones(
+    conn: &Connection,
+    usuario_id: Option<&str>,
+    ip: Option<&str>,
+    desde: Option<&str>,
+    hasta: Option<&str>,
+    limite: i64,
+) -> AppResult<Vec<SesionAuditada>> {
+    let mut filtros = vec!["a.sesion_id IS NOT NULL".to_string()];
+    let mut params: Vec<rusqlite::types::Value> = Vec::new();
+    for (campo, valor) in [
+        ("a.usuario_id", usuario_id),
+        ("a.ip", ip),
+        ("a.timestamp >=", desde),
+        ("a.timestamp <=", hasta),
+    ] {
+        if let Some(v) = valor {
+            let comparador = if campo.ends_with('=') { "" } else { "=" };
+            filtros.push(format!("{campo}{comparador} ?{}", params.len() + 1));
+            params.push(v.to_string().into());
+        }
+    }
+    let where_sql = format!(" WHERE {}", filtros.join(" AND "));
+
+    let sql = format!(
+        "SELECT a.sesion_id,
+                MAX(a.usuario_id),
+                MAX(u.nombre_usuario),
+                MAX(a.origen),
+                MAX(a.ip),
+                COUNT(DISTINCT a.ip),
+                MAX(a.agente),
+                MIN(a.timestamp),
+                MAX(a.timestamp),
+                COUNT(*),
+                SUM(CASE WHEN a.nivel IN ('ESCRITURA', 'CRITICO') THEN 1 ELSE 0 END),
+                SUM(CASE WHEN a.exito = 0 THEN 1 ELSE 0 END)
+         FROM auditoria a
+         LEFT JOIN usuarios u ON u.id = a.usuario_id{where_sql}
+         GROUP BY a.sesion_id
+         ORDER BY MIN(a.timestamp) DESC
+         LIMIT ?{}",
+        params.len() + 1
+    );
+    params.push(limite.clamp(1, 500).into());
+
+    let mut stmt = conn.prepare(&sql)?;
+    let filas = stmt
+        .query_map(rusqlite::params_from_iter(params.iter()), |r| {
+            let inicio: String = r.get(7)?;
+            let fin: String = r.get(8)?;
+            Ok(SesionAuditada {
+                sesion_id: r.get(0)?,
+                usuario_id: r.get(1)?,
+                nombre_usuario: r.get(2)?,
+                origen: r.get(3)?,
+                ip: r.get(4)?,
+                ips_distintas: r.get(5)?,
+                agente: r.get(6)?,
+                duracion_min: minutos_entre(&inicio, &fin),
+                inicio,
+                fin,
+                eventos: r.get(9)?,
+                escrituras: r.get::<_, Option<i64>>(10)?.unwrap_or(0),
+                fallos: r.get::<_, Option<i64>>(11)?.unwrap_or(0),
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(filas)
+}
+
+/// Minutos entre dos marcas ISO-8601. Cero si alguna no se puede leer: una
+/// duración rara no debe impedir ver el resto de la sesión.
+fn minutos_entre(inicio: &str, fin: &str) -> i64 {
+    use chrono::DateTime;
+    match (
+        DateTime::parse_from_rfc3339(inicio),
+        DateTime::parse_from_rfc3339(fin),
+    ) {
+        (Ok(a), Ok(b)) => (b - a).num_minutes(),
+        _ => 0,
+    }
 }

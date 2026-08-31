@@ -190,6 +190,25 @@ fn cors_para(config: &Config, base: &[Header], request: &tiny_http::Request) -> 
     cabeceras
 }
 
+/// Lo que se sabe del equipo desde el que llega una petición.
+pub struct DatosCliente {
+    pub ip: Option<String>,
+    /// Lo que el cliente *dice* ser. Es una pista, no una identificación: lo
+    /// elige quien llama, así que sirve para reconocer un equipo conocido, no
+    /// para confiar en él.
+    pub agente: Option<String>,
+}
+
+/// Valor de una cabecera de la petición, si viene.
+fn cabecera(request: &tiny_http::Request, nombre: &'static str) -> Option<String> {
+    request
+        .headers()
+        .iter()
+        .find(|h| h.field.equiv(nombre))
+        .map(|h| h.value.as_str().trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
 /// Token de sesión que presenta el cliente, si lo trae.
 fn token_de(request: &tiny_http::Request) -> Option<String> {
     request
@@ -234,10 +253,27 @@ fn manejar(
     // ventana de escritorio ni la de otro cliente. Las dos caras de la app
     // comparten lógica de negocio y base de datos, no identidad.
     let token_entrante = token_de(&request);
-    let sesion_previa = token_entrante.as_ref().and_then(|t| registro.obtener(t));
-    let ambito = Arc::new(SesionState::desde(sesion_previa.clone()));
+    // De dónde llega *esta* petición. Se toma en cada una, no solo al entrar:
+    // si un token empieza a usarse desde otra IP, el historial lo enseña.
+    let cliente = DatosCliente {
+        ip: Some(
+            request
+                .remote_addr()
+                .map_or_else(|| "desconocida".to_string(), |a| a.ip().to_string()),
+        ),
+        agente: cabecera(&request, "User-Agent"),
+    };
+    let mut sesion_previa = token_entrante.as_ref().and_then(|t| registro.obtener(t));
+    if let Some(s) = sesion_previa.as_mut() {
+        s.procedencia.ip = cliente.ip.clone();
+        s.procedencia.agente = cliente.agente.clone();
+    }
+    let ambito = Arc::new(SesionState::desde_cliente(
+        sesion_previa.clone(),
+        crate::domain::seguridad::Desde::anonimo(cliente.ip.clone(), cliente.agente.clone()),
+    ));
 
-    let resultado = despachar(db, &ambito, &comando, &args);
+    let resultado = despachar(db, &ambito, &comando, &args, &cliente);
 
     // Reconciliación: comparar la sesión antes y después del despacho cubre
     // `login`, `logout` y el reinicio de sesión con otro usuario sin que esta
@@ -369,11 +405,12 @@ fn ok<T: serde::Serialize>(v: T) -> AppResult<Value> {
 /// mismo permiso, misma auditoría — solo cambia de dónde vienen los
 /// argumentos (JSON crudo en vez de los parámetros tipados que genera Tauri).
 #[allow(clippy::too_many_lines)]
-fn despachar(
+pub(crate) fn despachar(
     db: &Arc<DbState>,
     sesion: &Arc<SesionState>,
     comando: &str,
     args: &Value,
+    cliente: &DatosCliente,
 ) -> AppResult<Value> {
     match comando {
         // ============ Autenticación y sesión ============
@@ -388,13 +425,20 @@ fn despachar(
             {
                 let conn = db.conn();
                 let actor = resultado.as_ref().ok().map(|u: &Usuario| u.id.clone());
+                // Con la procedencia incluso si falla: un intento de acceso
+                // fallido sin la IP de origen no sirve para nada, y es
+                // precisamente el evento que hay que poder vigilar.
                 let _ = repo::auditoria::registrar_invocacion(
                     &conn,
                     actor.as_deref(),
                     "login",
                     0,
                     exito,
-                    None,
+                    Some("http"),
+                    Some(&crate::domain::seguridad::Desde::anonimo(
+                        cliente.ip.clone(),
+                        cliente.agente.clone(),
+                    )),
                 );
             }
             let usuario = resultado?;
@@ -402,10 +446,28 @@ fn despachar(
                 let conn = db.conn();
                 repo::seguridad::rol_codigo_de_usuario(&conn, &usuario.id)?
             };
+            // El identificador de la sesión es propio y no el token: el token
+            // es un secreto vivo, y quien pudiera leer la auditoría se llevaría
+            // sesiones ajenas. Este solo sirve para agrupar eventos.
+            let procedencia = crate::sesion::Procedencia::http(
+                uuid::Uuid::new_v4().to_string(),
+                cliente.ip.clone(),
+                cliente.agente.clone(),
+            );
+            {
+                let conn = db.conn();
+                let _ = repo::auditoria::registrar_sesion_abierta(
+                    &conn,
+                    &usuario.id,
+                    procedencia.origen,
+                    &procedencia.para_auditoria(),
+                );
+            }
             sesion.iniciar(SesionActiva {
                 usuario_id: usuario.id.clone(),
                 nombre_usuario: usuario.nombre_usuario.clone(),
                 rol_codigo,
+                procedencia,
             });
             ok(usuario)
         }
@@ -1763,7 +1825,15 @@ fn despachar(
             vista.validar()?;
             let actor = sesion.usuario_id()?;
             let conn = db.conn();
-            ok(repo::auditoria::registrar_vista(&conn, &actor, &vista)?)
+            ok(repo::auditoria::registrar_vista(
+                &conn,
+                &actor,
+                &vista,
+                sesion
+                    .actual()
+                    .map(|s| s.procedencia.para_auditoria())
+                    .as_ref(),
+            )?)
         }
         "listar_historial" => con_auditoria!(db, sesion, "listar_historial", {
             let usuario_id = str_opt(args, "usuarioId");
@@ -1792,8 +1862,23 @@ fn despachar(
                 exito,
                 desde.as_deref(),
                 hasta.as_deref(),
+                str_opt(args, "sesionId").as_deref(),
+                str_opt(args, "ip").as_deref(),
+                str_opt(args, "origen").as_deref(),
                 page,
                 page_size,
+            )?)
+        }),
+        "listar_sesiones_auditadas" => con_auditoria!(db, sesion, "listar_sesiones_auditadas", {
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+            ok(repo::auditoria::listar_sesiones(
+                &conn,
+                str_opt(args, "usuarioId").as_deref(),
+                str_opt(args, "ip").as_deref(),
+                str_opt(args, "desde").as_deref(),
+                str_opt(args, "hasta").as_deref(),
+                i64_opt(args, "limite").unwrap_or(100),
             )?)
         }),
         "metricas_historial" => con_auditoria!(db, sesion, "metricas_historial", {
@@ -1860,6 +1945,7 @@ mod tests {
             usuario_id: admin_id,
             nombre_usuario: "admin".into(),
             rol_codigo: "ADMIN".into(),
+            procedencia: crate::sesion::Procedencia::escritorio(),
         });
 
         // El ADMIN puede aprobar movimientos (matriz completa).
@@ -1868,6 +1954,10 @@ mod tests {
             &sesion,
             "puedo",
             &json!({ "recurso": "movimiento", "accion": "aprobar" }),
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
         )
         .expect("puedo movimiento aprobar");
         assert_eq!(r, json!(true));
@@ -1878,6 +1968,10 @@ mod tests {
             &sesion,
             "puedo",
             &json!({ "recurso": "configuracion", "accion": "editar" }),
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
         )
         .expect("puedo configuracion editar");
         assert_eq!(r, json!(true));
@@ -1889,6 +1983,10 @@ mod tests {
             &sesion2,
             "puedo",
             &json!({ "recurso": "movimiento", "accion": "aprobar" }),
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
         )
         .expect_err("sin sesión");
         assert!(matches!(err, crate::error::AppError::NoAutenticado));
@@ -1910,10 +2008,21 @@ mod tests {
             usuario_id: admin_id,
             nombre_usuario: "admin".into(),
             rol_codigo: "ADMIN".into(),
+            procedencia: crate::sesion::Procedencia::escritorio(),
         });
 
         // listar_temas: las 6 paletas predefinidas.
-        let r = despachar(&db, &sesion, "listar_temas", &Value::Null).expect("listar_temas");
+        let r = despachar(
+            &db,
+            &sesion,
+            "listar_temas",
+            &Value::Null,
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
+        )
+        .expect("listar_temas");
         let temas = r.as_array().expect("array de temas");
         assert_eq!(temas.len(), 6);
 
@@ -1924,6 +2033,10 @@ mod tests {
             &sesion,
             "obtener_tema",
             &json!({ "temaId": "bosque", "modoOscuro": true }),
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
         )
         .expect("obtener_tema");
         assert_eq!(r["id"], "bosque");
@@ -1932,12 +2045,32 @@ mod tests {
         assert!(r["variables"]["--color-blue-500"].as_str().is_some());
 
         // obtener_tema_activo: por defecto hereda la empresa (óxido claro).
-        let r = despachar(&db, &sesion, "obtener_tema_activo", &Value::Null).expect("activo");
+        let r = despachar(
+            &db,
+            &sesion,
+            "obtener_tema_activo",
+            &Value::Null,
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
+        )
+        .expect("activo");
         assert_eq!(r["id"], "rust");
         assert_eq!(r["modo"], "CLARO");
 
         // obtener_tema_global: sin sesión, devuelve el tema de la empresa.
-        let r = despachar(&db, &sesion, "obtener_tema_global", &Value::Null).expect("global");
+        let r = despachar(
+            &db,
+            &sesion,
+            "obtener_tema_global",
+            &Value::Null,
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
+        )
+        .expect("global");
         assert_eq!(r["id"], "rust");
 
         // Tema inválido en el dispatcher: error claro, no rompe el JSON.
@@ -1946,6 +2079,10 @@ mod tests {
             &sesion,
             "obtener_tema",
             &json!({ "temaId": "neon", "modoOscuro": false }),
+            &DatosCliente {
+                ip: None,
+                agente: None,
+            },
         );
         assert!(r.is_err(), "tema inexistente debe fallar");
     }

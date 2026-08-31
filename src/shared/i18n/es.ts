@@ -1347,6 +1347,8 @@ export const es = {
 
   // ============ Historial ============
   historial: {
+    procedencia: "Desde",
+    escritorio: "Escritorio",
     titulo: "Centro de actividad",
     noSePudoCargar: "No se pudo cargar la actividad",
     perspectiva: "Perspectiva del periodo",

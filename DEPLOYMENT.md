@@ -259,7 +259,49 @@ revocar en otro sitio.
 
 ---
 
-## 7. Como servicio systemd
+## 7. Trazabilidad: quién, desde dónde y qué hizo
+
+Cada evento del registro de auditoría guarda su procedencia:
+
+| Campo | Qué es |
+|---|---|
+| `usuario_id` | quién |
+| `sesion_id` | la visita: agrupa todo lo que hizo entre entrar y salir |
+| `ip` | desde qué equipo llegó (vacío en la ventana de escritorio) |
+| `agente` | lo que el cliente *dice* ser — una pista, no una identidad |
+| `origen` | `escritorio` o `http` |
+| `timestamp`, `duracion_ms`, `exito` | cuándo, cuánto tardó, si salió bien |
+| `comando`, `modulo`, `proceso`, `ruta` | qué hizo, en qué parte de la app |
+
+**Se registra también lo que falla, y eso es lo importante.** Un intento de
+acceso con contraseña incorrecta, un sondeo anónimo del API y un permiso
+denegado quedan los tres con su IP y su `User-Agent`:
+
+```sql
+SELECT comando, ip, agente FROM auditoria WHERE exito = 0 ORDER BY id DESC;
+
+crear_almacen    192.168.1.95  Firefox/tablet-almacen   -- permiso denegado
+listar_usuarios  192.168.1.95  escaner-anonimo          -- sin sesión
+login            192.168.1.95  fuerza-bruta/1.0         -- contraseña incorrecta
+```
+
+### Reconstruir una visita
+
+`listar_sesiones_auditadas` agrupa la auditoría por sesión y responde «¿quién
+estuvo dentro?» de un vistazo: usuario, origen, IP, agente, inicio y fin,
+duración, y cuántos eventos, escrituras e intentos fallidos hubo.
+
+Si `ips_distintas` es mayor que 1, esa sesión se usó desde varios sitios.
+Puede ser un portátil que cambió de wifi, o un token copiado: Rustock no juzga,
+lo deja a la vista.
+
+Para bajar al detalle, el historial filtra por `sesionId` (la visita entera),
+por `ip` (todo lo que vino de un equipo) o por `origen`.
+
+**El identificador de sesión no es el token.** Es un valor propio que solo
+sirve para agrupar: quien pueda leer la auditoría no se lleva sesiones vivas.
+
+## 8. Como servicio systemd
 
 ```ini
 [Unit]
@@ -286,7 +328,7 @@ WantedBy=multi-user.target
 
 ---
 
-## 8. Dimensionar
+## 9. Dimensionar
 
 `datos.pool` es el número de conexiones simultáneas **y también el de hilos que
 atienden peticiones**: más hilos que conexiones solo esperarían turno, y menos
@@ -324,7 +366,7 @@ primero a mirar.
 
 ---
 
-## 9. Qué NO hace Rustock todavía
+## 10. Qué NO hace Rustock todavía
 
 Dicho aquí para que nadie lo descubra en producción:
 

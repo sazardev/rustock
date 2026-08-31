@@ -241,6 +241,17 @@ export function HistorialPage() {
         ),
     },
     {
+      key: "procedencia",
+      header: t.historial.procedencia,
+      render: (e) => (
+        // La ventana de escritorio no tiene IP: el proceso y la persona están
+        // en la misma máquina, y decir «—» es más honesto que inventarse una.
+        <span className="text-sm" title={e.agente ?? undefined}>
+          {e.origen === "escritorio" ? t.historial.escritorio : (e.ip ?? "—")}
+        </span>
+      ),
+    },
+    {
       key: "duracion",
       header: t.campos.duracion,
       num: true,

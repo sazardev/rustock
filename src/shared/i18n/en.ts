@@ -1303,6 +1303,8 @@ export const en: Diccionario = {
   },
 
   historial: {
+    procedencia: "From",
+    escritorio: "Desktop",
     titulo: "Activity centre",
     noSePudoCargar: "Could not load the activity",
     perspectiva: "Period overview",

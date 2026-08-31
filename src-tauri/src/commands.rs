@@ -21,8 +21,19 @@ use crate::sesion::{SesionActiva, SesionState};
 macro_rules! con_auditoria {
     ($db:expr, $sesion:expr, $comando:expr, $cuerpo:expr) => {{
         let inicio = std::time::Instant::now();
-        let actor = $sesion.actual().map(|s| s.usuario_id);
-        let resultado = $cuerpo;
+        // La sesión trae consigo desde dónde se está trabajando, así que cada
+        // comando queda trazado sin que su autor tenga que acordarse de nada.
+        let quien = $sesion.actual();
+        let actor = quien.as_ref().map(|s| s.usuario_id.clone());
+        let origen = quien.as_ref().map(|s| s.procedencia.origen);
+        let desde = $sesion.procedencia();
+        // El cuerpo va dentro de un cierre a propósito. Escrito como una
+        // expresión suelta, cualquier `?` suyo salía de la *función* entera y
+        // se saltaba el registro de abajo: los intentos denegados —justo los
+        // que hay que vigilar— no quedaban auditados, pese a que SPEC §4.5 y
+        // el ROADMAP decían que sí. Dentro del cierre, el `?` solo sale del
+        // cierre y la ejecución sigue hasta registrar el intento.
+        let resultado = (|| $cuerpo)();
         let duracion_ms = inicio.elapsed().as_millis() as i64;
         let exito = resultado.is_ok();
         {
@@ -33,7 +44,8 @@ macro_rules! con_auditoria {
                 $comando,
                 duracion_ms,
                 exito,
-                None,
+                origen,
+                desde.as_ref(),
             );
         }
         resultado
@@ -68,6 +80,7 @@ pub fn login(
             duracion_ms,
             exito,
             None,
+            None,
         );
     }
     let usuario = resultado?;
@@ -75,10 +88,23 @@ pub fn login(
         let conn = db.conn();
         repo::seguridad::rol_codigo_de_usuario(&conn, &usuario.id)?
     };
+    // En la ventana nativa no hay red: el proceso y la persona están en la
+    // misma máquina, así que la procedencia es «escritorio» sin IP.
+    let procedencia = crate::sesion::Procedencia::escritorio();
+    {
+        let conn = db.conn();
+        let _ = repo::auditoria::registrar_sesion_abierta(
+            &conn,
+            &usuario.id,
+            procedencia.origen,
+            &procedencia.para_auditoria(),
+        );
+    }
     sesion.iniciar(SesionActiva {
         usuario_id: usuario.id.clone(),
         nombre_usuario: usuario.nombre_usuario.clone(),
         rol_codigo,
+        procedencia,
     });
     Ok(usuario)
 }
@@ -2718,6 +2744,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         kardex_producto,
         precision_sesion,
         listar_historial,
+        listar_sesiones_auditadas,
         metricas_historial,
         registrar_vista,
         metricas_actividad,
@@ -2738,9 +2765,16 @@ pub fn registrar_vista(
     vista: crate::domain::seguridad::RegistrarVista,
 ) -> AppResult<()> {
     vista.validar()?;
-    let actor = sesion.usuario_id()?;
+    let quien = sesion
+        .actual()
+        .ok_or(crate::error::AppError::NoAutenticado)?;
     let conn = db.conn();
-    repo::auditoria::registrar_vista(&conn, &actor, &vista)
+    repo::auditoria::registrar_vista(
+        &conn,
+        &quien.usuario_id,
+        &vista,
+        Some(&quien.procedencia.para_auditoria()),
+    )
 }
 
 /// Lista el historial de actividad (filtrable y paginado, SPEC §15). Gateado
@@ -2760,6 +2794,9 @@ pub fn listar_historial(
     exito: Option<bool>,
     desde: Option<String>,
     hasta: Option<String>,
+    sesion_id: Option<String>,
+    ip: Option<String>,
+    origen: Option<String>,
     page: Option<i64>,
     page_size: Option<i64>,
 ) -> AppResult<Paginado<crate::domain::seguridad::EventoAuditoria>> {
@@ -2778,8 +2815,37 @@ pub fn listar_historial(
             exito,
             desde.as_deref(),
             hasta.as_deref(),
+            sesion_id.as_deref(),
+            ip.as_deref(),
+            origen.as_deref(),
             page.unwrap_or(1),
             page_size.unwrap_or(50),
+        )
+    })
+}
+
+/// Sesiones auditadas: quién entró, desde dónde, cuánto estuvo y qué hizo.
+/// Exige `reporte:ver` como el resto del historial.
+#[tauri::command]
+pub fn listar_sesiones_auditadas(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    usuario_id: Option<String>,
+    ip: Option<String>,
+    desde: Option<String>,
+    hasta: Option<String>,
+    limite: Option<i64>,
+) -> AppResult<Vec<repo::auditoria::SesionAuditada>> {
+    con_auditoria!(db, sesion, "listar_sesiones_auditadas", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "reporte", "ver")?;
+        repo::auditoria::listar_sesiones(
+            &conn,
+            usuario_id.as_deref(),
+            ip.as_deref(),
+            desde.as_deref(),
+            hasta.as_deref(),
+            limite.unwrap_or(100),
         )
     })
 }

@@ -24,6 +24,12 @@ export interface EventoAuditoria {
   duracion_vista_ms: number | null;
   hora_local: number | null;
   dia_semana: number | null;
+  /** Sesión que hizo esto: agrupa todo lo de una misma visita. */
+  sesion_id: string | null;
+  /** IP desde la que llegó. Vacía en la ventana de escritorio. */
+  ip: string | null;
+  /** `User-Agent` del cliente: una pista sobre el equipo, no una identidad. */
+  agente: string | null;
 }
 
 export interface ComandoMetrica {
@@ -138,4 +144,30 @@ export interface RegistrarVista {
   hora_local?: number;
   dia_semana?: number;
   cliente_info?: Record<string, unknown>;
+}
+
+/**
+ * Una visita completa: quién entró, desde dónde, cuánto estuvo y qué hizo.
+ *
+ * Se reconstruye agrupando la auditoría por sesión, no se guarda aparte: la
+ * tabla de eventos es el registro, y esto solo es una forma de leerlo.
+ */
+export interface SesionAuditada {
+  sesion_id: string;
+  usuario_id: string | null;
+  nombre_usuario: string | null;
+  /** `escritorio` o `http`. */
+  origen: string | null;
+  ip: string | null;
+  /** Mayor que 1 si la sesión se usó desde varios sitios: conviene mirarlo. */
+  ips_distintas: number;
+  agente: string | null;
+  inicio: string;
+  fin: string;
+  duracion_min: number;
+  eventos: number;
+  /** Acciones que cambian datos. */
+  escrituras: number;
+  /** Intentos rechazados: permisos denegados y reglas incumplidas. */
+  fallos: number;
 }

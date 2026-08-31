@@ -6,7 +6,7 @@
  * igual que en Rust.
  */
 import { invoke } from "./api";
-import type { EventoAuditoria, MetricasActividad, RegistrarVista } from "./audit";
+import type { EventoAuditoria, MetricasActividad, RegistrarVista, SesionAuditada } from "./audit";
 import type {
   CopiaSeguridad,
   Alerta,
@@ -611,6 +611,12 @@ export interface ListarHistorialArgs {
   modulo?: string;
   ruta?: string;
   proceso?: string;
+  /** Reconstruye una visita entera. */
+  sesion_id?: string;
+  /** ¿Quién entró desde este equipo? */
+  ip?: string;
+  /** `escritorio` o `http`. */
+  origen?: string;
   exito?: boolean;
   desde?: string;
   hasta?: string;
@@ -621,6 +627,18 @@ export const listarHistorial = (
   args: ListarHistorialArgs = {},
 ): Promise<Listado<EventoAuditoria>> => invoke("listar_historial", { ...args });
 export const metricasHistorial = (): Promise<MetricasHistorial> => invoke("metricas_historial");
+
+/** Sesiones auditadas: quién entró, desde dónde y qué hizo. Exige `reporte:ver`. */
+export interface SesionesAuditadasArgs {
+  usuario_id?: string;
+  ip?: string;
+  desde?: string;
+  hasta?: string;
+  limite?: number;
+}
+export const listarSesionesAuditadas = (
+  args: SesionesAuditadasArgs = {},
+): Promise<SesionAuditada[]> => invoke("listar_sesiones_auditadas", { ...args });
 
 /** Análisis profundo de actividad (Hito 25): resumen, desgloses e insights. */
 export interface MetricasActividadArgs {

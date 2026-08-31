@@ -63,6 +63,12 @@ Env for backend: `RUSTOCK_SEED=1` (seed, debug only), `RUSTOCK_WEB_ONLY=1`, `RUS
 
 `security::PERMISOS` is the canonical catalogue of `(recurso, accion)` pairs; `mis_permisos` resolves the caller's set in one round trip and `session.ts` caches it (`usePuede`). A test scans every `puede(...)` call site in the source and fails if the pair is not declared, so a new check cannot go unnoticed by the UI. Gating is courtesy only — the backend re-checks every operation and audits denials — so unknown permissions or an unknown resource show MORE, never less. `.github/workflows/release.yml` builds installers per OS on a `v*` tag.
 
+### Traceability
+
+Every audit row carries where it came from: `sesion_id` (groups one visit), `ip`, `agente`, `origen` (`escritorio`/`http`). The HTTP layer reads them per request, so a token used from a new IP shows up. `sesion_id` is a value of its own, never the session token — reading the audit must not hand anyone a live session. `repo::auditoria::listar_sesiones` reconstructs visits by grouping; there is no second table to drift.
+
+`con_auditoria!` runs its body inside a closure **on purpose**: as a bare expression, a `?` returned from the whole function and skipped the logging, so denials — the events worth watching — went unrecorded despite SPEC §4.5 promising otherwise. Keep the closure.
+
 ### CI (GitHub Actions)
 
 `.github/workflows/ci.yml` runs on push to `main`, on `v*` tags and on PRs, in two jobs: **frontend** (`npm ci` → `npm run verify` → `npm run format:check`) and **backend** (`cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, with the GTK/WebKit headers Tauri needs to compile). It deliberately calls the same commands as lefthook rather than restating the list — if CI and local ever disagree, that divergence is itself the bug.

@@ -52,35 +52,123 @@ pub struct SesionActiva {
     pub usuario_id: String,
     pub nombre_usuario: String,
     pub rol_codigo: String,
+    /// De dónde viene y desde qué máquina. Va pegado a la sesión, no a cada
+    /// petición, porque es lo que permite responder «¿quién estuvo dentro y
+    /// desde dónde?» sin cruzar tablas a mano.
+    pub procedencia: Procedencia,
+}
+
+/// Desde dónde se está usando Rustock.
+///
+/// Se registra en cada evento de auditoría. Sin esto, el historial dice qué se
+/// hizo y quién lo hizo, pero no desde qué equipo: y cuando algo sale mal, «un
+/// ajuste de 400 unidades a las 3 de la madrugada» y «...desde la terminal del
+/// muelle» son dos investigaciones muy distintas.
+#[derive(Debug, Clone, Default)]
+pub struct Procedencia {
+    /// Identificador de la sesión: une todo lo que hizo alguien entre que
+    /// entró y salió. Es el hilo del que se tira para reconstruir una visita.
+    pub sesion_id: String,
+    /// `escritorio` (ventana nativa) o `http` (navegador).
+    pub origen: &'static str,
+    /// IP del cliente. `None` en la ventana de escritorio: no hay red de por
+    /// medio, el proceso y la persona están en la misma máquina.
+    pub ip: Option<String>,
+    /// Lo que el cliente dice ser (`User-Agent`). Es una pista sobre el equipo
+    /// y el navegador, no una identificación: el cliente lo elige.
+    pub agente: Option<String>,
+}
+
+impl Procedencia {
+    /// Los datos que viajan al registro de auditoría.
+    pub fn para_auditoria(&self) -> crate::domain::seguridad::Desde {
+        crate::domain::seguridad::Desde {
+            sesion_id: Some(self.sesion_id.clone()),
+            ip: self.ip.clone(),
+            agente: self.agente.clone(),
+        }
+    }
+
+    /// Procedencia de la ventana de escritorio.
+    pub fn escritorio() -> Self {
+        Self {
+            sesion_id: Uuid::new_v4().to_string(),
+            origen: "escritorio",
+            ip: None,
+            agente: None,
+        }
+    }
+
+    /// Procedencia de un cliente HTTP.
+    pub fn http(sesion_id: String, ip: Option<String>, agente: Option<String>) -> Self {
+        Self {
+            sesion_id,
+            origen: "http",
+            ip,
+            agente,
+        }
+    }
 }
 
 /// Estado gestionado por Tauri (`app.manage`) con la sesión activa, si existe.
 #[derive(Default)]
-pub struct SesionState(Mutex<Option<SesionActiva>>);
+pub struct SesionState {
+    activa: Mutex<Option<SesionActiva>>,
+    /// De dónde llega quien todavía no se ha identificado.
+    ///
+    /// Sin esto, un intento anónimo contra el API quedaría registrado sin IP
+    /// —o sin registrar—, que es tanto como no enterarse. Quien sondea la
+    /// puerta también deja huella.
+    anonima: Option<crate::domain::seguridad::Desde>,
+}
 
 impl SesionState {
     /// Estado ya poblado. Lo usa el servidor HTTP para dar a cada petición la
     /// sesión de su propio cliente, de modo que todo el despacho siga
     /// llamando a `sesion.usuario_id()` sin saber que hay varias sesiones.
     pub fn desde(sesion: Option<SesionActiva>) -> Self {
-        Self(Mutex::new(sesion))
+        Self {
+            activa: Mutex::new(sesion),
+            anonima: None,
+        }
+    }
+
+    /// Igual, recordando de dónde viene la petición aunque no haya sesión.
+    pub fn desde_cliente(
+        sesion: Option<SesionActiva>,
+        anonima: crate::domain::seguridad::Desde,
+    ) -> Self {
+        Self {
+            activa: Mutex::new(sesion),
+            anonima: Some(anonima),
+        }
+    }
+
+    /// Desde dónde se está haciendo esto: la de la sesión si la hay, y si no
+    /// la del cliente sin identificar.
+    pub fn procedencia(&self) -> Option<crate::domain::seguridad::Desde> {
+        self.activa
+            .lock()
+            .as_ref()
+            .map(|s| s.procedencia.para_auditoria())
+            .or_else(|| self.anonima.clone())
     }
 
     pub fn iniciar(&self, sesion: SesionActiva) {
-        *self.0.lock() = Some(sesion);
+        *self.activa.lock() = Some(sesion);
     }
 
     pub fn cerrar(&self) {
-        *self.0.lock() = None;
+        *self.activa.lock() = None;
     }
 
     pub fn actual(&self) -> Option<SesionActiva> {
-        self.0.lock().clone()
+        self.activa.lock().clone()
     }
 
     /// Id del usuario autenticado, o `AppError::NoAutenticado` si no hay sesión.
     pub fn usuario_id(&self) -> AppResult<String> {
-        self.0
+        self.activa
             .lock()
             .as_ref()
             .map(|s| s.usuario_id.clone())
