@@ -16,6 +16,7 @@
 //!   a quien no fue.
 
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 use argon2::Argon2;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
@@ -90,39 +91,108 @@ impl SesionState {
 /// Nombre de la cabecera con la que el cliente HTTP presenta su sesión.
 pub const CABECERA_SESION: &str = "x-rustock-sesion";
 
+/// Una sesión viva y cuándo se usó por última vez.
+struct Entrada {
+    sesion: SesionActiva,
+    visto: Instant,
+}
+
 /// Sesiones abiertas del servidor HTTP, una por cliente.
 ///
 /// El token es opaco y solo vive en memoria: reiniciar el backend cierra todas
 /// las sesiones, que es el comportamiento correcto para una herramienta
 /// self-hosted — no hay nada que persistir ni que revocar en otro sitio.
-#[derive(Default)]
-pub struct RegistroSesiones(Mutex<HashMap<String, SesionActiva>>);
+///
+/// **Caducidad por inactividad.** Cada acceso renueva el reloj del token; si
+/// pasa `ttl` sin usarse, deja de valer. Se mide inactividad y no antigüedad a
+/// propósito: a quien está trabajando no se le corta la sesión a media tarde,
+/// pero un token copiado de un equipo que quedó abierto muere solo.
+///
+/// La limpieza es perezosa —se hace al consultar, no con un hilo aparte—
+/// porque el coste es proporcional a las sesiones vivas, que en una
+/// instalación self-hosted son decenas, no millones.
+pub struct RegistroSesiones {
+    sesiones: Mutex<HashMap<String, Entrada>>,
+    /// `None` = las sesiones no caducan.
+    ttl: Option<Duration>,
+}
+
+impl Default for RegistroSesiones {
+    fn default() -> Self {
+        Self::con_ttl(None)
+    }
+}
 
 impl RegistroSesiones {
+    /// Registro con la caducidad indicada. `None` las hace eternas.
+    pub fn con_ttl(ttl: Option<Duration>) -> Self {
+        Self {
+            sesiones: Mutex::new(HashMap::new()),
+            ttl,
+        }
+    }
+
+    /// Registro a partir de los minutos configurados (`0` = sin caducidad).
+    pub fn desde_minutos(minutos: u64) -> Self {
+        Self::con_ttl((minutos > 0).then(|| Duration::from_secs(minutos * 60)))
+    }
+
     /// Abre una sesión y devuelve su token.
     pub fn abrir(&self, sesion: SesionActiva) -> String {
         let token = Uuid::new_v4().to_string();
-        self.0.lock().insert(token.clone(), sesion);
+        let mut sesiones = self.sesiones.lock();
+        self.purgar(&mut sesiones);
+        sesiones.insert(
+            token.clone(),
+            Entrada {
+                sesion,
+                visto: Instant::now(),
+            },
+        );
         token
     }
 
+    /// Devuelve la sesión del token y renueva su reloj. `None` si no existe o
+    /// si ya caducó — desde fuera, ambas cosas son lo mismo: no hay sesión.
     pub fn obtener(&self, token: &str) -> Option<SesionActiva> {
-        self.0.lock().get(token).cloned()
+        let mut sesiones = self.sesiones.lock();
+        let ttl = self.ttl;
+        let entrada = sesiones.get_mut(token)?;
+        if ttl.is_some_and(|ttl| entrada.visto.elapsed() > ttl) {
+            sesiones.remove(token);
+            return None;
+        }
+        entrada.visto = Instant::now();
+        Some(entrada.sesion.clone())
     }
 
     /// Reemplaza la sesión de un token (p. ej. al iniciar sesión con otro
     /// usuario sin haber cerrado la anterior).
     pub fn actualizar(&self, token: &str, sesion: SesionActiva) {
-        self.0.lock().insert(token.to_string(), sesion);
+        self.sesiones.lock().insert(
+            token.to_string(),
+            Entrada {
+                sesion,
+                visto: Instant::now(),
+            },
+        );
     }
 
     pub fn cerrar(&self, token: &str) {
-        self.0.lock().remove(token);
+        self.sesiones.lock().remove(token);
+    }
+
+    /// Tira las sesiones caducadas. Se llama al abrir una nueva, que es el
+    /// único momento en que el mapa crece.
+    fn purgar(&self, sesiones: &mut HashMap<String, Entrada>) {
+        if let Some(ttl) = self.ttl {
+            sesiones.retain(|_, e| e.visto.elapsed() <= ttl);
+        }
     }
 
     /// Cuántas sesiones hay abiertas. Solo lo usan las pruebas.
     #[cfg(test)]
     pub fn abiertas(&self) -> usize {
-        self.0.lock().len()
+        self.sesiones.lock().len()
     }
 }

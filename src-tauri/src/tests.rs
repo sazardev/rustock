@@ -8020,3 +8020,439 @@ fn los_codigos_de_error_son_unicos_y_estables() {
         );
     }
 }
+
+// ============ Configuración de despliegue ============
+
+#[test]
+fn la_configuracion_por_defecto_es_la_segura() {
+    let config = crate::config::Config::default();
+    // Los valores por defecto tienen que servir para arrancar en un portátil
+    // sin configurar nada, y a la vez no exponer nada sin querer.
+    assert_eq!(config.http.host, "127.0.0.1");
+    assert!(
+        !config.expuesto_en_red(),
+        "por defecto no sale de la máquina"
+    );
+    assert!(!config.tls_activo());
+    assert!(
+        config.http.cors_origenes.is_empty(),
+        "CORS cerrado mientras nadie diga lo contrario"
+    );
+    assert!(config.sesion.ttl_minutos > 0, "las sesiones deben caducar");
+    assert!(config.datos.pool >= 1);
+    config
+        .validar()
+        .expect("la configuración por defecto es válida");
+    assert!(
+        config.advertencias().is_empty(),
+        "nada que advertir de serie"
+    );
+}
+
+#[test]
+fn la_configuracion_invalida_no_deja_arrancar() {
+    use crate::config::{Config, Motor};
+
+    let mal_host = Config {
+        http: crate::config::Http {
+            host: "no-es-una-ip".into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        mal_host.validar(),
+        Err(crate::error::AppError::Configuracion(_))
+    ));
+
+    // Medio par de TLS: serviría en claro creyendo que cifra.
+    let medio_tls = Config {
+        http: crate::config::Http {
+            tls_cert: Some("/tmp/cert.pem".into()),
+            tls_key: None,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        medio_tls.validar(),
+        Err(crate::error::AppError::Configuracion(_))
+    ));
+
+    // Un motor que no existe se dice al arrancar, no a la primera consulta.
+    let motor = Config {
+        datos: crate::config::Datos {
+            motor: Motor::Postgres,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        motor.validar(),
+        Err(crate::error::AppError::Configuracion(_))
+    ));
+
+    // Un origen CORS sin esquema no casa con nada y sería un permiso que
+    // parece dado y no lo está.
+    let cors = Config {
+        http: crate::config::Http {
+            cors_origenes: vec!["ejemplo.com".into()],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        cors.validar(),
+        Err(crate::error::AppError::Configuracion(_))
+    ));
+}
+
+#[test]
+fn exponerse_sin_cifrar_avisa() {
+    use crate::config::{Config, Http};
+
+    let expuesto = Config {
+        http: Http {
+            host: "0.0.0.0".into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert!(expuesto.expuesto_en_red());
+    let avisos = expuesto.advertencias();
+    assert!(
+        avisos.iter().any(|a| a.contains("SIN TLS")),
+        "escuchar en toda la red sin cifrar tiene que avisar: {avisos:?}"
+    );
+
+    // Tras un proxy que cifre, el mismo despliegue es legítimo: el aviso
+    // informa, nunca impide arrancar.
+    expuesto.validar().expect("sigue siendo válido");
+}
+
+#[test]
+fn el_fichero_toml_se_lee_y_el_entorno_manda_encima() {
+    let dir = std::env::temp_dir().join(format!("rustock-cfg-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    let ruta = dir.join("rustock.toml");
+    std::fs::write(
+        &ruta,
+        "[http]\nhost = \"0.0.0.0\"\npuerto = 9000\n\n[sesion]\nttl_minutos = 30\n",
+    )
+    .expect("escribe");
+
+    // SAFETY: `set_var` es unsafe desde la edición 2024 porque el entorno es
+    // global al proceso. Este test se aísla con un fichero propio y restaura
+    // las variables antes de salir.
+    unsafe {
+        std::env::set_var("RUSTOCK_CONFIG", &ruta);
+        std::env::set_var("RUSTOCK_HTTP_PORT", "9999");
+    }
+    let config = crate::config::Config::cargar().expect("carga");
+    unsafe {
+        std::env::remove_var("RUSTOCK_CONFIG");
+        std::env::remove_var("RUSTOCK_HTTP_PORT");
+    }
+    std::fs::remove_dir_all(&dir).ok();
+
+    assert_eq!(config.http.host, "0.0.0.0", "el fichero se aplica");
+    assert_eq!(config.sesion.ttl_minutos, 30);
+    assert_eq!(
+        config.http.puerto, 9999,
+        "la variable de entorno pisa al fichero"
+    );
+}
+
+#[test]
+fn una_errata_en_el_toml_no_pasa_desapercibida() {
+    let dir = std::env::temp_dir().join(format!("rustock-cfg-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    let ruta = dir.join("rustock.toml");
+    // `puerta` en vez de `puerto`: sin `deny_unknown_fields` esto se ignoraría
+    // y el servidor arrancaría en otro puerto del que su dueño cree.
+    std::fs::write(&ruta, "[http]\npuerta = 9000\n").expect("escribe");
+
+    // SAFETY: ver el test anterior.
+    unsafe {
+        std::env::set_var("RUSTOCK_CONFIG", &ruta);
+    }
+    let resultado = crate::config::Config::cargar();
+    unsafe {
+        std::env::remove_var("RUSTOCK_CONFIG");
+    }
+    std::fs::remove_dir_all(&dir).ok();
+
+    assert!(
+        matches!(resultado, Err(crate::error::AppError::Configuracion(_))),
+        "un campo desconocido tiene que impedir el arranque"
+    );
+}
+
+// ============ Caducidad de sesiones ============
+
+#[test]
+fn una_sesion_caduca_por_inactividad_y_se_renueva_al_usarla() {
+    use crate::sesion::{RegistroSesiones, SesionActiva};
+    use std::time::Duration;
+
+    let quien = || SesionActiva {
+        usuario_id: "u1".into(),
+        nombre_usuario: "admin".into(),
+        rol_codigo: "ADMIN".into(),
+    };
+
+    // TTL diminuto para no dormir el test más de lo imprescindible.
+    let registro = RegistroSesiones::con_ttl(Some(Duration::from_millis(120)));
+    let token = registro.abrir(quien());
+
+    // Usarla dentro de plazo la renueva: se mide inactividad, no antigüedad.
+    std::thread::sleep(Duration::from_millis(80));
+    assert!(registro.obtener(&token).is_some(), "aún vale");
+    std::thread::sleep(Duration::from_millis(80));
+    assert!(
+        registro.obtener(&token).is_some(),
+        "el acceso anterior reinició el reloj"
+    );
+
+    // Sin tocarla, caduca.
+    std::thread::sleep(Duration::from_millis(200));
+    assert!(registro.obtener(&token).is_none(), "caducó por inactividad");
+
+    // Y deja de ocupar sitio: abrir otra purga las caducadas.
+    let otro = registro.abrir(quien());
+    assert_eq!(registro.abiertas(), 1);
+    assert!(registro.obtener(&otro).is_some());
+}
+
+#[test]
+fn con_ttl_cero_las_sesiones_no_caducan() {
+    use crate::sesion::{RegistroSesiones, SesionActiva};
+
+    let registro = RegistroSesiones::desde_minutos(0);
+    let token = registro.abrir(SesionActiva {
+        usuario_id: "u1".into(),
+        nombre_usuario: "admin".into(),
+        rol_codigo: "ADMIN".into(),
+    });
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    assert!(
+        registro.obtener(&token).is_some(),
+        "ttl_minutos = 0 las hace eternas, como está documentado"
+    );
+}
+
+// ============ Copias de seguridad ============
+
+/// Base en fichero temporal: las copias no tienen sentido contra una base en
+/// memoria, que es justo lo que no sobrevive a nada.
+fn setup_en_disco() -> (std::sync::Arc<DbState>, std::path::PathBuf) {
+    let dir = std::env::temp_dir().join(format!("rustock-bk-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    let ruta = dir.join("rustock.db");
+    let db = DbState::abrir(&ruta, 2, 5_000).expect("db");
+    {
+        let conn = db.conn();
+        crate::security::seed_roles(&conn).expect("roles");
+        crate::repo::seguridad::bootstrap_admin(&conn, "admin", "Administrador", "admin1234")
+            .expect("admin");
+    }
+    (db, dir)
+}
+
+#[test]
+fn una_copia_se_crea_se_lista_y_es_una_base_valida() {
+    let (db, dir) = setup_en_disco();
+    let copias_dir = dir.join("copias");
+    let conn = db.conn();
+
+    assert!(
+        crate::repo::backup::listar(&copias_dir)
+            .expect("listar")
+            .is_empty(),
+        "sin copias todavía"
+    );
+
+    let copia = crate::repo::backup::crear(&conn, &copias_dir, 7).expect("crear copia");
+    assert!(copia.bytes > 0, "una copia vacía no serviría de nada");
+
+    let listado = crate::repo::backup::listar(&copias_dir).expect("listar");
+    assert_eq!(listado.len(), 1);
+    assert_eq!(listado[0].nombre, copia.nombre);
+    // La fecha se reconstruye desde el nombre: el fichero no puede llevar `:`,
+    // pero lo que se muestra tiene que ser un ISO-8601 de verdad.
+    assert!(
+        !copia.creada_en.contains("+00-00") && copia.creada_en.contains('T'),
+        "la fecha debe volver a ISO-8601: {}",
+        copia.creada_en
+    );
+
+    // La copia tiene que ser una base de Rustock abrible, no un fichero a
+    // medias: es la comprobación que separa una copia de una falsa sensación
+    // de seguridad.
+    crate::repo::backup::verificar(std::path::Path::new(&copia.ruta)).expect("es válida");
+
+    let copiada = rusqlite::Connection::open(&copia.ruta).expect("abre");
+    let usuarios: i64 = copiada
+        .query_row("SELECT COUNT(*) FROM usuarios", [], |r| r.get(0))
+        .expect("consulta");
+    assert_eq!(usuarios, 1, "los datos viajaron en la copia");
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn la_retencion_deja_solo_las_copias_mas_recientes() {
+    let (db, dir) = setup_en_disco();
+    let copias_dir = dir.join("copias");
+    let conn = db.conn();
+
+    // El nombre lleva la marca de tiempo, así que hay que separarlas para que
+    // no colisionen; con retener = 2 deben quedar las dos últimas.
+    for _ in 0..4 {
+        crate::repo::backup::crear(&conn, &copias_dir, 2).expect("crear");
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+    }
+    let listado = crate::repo::backup::listar(&copias_dir).expect("listar");
+    assert_eq!(listado.len(), 2, "la poda deja exactamente las retenidas");
+    assert!(
+        listado[0].nombre > listado[1].nombre,
+        "se listan de la más reciente a la más antigua"
+    );
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn restaurar_guarda_antes_el_estado_actual_y_rechaza_ficheros_ajenos() {
+    let (db, dir) = setup_en_disco();
+    let copias_dir = dir.join("copias");
+    let conn = db.conn();
+
+    let copia = crate::repo::backup::crear(&conn, &copias_dir, 0).expect("crear");
+
+    // Restaurar es destructivo: antes de tocar nada tiene que quedar copia de
+    // lo que había.
+    let antes = crate::repo::backup::listar(&copias_dir)
+        .expect("listar")
+        .len();
+    crate::repo::backup::restaurar(
+        &conn,
+        std::path::Path::new(&copia.ruta),
+        &dir.join("rustock.db"),
+        &copias_dir,
+    )
+    .expect("restaurar");
+    let despues = crate::repo::backup::listar(&copias_dir)
+        .expect("listar")
+        .len();
+    assert_eq!(despues, antes + 1, "queda copia del estado previo");
+
+    // Un fichero que no es una base de Rustock no puede pisar los datos vivos.
+    let basura = dir.join("basura.rustock.db");
+    std::fs::write(&basura, b"esto no es sqlite").expect("escribe");
+    assert!(matches!(
+        crate::repo::backup::verificar(&basura),
+        Err(crate::error::AppError::Backup(_))
+    ));
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn el_nombre_de_una_copia_no_puede_escaparse_del_directorio() {
+    let dir = std::path::Path::new("/var/lib/rustock/copias");
+    // El nombre llega desde la interfaz: se trata como entrada hostil.
+    for intento in ["../../etc/passwd", "..", "sub/otro.db", "a\\b"] {
+        assert!(
+            matches!(
+                crate::repo::backup::ruta_de(dir, intento),
+                Err(crate::error::AppError::Backup(_))
+            ),
+            "«{intento}» debería rechazarse"
+        );
+    }
+    assert!(crate::repo::backup::ruta_de(dir, "rustock-2026.rustock.db").is_ok());
+}
+
+// ============ Pool de conexiones ============
+
+#[test]
+fn el_pool_atiende_a_varios_hilos_a_la_vez() {
+    let (db, dir) = setup_en_disco();
+
+    // Ocho hilos escribiendo y leyendo contra un pool de dos conexiones: si el
+    // pool no devolviera las conexiones al soltarlas, esto se quedaría colgado.
+    let mut hilos = Vec::new();
+    for i in 0..8 {
+        let db = db.clone();
+        hilos.push(std::thread::spawn(move || {
+            let conn = db.conn();
+            conn.execute(
+                "INSERT INTO categorias (id, nombre, activo, created_at, updated_at)
+                 VALUES (?1, ?2, 1, datetime('now'), datetime('now'))",
+                rusqlite::params![format!("cat-{i}"), format!("Cat {i}")],
+            )
+            .expect("inserta");
+        }));
+    }
+    for h in hilos {
+        h.join().expect("hilo");
+    }
+
+    let conn = db.conn();
+    let total: i64 = conn
+        .query_row("SELECT COUNT(*) FROM categorias", [], |r| r.get(0))
+        .expect("cuenta");
+    assert_eq!(total, 8, "las ocho escrituras llegaron");
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn cada_conexion_del_pool_aplica_los_mismos_pragmas() {
+    let (db, dir) = setup_en_disco();
+
+    // `foreign_keys` es por conexión: si solo se aplicara a la primera, unas
+    // comprobarían las claves ajenas y otras no, y la integridad dependería de
+    // qué conexión tocara.
+    for _ in 0..4 {
+        let conn = db.conn();
+        let fk: i64 = conn
+            .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
+            .expect("pragma");
+        assert_eq!(fk, 1, "foreign_keys activo en toda conexión del pool");
+    }
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn un_fichero_de_configuracion_nombrado_y_ausente_no_pasa_desapercibido() {
+    // Si alguien nombra un fichero con RUSTOCK_CONFIG y no está —una errata,
+    // un volumen mal montado en un contenedor—, arrancar con otros valores que
+    // los que pidió es peor que no arrancar. Que falte el fichero *por
+    // defecto*, en cambio, es lo normal y no es un error.
+    // SAFETY: se restaura la variable antes de salir.
+    unsafe {
+        std::env::set_var("RUSTOCK_CONFIG", "/no/existe/rustock.toml");
+    }
+    let resultado = crate::config::Config::cargar();
+    unsafe {
+        std::env::remove_var("RUSTOCK_CONFIG");
+    }
+    match resultado {
+        Err(crate::error::AppError::Configuracion(msg)) => {
+            assert!(
+                msg.contains("no existe"),
+                "el mensaje debe decir qué falta: {msg}"
+            );
+        }
+        otro => {
+            panic!("debería fallar al arrancar, no seguir con los valores por defecto: {otro:?}")
+        }
+    }
+}

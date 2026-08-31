@@ -1,0 +1,77 @@
+# Configuración de Rustock.
+#
+# Copia este fichero como `rustock.toml` junto a la base de datos
+# (`~/.local/share/com.rustock.app/rustock.toml`), o apunta a él con
+# la variable RUSTOCK_CONFIG.
+#
+# Todo lo de aquí es opcional: sin fichero, Rustock arranca con estos mismos
+# valores. Cada campo tiene su variable de entorno equivalente, y la variable
+# manda sobre el fichero — así una imagen de contenedor puede traer su
+# configuración horneada y dejar que el orquestador cambie el puerto sin
+# reconstruirla.
+#
+# Un campo mal escrito impide arrancar y dice cuál es. Es deliberado: una
+# errata que se ignora en silencio se descubre semanas después, cuando el
+# ajuste que creías puesto nunca lo estuvo.
+
+[datos]
+# Motor de almacenamiento. Hoy solo "sqlite".
+# RUSTOCK_DB_MOTOR
+motor = "sqlite"
+
+# Fichero de la base. Vacío = la ruta estándar del sistema
+# (~/.local/share/com.rustock.app/rustock.db).
+# RUSTOCK_DB_PATH
+# ruta = "/var/lib/rustock/rustock.db"
+
+# Conexiones simultáneas. SQLite en WAL admite varios lectores a la vez, así
+# que subirlo da concurrencia real; las escrituras las serializa el motor.
+# RUSTOCK_DB_POOL
+pool = 8
+
+# Milisegundos que una conexión espera si otra está escribiendo antes de
+# rendirse. Súbelo si ves errores de "database is locked" con mucha carga.
+# RUSTOCK_DB_BUSY_TIMEOUT_MS
+busy_timeout_ms = 5000
+
+[http]
+# Interfaz en la que escuchar.
+#   127.0.0.1 → solo esta máquina (por defecto)
+#   0.0.0.0   → toda la red: es lo que hay que poner para que otros equipos
+#               del almacén entren, y exige leer la sección de TLS de abajo.
+# RUSTOCK_HTTP_HOST
+host = "127.0.0.1"
+
+# RUSTOCK_HTTP_PORT
+puerto = 1421
+
+# Certificado y clave en PEM. Con los dos presentes, Rustock sirve HTTPS.
+# Déjalos vacíos SOLO si escuchas en 127.0.0.1 o si tienes delante un proxy
+# inverso que ya cifra: sin TLS, las contraseñas viajan en claro por la red.
+# RUSTOCK_TLS_CERT / RUSTOCK_TLS_KEY
+# tls_cert = "/etc/rustock/fullchain.pem"
+# tls_key  = "/etc/rustock/privkey.pem"
+
+# Orígenes autorizados a llamar al API desde un navegador.
+# Vacío = ninguno, que es lo correcto cuando el mismo host sirve el frontend.
+# Enumera los que necesites; "*" deja entrar a cualquier página web y solo
+# tiene sentido en desarrollo.
+# RUSTOCK_CORS_ORIGENES (separados por comas)
+cors_origenes = []
+
+[sesion]
+# Minutos de inactividad tras los que caduca una sesión. Se mide inactividad,
+# no antigüedad: a quien está trabajando no se le corta la sesión, pero un
+# equipo que quedó abierto deja de valer solo.
+# 480 = un turno de ocho horas. 0 las hace eternas (desaconsejado).
+# RUSTOCK_SESION_TTL_MINUTOS
+ttl_minutos = 480
+
+[backup]
+# Dónde se escriben las copias. Vacío = "copias/" junto a la base de datos.
+# RUSTOCK_BACKUP_DIR
+# directorio = "/var/backups/rustock"
+
+# Cuántas copias conservar al crear una nueva. 0 = no borrar ninguna.
+# RUSTOCK_BACKUP_RETENER
+retener = 7

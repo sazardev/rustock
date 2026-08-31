@@ -8,6 +8,7 @@
 import { invoke } from "./api";
 import type { EventoAuditoria, MetricasActividad, RegistrarVista } from "./audit";
 import type {
+  CopiaSeguridad,
   Alerta,
   Almacen,
   ArchivoEmpresa,
@@ -458,6 +459,18 @@ export const cambiarPassword = (passwordActual: string, passwordNueva: string): 
   invoke("cambiar_password", { passwordActual, passwordNueva });
 export const cambiarPasswordAdmin = (id: string, passwordNueva: string): Promise<void> =>
   invoke("cambiar_password_admin", { id, passwordNueva });
+
+// ============ Copias de seguridad ============
+//
+// Exigen `configuracion:editar` (por defecto solo ADMIN): una copia es un
+// volcado completo de la base, hashes de contraseña incluidos.
+
+export const crearCopiaSeguridad = (): Promise<CopiaSeguridad> => invoke("crear_copia_seguridad");
+export const listarCopiasSeguridad = (): Promise<CopiaSeguridad[]> =>
+  invoke("listar_copias_seguridad");
+/** Prepara la restauración; devuelve las instrucciones para completarla. */
+export const restaurarCopiaSeguridad = (nombre: string): Promise<string> =>
+  invoke("restaurar_copia_seguridad", { nombre });
 
 // ============ Configuración de empresa y preferencias ============
 

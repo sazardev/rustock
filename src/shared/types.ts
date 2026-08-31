@@ -1163,6 +1163,15 @@ export type FormatoFecha = "DD_MMM_YYYY" | "DD_MM_YYYY" | "YYYY_MM_DD";
 /** Tamaños de fuente de la UI. */
 export type TamanioFuente = "PEQUENA" | "MEDIA" | "GRANDE";
 
+/** Una copia de seguridad existente (espejo de `repo::backup::Copia`). */
+export interface CopiaSeguridad {
+  /** Nombre del fichero, que es su identificador. */
+  nombre: string;
+  ruta: string;
+  bytes: number;
+  creada_en: string;
+}
+
 export interface ConfiguracionEmpresa {
   id: string;
   nombre: string | null;

@@ -1,6 +1,7 @@
 pub mod alerta;
 pub mod archivo;
 pub mod auditoria;
+pub mod backup;
 pub mod catalogo;
 pub mod comentario;
 pub mod configuracion;

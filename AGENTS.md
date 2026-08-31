@@ -55,6 +55,10 @@ Env for backend: `RUSTOCK_SEED=1` (seed, debug only), `RUSTOCK_WEB_ONLY=1`, `RUS
 - `pre-push` (sequential): `typecheck`, `build`, `oxlint src`, `design-guard`, `route-guard`, `cargo fmt --all --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo check --all-targets`.
 - `commit-msg`: `scripts/check-commit.mjs` — Conventional Commits `feat|fix|perf|refactor|docs|test|build|ci|chore|revert|style|wip`. Ex `feat(movimientos): agrega traslados`.
 
+### Deployment surface
+
+`src-tauri/src/config.rs` is the single source of deployment config: TOML file (`RUSTOCK_CONFIG`, else `rustock.toml` beside the DB) overridden by `RUSTOCK_*` env vars, `deny_unknown_fields` so a typo fails startup instead of being ignored. Defaults are the safe ones — loopback bind, empty CORS allowlist, sessions expiring — so exposing Rustock is always a deliberate act. `DbState` is a connection pool (`datos.pool`, default 8); `conn()` returns a guard that derefs to `Connection`, so the 491 call sites never learned about it. Backups go through the SQLite backup API (`repo/backup.rs`) — never `cp` the `.db`, WAL means it is incomplete on its own. User-facing guide: `DEPLOYMENT.md`; annotated sample: `rustock.example.toml`.
+
 ### CI (GitHub Actions)
 
 `.github/workflows/ci.yml` runs on push to `main`, on `v*` tags and on PRs, in two jobs: **frontend** (`npm ci` → `npm run verify` → `npm run format:check`) and **backend** (`cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, with the GTK/WebKit headers Tauri needs to compile). It deliberately calls the same commands as lefthook rather than restating the list — if CI and local ever disagree, that divergence is itself the bug.

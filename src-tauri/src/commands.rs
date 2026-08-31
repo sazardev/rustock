@@ -1585,6 +1585,74 @@ pub fn obtener_configuracion_empresa(
     })
 }
 
+// ============ Copias de seguridad (SPEC §14.5) ============
+//
+// Exigen `configuracion:editar` —en la matriz por defecto, solo ADMIN—: una
+// copia es un volcado completo de la base, incluidos los hashes de contraseña,
+// así que poder crearla o descargarla equivale a poder llevarse el sistema
+// entero.
+
+/// Crea una copia de seguridad de la base de datos.
+#[tauri::command]
+pub fn crear_copia_seguridad(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<repo::backup::Copia> {
+    con_auditoria!(db, sesion, "crear_copia_seguridad", {
+        let conn = db.conn();
+        puede(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "configuracion",
+            "editar",
+        )?;
+        let config = crate::config::Config::cargar()?;
+        repo::backup::crear(&conn, &config.directorio_backup(), config.backup.retener)
+    })
+}
+
+/// Lista las copias disponibles, de la más reciente a la más antigua.
+#[tauri::command]
+pub fn listar_copias_seguridad(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<repo::backup::Copia>> {
+    con_auditoria!(db, sesion, "listar_copias_seguridad", {
+        let conn = db.conn();
+        puede(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "configuracion",
+            "editar",
+        )?;
+        let config = crate::config::Config::cargar()?;
+        repo::backup::listar(&config.directorio_backup())
+    })
+}
+
+/// Prepara la restauración desde una copia. Devuelve las instrucciones para
+/// completarla; no sustituye la base en caliente (ver `repo::backup`).
+#[tauri::command]
+pub fn restaurar_copia_seguridad(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    nombre: String,
+) -> AppResult<String> {
+    con_auditoria!(db, sesion, "restaurar_copia_seguridad", {
+        let conn = db.conn();
+        puede(
+            &conn,
+            Some(&sesion.usuario_id()?),
+            "configuracion",
+            "editar",
+        )?;
+        let config = crate::config::Config::cargar()?;
+        let directorio = config.directorio_backup();
+        let origen = repo::backup::ruta_de(&directorio, &nombre)?;
+        repo::backup::restaurar(&conn, &origen, &config.ruta_datos(), &directorio)
+    })
+}
+
 /// Actualiza la configuración de empresa (campos parciales). Permiso
 /// `configuracion:editar` (solo ADMIN por defecto).
 #[tauri::command]
@@ -2569,6 +2637,9 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         cambiar_password,
         cambiar_password_admin,
         obtener_configuracion_empresa,
+        crear_copia_seguridad,
+        listar_copias_seguridad,
+        restaurar_copia_seguridad,
         guardar_configuracion_empresa,
         obtener_preferencias_usuario,
         guardar_preferencias_usuario,

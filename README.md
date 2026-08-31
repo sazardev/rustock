@@ -117,7 +117,8 @@ npm run tauri build
 - **SPEC.md** — lógica de negocio completa (fuente de verdad).
 - **DESIGN.md** — sistema de diseño “Rust & Iron” (paleta, tokens, layout, componentes).
 - **STACK.md** — stack y reglas de rendimiento.
-- **INSTALACION.md** — guía detallada de instalación y despliegue.
+- **INSTALACION.md** — guía detallada de instalación.
+- **DEPLOYMENT.md** — puesta en producción: configuración, red y TLS, copias de seguridad, systemd.
 
 Para agentes de IA y crawlers:
 
@@ -176,7 +177,10 @@ npm run dev:web      # todo-en-uno (scripts/dev.sh)
 
 ## Licencia
 
-MIT — Hazlo tuyo. Tus datos, tu servidor, tu control.
+**MIT** © 2026 Omar Sazar — ver [LICENSE](LICENSE).
+
+Hazlo tuyo: úsalo, modifícalo y véndelo si quieres. Lo único que se pide es
+conservar el aviso de copyright. Tus datos, tu servidor, tu control.
 
 <p align="center">
   <em>Tu almacén, bajo control.</em><br/>

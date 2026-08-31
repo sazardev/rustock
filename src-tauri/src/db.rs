@@ -1,45 +1,126 @@
-use parking_lot::Mutex;
+use parking_lot::{Condvar, Mutex};
 use rusqlite::Connection;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::sync::Arc;
 
 use crate::error::AppResult;
 
-/// Estado compartido de la base de datos (una conexión, self-hosted).
+/// Pool de conexiones a la base de datos.
+///
+/// Antes había una sola conexión tras un mutex, así que toda petición esperaba
+/// su turno aunque solo fuera a leer. SQLite en modo WAL admite varios lectores
+/// a la vez —lo que serializa es la escritura, y eso lo hace el propio motor—,
+/// de modo que mantener N conexiones abiertas convierte esa cola en
+/// concurrencia real sin tocar una sola consulta.
+///
+/// El pool se dimensiona en la configuración (`datos.pool`). Cuando todas las
+/// conexiones están ocupadas, quien pide espera en la `Condvar` en vez de
+/// abrir una nueva: un límite fijo es justo lo que protege de que un pico de
+/// peticiones agote los descriptores de fichero del sistema.
 pub struct DbState {
-    conn: Mutex<Connection>,
+    /// Conexiones libres. Se sacan por el final y se devuelven al soltarlas.
+    libres: Mutex<Vec<Connection>>,
+    /// Avisa a quien espera que una conexión ha vuelto al pool.
+    hay_libre: Condvar,
+}
+
+/// Conexión prestada del pool. Al soltarse vuelve sola.
+///
+/// Se comporta como una `Connection` (`Deref`), así que el código que la usa
+/// no se entera de que viene de un pool y no de un mutex.
+pub struct Conexion<'a> {
+    pool: &'a DbState,
+    /// `Option` solo para poder sacarla en `Drop` y devolverla al pool.
+    conn: Option<Connection>,
+}
+
+impl Deref for Conexion<'_> {
+    type Target = Connection;
+    fn deref(&self) -> &Connection {
+        self.conn.as_ref().expect("la conexión vive hasta el Drop")
+    }
+}
+
+impl DerefMut for Conexion<'_> {
+    fn deref_mut(&mut self) -> &mut Connection {
+        self.conn.as_mut().expect("la conexión vive hasta el Drop")
+    }
+}
+
+impl Drop for Conexion<'_> {
+    fn drop(&mut self) {
+        if let Some(conn) = self.conn.take() {
+            self.pool.libres.lock().push(conn);
+            // `notify_one`: solo una de las esperas puede quedarse con esta
+            // conexión, despertar a todas sería trabajo tirado.
+            self.pool.hay_libre.notify_one();
+        }
+    }
 }
 
 impl DbState {
     /// Abre (o crea) la base de datos y ejecuta las migraciones.
-    pub fn init(path: &Path) -> AppResult<Arc<Self>> {
-        let conn = Connection::open(path)?;
-        conn.pragma_update(None, "journal_mode", "WAL")?;
-        conn.pragma_update(None, "foreign_keys", "ON")?;
-        conn.pragma_update(None, "busy_timeout", "5000")?;
+    ///
+    /// `pool` conexiones y `busy_timeout_ms` de espera cuando otra conexión
+    /// tiene la base bloqueada escribiendo.
+    pub fn abrir(path: &Path, pool: usize, busy_timeout_ms: u32) -> AppResult<Arc<Self>> {
+        let pool = pool.max(1);
+        let mut conexiones = Vec::with_capacity(pool);
+        for _ in 0..pool {
+            conexiones.push(Self::preparar(Connection::open(path)?, busy_timeout_ms)?);
+        }
         let state = Arc::new(Self {
-            conn: Mutex::new(conn),
+            libres: Mutex::new(conexiones),
+            hay_libre: Condvar::new(),
         });
         state.migrate()?;
         Ok(state)
     }
 
-    /// Conexión in-memory para tests.
+    /// Ajustes que toda conexión necesita.
+    ///
+    /// `journal_mode` es propiedad del fichero y basta con fijarlo una vez,
+    /// pero `foreign_keys` y `busy_timeout` son *por conexión*: si no se
+    /// aplican a todas, unas comprobarían las claves ajenas y otras no.
+    fn preparar(conn: Connection, busy_timeout_ms: u32) -> AppResult<Connection> {
+        conn.pragma_update(None, "journal_mode", "WAL")?;
+        conn.pragma_update(None, "foreign_keys", "ON")?;
+        conn.pragma_update(None, "busy_timeout", busy_timeout_ms)?;
+        Ok(conn)
+    }
+
+    /// Base en memoria para tests.
+    ///
+    /// Una sola conexión, a la fuerza: cada `open_in_memory` crea su *propia*
+    /// base vacía, así que un pool aquí daría N bases distintas y los tests
+    /// verían datos que aparecen y desaparecen según qué conexión toque.
     #[cfg(test)]
     #[allow(dead_code)]
     pub fn init_in_memory() -> AppResult<Arc<Self>> {
         let conn = Connection::open_in_memory()?;
-        conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
         let state = Arc::new(Self {
-            conn: Mutex::new(conn),
+            libres: Mutex::new(vec![conn]),
+            hay_libre: Condvar::new(),
         });
         state.migrate()?;
         Ok(state)
     }
 
-    pub fn conn(&self) -> parking_lot::MutexGuard<'_, Connection> {
-        self.conn.lock()
+    /// Toma una conexión del pool, esperando si todas están ocupadas.
+    pub fn conn(&self) -> Conexion<'_> {
+        let mut libres = self.libres.lock();
+        let conn = loop {
+            if let Some(conn) = libres.pop() {
+                break conn;
+            }
+            self.hay_libre.wait(&mut libres);
+        };
+        Conexion {
+            pool: self,
+            conn: Some(conn),
+        }
     }
 
     fn migrate(&self) -> AppResult<()> {

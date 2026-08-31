@@ -1,5 +1,6 @@
 mod buscar;
 mod commands;
+mod config;
 mod db;
 /// Público para que los ejemplos de verificación (`examples/`) puedan
 /// comprobar la codificación de etiquetas contra un lector externo sin pasar
@@ -25,6 +26,7 @@ use std::sync::Arc;
 
 use tauri::Manager;
 
+use config::Config;
 use db::DbState;
 use security::seed_roles;
 use sesion::SesionState;
@@ -34,15 +36,23 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            // Ruta de la base de datos self-hosted junto al binario (o app data dir).
-            let app_dir = app
-                .path()
-                .app_data_dir()
-                .unwrap_or_else(|_| PathBuf::from("."));
-            std::fs::create_dir_all(&app_dir)?;
-            let db_path = app_dir.join("rustock.db");
+            // La configuración manda incluso en modo escritorio: quien
+            // instala Rustock en un equipo compartido puede querer la base en
+            // otro disco, o el API en otro puerto, sin recompilar nada.
+            let config = Config::cargar()?;
+            let db_path = match &config.datos.ruta {
+                Some(ruta) => ruta.clone(),
+                None => app
+                    .path()
+                    .app_data_dir()
+                    .unwrap_or_else(|_| PathBuf::from("."))
+                    .join("rustock.db"),
+            };
+            if let Some(dir) = db_path.parent() {
+                std::fs::create_dir_all(dir)?;
+            }
 
-            let db = DbState::init(&db_path)?;
+            let db = DbState::abrir(&db_path, config.datos.pool, config.datos.busy_timeout_ms)?;
             {
                 let conn = db.conn();
                 seed_roles(&conn)?;
@@ -53,10 +63,10 @@ pub fn run() {
             }
             let sesion = Arc::new(SesionState::default());
 
-            // Servidor HTTP local (127.0.0.1:1421): expone la misma lógica de
-            // negocio para poder usar Rustock desde un navegador normal, sin
-            // el puente IPC de la ventana de escritorio (ver src/server.rs).
-            server::iniciar(db.clone());
+            // Servidor HTTP: expone la misma lógica de negocio para poder
+            // usar Rustock desde un navegador normal, sin el puente IPC de la
+            // ventana de escritorio (ver src/server.rs).
+            server::iniciar_con(db.clone(), config);
 
             app.manage(db);
             app.manage(sesion);
@@ -78,24 +88,6 @@ pub fn run() {
         .expect("error while running rustock");
 }
 
-/// Ruta de la base de datos: `RUSTOCK_DB_PATH` si se define, si no la misma
-/// app data dir que usa el modo escritorio (`~/.local/share/com.rustock.app/
-/// rustock.db`, con `XDG_DATA_HOME` si está definida). Así el modo web y el
-/// modo ventana comparten los mismos datos.
-fn ruta_base_de_datos() -> PathBuf {
-    if let Ok(p) = std::env::var("RUSTOCK_DB_PATH")
-        && !p.is_empty()
-    {
-        return PathBuf::from(p);
-    }
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    let data_home =
-        std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| format!("{home}/.local/share"));
-    PathBuf::from(data_home)
-        .join("com.rustock.app")
-        .join("rustock.db")
-}
-
 /// Modo navegador sin ventana (`RUSTOCK_WEB_ONLY=1`): arranca solo la capa de
 /// datos + el servidor HTTP local (`server.rs`, `127.0.0.1:1421`) sin
 /// inicializar GTK/WebKit ni crear ventana alguna. Pensado para entornos sin
@@ -104,11 +96,21 @@ fn ruta_base_de_datos() -> PathBuf {
 /// mismos permisos que el modo escritorio; las sesiones, en cambio, son por
 /// cliente HTTP y viven en el registro del servidor (ver `sesion.rs`).
 pub fn run_web() {
-    let db_path = ruta_base_de_datos();
+    // Una configuración inválida se dice y se muere aquí, con el mensaje del
+    // campo concreto: es el momento en que quien despliega está mirando.
+    let config = match Config::cargar() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("[rustock-web] {e}");
+            std::process::exit(2);
+        }
+    };
+    let db_path = config.ruta_datos();
     if let Some(dir) = db_path.parent() {
         std::fs::create_dir_all(dir).expect("no se pudo crear el directorio de datos");
     }
-    let db = DbState::init(&db_path).expect("no se pudo abrir la base de datos");
+    let db = DbState::abrir(&db_path, config.datos.pool, config.datos.busy_timeout_ms)
+        .expect("no se pudo abrir la base de datos");
     {
         let conn = db.conn();
         seed_roles(&conn).expect("no se pudieron sembrar los roles por defecto");
@@ -117,11 +119,12 @@ pub fn run_web() {
             seed::sembrar_si_vacio(&conn).expect("no se pudieron sembrar los datos de ejemplo");
         }
     }
-    server::iniciar(db);
     println!(
-        "[rustock-web] backend HTTP en 127.0.0.1:{} — Ctrl+C para detener",
-        server::puerto_http()
+        "[rustock-web] datos en {} ({} conexiones) — Ctrl+C para detener",
+        db_path.display(),
+        config.datos.pool
     );
+    server::iniciar_con(db, config);
     loop {
         std::thread::park();
     }

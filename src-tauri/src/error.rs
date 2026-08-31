@@ -35,6 +35,15 @@ pub enum AppError {
     #[error("El motivo es obligatorio (mínimo 3 caracteres)")]
     MotivoRequerido,
 
+    /// La instalación está mal configurada. No es un error de negocio: se da
+    /// al arrancar, ante quien despliega, y por eso el mensaje dice qué campo
+    /// arreglar en vez de traducirse para el operador de almacén.
+    #[error("Configuración inválida: {0}")]
+    Configuracion(String),
+
+    #[error("No se pudo completar la copia de seguridad: {0}")]
+    Backup(String),
+
     #[error("El lote '{0}' está vencido y no puede salir a cliente ni devolverse al proveedor")]
     LoteVencido(String),
 
@@ -137,6 +146,8 @@ impl AppError {
             Self::PasswordActualIncorrecta => "PASSWORD_ACTUAL_INCORRECTA",
             Self::UltimoAdmin => "ULTIMO_ADMIN",
             Self::MotivoRequerido => "MOTIVO_REQUERIDO",
+            Self::Configuracion(_) => "CONFIGURACION",
+            Self::Backup(_) => "BACKUP",
             Self::LoteVencido(_) => "LOTE_VENCIDO",
             Self::LoteRequerido(_) => "LOTE_REQUERIDO",
             Self::NoEncontrado(..) => "NO_ENCONTRADO",

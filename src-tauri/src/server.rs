@@ -25,9 +25,10 @@
 use std::sync::Arc;
 
 use serde_json::{Value, json};
-use tiny_http::{Header, Method, Response, Server};
+use tiny_http::{Header, Method, Response, Server, SslConfig};
 
 use crate::commands::con_auditoria;
+use crate::config::Config;
 use crate::db::DbState;
 use crate::domain::alerta::NuevoComentario;
 use crate::domain::catalogo::*;
@@ -40,50 +41,124 @@ use crate::repo;
 use crate::security::puede;
 use crate::sesion::{CABECERA_SESION, RegistroSesiones, SesionActiva, SesionState};
 
-const PUERTO: u16 = 1421;
-
-/// Puerto del API HTTP local. Configurable con `RUSTOCK_HTTP_PORT` (útil si
-/// `1421` está ocupado); por defecto `1421`.
-pub fn puerto_http() -> u16 {
-    std::env::var("RUSTOCK_HTTP_PORT")
-        .ok()
-        .and_then(|v| v.parse::<u16>().ok())
-        .unwrap_or(PUERTO)
-}
-
 /// Arranca el servidor en un hilo aparte. No bloquea: si el puerto ya está
 /// ocupado (ej. otra instancia corriendo), se registra el error y la app
 /// sigue funcionando igual como app de escritorio pura.
-pub fn iniciar(db: Arc<DbState>) {
+pub fn iniciar_con(db: Arc<DbState>, config: Config) {
     std::thread::spawn(move || {
-        let registro = Arc::new(RegistroSesiones::default());
-        let puerto = puerto_http();
-        let server = match Server::http(("127.0.0.1", puerto)) {
+        let registro = Arc::new(RegistroSesiones::desde_minutos(config.sesion.ttl_minutos));
+        let direccion = (config.http.host.as_str(), config.http.puerto);
+        let esquema = if config.tls_activo() { "https" } else { "http" };
+
+        let server = match abrir_servidor(&config, direccion) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("[server] no se pudo abrir el puerto {puerto}: {e}");
+                eprintln!(
+                    "[server] no se pudo escuchar en {}:{}: {e}",
+                    config.http.host, config.http.puerto
+                );
                 return;
             }
         };
+
         println!(
-            "[server] API HTTP local en http://127.0.0.1:{puerto} (para el frontend en modo navegador)"
+            "[server] API en {esquema}://{}:{}",
+            config.http.host, config.http.puerto
         );
+        // Los avisos van por stderr y con la palabra AVISO: quien despliega
+        // mirando los registros tiene que tropezarse con ellos, no encontrarlos
+        // si los busca.
+        for aviso in config.advertencias() {
+            eprintln!("[server] AVISO: {aviso}");
+        }
+
+        let cors = Cors {
+            base: cabeceras_cors(&config),
+            config,
+        };
         for request in server.incoming_requests() {
-            manejar(&db, &registro, request);
+            manejar(&db, &registro, &cors, request);
         }
     });
 }
 
-fn cors_headers() -> Vec<Header> {
+/// Abre el socket, con TLS si hay certificado configurado.
+fn abrir_servidor(
+    config: &Config,
+    direccion: (&str, u16),
+) -> Result<Server, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let (Some(cert), Some(key)) = (&config.http.tls_cert, &config.http.tls_key) else {
+        return Server::http(direccion);
+    };
+    let certificate = std::fs::read(cert)
+        .map_err(|e| format!("no se pudo leer el certificado {}: {e}", cert.display()))?;
+    let private_key = std::fs::read(key)
+        .map_err(|e| format!("no se pudo leer la clave {}: {e}", key.display()))?;
+    Server::https(
+        direccion,
+        SslConfig {
+            certificate,
+            private_key,
+        },
+    )
+}
+
+/// Lo que hace falta para decidir las cabeceras CORS de cada petición: la
+/// lista blanca y las cabeceras que no dependen de quién llama.
+pub struct Cors {
+    config: Config,
+    base: Vec<Header>,
+}
+
+/// Cabeceras CORS según la lista blanca configurada.
+///
+/// Sin orígenes configurados no se emite ninguna cabecera CORS: el navegador
+/// solo dejará llamar al API desde el propio origen, que es lo correcto cuando
+/// el frontend lo sirve este mismo host. Abrirlo es una decisión explícita de
+/// quien despliega, no el valor por defecto.
+fn cabeceras_cors(config: &Config) -> Vec<Header> {
+    let origenes = &config.http.cors_origenes;
+    if origenes.is_empty() {
+        return Vec::new();
+    }
+    // Con varios orígenes hay que responder el que pidió cada cliente, no la
+    // lista entera: `Access-Control-Allow-Origin` admite un único valor. Eso
+    // se resuelve por petición en `cors_para`; aquí van las constantes.
     vec![
-        Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap(),
         Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"POST, OPTIONS"[..]).unwrap(),
         Header::from_bytes(
             &b"Access-Control-Allow-Headers"[..],
             format!("Content-Type, {CABECERA_SESION}").as_bytes(),
         )
         .unwrap(),
+        // Un origen permitido cambia la respuesta: las cachés intermedias no
+        // deben servir a un origen lo que se respondió a otro.
+        Header::from_bytes(&b"Vary"[..], &b"Origin"[..]).unwrap(),
     ]
+}
+
+/// Cabeceras CORS de *esta* petición: las constantes más el origen concreto,
+/// solo si está en la lista blanca.
+fn cors_para(config: &Config, base: &[Header], request: &tiny_http::Request) -> Vec<Header> {
+    if base.is_empty() {
+        return Vec::new();
+    }
+    let origen = request
+        .headers()
+        .iter()
+        .find(|h| h.field.equiv("Origin"))
+        .map(|h| h.value.as_str().to_string());
+    let permitido = match &origen {
+        Some(o) if config.http.cors_origenes.iter().any(|p| p == "*" || p == o) => o.clone(),
+        // Un origen que no está en la lista no recibe permiso: la petición se
+        // atiende igual, pero el navegador se negará a entregar la respuesta.
+        _ => return Vec::new(),
+    };
+    let mut cabeceras = base.to_vec();
+    cabeceras.push(
+        Header::from_bytes(&b"Access-Control-Allow-Origin"[..], permitido.as_bytes()).unwrap(),
+    );
+    cabeceras
 }
 
 /// Token de sesión que presenta el cliente, si lo trae.
@@ -96,10 +171,15 @@ fn token_de(request: &tiny_http::Request) -> Option<String> {
         .filter(|t| !t.is_empty())
 }
 
-fn manejar(db: &Arc<DbState>, registro: &Arc<RegistroSesiones>, mut request: tiny_http::Request) {
+fn manejar(
+    db: &Arc<DbState>,
+    registro: &Arc<RegistroSesiones>,
+    cors: &Cors,
+    mut request: tiny_http::Request,
+) {
     if request.method() == &Method::Options {
         let mut response = Response::empty(204);
-        for h in cors_headers() {
+        for h in cors_para(&cors.config, &cors.base, &request) {
             response.add_header(h);
         }
         let _ = request.respond(response);
@@ -173,7 +253,7 @@ fn manejar(db: &Arc<DbState>, registro: &Arc<RegistroSesiones>, mut request: tin
     };
 
     let mut response = Response::from_string(cuerpo_respuesta);
-    for h in cors_headers() {
+    for h in cors_para(&cors.config, &cors.base, &request) {
         response.add_header(h);
     }
     response
@@ -1110,6 +1190,59 @@ fn despachar(
                 let conn = db.conn();
                 puede(&conn, Some(&sesion.usuario_id()?), "configuracion", "ver")?;
                 ok(repo::configuracion::obtener_configuracion_empresa(&conn)?)
+            })
+        }
+        // Copias de seguridad: mismo permiso y misma lógica que en
+        // `commands.rs` — esta capa nunca decide nada por su cuenta.
+        "crear_copia_seguridad" => {
+            con_auditoria!(db, sesion, "crear_copia_seguridad", {
+                let conn = db.conn();
+                puede(
+                    &conn,
+                    Some(&sesion.usuario_id()?),
+                    "configuracion",
+                    "editar",
+                )?;
+                let config = Config::cargar()?;
+                ok(repo::backup::crear(
+                    &conn,
+                    &config.directorio_backup(),
+                    config.backup.retener,
+                )?)
+            })
+        }
+        "listar_copias_seguridad" => {
+            con_auditoria!(db, sesion, "listar_copias_seguridad", {
+                let conn = db.conn();
+                puede(
+                    &conn,
+                    Some(&sesion.usuario_id()?),
+                    "configuracion",
+                    "editar",
+                )?;
+                ok(repo::backup::listar(
+                    &Config::cargar()?.directorio_backup(),
+                )?)
+            })
+        }
+        "restaurar_copia_seguridad" => {
+            con_auditoria!(db, sesion, "restaurar_copia_seguridad", {
+                let conn = db.conn();
+                puede(
+                    &conn,
+                    Some(&sesion.usuario_id()?),
+                    "configuracion",
+                    "editar",
+                )?;
+                let config = Config::cargar()?;
+                let directorio = config.directorio_backup();
+                let origen = repo::backup::ruta_de(&directorio, &str_req(args, "nombre")?)?;
+                ok(repo::backup::restaurar(
+                    &conn,
+                    &origen,
+                    &config.ruta_datos(),
+                    &directorio,
+                )?)
             })
         }
         "guardar_configuracion_empresa" => {

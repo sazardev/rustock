@@ -78,9 +78,10 @@ la **misma base de datos y la misma lógica** que el modo escritorio.
 ## Dónde viven los datos
 
 - Base de datos: `~/.local/share/com.rustock.app/rustock.db` (o la ruta de
-  `RUSTOCK_DB_PATH` si se define).
-- La base es un único archivo SQLite: para respaldar la instalación basta
-  copiarlo (con la app cerrada).
+  `datos.ruta` / `RUSTOCK_DB_PATH` si se define).
+- Configuración opcional: `rustock.toml` junto a la base, o donde apunte
+  `RUSTOCK_CONFIG`. Ver [`rustock.example.toml`](rustock.example.toml).
+- Copias de seguridad: `copias/` junto a la base, por defecto.
 
 ## Solución de problemas
 
@@ -94,12 +95,24 @@ la **misma base de datos y la misma lógica** que el modo escritorio.
   administrador (los cambios de esquema recientes son migraciones
   automáticas, pero las versiones pre-0.3 requerían borrar el archivo).
 - **Cambiar el puerto HTTP** (1421): define `RUSTOCK_HTTP_PORT`.
+- **Que entren desde otros equipos**: por defecto Rustock solo escucha en
+  `127.0.0.1`. Ver la sección "Abrirlo a la red" de
+  [DEPLOYMENT.md](DEPLOYMENT.md) — hay que poner host **y** TLS.
 
 ## Respaldo y restauración
 
-1. Cierra Rustock.
-2. Copia `~/.local/share/com.rustock.app/rustock.db` a un lugar seguro.
-3. Para restaurar, coloca la copia en la misma ruta antes de abrir la app.
+Usa las copias integradas (menú de configuración, con permiso
+`configuracion:editar`), no un `cp` del archivo.
+
+Con el modo WAL activo, `rustock.db` **no contiene por sí solo el estado
+completo**: hay transacciones confirmadas viviendo aún en `rustock.db-wal`.
+Copiar solo el `.db` produce un archivo que abre perfectamente y al que le
+faltan los últimos movimientos — la peor clase de fallo, la silenciosa. Las
+copias integradas usan la API de backup de SQLite, que es coherente y no
+obliga a detener la operación.
+
+Para programarlas, restaurarlas y comprobarlas, ver
+**[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---
 
