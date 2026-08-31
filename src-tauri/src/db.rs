@@ -205,10 +205,6 @@ impl DbState {
             CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
             CREATE INDEX IF NOT EXISTS idx_auditoria_comando ON auditoria(comando);
             CREATE INDEX IF NOT EXISTS idx_auditoria_nivel ON auditoria(nivel);
-            -- Al investigar se pregunta «¿qué hizo esta sesión?» y «¿quién
-            -- entró desde esta IP?», así que ambas van indexadas.
-            CREATE INDEX IF NOT EXISTS idx_auditoria_sesion ON auditoria(sesion_id);
-            CREATE INDEX IF NOT EXISTS idx_auditoria_ip ON auditoria(ip);
 
             -- ============ CATALOGOS: ARBOL FISICO (SPEC §3.1-3.6) ============
             CREATE TABLE IF NOT EXISTS almacenes (
@@ -745,6 +741,18 @@ impl DbState {
         asegurar_columna(&tx, "auditoria", "sesion_id", "TEXT")?;
         asegurar_columna(&tx, "auditoria", "ip", "TEXT")?;
         asegurar_columna(&tx, "auditoria", "agente", "TEXT")?;
+        // Estos dos índices van *después* de las columnas y no en el lote de
+        // arriba: en una base ya existente el CREATE TABLE IF NOT EXISTS no
+        // hace nada, así que la columna aún no está cuando se ejecuta el lote
+        // y el índice falla al arrancar. Solo se nota actualizando una
+        // instalación real, nunca creando una base nueva.
+        //
+        // Al investigar se pregunta «¿qué hizo esta sesión?» y «¿quién entró
+        // desde esta IP?», así que ambas se indexan.
+        tx.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_auditoria_sesion ON auditoria(sesion_id);
+             CREATE INDEX IF NOT EXISTS idx_auditoria_ip ON auditoria(ip);",
+        )?;
         asegurar_columna(&tx, "auditoria", "hora_local", "INTEGER")?;
         asegurar_columna(&tx, "auditoria", "dia_semana", "INTEGER")?;
         // Los índices sobre estas columnas se crean aquí (no en el batch

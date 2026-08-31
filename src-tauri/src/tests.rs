@@ -9129,3 +9129,86 @@ fn un_intento_denegado_queda_auditado_con_su_procedencia() {
     assert_eq!(evento.ip.as_deref(), Some("203.0.113.5"));
     assert_eq!(evento.sesion_id.as_deref(), Some("s-denegada"));
 }
+
+#[test]
+fn una_base_anterior_se_migra_al_abrirla() {
+    // Las columnas de trazabilidad se añaden con ALTER TABLE, y sus índices
+    // tienen que crearse *después*. Puestos en el lote del CREATE TABLE, en una
+    // base ya existente el `IF NOT EXISTS` no hace nada, la columna todavía no
+    // está y el arranque revienta — un fallo que solo aparece actualizando una
+    // instalación real, nunca creando una base nueva.
+    let dir = std::env::temp_dir().join(format!("rustock-mig-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    let ruta = dir.join("rustock.db");
+
+    // Una `auditoria` como la de una versión anterior: sin las columnas nuevas.
+    {
+        let conn = rusqlite::Connection::open(&ruta).expect("crear");
+        conn.execute_batch(
+            "CREATE TABLE auditoria (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id TEXT,
+                accion TEXT NOT NULL,
+                entidad TEXT NOT NULL,
+                entidad_id TEXT,
+                antes TEXT,
+                despues TEXT,
+                timestamp TEXT NOT NULL,
+                origen TEXT,
+                comando TEXT,
+                duracion_ms INTEGER,
+                exito INTEGER NOT NULL DEFAULT 1,
+                nivel TEXT NOT NULL DEFAULT 'LECTURA',
+                tipo_evento TEXT NOT NULL DEFAULT 'COMANDO',
+                ruta TEXT,
+                modulo TEXT,
+                proceso TEXT,
+                metadatos TEXT,
+                tenant TEXT,
+                duracion_vista_ms INTEGER,
+                hora_local INTEGER,
+                dia_semana INTEGER
+            );
+            INSERT INTO auditoria (accion, entidad, timestamp) VALUES ('vieja', 'cosa', '2026-01-01T00:00:00+00:00');",
+        )
+        .expect("esquema viejo");
+    }
+
+    // Abrirla tiene que migrarla, no fallar.
+    let db = DbState::abrir(&ruta, 2, 5_000).expect("una base anterior debe poder abrirse");
+    let conn = db.conn();
+
+    for columna in ["sesion_id", "ip", "agente"] {
+        let existe: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('auditoria') WHERE name = ?1",
+                [columna],
+                |r| r.get(0),
+            )
+            .expect("pragma");
+        assert_eq!(existe, 1, "falta la columna {columna} tras migrar");
+    }
+    for indice in ["idx_auditoria_sesion", "idx_auditoria_ip"] {
+        let existe: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?1",
+                [indice],
+                |r| r.get(0),
+            )
+            .expect("sqlite_master");
+        assert_eq!(existe, 1, "falta el índice {indice} tras migrar");
+    }
+
+    // Y los datos que ya había siguen ahí: migrar no es empezar de cero.
+    let previos: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM auditoria WHERE accion = 'vieja'",
+            [],
+            |r| r.get(0),
+        )
+        .expect("cuenta");
+    assert_eq!(previos, 1);
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}

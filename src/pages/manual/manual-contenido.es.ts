@@ -3334,4 +3334,771 @@ export const MANUAL_PARTES_ES: ManualParte[] = [
       },
     ],
   },
+  {
+    titulo: "Parte 9 — Despliegue y operación (DevOps)",
+    descripcion:
+      "Instalar, configurar, abrir a la red con TLS, copias, servicio, dimensionado, trazabilidad y puesta en producción.",
+    capitulos: [
+      {
+        id: "m09-modos",
+        titulo: "Elegir cómo vas a usarlo",
+        icono: "instalar",
+        resumen:
+          "Rustock tiene dos caras sobre el mismo backend: ventana de escritorio y servidor + navegador. La que necesitas depende de cuánta gente lo va a usar.",
+        paraQueSirve:
+          "Tomar la primera decisión del despliegue sin volver atrás: una persona en un equipo, o varias desde distintos puntos del almacén.",
+        cuandoUsarlo: "Antes de instalar nada.",
+        relacionados: ["m09-arranque", "m09-red"],
+        secciones: [
+          {
+            titulo: "Las dos caras",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Modo", "Para quién", "Cómo se arranca"],
+                filas: [
+                  [
+                    "Aplicación de escritorio",
+                    "Una persona, un equipo",
+                    "Instala el .deb/.rpm/.msi/.dmg y ábrela",
+                  ],
+                  [
+                    "Servidor + navegador",
+                    "Varias personas, varios equipos",
+                    "rustock con RUSTOCK_WEB_ONLY=1",
+                  ],
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "Las dos comparten la misma base de datos y las mismas reglas de negocio: lo que cambia es el transporte, no el comportamiento. La ventana usa el puente IPC de Tauri; el navegador, un API HTTP. Ambas pasan por el mismo código de dominio y los mismos permisos.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Puedes empezar en escritorio y pasar a servidor después sin migrar nada: es el mismo archivo de base de datos.",
+                tono: "info",
+              },
+            ],
+          },
+          {
+            titulo: "Qué necesita la máquina",
+            bloques: [
+              {
+                tipo: "lista",
+                items: [
+                  "Linux con GTK/WebKit para la ventana de escritorio (el paquete declara libwebkit2gtk-4.1-0 y libgtk-3-0).",
+                  "Para el modo servidor no hace falta entorno gráfico: RUSTOCK_WEB_ONLY=1 no inicializa GTK.",
+                  "Un disco donde escribir la base y las copias. Nada más: no hay servidor de base de datos que instalar.",
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-arranque",
+        titulo: "Arranque mínimo y primer administrador",
+        icono: "aprobar",
+        resumen:
+          "Sin configurar nada, Rustock arranca con la base en la ruta estándar del sistema y el API escuchando solo en 127.0.0.1:1421.",
+        paraQueSirve: "Tener Rustock funcionando en un equipo en menos de cinco minutos.",
+        cuandoUsarlo: "La primera instalación, y cada vez que montes un entorno de pruebas.",
+        relacionados: ["m09-configuracion", "m00-acceso"],
+        secciones: [
+          {
+            titulo: "Levantarlo",
+            bloques: [
+              { tipo: "texto", texto: "RUSTOCK_WEB_ONLY=1 rustock" },
+              {
+                tipo: "texto",
+                texto:
+                  "Eso es todo para un equipo. La primera vez, la aplicación pide crear la cuenta de administración: ese formulario solo funciona mientras no exista ningún usuario, así que nadie puede usarlo después para colarse.",
+              },
+              {
+                tipo: "pasos",
+                pasos: [
+                  "Arranca Rustock.",
+                  "Abre http://127.0.0.1:1421 (o la ventana, si instalaste el paquete).",
+                  "Crea el administrador con una contraseña de al menos 8 caracteres.",
+                  "Entra y crea el resto de cuentas desde Usuarios y roles.",
+                ],
+              },
+            ],
+          },
+          {
+            titulo: "Dónde viven los datos",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Qué", "Dónde por defecto"],
+                filas: [
+                  ["Base de datos", "~/.local/share/com.rustock.app/rustock.db"],
+                  ["Configuración", "rustock.toml junto a la base (opcional)"],
+                  ["Copias de seguridad", "copias/ junto a la base"],
+                ],
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "XDG_DATA_HOME cambia la carpeta base. Para poner la base en otro disco, usa datos.ruta o RUSTOCK_DB_PATH.",
+                tono: "info",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-configuracion",
+        titulo: "Cómo se configura Rustock",
+        icono: "configuracion",
+        resumen:
+          "Tres fuentes con prioridad: valores por defecto, fichero TOML y variables de entorno. La variable manda sobre el fichero.",
+        paraQueSirve:
+          "Cambiar lo que distingue tu instalación de cualquier otra sin recompilar ni tocar el código.",
+        cuandoUsarlo: "Al montar el servidor y cada vez que cambie algo del entorno.",
+        terminosClave: ["auditoria"],
+        relacionados: ["m09-referencia", "m09-red"],
+        secciones: [
+          {
+            titulo: "El orden importa",
+            bloques: [
+              {
+                tipo: "pasos",
+                pasos: [
+                  "Valores por defecto: elegidos para que arranque en un portátil sin tocar nada.",
+                  "Fichero TOML: RUSTOCK_CONFIG, o rustock.toml junto a la base.",
+                  "Variables de entorno RUSTOCK_*: pisan al fichero.",
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "Ese orden es lo que permite hornear la configuración dentro de una imagen de contenedor y aun así dejar que el orquestador cambie el puerto, sin reconstruir la imagen.",
+              },
+            ],
+          },
+          {
+            titulo: "Una errata no pasa desapercibida",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "Un campo mal escrito impide arrancar y dice cuál es. Es deliberado: un ajuste que se ignora en silencio se descubre semanas después, cuando resulta que nunca estuvo puesto.",
+              },
+              {
+                tipo: "lista",
+                items: [
+                  "puterto = 9000 → «Configuración inválida: TOML parse error at line 2».",
+                  'host = "mi-servidor.local" → «http.host debe ser una dirección IP».',
+                  'motor = "postgres" → «el motor postgres todavía no está implementado».',
+                  "RUSTOCK_CONFIG apuntando a un fichero que no existe → falla, en vez de arrancar con otros valores.",
+                ],
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Que falte el fichero por defecto es normal y no es error: casi nadie configura nada. Lo que falla es nombrar uno y que no esté.",
+                tono: "info",
+              },
+            ],
+          },
+          {
+            titulo: "Valores por defecto seguros",
+            bloques: [
+              {
+                tipo: "lista",
+                items: [
+                  "Escucha solo en 127.0.0.1: no sale de la máquina.",
+                  "Sin orígenes CORS externos: solo la propia máquina puede llamar al API desde un navegador.",
+                  "Las sesiones caducan a las 8 horas de inactividad.",
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "Abrir Rustock es siempre un acto consciente de quien lo despliega, nunca algo que ocurre por no haber leído la documentación.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-referencia",
+        titulo: "Referencia completa de opciones",
+        icono: "reportes",
+        resumen:
+          "Todas las claves del fichero TOML con su variable de entorno y su valor por defecto.",
+        paraQueSirve: "Consultar de un vistazo qué se puede ajustar y cómo se llama cada cosa.",
+        cuandoUsarlo: "Cuando escribas o revises tu rustock.toml.",
+        relacionados: ["m09-configuracion"],
+        secciones: [
+          {
+            titulo: "[datos] — dónde y cómo se guarda",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Clave", "Variable", "Por defecto", "Qué hace"],
+                filas: [
+                  [
+                    "datos.motor",
+                    "RUSTOCK_DB_MOTOR",
+                    "sqlite",
+                    "Motor de almacenamiento. Hoy solo sqlite.",
+                  ],
+                  [
+                    "datos.ruta",
+                    "RUSTOCK_DB_PATH",
+                    "ruta estándar",
+                    "Fichero de la base de datos.",
+                  ],
+                  [
+                    "datos.pool",
+                    "RUSTOCK_DB_POOL",
+                    "8",
+                    "Conexiones simultáneas y también hilos que atienden peticiones.",
+                  ],
+                  [
+                    "datos.busy_timeout_ms",
+                    "RUSTOCK_DB_BUSY_TIMEOUT_MS",
+                    "5000",
+                    "Espera antes de rendirse si otra conexión escribe.",
+                  ],
+                ],
+              },
+            ],
+          },
+          {
+            titulo: "[http] — cómo se expone",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Clave", "Variable", "Por defecto", "Qué hace"],
+                filas: [
+                  [
+                    "http.host",
+                    "RUSTOCK_HTTP_HOST",
+                    "127.0.0.1",
+                    "Interfaz de escucha. 0.0.0.0 abre a toda la red.",
+                  ],
+                  ["http.puerto", "RUSTOCK_HTTP_PORT", "1421", "Puerto del API."],
+                  [
+                    "http.tls_cert",
+                    "RUSTOCK_TLS_CERT",
+                    "—",
+                    "Certificado PEM. Con clave, sirve HTTPS.",
+                  ],
+                  ["http.tls_key", "RUSTOCK_TLS_KEY", "—", "Clave privada PEM."],
+                  [
+                    "http.cors_origenes",
+                    "RUSTOCK_CORS_ORIGENES",
+                    "vacío",
+                    "Orígenes externos autorizados, separados por comas.",
+                  ],
+                ],
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Los orígenes de la propia máquina (localhost, 127.0.0.1, [::1], en cualquier puerto) se admiten siempre y no hace falta listarlos: es el modo navegador de Rustock.",
+                tono: "info",
+              },
+            ],
+          },
+          {
+            titulo: "[sesion] y [backup]",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Clave", "Variable", "Por defecto", "Qué hace"],
+                filas: [
+                  [
+                    "sesion.ttl_minutos",
+                    "RUSTOCK_SESION_TTL_MINUTOS",
+                    "480",
+                    "Minutos de inactividad hasta caducar. 0 = nunca.",
+                  ],
+                  ["backup.directorio", "RUSTOCK_BACKUP_DIR", "copias/", "Carpeta de copias."],
+                  [
+                    "backup.retener",
+                    "RUSTOCK_BACKUP_RETENER",
+                    "7",
+                    "Cuántas conservar. 0 = no borrar.",
+                  ],
+                  [
+                    "backup.cada_horas",
+                    "RUSTOCK_BACKUP_CADA_HORAS",
+                    "0",
+                    "Copia automática cada N horas. 0 = desactivado.",
+                  ],
+                  [
+                    "backup.replica",
+                    "RUSTOCK_BACKUP_REPLICA",
+                    "—",
+                    "Segunda carpeta donde replicar cada copia.",
+                  ],
+                ],
+              },
+            ],
+          },
+          {
+            titulo: "Otras variables",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Variable", "Qué hace"],
+                filas: [
+                  ["RUSTOCK_CONFIG", "Ruta del fichero de configuración."],
+                  ["RUSTOCK_WEB_ONLY=1", "Arranca solo el servidor, sin ventana ni GTK."],
+                  ["RUSTOCK_HEADLESS=1", "Crea la ventana pero no la muestra."],
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-red",
+        titulo: "Abrirlo a la red, con TLS",
+        icono: "alerta",
+        resumen:
+          "Que otros equipos entren es una decisión consciente en dos pasos que van juntos: cambiar el host y poner certificado.",
+        paraQueSirve: "Que el almacén entero use Rustock sin que las contraseñas viajen en claro.",
+        cuandoUsarlo: "Al pasar de un equipo a varios.",
+        relacionados: ["m09-configuracion", "m09-servicio"],
+        secciones: [
+          {
+            titulo: "Los dos pasos, no uno",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  '[http] host = "0.0.0.0", tls_cert = "/etc/rustock/fullchain.pem", tls_key = "/etc/rustock/privkey.pem"',
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "Sin TLS, las contraseñas de tu gente viajan en claro por la red del almacén. Rustock arranca igual si omites el certificado —hay despliegues legítimos tras un proxy inverso que ya cifra— pero lo dice por stderr en cada arranque.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Si ves «AVISO: escuchando en 0.0.0.0 SIN TLS» y no tienes un proxy delante, tienes un problema que arreglar hoy.",
+                tono: "warning",
+              },
+            ],
+          },
+          {
+            titulo: "Con proxy inverso",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "Si ya operas nginx o Caddy terminando TLS, deja Rustock en loopback y apunta el proxy a 127.0.0.1:1421. Es la opción recomendada si ya tienes uno: un sitio menos donde renovar certificados.",
+              },
+            ],
+          },
+          {
+            titulo: "CORS",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "Solo hace falta si el frontend lo sirve otro host distinto del API. Enumera los orígenes concretos; Rustock responde el que pidió cada cliente, nunca un comodín.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Nunca uses «*» fuera de desarrollo: cualquier página web podría llamar a tu API desde el navegador de quien tenga sesión abierta.",
+                tono: "warning",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-copias",
+        titulo: "Copias de seguridad y restauración",
+        icono: "exportar",
+        resumen:
+          "Copias coherentes sin detener la operación, automáticas cada N horas y replicadas a otro disco. Restaurar exige parar el servicio.",
+        paraQueSirve:
+          "Que el histórico de movimientos sobreviva a un disco roto. El stock se recuenta en una tarde; la trazabilidad no se reconstruye.",
+        cuandoUsarlo: "El primer día, y ensayando la restauración cada cierto tiempo.",
+        terminosClave: ["trazabilidad", "movimiento"],
+        relacionados: ["m09-servicio", "m09-checklist"],
+        secciones: [
+          {
+            titulo: "Nunca copies el fichero a mano",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "Con el modo WAL activo, rustock.db no contiene por sí solo el estado completo: hay transacciones confirmadas viviendo aún en rustock.db-wal. Un cp del .db produce un fichero que abre perfectamente y al que le faltan los últimos movimientos — la peor forma de fallo, la silenciosa.",
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "Las copias integradas usan la API de backup de SQLite, que es coherente con la base en uso y no obliga a parar a nadie.",
+              },
+            ],
+          },
+          {
+            titulo: "Automatizarlas",
+            bloques: [
+              {
+                tipo: "texto",
+                texto: '[backup] cada_horas = 12, retener = 7, replica = "/mnt/nas/rustock"',
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "La primera copia se hace al arrancar: con un intervalo de 24 horas y un equipo que se apaga cada noche, si no fuera así no se dispararía nunca. La poda deja las últimas retener, tanto en el directorio principal como en la réplica.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Una copia en el mismo disco que la base no protege del fallo más común, que es que ese disco muera. Apunta replica a otro disco o a un recurso de red; Rustock avisa si la pones dentro del propio directorio de copias.",
+                tono: "warning",
+              },
+            ],
+          },
+          {
+            titulo: "Restaurar",
+            bloques: [
+              {
+                tipo: "pasos",
+                pasos: [
+                  "Pide la restauración desde Configuración o por API: guarda antes una copia del estado actual, por si la copia elegida no era la que creías.",
+                  "Detén Rustock.",
+                  "Sustituye rustock.db por el fichero rustock.db.restaurar que dejó preparado.",
+                  "Borra rustock.db-wal y rustock.db-shm (higiene: sobras de la base anterior).",
+                  "Arranca Rustock y comprueba los saldos.",
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "No se aplica en caliente a propósito: intercambiar el fichero bajo un pool de conexiones abiertas es justo el tipo de listeza que corrompe una base.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Una copia que nunca se ha restaurado no es una copia, es una esperanza. Ensáyala en un directorio aparte con RUSTOCK_DB_PATH=/tmp/prueba.db.",
+                tono: "warning",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-servicio",
+        titulo: "Dejarlo corriendo como servicio",
+        icono: "refrescar",
+        resumen:
+          "Unidad de systemd con arranque automático, reinicio ante fallo y permisos mínimos.",
+        paraQueSirve: "Que Rustock vuelva solo tras un corte de luz o una actualización.",
+        cuandoUsarlo: "En cuanto pase de ser una prueba a ser la herramienta del almacén.",
+        relacionados: ["m09-red", "m09-copias"],
+        secciones: [
+          {
+            titulo: "Unidad de systemd",
+            bloques: [
+              {
+                tipo: "lista",
+                items: [
+                  "Type=simple, ExecStart=/usr/bin/rustock, Restart=on-failure",
+                  "Environment=RUSTOCK_WEB_ONLY=1 y RUSTOCK_CONFIG=/etc/rustock/rustock.toml",
+                  "User=rustock — nunca root: Rustock no necesita privilegios",
+                  "ProtectSystem=strict con ReadWritePaths=/var/lib/rustock",
+                  "PrivateTmp=true, NoNewPrivileges=true",
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "La base y las copias son lo único que Rustock necesita escribir. Todo lo demás puede ser de solo lectura.",
+              },
+            ],
+          },
+          {
+            titulo: "Actualizar",
+            bloques: [
+              {
+                tipo: "pasos",
+                pasos: [
+                  "Haz una copia de seguridad antes de nada.",
+                  "Detén el servicio.",
+                  "Instala el paquete nuevo.",
+                  "Arranca: las migraciones de esquema se aplican solas al abrir la base.",
+                  "Comprueba que el historial y los saldos siguen ahí.",
+                ],
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Las migraciones añaden columnas sin borrar datos. Aun así, la copia previa es innegociable: es tu marcha atrás.",
+                tono: "warning",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-dimensionar",
+        titulo: "Dimensionar y rendimiento",
+        icono: "dashboard",
+        resumen:
+          "El pool fija a la vez las conexiones y los hilos que atienden. Medido: 1 250 operaciones por segundo con el saldo cuadrando al dígito.",
+        paraQueSirve: "Saber cuánta gente aguanta tu instalación sin adivinar.",
+        cuandoUsarlo: "Al planificar cuántas terminales pondrás, o si notas lentitud.",
+        relacionados: ["m09-referencia", "m09-problemas"],
+        secciones: [
+          {
+            titulo: "Qué significa el pool",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "datos.pool es el número de conexiones simultáneas y también el de hilos que atienden peticiones: más hilos que conexiones solo esperarían turno, y menos dejarían conexiones ociosas. Ocho cubre de sobra un almacén con decenas de terminales.",
+              },
+            ],
+          },
+          {
+            titulo: "Cifras medidas",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: [
+                  "Usuarios a la vez",
+                  "Peticiones/s",
+                  "p95 lectura",
+                  "p95 escritura",
+                  "Errores",
+                ],
+                filas: [
+                  ["5", "1 277", "4–9 ms", "4–5 ms", "0"],
+                  ["25", "1 243", "26–30 ms", "26–28 ms", "0"],
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "El techo lo pone SQLite serializando escrituras, no el número de clientes: por eso 25 usuarios rinden casi lo mismo que 5. Para situarlo, una persona en el almacén hace del orden de una acción cada diez segundos.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "La prueba lanzó 12 768 salidas del mismo hueco desde varias sesiones a la vez: el saldo quedó exacto y sin negativos. La velocidad importa menos que eso.",
+                tono: "success",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-trazabilidad",
+        titulo: "Trazabilidad: quién, desde dónde y qué hizo",
+        icono: "historial",
+        resumen:
+          "Cada evento guarda usuario, sesión, IP, agente y origen. También los intentos rechazados.",
+        paraQueSirve: "Poder responder «¿quién hizo esto y desde qué equipo?» sin conjeturas.",
+        cuandoUsarlo: "Ante un descuadre, un acceso raro o una auditoría.",
+        terminosClave: ["auditoria", "trazabilidad"],
+        relacionados: ["m06-actividad", "m09-checklist"],
+        secciones: [
+          {
+            titulo: "Qué se guarda de cada evento",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Campo", "Qué responde"],
+                filas: [
+                  ["usuario_id", "Quién"],
+                  ["sesion_id", "La visita: agrupa todo entre entrar y salir"],
+                  ["ip", "Desde qué equipo (vacío en la ventana de escritorio)"],
+                  ["agente", "Lo que el cliente dice ser: una pista, no una identidad"],
+                  ["origen", "escritorio o http"],
+                  ["comando, modulo, proceso, ruta", "Qué hizo y en qué parte"],
+                  ["timestamp, duracion_ms, exito", "Cuándo, cuánto tardó, si salió bien"],
+                ],
+              },
+            ],
+          },
+          {
+            titulo: "Lo que falla también se registra",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "Un intento de acceso con contraseña incorrecta, un sondeo anónimo del API y un permiso denegado quedan los tres con su IP y su agente. Son justo los eventos que hay que poder vigilar.",
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "La IP se toma en cada petición, no solo al entrar: si un token empieza a usarse desde otro sitio, el historial lo enseña.",
+              },
+            ],
+          },
+          {
+            titulo: "Reconstruir una visita",
+            bloques: [
+              {
+                tipo: "texto",
+                texto:
+                  "El informe de sesiones agrupa la auditoría y responde de un vistazo quién estuvo dentro: usuario, origen, IP, agente, inicio y fin, duración, y cuántos eventos, escrituras e intentos fallidos hubo.",
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Si una sesión aparece con más de una IP, se usó desde varios sitios. Puede ser un portátil que cambió de wifi, o un token copiado: Rustock no juzga, lo deja a la vista.",
+                tono: "warning",
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "El identificador de sesión es un valor propio y nunca el token de acceso: quien pueda leer la auditoría no se lleva sesiones vivas.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-problemas",
+        titulo: "Solución de problemas",
+        icono: "alerta",
+        resumen: "Los fallos que de verdad aparecen, con su causa y su arreglo.",
+        paraQueSirve: "Desatascar un despliegue sin tener que leer el código.",
+        cuandoUsarlo: "Cuando algo no arranca o no responde.",
+        relacionados: ["m09-configuracion", "m09-dimensionar"],
+        secciones: [
+          {
+            titulo: "Arranque",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Síntoma", "Causa", "Arreglo"],
+                filas: [
+                  [
+                    "«Configuración inválida: …»",
+                    "Errata o valor imposible en el TOML",
+                    "El mensaje nombra el campo; corrígelo",
+                  ],
+                  [
+                    "«RUSTOCK_CONFIG apunta a … que no existe»",
+                    "Ruta mal escrita o volumen sin montar",
+                    "Comprueba la ruta y el montaje",
+                  ],
+                  [
+                    "«no se pudo escuchar en …»",
+                    "Puerto ocupado por otra instancia",
+                    "Cambia http.puerto o para la otra",
+                  ],
+                  [
+                    "La ventana no aparece (WSL/SSH)",
+                    "Sin servidor X/Wayland",
+                    "Usa RUSTOCK_WEB_ONLY=1",
+                  ],
+                ],
+              },
+            ],
+          },
+          {
+            titulo: "En marcha",
+            bloques: [
+              {
+                tipo: "tabla",
+                cabeceras: ["Síntoma", "Causa", "Arreglo"],
+                filas: [
+                  [
+                    "«No se pudo conectar con el backend»",
+                    "El servidor no está corriendo",
+                    "Arranca Rustock; comprueba el puerto",
+                  ],
+                  [
+                    "El navegador bloquea las llamadas",
+                    "Origen no autorizado en CORS",
+                    "Añade el origen a http.cors_origenes",
+                  ],
+                  [
+                    "«database is locked» con mucha carga",
+                    "Espera corta ante escrituras",
+                    "Sube busy_timeout_ms antes que el pool",
+                  ],
+                  [
+                    "Las sesiones se cierran solas",
+                    "ttl_minutos demasiado bajo",
+                    "Súbelo; 480 es un turno completo",
+                  ],
+                ],
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Reiniciar Rustock cierra todas las sesiones abiertas: los tokens viven en memoria. Es lo correcto para una herramienta self-hosted, pero avisa a tu gente antes de reiniciar en mitad de un turno.",
+                tono: "info",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "m09-checklist",
+        titulo: "Checklist de puesta en producción",
+        icono: "aprobar",
+        resumen: "Lo que hay que poder marcar antes de decir que Rustock está en producción.",
+        paraQueSirve: "No descubrir en marzo que las copias nunca se hicieron.",
+        cuandoUsarlo: "El día que Rustock deja de ser una prueba.",
+        relacionados: ["m09-copias", "m09-red", "m08-checklist"],
+        secciones: [
+          {
+            titulo: "Antes de abrir a tu equipo",
+            bloques: [
+              {
+                tipo: "lista",
+                items: [
+                  "La base no está en el disco del sistema, o hay copias fuera de él.",
+                  "backup.cada_horas configurado y una copia verificada en el directorio.",
+                  "backup.replica en otro disco o recurso de red.",
+                  "Restauración ensayada al menos una vez, en un directorio aparte.",
+                  "Si escucha en 0.0.0.0: TLS configurado, o proxy inverso que cifra.",
+                  "Ningún «*» en cors_origenes.",
+                  "sesion.ttl_minutos acorde a la duración de un turno.",
+                  "Rustock corre como servicio, con usuario propio y sin privilegios.",
+                  "Cada persona tiene su cuenta con su rol: nadie comparte la del administrador.",
+                  "Hay al menos dos administradores: el sistema impide quedarse sin ninguno, pero uno solo es un riesgo de agenda.",
+                ],
+              },
+              {
+                tipo: "nota",
+                texto:
+                  "Si no puedes marcar «restauración ensayada», no tienes copias de seguridad: tienes ficheros que esperas que sirvan.",
+                tono: "warning",
+              },
+            ],
+          },
+          {
+            titulo: "Qué no hace Rustock todavía",
+            bloques: [
+              {
+                tipo: "lista",
+                items: [
+                  "Solo SQLite: datos.motor no admite otro motor por ahora.",
+                  "Sin alta disponibilidad: una instancia atendiendo. Si cae, deja de estar disponible hasta que la levantes.",
+                  "El planificador de copias es «cada N horas», no un cron completo.",
+                  "La restauración exige parar el servicio y mover un fichero.",
+                ],
+              },
+              {
+                tipo: "texto",
+                texto:
+                  "Dicho aquí para que nadie lo descubra en producción. Las copias son tu plan de continuidad, no la replicación.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ];

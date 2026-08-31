@@ -3007,12 +3007,758 @@ const TRADUCIDOS: ManualCapitulo[] = [
   CH_CHECKLIST,
   CH_ROADMAP,
   CH_FULL_GLOSSARY,
+  {
+    id: "m09-modos",
+    titulo: "Choosing how you will run it",
+    icono: "instalar",
+    resumen:
+      "Rustock has two faces over one backend: a desktop window and a server plus browser. Which you need depends on how many people will use it.",
+    paraQueSirve:
+      "Make the first deployment decision without having to undo it: one person on one machine, or several from across the warehouse.",
+    cuandoUsarlo: "Before installing anything.",
+    relacionados: ["m09-arranque", "m09-red"],
+    secciones: [
+      {
+        titulo: "The two faces",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Mode", "Who for", "How it starts"],
+            filas: [
+              [
+                "Desktop application",
+                "One person, one machine",
+                "Install the .deb/.rpm/.msi/.dmg and open it",
+              ],
+              [
+                "Server + browser",
+                "Several people, several machines",
+                "rustock with RUSTOCK_WEB_ONLY=1",
+              ],
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "Both share the same database and the same business rules: what changes is the transport, not the behaviour. The window uses Tauri's IPC bridge; the browser, an HTTP API. Both go through the same domain code and the same permissions.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "You can start on the desktop and move to a server later without migrating anything: it is the same database file.",
+            tono: "info",
+          },
+        ],
+      },
+      {
+        titulo: "What the machine needs",
+        bloques: [
+          {
+            tipo: "lista",
+            items: [
+              "Linux with GTK/WebKit for the desktop window (the package declares libwebkit2gtk-4.1-0 and libgtk-3-0).",
+              "Server mode needs no graphical environment: RUSTOCK_WEB_ONLY=1 never initialises GTK.",
+              "A disk to write the database and the backups. Nothing else: there is no database server to install.",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-arranque",
+    titulo: "Minimal start and the first administrator",
+    icono: "aprobar",
+    resumen:
+      "With nothing configured, Rustock starts with the database in the system's standard path and the API listening only on 127.0.0.1:1421.",
+    paraQueSirve: "Get Rustock running on one machine in under five minutes.",
+    cuandoUsarlo: "The first install, and every time you set up a test environment.",
+    relacionados: ["m09-configuracion", "m00-acceso"],
+    secciones: [
+      {
+        titulo: "Bringing it up",
+        bloques: [
+          { tipo: "texto", texto: "RUSTOCK_WEB_ONLY=1 rustock" },
+          {
+            tipo: "texto",
+            texto:
+              "That is all it takes for one machine. The first time, the application asks you to create the administrator account: that form only works while no user exists, so nobody can use it later to get in.",
+          },
+          {
+            tipo: "pasos",
+            pasos: [
+              "Start Rustock.",
+              "Open http://127.0.0.1:1421 (or the window, if you installed the package).",
+              "Create the administrator with a password of at least 8 characters.",
+              "Sign in and create the rest of the accounts from Users and roles.",
+            ],
+          },
+        ],
+      },
+      {
+        titulo: "Where the data lives",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["What", "Default location"],
+            filas: [
+              ["Database", "~/.local/share/com.rustock.app/rustock.db"],
+              ["Configuration", "rustock.toml beside the database (optional)"],
+              ["Backups", "copias/ beside the database"],
+            ],
+          },
+          {
+            tipo: "nota",
+            texto:
+              "XDG_DATA_HOME changes the base folder. To put the database on another disk, use datos.ruta or RUSTOCK_DB_PATH.",
+            tono: "info",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-configuracion",
+    titulo: "How Rustock is configured",
+    icono: "configuracion",
+    resumen:
+      "Three sources in order of precedence: defaults, a TOML file and environment variables. The variable wins over the file.",
+    paraQueSirve:
+      "Change what makes your installation different from any other, without recompiling or touching the code.",
+    cuandoUsarlo: "When setting up the server, and whenever the environment changes.",
+    terminosClave: ["auditoria"],
+    relacionados: ["m09-referencia", "m09-red"],
+    secciones: [
+      {
+        titulo: "The order matters",
+        bloques: [
+          {
+            tipo: "pasos",
+            pasos: [
+              "Defaults: chosen so it starts on a laptop with nothing set.",
+              "TOML file: RUSTOCK_CONFIG, or rustock.toml beside the database.",
+              "RUSTOCK_* environment variables: they override the file.",
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "That order is what lets you bake configuration into a container image and still let the orchestrator change the port, without rebuilding the image.",
+          },
+        ],
+      },
+      {
+        titulo: "A typo does not slip through",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "A misspelled field stops startup and says which one. That is deliberate: a setting silently ignored is discovered weeks later, when it turns out it was never applied.",
+          },
+          {
+            tipo: "lista",
+            items: [
+              "puterto = 9000 → «Configuración inválida: TOML parse error at line 2».",
+              'host = "my-server.local" → «http.host must be an IP address».',
+              'motor = "postgres" → «the postgres engine is not implemented yet».',
+              "RUSTOCK_CONFIG pointing at a file that does not exist → it fails, instead of starting with other values.",
+            ],
+          },
+          {
+            tipo: "nota",
+            texto:
+              "A missing default file is normal and not an error: almost nobody configures anything. What fails is naming one that is not there.",
+            tono: "info",
+          },
+        ],
+      },
+      {
+        titulo: "Safe defaults",
+        bloques: [
+          {
+            tipo: "lista",
+            items: [
+              "Listens only on 127.0.0.1: it does not leave the machine.",
+              "No external CORS origins: only this machine can call the API from a browser.",
+              "Sessions expire after 8 hours of inactivity.",
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "Opening Rustock up is always a deliberate act by whoever deploys it, never something that happens for not having read the documentation.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-referencia",
+    titulo: "Full options reference",
+    icono: "reportes",
+    resumen: "Every TOML key with its environment variable and its default.",
+    paraQueSirve: "See at a glance what can be tuned and what each thing is called.",
+    cuandoUsarlo: "When writing or reviewing your rustock.toml.",
+    relacionados: ["m09-configuracion"],
+    secciones: [
+      {
+        titulo: "[datos] — where and how it is stored",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Key", "Variable", "Default", "What it does"],
+            filas: [
+              ["datos.motor", "RUSTOCK_DB_MOTOR", "sqlite", "Storage engine. Only sqlite today."],
+              ["datos.ruta", "RUSTOCK_DB_PATH", "standard path", "Database file."],
+              [
+                "datos.pool",
+                "RUSTOCK_DB_POOL",
+                "8",
+                "Simultaneous connections, and also request-serving threads.",
+              ],
+              [
+                "datos.busy_timeout_ms",
+                "RUSTOCK_DB_BUSY_TIMEOUT_MS",
+                "5000",
+                "Wait before giving up when another connection is writing.",
+              ],
+            ],
+          },
+        ],
+      },
+      {
+        titulo: "[http] — how it is exposed",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Key", "Variable", "Default", "What it does"],
+            filas: [
+              [
+                "http.host",
+                "RUSTOCK_HTTP_HOST",
+                "127.0.0.1",
+                "Listening interface. 0.0.0.0 opens it to the network.",
+              ],
+              ["http.puerto", "RUSTOCK_HTTP_PORT", "1421", "API port."],
+              [
+                "http.tls_cert",
+                "RUSTOCK_TLS_CERT",
+                "—",
+                "PEM certificate. With the key, serves HTTPS.",
+              ],
+              ["http.tls_key", "RUSTOCK_TLS_KEY", "—", "PEM private key."],
+              [
+                "http.cors_origenes",
+                "RUSTOCK_CORS_ORIGENES",
+                "empty",
+                "Authorised external origins, comma separated.",
+              ],
+            ],
+          },
+          {
+            tipo: "nota",
+            texto:
+              "Origins from this machine (localhost, 127.0.0.1, [::1], on any port) are always allowed and need not be listed: that is Rustock's browser mode.",
+            tono: "info",
+          },
+        ],
+      },
+      {
+        titulo: "[sesion] and [backup]",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Key", "Variable", "Default", "What it does"],
+            filas: [
+              [
+                "sesion.ttl_minutos",
+                "RUSTOCK_SESION_TTL_MINUTOS",
+                "480",
+                "Minutes of inactivity before expiry. 0 = never.",
+              ],
+              ["backup.directorio", "RUSTOCK_BACKUP_DIR", "copias/", "Backup folder."],
+              [
+                "backup.retener",
+                "RUSTOCK_BACKUP_RETENER",
+                "7",
+                "How many to keep. 0 = delete none.",
+              ],
+              [
+                "backup.cada_horas",
+                "RUSTOCK_BACKUP_CADA_HORAS",
+                "0",
+                "Automatic backup every N hours. 0 = off.",
+              ],
+              [
+                "backup.replica",
+                "RUSTOCK_BACKUP_REPLICA",
+                "—",
+                "Second folder to replicate each backup to.",
+              ],
+            ],
+          },
+        ],
+      },
+      {
+        titulo: "Other variables",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Variable", "What it does"],
+            filas: [
+              ["RUSTOCK_CONFIG", "Path to the configuration file."],
+              ["RUSTOCK_WEB_ONLY=1", "Starts only the server, with no window and no GTK."],
+              ["RUSTOCK_HEADLESS=1", "Creates the window but does not show it."],
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-red",
+    titulo: "Opening it to the network, with TLS",
+    icono: "alerta",
+    resumen:
+      "Letting other machines in is a deliberate decision in two steps that go together: change the host and add a certificate.",
+    paraQueSirve: "Let the whole warehouse use Rustock without passwords travelling in the clear.",
+    cuandoUsarlo: "When going from one machine to several.",
+    relacionados: ["m09-configuracion", "m09-servicio"],
+    secciones: [
+      {
+        titulo: "Both steps, not one",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              '[http] host = "0.0.0.0", tls_cert = "/etc/rustock/fullchain.pem", tls_key = "/etc/rustock/privkey.pem"',
+          },
+          {
+            tipo: "texto",
+            texto:
+              "Without TLS, your people's passwords travel in the clear across the warehouse network. Rustock still starts if you omit the certificate — there are legitimate deployments behind a reverse proxy that already encrypts — but it says so on stderr at every start.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "If you see «AVISO: escuchando en 0.0.0.0 SIN TLS» and you have no proxy in front, you have a problem to fix today.",
+            tono: "warning",
+          },
+        ],
+      },
+      {
+        titulo: "Behind a reverse proxy",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "If you already run nginx or Caddy terminating TLS, leave Rustock on loopback and point the proxy at 127.0.0.1:1421. It is the recommended option when you already have one: one less place to renew certificates.",
+          },
+        ],
+      },
+      {
+        titulo: "CORS",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "Only needed if another host serves the frontend. List the specific origins; Rustock answers with the one each client asked for, never a wildcard.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "Never use «*» outside development: any web page could call your API from the browser of whoever has a session open.",
+            tono: "warning",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-copias",
+    titulo: "Backups and restore",
+    icono: "exportar",
+    resumen:
+      "Consistent backups without stopping the operation, automatic every N hours and replicated to another disk. Restoring requires stopping the service.",
+    paraQueSirve:
+      "So the movement history survives a dead disk. Stock can be recounted in an afternoon; traceability cannot be rebuilt.",
+    cuandoUsarlo: "On day one, and rehearsing the restore from time to time.",
+    terminosClave: ["trazabilidad", "movimiento"],
+    relacionados: ["m09-servicio", "m09-checklist"],
+    secciones: [
+      {
+        titulo: "Never copy the file by hand",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "With WAL mode on, rustock.db does not by itself hold the complete state: there are committed transactions still living in rustock.db-wal. A cp of the .db produces a file that opens perfectly and is missing the last movements — the worst kind of failure, the silent one.",
+          },
+          {
+            tipo: "texto",
+            texto:
+              "The built-in backups use SQLite's backup API, which is consistent with the live database and does not force anyone to stop.",
+          },
+        ],
+      },
+      {
+        titulo: "Automating them",
+        bloques: [
+          {
+            tipo: "texto",
+            texto: '[backup] cada_horas = 12, retener = 7, replica = "/mnt/nas/rustock"',
+          },
+          {
+            tipo: "texto",
+            texto:
+              "The first backup happens at startup: with a 24-hour interval and a machine that shuts down every night, otherwise it would never fire. Pruning keeps the last retener, in both the main directory and the replica.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "A backup on the same disk as the database does not protect against the most common failure, which is that disk dying. Point replica at another disk or a network share; Rustock warns you if you put it inside the backup directory itself.",
+            tono: "warning",
+          },
+        ],
+      },
+      {
+        titulo: "Restoring",
+        bloques: [
+          {
+            tipo: "pasos",
+            pasos: [
+              "Request the restore from Configuration or via the API: it first saves a backup of the current state, in case the chosen backup was not the one you thought.",
+              "Stop Rustock.",
+              "Replace rustock.db with the rustock.db.restaurar file it prepared.",
+              "Delete rustock.db-wal and rustock.db-shm (hygiene: leftovers from the previous database).",
+              "Start Rustock and check the balances.",
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "It is not applied live on purpose: swapping the file under an open connection pool is exactly the kind of cleverness that corrupts a database.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "A backup that has never been restored is not a backup, it is a hope. Rehearse it in a separate directory with RUSTOCK_DB_PATH=/tmp/test.db.",
+            tono: "warning",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-servicio",
+    titulo: "Running it as a service",
+    icono: "refrescar",
+    resumen: "A systemd unit with automatic start, restart on failure and minimal permissions.",
+    paraQueSirve: "So Rustock comes back on its own after a power cut or an update.",
+    cuandoUsarlo: "As soon as it stops being a trial and becomes the warehouse's tool.",
+    relacionados: ["m09-red", "m09-copias"],
+    secciones: [
+      {
+        titulo: "systemd unit",
+        bloques: [
+          {
+            tipo: "lista",
+            items: [
+              "Type=simple, ExecStart=/usr/bin/rustock, Restart=on-failure",
+              "Environment=RUSTOCK_WEB_ONLY=1 and RUSTOCK_CONFIG=/etc/rustock/rustock.toml",
+              "User=rustock — never root: Rustock needs no privileges",
+              "ProtectSystem=strict with ReadWritePaths=/var/lib/rustock",
+              "PrivateTmp=true, NoNewPrivileges=true",
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "The database and the backups are the only things Rustock needs to write. Everything else can be read-only.",
+          },
+        ],
+      },
+      {
+        titulo: "Updating",
+        bloques: [
+          {
+            tipo: "pasos",
+            pasos: [
+              "Take a backup before anything else.",
+              "Stop the service.",
+              "Install the new package.",
+              "Start it: schema migrations apply themselves when the database opens.",
+              "Check that the history and the balances are still there.",
+            ],
+          },
+          {
+            tipo: "nota",
+            texto:
+              "Migrations add columns without deleting data. Even so, the backup beforehand is non-negotiable: it is your way back.",
+            tono: "warning",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-dimensionar",
+    titulo: "Sizing and performance",
+    icono: "dashboard",
+    resumen:
+      "The pool sets both the connections and the serving threads. Measured: 1,250 operations per second with the balance reconciling to the unit.",
+    paraQueSirve: "Know how many people your installation takes, without guessing.",
+    cuandoUsarlo: "When planning how many terminals to deploy, or if you notice slowness.",
+    relacionados: ["m09-referencia", "m09-problemas"],
+    secciones: [
+      {
+        titulo: "What the pool means",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "datos.pool is the number of simultaneous connections and also of request-serving threads: more threads than connections would only wait their turn, and fewer would leave connections idle. Eight covers a warehouse with dozens of terminals comfortably.",
+          },
+        ],
+      },
+      {
+        titulo: "Measured figures",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Concurrent users", "Requests/s", "p95 read", "p95 write", "Errors"],
+            filas: [
+              ["5", "1,277", "4–9 ms", "4–5 ms", "0"],
+              ["25", "1,243", "26–30 ms", "26–28 ms", "0"],
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "The ceiling comes from SQLite serialising writes, not from the number of clients: that is why 25 users perform almost the same as 5. For scale, a person in the warehouse takes an action roughly every ten seconds.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "The test fired 12,768 dispatches from the same slot across several concurrent sessions: the balance came out exact, with no negatives. That matters more than the speed.",
+            tono: "success",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-trazabilidad",
+    titulo: "Traceability: who, from where and what they did",
+    icono: "historial",
+    resumen: "Every event stores user, session, IP, agent and origin. Rejected attempts too.",
+    paraQueSirve: "Be able to answer «who did this, and from which machine?» without guessing.",
+    cuandoUsarlo: "After a discrepancy, an odd access or an audit.",
+    terminosClave: ["auditoria", "trazabilidad"],
+    relacionados: ["m06-actividad", "m09-checklist"],
+    secciones: [
+      {
+        titulo: "What each event stores",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Field", "What it answers"],
+            filas: [
+              ["usuario_id", "Who"],
+              ["sesion_id", "The visit: groups everything between signing in and out"],
+              ["ip", "From which machine (empty in the desktop window)"],
+              ["agente", "What the client claims to be: a hint, not an identity"],
+              ["origen", "escritorio or http"],
+              ["comando, modulo, proceso, ruta", "What they did and in which part"],
+              ["timestamp, duracion_ms, exito", "When, how long, whether it succeeded"],
+            ],
+          },
+        ],
+      },
+      {
+        titulo: "What fails is recorded too",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "A sign-in attempt with the wrong password, an anonymous probe of the API and a denied permission all three land with their IP and their agent. They are exactly the events worth watching.",
+          },
+          {
+            tipo: "texto",
+            texto:
+              "The IP is taken on every request, not only at sign-in: if a token starts being used from somewhere else, the history shows it.",
+          },
+        ],
+      },
+      {
+        titulo: "Reconstructing a visit",
+        bloques: [
+          {
+            tipo: "texto",
+            texto:
+              "The sessions report groups the audit trail and answers at a glance who was inside: user, origin, IP, agent, start and end, duration, and how many events, writes and failed attempts there were.",
+          },
+          {
+            tipo: "nota",
+            texto:
+              "If a session shows more than one IP, it was used from several places. It may be a laptop that changed wifi, or a copied token: Rustock does not judge, it puts it in plain sight.",
+            tono: "warning",
+          },
+          {
+            tipo: "texto",
+            texto:
+              "The session identifier is a value of its own and never the access token: whoever can read the audit trail does not walk away with live sessions.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-problemas",
+    titulo: "Troubleshooting",
+    icono: "alerta",
+    resumen: "The failures that actually turn up, with their cause and their fix.",
+    paraQueSirve: "Unblock a deployment without having to read the code.",
+    cuandoUsarlo: "When something does not start or does not answer.",
+    relacionados: ["m09-configuracion", "m09-dimensionar"],
+    secciones: [
+      {
+        titulo: "Startup",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Symptom", "Cause", "Fix"],
+            filas: [
+              [
+                "«Configuración inválida: …»",
+                "Typo or impossible value in the TOML",
+                "The message names the field; correct it",
+              ],
+              [
+                "«RUSTOCK_CONFIG apunta a … que no existe»",
+                "Wrong path or unmounted volume",
+                "Check the path and the mount",
+              ],
+              [
+                "«no se pudo escuchar en …»",
+                "Port taken by another instance",
+                "Change http.puerto or stop the other one",
+              ],
+              [
+                "The window does not appear (WSL/SSH)",
+                "No X/Wayland server",
+                "Use RUSTOCK_WEB_ONLY=1",
+              ],
+            ],
+          },
+        ],
+      },
+      {
+        titulo: "While running",
+        bloques: [
+          {
+            tipo: "tabla",
+            cabeceras: ["Symptom", "Cause", "Fix"],
+            filas: [
+              [
+                "«Could not connect to the backend»",
+                "The server is not running",
+                "Start Rustock; check the port",
+              ],
+              [
+                "The browser blocks the calls",
+                "Origin not authorised in CORS",
+                "Add the origin to http.cors_origenes",
+              ],
+              [
+                "«database is locked» under load",
+                "Short wait on writes",
+                "Raise busy_timeout_ms before the pool",
+              ],
+              [
+                "Sessions close on their own",
+                "ttl_minutos too low",
+                "Raise it; 480 is a full shift",
+              ],
+            ],
+          },
+          {
+            tipo: "nota",
+            texto:
+              "Restarting Rustock closes every open session: tokens live in memory. That is right for a self-hosted tool, but warn your people before restarting mid-shift.",
+            tono: "info",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "m09-checklist",
+    titulo: "Go-live checklist",
+    icono: "aprobar",
+    resumen: "What you must be able to tick before calling Rustock production.",
+    paraQueSirve: "Not to find out in March that the backups were never running.",
+    cuandoUsarlo: "The day Rustock stops being a trial.",
+    relacionados: ["m09-copias", "m09-red", "m08-checklist"],
+    secciones: [
+      {
+        titulo: "Before opening it to your team",
+        bloques: [
+          {
+            tipo: "lista",
+            items: [
+              "The database is not on the system disk, or there are backups off it.",
+              "backup.cada_horas configured and one verified backup in the directory.",
+              "backup.replica on another disk or network share.",
+              "Restore rehearsed at least once, in a separate directory.",
+              "If it listens on 0.0.0.0: TLS configured, or a reverse proxy that encrypts.",
+              "No «*» in cors_origenes.",
+              "sesion.ttl_minutos matching the length of a shift.",
+              "Rustock runs as a service, with its own unprivileged user.",
+              "Everyone has their own account with their own role: nobody shares the administrator's.",
+              "There are at least two administrators: the system prevents ending up with none, but one alone is a scheduling risk.",
+            ],
+          },
+          {
+            tipo: "nota",
+            texto:
+              "If you cannot tick «restore rehearsed», you do not have backups: you have files you hope will work.",
+            tono: "warning",
+          },
+        ],
+      },
+      {
+        titulo: "What Rustock does not do yet",
+        bloques: [
+          {
+            tipo: "lista",
+            items: [
+              "SQLite only: datos.motor takes no other engine for now.",
+              "No high availability: one instance serving. If it goes down, it stays down until you bring it back.",
+              "The backup scheduler is «every N hours», not a full cron.",
+              "Restoring requires stopping the service and moving a file.",
+            ],
+          },
+          {
+            tipo: "texto",
+            texto:
+              "Said here so nobody discovers it in production. Backups are your continuity plan, not replication.",
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 const POR_ID = new Map(TRADUCIDOS.map((cap) => [cap.id, cap]));
 
 /** Títulos y descripciones de las partes, que no son capítulos. */
 const PARTES: Record<string, { titulo: string; descripcion: string }> = {
+  "Parte 9 — Despliegue y operación (DevOps)": {
+    titulo: "Part 9 — Deployment and operations (DevOps)",
+    descripcion:
+      "Install, configure, expose with TLS, backups, service, sizing, traceability and going live.",
+  },
   "Parte 0 — Primeros pasos": {
     titulo: "Part 0 — First steps",
     descripcion: "Installation, access, roles and personalisation.",
