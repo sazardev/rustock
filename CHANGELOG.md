@@ -4,6 +4,12 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [0.6.0] - 2026-08-31
+
+### Features
+
+- **despliegue:** Configuración, TLS, caducidad de sesión, copias y pool
+
 ## [0.5.2] - 2026-08-31
 
 ### Bug Fixes
