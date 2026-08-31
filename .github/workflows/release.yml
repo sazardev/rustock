@@ -37,10 +37,10 @@ jobs:
             os: macos-latest
             bundles: dmg
             target: aarch64-apple-darwin
-          - nombre: macOS Intel (dmg)
-            os: macos-13
-            bundles: dmg
-            target: x86_64-apple-darwin
+          # macOS Intel (macos-13) queda fuera: tardaba más de una hora sin
+          # caché y bloqueaba la publicación de las demás plataformas. Los Mac
+          # con Intel son anteriores a 2020; quien tenga uno compila desde el
+          # código, que es lo mismo que hace este workflow.
     steps:
       - uses: actions/checkout@v7
         with:
