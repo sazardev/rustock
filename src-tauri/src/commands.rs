@@ -122,6 +122,20 @@ pub fn puedo(
     }
 }
 
+/// Todos los permisos del usuario de la sesión, como `"recurso:accion"`.
+///
+/// La interfaz lo pide una vez al entrar para no ofrecer acciones que el
+/// backend va a rechazar. Es una cortesía visual, no un control: cada
+/// operación se vuelve a comprobar en el servidor.
+#[tauri::command]
+pub fn mis_permisos(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+) -> AppResult<Vec<String>> {
+    let conn = db.conn();
+    crate::security::permisos_de(&conn, &sesion.usuario_id()?)
+}
+
 // ============ Almacén ============
 
 #[tauri::command]
@@ -2636,6 +2650,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         reactivar_usuario,
         cambiar_password,
         cambiar_password_admin,
+        mis_permisos,
         obtener_configuracion_empresa,
         crear_copia_seguridad,
         listar_copias_seguridad,

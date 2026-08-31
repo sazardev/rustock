@@ -102,9 +102,17 @@ pub struct Http {
     /// Certificado y clave en PEM. Con ambos presentes se sirve HTTPS.
     pub tls_cert: Option<PathBuf>,
     pub tls_key: Option<PathBuf>,
-    /// Orígenes autorizados a llamar al API desde un navegador. Vacío deja
-    /// solo el propio origen (sin cabeceras CORS), que es lo correcto cuando
-    /// el frontend lo sirve el mismo host.
+    /// Orígenes *adicionales* autorizados a llamar al API desde un navegador.
+    ///
+    /// Los de la propia máquina (`localhost`, `127.0.0.1`, `[::1]`, en
+    /// cualquier puerto) se admiten siempre y no hace falta listarlos: son el
+    /// modo navegador de Rustock, donde el frontend vive en un puerto y el API
+    /// en otro. Permitirlos no abre nada — una página atacante tiene su propio
+    /// origen, nunca `localhost`, y el token de sesión viaja en una cabecera
+    /// que esa página no puede leer ni adivinar.
+    ///
+    /// Aquí solo van los orígenes de fuera: el dominio desde el que sirvas el
+    /// frontend si no es este mismo equipo.
     pub cors_origenes: Vec<String>,
 }
 
@@ -383,6 +391,26 @@ impl Config {
 }
 
 // ============ Auxiliares ============
+
+/// ¿El origen es una página servida desde esta misma máquina?
+///
+/// Se admiten siempre (ver `Http::cors_origenes`): son el modo navegador de
+/// Rustock. Se compara el host exacto para que `http://localhost.evil.com` no
+/// cuele por empezar igual.
+pub fn es_origen_local(origen: &str) -> bool {
+    let sin_esquema = match origen.split_once("://") {
+        Some(("http" | "https", resto)) => resto,
+        _ => return false,
+    };
+    // Un host IPv6 va entre corchetes y lleva `:` dentro, así que el puerto no
+    // se puede separar por el primer `:`: se corta tras el `]`.
+    let host = if let Some(fin) = sin_esquema.strip_prefix('[').and_then(|r| r.find(']')) {
+        &sin_esquema[..fin + 2]
+    } else {
+        sin_esquema.split_once(':').map_or(sin_esquema, |(h, _)| h)
+    };
+    matches!(host, "localhost" | "127.0.0.1" | "[::1]")
+}
 
 /// Variable de entorno no vacía.
 fn var(clave: &str) -> Option<String> {

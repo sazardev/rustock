@@ -5,7 +5,7 @@ import { listarRoles, listarUsuarios, obtenerUsuario } from "../shared/backend";
 import { esPaginado, type Rol, type Usuario } from "../shared/types";
 import { formatearFecha, mensajeError } from "../shared/format";
 import { catalogoDetalle, PATH } from "../app/route-paths";
-import { useSession } from "../shared/session";
+import { usePuede } from "../shared/session";
 import { useT } from "../shared/i18n";
 import {
   Badge,
@@ -26,9 +26,9 @@ const PAGE_SIZE = 20;
 
 export function UsuariosPage() {
   const t = useT();
+  const puedeCrear = usePuede("usuario", "crear");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const usuarioActual = useSession((s) => s.usuario);
   const [page, setPage] = useState(1);
   const [estado, setEstado] = useState<"" | "activo" | "inactivo">("");
 
@@ -60,10 +60,6 @@ export function UsuariosPage() {
     staleTime: 5 * 60_000,
   });
   const rolDe = (id: string): Rol | undefined => rolesQuery.data?.find((r) => r.id === id);
-
-  // Solo el ADMIN gestiona usuarios (SPEC §4.4); el resto solo ve el listado.
-  const rolCodigo = rolDe(usuarioActual?.rol_id ?? "")?.codigo;
-  const esAdmin = rolCodigo === "ADMIN";
 
   const listado = query.data && esPaginado(query.data) ? query.data : null;
   const filas = listado?.data ?? [];
@@ -120,7 +116,7 @@ export function UsuariosPage() {
 
       <FilterBar
         action={
-          esAdmin ? (
+          puedeCrear ? (
             <ButtonLink variant="primary" icon="agregar" href={`${PATH.usuarios}/nuevo`}>
               {t.comun.nuevoUsuario}
             </ButtonLink>

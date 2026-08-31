@@ -3,6 +3,68 @@ use rusqlite::Connection;
 use crate::domain::seguridad::RolSistema;
 use crate::error::{AppError, AppResult};
 
+/// Catálogo de todos los permisos que el sistema comprueba.
+///
+/// Es la lista que la interfaz consulta para saber qué ofrecer y qué no. Vive
+/// aquí, pegada a la matriz, y no en el frontend, porque quien decide qué
+/// existe es el backend (STACK §1); la interfaz solo pregunta.
+///
+/// Un test recorre el código fuente y comprueba que todo `puede(...)` usa un
+/// par de esta lista: si alguien añade una comprobación nueva y olvida
+/// declararla aquí, la interfaz nunca sabría de ella y ofrecería un botón que
+/// el backend rechaza. El test falla antes de que eso llegue a nadie.
+pub const PERMISOS: &[(&str, &[&str])] = &[
+    ("ajuste", &["crear", "aprobar", "anular"]),
+    ("alerta", &["ver"]),
+    ("almacen", &["ver", "crear", "editar", "desactivar"]),
+    ("caja", &["ver", "crear", "editar", "desactivar"]),
+    ("categoria", &["ver", "crear", "editar", "desactivar"]),
+    ("cliente", &["ver", "crear", "editar", "desactivar"]),
+    ("comentario", &["crear", "eliminar"]),
+    ("configuracion", &["ver", "editar", "ejecutar"]),
+    ("entrada", &["crear", "aprobar", "anular"]),
+    ("escaneo", &["ver", "usar"]),
+    ("inventario", &["ver", "ejecutar", "cerrar", "anular"]),
+    ("lote", &["ver", "crear", "editar"]),
+    ("movimiento", &["ver", "crear", "aprobar", "anular"]),
+    ("pasillo", &["ver", "crear", "editar", "desactivar"]),
+    ("producto", &["ver", "crear", "editar", "desactivar"]),
+    ("proveedor", &["ver", "crear", "editar", "desactivar"]),
+    ("rack", &["ver", "crear", "editar", "desactivar"]),
+    ("regla", &["ver", "crear", "editar", "eliminar"]),
+    ("reporte", &["ver", "exportar"]),
+    ("rol", &["ver", "editar"]),
+    ("salida", &["crear", "aprobar", "anular"]),
+    ("seccion", &["ver", "crear", "editar", "desactivar"]),
+    ("traslado", &["crear", "aprobar", "anular"]),
+    ("ubicacion", &["ver", "crear", "editar", "desactivar"]),
+    ("uom", &["ver", "crear", "editar", "desactivar"]),
+    ("usuario", &["ver", "crear", "editar"]),
+    ("zona", &["ver", "crear", "editar", "desactivar"]),
+];
+
+/// Todos los permisos que este usuario tiene, como `"recurso:accion"`.
+///
+/// Una sola llamada en vez de una por botón: la interfaz pregunta al entrar y
+/// se guarda la respuesta. **No sustituye a la comprobación real** — cada
+/// operación vuelve a pasar por `puede`, porque un cliente puede mentir sobre
+/// lo que se le dijo. Esto solo sirve para no ofrecer lo que se va a negar.
+pub fn permisos_de(conn: &Connection, usuario_id: &str) -> AppResult<Vec<String>> {
+    let mut concedidos = Vec::new();
+    for (recurso, acciones) in PERMISOS {
+        for accion in *acciones {
+            match puede(conn, Some(usuario_id), recurso, accion) {
+                Ok(()) => concedidos.push(format!("{recurso}:{accion}")),
+                Err(AppError::SinPermiso(_)) => {}
+                // Sesión inválida o usuario desactivado: no es «no puede esto»
+                // sino «no puede nada», y quien pregunta debe enterarse.
+                Err(e) => return Err(e),
+            }
+        }
+    }
+    Ok(concedidos)
+}
+
 /// Matriz de permisos por defecto (SPEC §4.4).
 /// fila = rol, columna = (recurso, accion). El ADMIN siempre puede todo.
 pub fn puede(

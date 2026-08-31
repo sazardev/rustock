@@ -15,6 +15,7 @@ import {
 } from "../shared/backend";
 import { mensajeError } from "../shared/format";
 import { usePreferencias } from "../shared/preferencias";
+import { usePuede } from "../shared/session";
 import { useTema } from "../shared/tema";
 import { useT, type Diccionario } from "../shared/i18n";
 import { PATH } from "../app/route-paths";
@@ -116,6 +117,8 @@ export function ConfiguracionPage() {
   const [detectando, setDetectando] = useState(false);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const docInputRef = useRef<HTMLInputElement | null>(null);
+
+  const puedeEditar = usePuede("configuracion", "editar");
 
   const { data: config, isLoading } = useQuery({
     queryKey: ["configuracion-empresa"],
@@ -323,7 +326,10 @@ export function ConfiguracionPage() {
   if (isLoading) {
     return <PageHeader title={t.configuracion.titulo} description={t.comun.cargando} />;
   }
-  if (!config && !isLoading) {
+  // Antes esta rama solo saltaba si la *consulta* fallaba, así que quien podía
+  // leer la configuración veía el formulario entero aunque no pudiera guardar
+  // nada. Ahora se pregunta por el permiso que hace falta de verdad.
+  if (!puedeEditar || (!config && !isLoading)) {
     return (
       <>
         <PageHeader title={t.configuracion.titulo} description={t.configuracion.intro} />

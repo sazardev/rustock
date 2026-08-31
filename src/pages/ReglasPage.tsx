@@ -3,6 +3,7 @@ import { listarReglas } from "../shared/backend";
 import type { Regla } from "../shared/types";
 import { mensajeError } from "../shared/format";
 import { PATH, reglaEditar } from "../app/route-paths";
+import { usePuede } from "../shared/session";
 import { useT, type Diccionario } from "../shared/i18n";
 import { useNavigate } from "react-router";
 import {
@@ -61,6 +62,7 @@ export function frase(regla: Regla, t: Diccionario): string {
  */
 export function ReglasPage() {
   const t = useT();
+  const puedeCrear = usePuede("regla", "crear");
   const navigate = useNavigate();
   const query = useQuery({ queryKey: ["reglas"], queryFn: listarReglas });
 
@@ -133,9 +135,11 @@ export function ReglasPage() {
             emptyTitle={t.reglas.sinReglas}
             emptyDescription={t.reglas.sinReglasDesc}
             emptyAction={
-              <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.reglaNueva}>
-                {t.reglas.escribirPrimera}
-              </ButtonLink>
+              puedeCrear ? (
+                <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.reglaNueva}>
+                  {t.reglas.escribirPrimera}
+                </ButtonLink>
+              ) : undefined
             }
           />
         </Card.Body>

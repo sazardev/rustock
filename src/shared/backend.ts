@@ -138,6 +138,12 @@ export function quienSoy(): Promise<Usuario | null> {
 }
 
 /** ¿Tiene el usuario de la sesión el permiso `recurso:accion`? (SPEC §4.3). */
+/**
+ * Todos los permisos del usuario, como `"recurso:accion"`. Una llamada en vez
+ * de una por botón; `usePuede` en `session.ts` es quien los consulta.
+ */
+export const misPermisos = (): Promise<string[]> => invoke("mis_permisos");
+
 export function puedo(recurso: string, accion: string): Promise<boolean> {
   return invoke("puedo", { recurso, accion });
 }

@@ -717,6 +717,30 @@ function cajaAdapter(t: Diccionario): CatalogAdapter<Caja> {
  * declaran aparte: el enrutador y las migas de pan los necesitan sin tener
  * que construir los trece adaptadores.
  */
+/**
+ * Recurso de permisos de cada catálogo (`security.rs::PERMISOS`).
+ *
+ * El slug va en plural porque es una URL; el recurso en singular porque es una
+ * entidad. Este mapa es el único sitio donde se cruzan, para que las páginas
+ * de catálogo puedan preguntar «¿puede crear esto?» sin repetir la traducción
+ * en cada una.
+ */
+export const RECURSO_DE_CATALOGO: Record<string, string> = {
+  almacenes: "almacen",
+  zonas: "zona",
+  pasillos: "pasillo",
+  racks: "rack",
+  secciones: "seccion",
+  ubicaciones: "ubicacion",
+  cajas: "caja",
+  productos: "producto",
+  lotes: "lote",
+  categorias: "categoria",
+  uoms: "uom",
+  proveedores: "proveedor",
+  clientes: "cliente",
+};
+
 export const SLUGS_CATALOGO = [
   "almacenes",
   "zonas",

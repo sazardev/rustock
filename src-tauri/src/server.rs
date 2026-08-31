@@ -117,10 +117,10 @@ pub struct Cors {
 /// el frontend lo sirve este mismo host. Abrirlo es una decisión explícita de
 /// quien despliega, no el valor por defecto.
 fn cabeceras_cors(config: &Config) -> Vec<Header> {
-    let origenes = &config.http.cors_origenes;
-    if origenes.is_empty() {
-        return Vec::new();
-    }
+    // Siempre se emiten: aunque no haya ningún origen configurado, los de la
+    // propia máquina se admiten (ver `Http::cors_origenes`), que es como
+    // funciona el modo navegador de Rustock.
+    let _ = config;
     // Con varios orígenes hay que responder el que pidió cada cliente, no la
     // lista entera: `Access-Control-Allow-Origin` admite un único valor. Eso
     // se resuelve por petición en `cors_para`; aquí van las constantes.
@@ -140,16 +140,19 @@ fn cabeceras_cors(config: &Config) -> Vec<Header> {
 /// Cabeceras CORS de *esta* petición: las constantes más el origen concreto,
 /// solo si está en la lista blanca.
 fn cors_para(config: &Config, base: &[Header], request: &tiny_http::Request) -> Vec<Header> {
-    if base.is_empty() {
-        return Vec::new();
-    }
     let origen = request
         .headers()
         .iter()
         .find(|h| h.field.equiv("Origin"))
         .map(|h| h.value.as_str().to_string());
+    // Un origen de la propia máquina se admite sin configurar nada: es el modo
+    // navegador de Rustock (frontend en un puerto, API en otro).
+    let autorizado = |o: &String| {
+        crate::config::es_origen_local(o)
+            || config.http.cors_origenes.iter().any(|p| p == "*" || p == o)
+    };
     let permitido = match &origen {
-        Some(o) if config.http.cors_origenes.iter().any(|p| p == "*" || p == o) => o.clone(),
+        Some(o) if autorizado(o) => o.clone(),
         // Un origen que no está en la lista no recibe permiso: la petición se
         // atiende igual, pero el navegador se negará a entregar la respuesta.
         _ => return Vec::new(),
@@ -1192,6 +1195,11 @@ fn despachar(
                 ok(repo::configuracion::obtener_configuracion_empresa(&conn)?)
             })
         }
+        "mis_permisos" => ok(crate::security::permisos_de(
+            &db.conn(),
+            &sesion.usuario_id()?,
+        )?),
+
         // Copias de seguridad: mismo permiso y misma lógica que en
         // `commands.rs` — esta capa nunca decide nada por su cuenta.
         "crear_copia_seguridad" => {

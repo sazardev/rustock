@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePuede } from "../shared/session";
 import { useT } from "../shared/i18n";
 import { useNavigate, useSearchParams } from "react-router";
 import { listarMovimientos, obtenerMovimiento } from "../shared/backend";
@@ -38,6 +39,7 @@ const PAGE_SIZE = 20;
 
 export function MovimientosPage() {
   const t = useT();
+  const puedeCrear = usePuede("movimiento", "crear");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -136,9 +138,11 @@ export function MovimientosPage() {
 
       <FilterBar
         action={
-          <ButtonLink variant="primary" icon="agregar" href={PATH.movimientosNuevo}>
-            {t.mov.nuevo}
-          </ButtonLink>
+          puedeCrear ? (
+            <ButtonLink variant="primary" icon="agregar" href={PATH.movimientosNuevo}>
+              {t.mov.nuevo}
+            </ButtonLink>
+          ) : undefined
         }
       >
         <FilterField>
@@ -194,9 +198,11 @@ export function MovimientosPage() {
           emptyTitle={t.mov.sinMovimientos}
           emptyDescription={t.mov.sinMovimientosDesc}
           emptyAction={
-            <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.movimientosNuevo}>
-              {t.mov.crearPrimero}
-            </ButtonLink>
+            puedeCrear ? (
+              <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.movimientosNuevo}>
+                {t.mov.crearPrimero}
+              </ButtonLink>
+            ) : undefined
           }
         />
         {listado && listado.meta.total > 0 ? (

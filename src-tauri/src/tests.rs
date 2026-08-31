@@ -8456,3 +8456,161 @@ fn un_fichero_de_configuracion_nombrado_y_ausente_no_pasa_desapercibido() {
         }
     }
 }
+
+// ============ Catálogo de permisos ============
+
+#[test]
+fn el_catalogo_de_permisos_cubre_todo_lo_que_el_codigo_comprueba() {
+    use std::collections::HashSet;
+
+    // Recorre el código fuente buscando cada `puede(..., "recurso", "accion")`
+    // y exige que el par esté declarado en `security::PERMISOS`. Sin esto, una
+    // comprobación nueva quedaría invisible para la interfaz, que seguiría
+    // ofreciendo un botón cuyo resultado es un «sin permiso».
+    let declarados: HashSet<String> = crate::security::PERMISOS
+        .iter()
+        .flat_map(|(recurso, acciones)| acciones.iter().map(move |a| format!("{recurso}:{a}")))
+        .collect();
+
+    let mut usados: HashSet<String> = HashSet::new();
+    let mut pendientes = vec![std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src")];
+    while let Some(dir) = pendientes.pop() {
+        for entrada in std::fs::read_dir(&dir)
+            .expect("lee el directorio")
+            .flatten()
+        {
+            let ruta = entrada.path();
+            if ruta.is_dir() {
+                pendientes.push(ruta);
+                continue;
+            }
+            if ruta.extension().is_none_or(|e| e != "rs")
+                || ruta.file_name().is_some_and(|n| n == "tests.rs")
+            {
+                continue;
+            }
+            let fuente = std::fs::read_to_string(&ruta).expect("lee el fichero");
+            recolectar_permisos(&fuente, &mut usados);
+        }
+    }
+
+    assert!(
+        !usados.is_empty(),
+        "el escaneo no encontró ninguna llamada a puede(): el test se ha quedado ciego"
+    );
+    let sin_declarar: Vec<_> = usados.difference(&declarados).collect();
+    assert!(
+        sin_declarar.is_empty(),
+        "estos permisos se comprueban en el código pero faltan en security::PERMISOS, \
+         así que la interfaz no puede saber de ellos: {sin_declarar:?}"
+    );
+}
+
+/// Extrae los pares `"recurso", "accion"` del final de cada `puede(...)`.
+fn recolectar_permisos(fuente: &str, destino: &mut std::collections::HashSet<String>) {
+    for (inicio, _) in fuente.match_indices("puede(") {
+        // La llamada acaba en el primer `)` que cierra su propio paréntesis.
+        let resto = &fuente[inicio + "puede(".len()..];
+        let mut profundidad = 0usize;
+        let mut fin = None;
+        for (i, c) in resto.char_indices() {
+            match c {
+                '(' => profundidad += 1,
+                ')' if profundidad == 0 => {
+                    fin = Some(i);
+                    break;
+                }
+                ')' => profundidad -= 1,
+                _ => {}
+            }
+        }
+        let Some(fin) = fin else { continue };
+        // Los dos últimos literales entre comillas son (recurso, accion).
+        let literales: Vec<&str> = resto[..fin]
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .filter(|l| !l.is_empty() && l.chars().all(|c| c.is_ascii_lowercase() || c == '_'))
+            .collect();
+        if literales.len() >= 2 {
+            let accion = literales[literales.len() - 1];
+            let recurso = literales[literales.len() - 2];
+            destino.insert(format!("{recurso}:{accion}"));
+        }
+    }
+}
+
+#[test]
+fn cada_rol_recibe_los_permisos_que_declara_la_matriz() {
+    let db = setup();
+    let conn = db.conn();
+    let admin_id = id_admin(&conn);
+
+    // El ADMIN puede todo lo que existe: es la definición del rol.
+    let del_admin = crate::security::permisos_de(&conn, &admin_id).expect("permisos");
+    let total: usize = crate::security::PERMISOS
+        .iter()
+        .map(|(_, acciones)| acciones.len())
+        .sum();
+    assert_eq!(del_admin.len(), total, "el ADMIN puede todo");
+
+    // Un LECTOR ve, pero no toca — y del escáner ni siquiera ve el registro.
+    let lector = repo::seguridad::crear_usuario(
+        &conn,
+        &NuevoUsuario {
+            nombre_usuario: "lector_permisos".into(),
+            nombre_completo: "Lector".into(),
+            email: None,
+            password: "pass12345".into(),
+            rol_id: id_rol(&conn, "LECTOR"),
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("lector");
+    let del_lector = crate::security::permisos_de(&conn, &lector.id).expect("permisos");
+    assert!(del_lector.contains(&"producto:ver".to_string()));
+    assert!(!del_lector.contains(&"producto:crear".to_string()));
+    assert!(!del_lector.contains(&"movimiento:crear".to_string()));
+    assert!(!del_lector.contains(&"escaneo:usar".to_string()));
+    assert!(!del_lector.contains(&"escaneo:ver".to_string()));
+    assert!(!del_lector.contains(&"usuario:crear".to_string()));
+
+    // Y lo que se le concede es exactamente lo que la matriz responde: el
+    // listado no puede inventarse permisos que `puede` negaría.
+    for permiso in &del_lector {
+        let (recurso, accion) = permiso.split_once(':').expect("par bien formado");
+        crate::security::puede(&conn, Some(&lector.id), recurso, accion).unwrap_or_else(|_| {
+            panic!("{permiso} se concedió en el listado pero puede() lo niega")
+        });
+    }
+}
+
+#[test]
+fn los_origenes_de_la_propia_maquina_se_admiten_sin_configurar() {
+    use crate::config::es_origen_local;
+
+    // El modo navegador de Rustock sirve el frontend en un puerto y el API en
+    // otro: sin esto habría que configurar CORS solo para usarlo en local, y
+    // la app no arrancaría "sin tocar nada" como promete.
+    for origen in [
+        "http://localhost:6821",
+        "http://127.0.0.1:1421",
+        "http://[::1]:8080",
+        "https://localhost:443",
+    ] {
+        assert!(es_origen_local(origen), "{origen} es local");
+    }
+
+    // Se compara el host completo: un dominio que *empieza* por localhost no
+    // cuela, ni un esquema que no es http(s).
+    for origen in [
+        "http://localhost.evil.com",
+        "http://127.0.0.1.evil.com:80",
+        "https://midominio.com",
+        "file://localhost",
+        "null",
+        "",
+    ] {
+        assert!(!es_origen_local(origen), "{origen} NO es local");
+    }
+}

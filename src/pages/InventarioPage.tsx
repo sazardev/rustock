@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePuede } from "../shared/session";
 import { useT } from "../shared/i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
@@ -26,6 +27,7 @@ const PAGE_SIZE = 20;
 
 export function InventarioPage() {
   const t = useT();
+  const puedeCrear = usePuede("inventario", "ejecutar");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -92,9 +94,11 @@ export function InventarioPage() {
 
       <FilterBar
         action={
-          <ButtonLink variant="primary" icon="agregar" href={PATH.inventarioNuevo}>
-            {t.inventarioPagina.nuevaSesion}
-          </ButtonLink>
+          puedeCrear ? (
+            <ButtonLink variant="primary" icon="agregar" href={PATH.inventarioNuevo}>
+              {t.inventarioPagina.nuevaSesion}
+            </ButtonLink>
+          ) : undefined
         }
       >
         <FilterField>
@@ -127,9 +131,11 @@ export function InventarioPage() {
           emptyTitle={t.inventarioPagina.sinSesiones}
           emptyDescription={t.inventarioPagina.sinSesionesDesc}
           emptyAction={
-            <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.inventarioNuevo}>
-              {t.inventarioNuevo.crear}
-            </ButtonLink>
+            puedeCrear ? (
+              <ButtonLink variant="primary" size="sm" icon="agregar" href={PATH.inventarioNuevo}>
+                {t.inventarioNuevo.crear}
+              </ButtonLink>
+            ) : undefined
           }
         />
         {listado && listado.meta.total > 0 ? (

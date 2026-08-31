@@ -3,7 +3,7 @@ import { Navigate, Outlet } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { listarAlertas, listarRoles } from "../shared/backend";
 import { usePreferencias } from "../shared/preferencias";
-import { useSession } from "../shared/session";
+import { puedeCon, useSession } from "../shared/session";
 import {
   AlertsIndicator,
   AppShell,
@@ -23,7 +23,7 @@ import {
 } from "../shared/ui";
 import { usePalette } from "../shared/palette/palette-store";
 import { CommandPalette } from "../shared/palette/CommandPalette";
-import { construirNav, DESIGN_HREF } from "./nav";
+import { construirNav, DESIGN_HREF, filtrarNav } from "./nav";
 import { PATH } from "./route-paths";
 import { SeoManager } from "../shared/seo";
 import { SmartBreadcrumbs } from "./SmartBreadcrumbs";
@@ -129,7 +129,11 @@ export function AppLayout() {
       return null;
     }
   }, [preferenciasResueltas?.orden_sidebar]);
-  const gruposNav = useMemo(() => construirNav(ordenSidebar, t), [ordenSidebar, t]);
+  const permisos = useSession((s) => s.permisos);
+  const gruposNav = useMemo(
+    () => filtrarNav(construirNav(ordenSidebar, t), permisos),
+    [ordenSidebar, t, permisos],
+  );
   // El modo compacto aplica en escritorio colapsado o en tablet (nunca en el
   // drawer móvil, que siempre se muestra expandido).
   const sidebarCompact = !isMobile && (sidebarCollapsed || isTablet);
@@ -147,11 +151,12 @@ export function AppLayout() {
     enabled: Boolean(usuario),
     staleTime: 5 * 60_000,
   });
+  // Solo para mostrar el nombre del rol junto al avatar. Lo que se puede hacer
+  // ya no se deduce de aquí.
   const rolCodigo = roles?.find((r) => r.id === usuario?.rol_id)?.codigo;
-  // Espejo en la UI del permiso `escaneo:usar` de `security.rs`. El backend
-  // sigue siendo la autoridad —- niega y registra el intento igual—, pero no
-  // se ofrece un botón a quien va a recibir un "sin permiso" al pulsarlo.
-  const puedeEscanear = rolCodigo !== undefined && rolCodigo !== "LECTOR";
+  // El permiso viene del backend, no se deduce del código de rol: si mañana
+  // la matriz cambia, la interfaz se entera sola.
+  const puedeEscanear = puedeCon(permisos, "escaneo", "usar");
 
   if (cargandoSesion) {
     return null;

@@ -8,6 +8,16 @@ export interface NavItem {
   icon: IconName;
   /** Breve descripción del módulo; se muestra en el tooltip del modo compacto. */
   descripcion?: string;
+  /**
+   * Permiso `"recurso:accion"` que hace falta para que este módulo aparezca.
+   * Sin él, la entrada se muestra siempre (dashboard, ayuda, manual: todo el
+   * mundo puede verlos).
+   *
+   * Esconder no protege nada —el backend sigue siendo el único que decide, y
+   * registra los intentos denegados—; sirve para que nadie navegue hasta una
+   * página que solo va a poder mirar sin poder usar.
+   */
+  permiso?: string;
 }
 
 export interface NavGroup {
@@ -53,6 +63,26 @@ export interface NavItemConGrupo {
   item: NavItem;
 }
 
+/**
+ * Quita de la navegación los módulos que este usuario no puede usar.
+ *
+ * `permisos` a `null` significa «todavía no se sabe», y entonces no se filtra
+ * nada: es preferible enseñar de más un instante a hacer parpadear el menú o
+ * a esconderle trabajo a alguien porque una petición falló.
+ */
+export function filtrarNav(grupos: NavGroup[], permisos: string[] | null): NavGroup[] {
+  if (permisos === null) return grupos;
+  return (
+    grupos
+      .map((grupo) => ({
+        ...grupo,
+        items: grupo.items.filter((item) => !item.permiso || permisos.includes(item.permiso)),
+      }))
+      // Un grupo entero sin módulos visibles no deja un encabezado huérfano.
+      .filter((grupo) => grupo.items.length > 0)
+  );
+}
+
 export function itemsDeNav(t: Diccionario): NavItemConGrupo[] {
   return navDe(t).flatMap((grupo) => grupo.items.map((item) => ({ grupo: grupo.title, item })));
 }
@@ -73,36 +103,42 @@ export function navDe(t: Diccionario): NavGroup[] {
           href: PATH.movimientos,
           icon: "movements",
           descripcion: t.nav.movimientosDesc,
+          permiso: "movimiento:ver",
         },
         {
           label: t.nav.escaner,
           href: PATH.escanear,
           icon: "codigoBarras",
           descripcion: t.nav.escanerDesc,
+          permiso: "escaneo:usar",
         },
         {
           label: t.nav.etiquetas,
           href: PATH.etiquetas,
           icon: "exportar",
           descripcion: t.nav.etiquetasDesc,
+          permiso: "producto:ver",
         },
         {
           label: t.nav.capturaRapida,
           href: "/movimientos/captura-recepcion",
           icon: "escanear",
           descripcion: t.nav.capturaRapidaDesc,
+          permiso: "movimiento:crear",
         },
         {
           label: t.nav.inventario,
           href: PATH.inventario,
           icon: "inventario",
           descripcion: t.nav.inventarioDesc,
+          permiso: "inventario:ver",
         },
         {
           label: t.nav.alertas,
           href: PATH.alertas,
           icon: "alerta",
           descripcion: t.nav.alertasDesc,
+          permiso: "alerta:ver",
         },
       ],
     },
@@ -197,12 +233,14 @@ export function navDe(t: Diccionario): NavGroup[] {
           href: PATH.reportes,
           icon: "reportes",
           descripcion: t.nav.reportesDesc,
+          permiso: "reporte:ver",
         },
         {
           label: t.nav.escaneos,
           href: PATH.escaneos,
           icon: "codigoBarras",
           descripcion: t.nav.escaneosDesc,
+          permiso: "escaneo:ver",
         },
         {
           label: t.nav.historial,
@@ -220,6 +258,7 @@ export function navDe(t: Diccionario): NavGroup[] {
           href: PATH.usuarios,
           icon: "rol",
           descripcion: t.nav.usuariosDesc,
+          permiso: "usuario:ver",
         },
         {
           label: t.nav.sucursales,
@@ -232,12 +271,17 @@ export function navDe(t: Diccionario): NavGroup[] {
           href: PATH.reglas,
           icon: "ajuste",
           descripcion: t.nav.reglasDesc,
+          permiso: "regla:ver",
         },
         {
           label: t.nav.configuracion,
           href: PATH.configuracion,
           icon: "configuracion",
           descripcion: t.nav.configuracionDesc,
+          // `editar`, no `ver`: esta página *es* el editor. Quien solo puede
+          // mirar la configuración no tiene nada que hacer aquí, y ofrecerle
+          // el enlace solo lo lleva a un panel de "no tienes permiso".
+          permiso: "configuracion:editar",
         },
       ],
     },

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router";
-import type { CatalogAdapter } from "./catalog-adapters";
+import { RECURSO_DE_CATALOGO, type CatalogAdapter } from "./catalog-adapters";
 import {
   esPaginado,
   type Pasillo,
@@ -12,6 +12,7 @@ import {
 } from "../shared/types";
 import { crearComentario, listarComentarios } from "../shared/backend";
 import { mensajeError } from "../shared/format";
+import { usePuede } from "../shared/session";
 import { useT } from "../shared/i18n";
 import {
   TIPO_ETIQUETA_POR_SLUG,
@@ -75,6 +76,9 @@ export function CatalogListPage<T extends { id: string }>({
   const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // Un catálogo sin recurso declarado no se esconde a nadie: es mejor mostrar
+  // de más —el backend rechazará igual— que ocultar por un mapa incompleto.
+  const puedeCrear = usePuede(RECURSO_DE_CATALOGO[slug] ?? "", "crear");
 
   // Filtros en la URL (DESIGN §6.10): deep-link, recarga segura y
   // compartible — igual que MovimientosPage. `page`/`q` son la única fuente
@@ -132,7 +136,7 @@ export function CatalogListPage<T extends { id: string }>({
 
       <FilterBar
         action={
-          adapter.crearHref ? (
+          adapter.crearHref && puedeCrear ? (
             <ButtonLink variant="primary" icon="agregar" href={adapter.crearHref}>
               {esFemenino(adapter)
                 ? t.listado.nueva({ entidad: adapter.singular.toLowerCase() })
@@ -170,12 +174,12 @@ export function CatalogListPage<T extends { id: string }>({
           prefetch={prefetchDetalle}
           emptyTitle={t.listado.sinRegistros({ entidad: adapter.singular.toLowerCase() })}
           emptyDescription={
-            adapter.crearHref
+            adapter.crearHref && puedeCrear
               ? `Cree ${articuloPrimero(adapter)} ${adapter.singular.toLowerCase()} para comenzar a operar.`
               : undefined
           }
           emptyAction={
-            adapter.crearHref ? (
+            adapter.crearHref && puedeCrear ? (
               <ButtonLink variant="primary" size="sm" icon="agregar" href={adapter.crearHref}>
                 Crear {adapter.singular.toLowerCase()}
               </ButtonLink>
@@ -208,6 +212,9 @@ export function CatalogDetailPage<T extends { id: string }>({
   id: string;
 }) {
   const t = useT();
+  const recurso = RECURSO_DE_CATALOGO[slug] ?? "";
+  const puedeEditar = usePuede(recurso, "editar");
+  const puedeDesactivar = usePuede(recurso, "desactivar");
   const query = useQuery({
     queryKey: ["catalogo-detalle", slug, id],
     queryFn: () => adapter.obtener(id),
@@ -253,12 +260,12 @@ export function CatalogDetailPage<T extends { id: string }>({
                 {t.comun.duplicarAccion}
               </ButtonLink>
             ) : null}
-            {adapter.editarHref ? (
+            {adapter.editarHref && puedeEditar ? (
               <ButtonLink variant="secondary" icon="editar" href={adapter.editarHref(id)}>
                 {t.comun.editar}
               </ButtonLink>
             ) : null}
-            {adapter.eliminarHref ? (
+            {adapter.eliminarHref && puedeDesactivar ? (
               <ButtonLink variant="ghost" icon="eliminar" href={adapter.eliminarHref(id)}>
                 {t.comun.eliminar}
               </ButtonLink>
