@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePuede } from "../shared/session";
 import { useT } from "../shared/i18n";
 import { useParams } from "react-router";
 import {
@@ -33,6 +34,7 @@ import {
 
 export function SesionInventarioDetallePage() {
   const t = useT();
+  const puedeCerrar = usePuede("inventario", "cerrar");
   const { id } = useParams<{ id: string }>();
   const sesionId = id as string;
   const queryClient = useQueryClient();
@@ -173,9 +175,11 @@ export function SesionInventarioDetallePage() {
               >
                 {t.sesionInventario.registrarConteos}
               </ButtonLink>
-              <ButtonLink variant="primary" icon="cerrar" href={sesionInventarioCerrar(sesionId)}>
-                {t.sesionInventario.cerrar}
-              </ButtonLink>
+              {puedeCerrar ? (
+                <ButtonLink variant="primary" icon="cerrar" href={sesionInventarioCerrar(sesionId)}>
+                  {t.sesionInventario.cerrar}
+                </ButtonLink>
+              ) : null}
             </div>
           ) : sesion.estado === "PLANEADA" ? (
             <Button

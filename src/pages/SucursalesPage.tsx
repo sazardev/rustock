@@ -4,6 +4,7 @@ import { listarSucursales } from "../shared/backend";
 import type { Sucursal } from "../shared/types";
 import { mensajeError } from "../shared/format";
 import { PATH } from "../app/route-paths";
+import { usePuede } from "../shared/session";
 import { useT } from "../shared/i18n";
 import {
   Badge,
@@ -18,6 +19,7 @@ import {
 
 export function SucursalesPage() {
   const t = useT();
+  const puedeGestionar = usePuede("configuracion", "editar");
   const navigate = useNavigate();
   const query = useQuery({
     queryKey: ["sucursales"],
@@ -59,9 +61,11 @@ export function SucursalesPage() {
 
       <FilterBar
         action={
-          <ButtonLink variant="primary" icon="agregar" href={`${PATH.sucursales}/nuevo`}>
-            {t.comun.nuevaSucursal}
-          </ButtonLink>
+          puedeGestionar ? (
+            <ButtonLink variant="primary" icon="agregar" href={`${PATH.sucursales}/nuevo`}>
+              {t.comun.nuevaSucursal}
+            </ButtonLink>
+          ) : undefined
         }
       />
 

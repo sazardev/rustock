@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { listarHistorial, listarRoles, obtenerUsuario } from "../shared/backend";
-import { useSession } from "../shared/session";
+import { usePuede, useSession } from "../shared/session";
 import { esPaginado, type Rol } from "../shared/types";
 import { formatearFecha, mensajeError } from "../shared/format";
 import { catalogoLista, PATH } from "../app/route-paths";
@@ -42,8 +42,9 @@ export function UsuarioDetallePage() {
   });
 
   const usuario = query.data ?? null;
-  const rolCodigo = rolDe(usuarioActual?.rol_id ?? "")?.codigo;
-  const esAdmin = rolCodigo === "ADMIN";
+  // El permiso que el backend exige de verdad, no una deducción del rol: si
+  // mañana la matriz cambia, esta página se entera sola.
+  const esAdmin = usePuede("usuario", "editar");
   const esMiCuenta = usuarioActual?.id === id;
 
   if (query.isLoading) {

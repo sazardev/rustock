@@ -36,10 +36,12 @@ import {
   formatearNumero,
   mensajeError,
 } from "../shared/format";
-import { useSession } from "../shared/session";
+import { useSession, usePuede } from "../shared/session";
 
 export function MovimientoDetallePage() {
   const t = useT();
+  const puedeAprobar = usePuede("movimiento", "aprobar");
+  const puedeAnular = usePuede("movimiento", "anular");
   const { id } = useParams<{ id: string }>();
   const movimientoId = id as string;
   const queryClient = useQueryClient();
@@ -200,12 +202,13 @@ export function MovimientoDetallePage() {
                 {t.movimientoDetalle.enviarAAprobacion}
               </Button>
             ) : null}
-            {movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION" ? (
+            {puedeAprobar &&
+            (movimiento.estado === "BORRADOR" || movimiento.estado === "PENDIENTE_APROBACION") ? (
               <ButtonLink variant="primary" icon="aprobar" href={movimientoAprobar(movimientoId)}>
                 {t.movimientoDetalle.aprobar}
               </ButtonLink>
             ) : null}
-            {movimiento.estado === "APROBADO" ? (
+            {puedeAnular && movimiento.estado === "APROBADO" ? (
               <ButtonLink variant="danger" icon="anular" href={movimientoAnular(movimientoId)}>
                 {t.movimientoDetalle.anular}
               </ButtonLink>
