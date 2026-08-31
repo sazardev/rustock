@@ -111,7 +111,8 @@ faltan los últimos movimientos — la peor clase de fallo, la silenciosa. Las
 copias integradas usan la API de backup de SQLite, que es coherente y no
 obliga a detener la operación.
 
-Para programarlas, restaurarlas y comprobarlas, ver
+También pueden hacerse solas (`backup.cada_horas`) y replicarse a otro disco
+(`backup.replica`). Para programarlas, restaurarlas y comprobarlas, ver
 **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---

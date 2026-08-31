@@ -35,6 +35,8 @@
 
 > **Una instalación. Un archivo. Control total.** Una aplicación compilada en Rust que corre completa en tu infraestructura. Sin Docker, sin nube, sin sorpresas en la factura.
 
+**Listo para producción:** HTTPS con certificado propio, multiusuario en red, sesiones que caducan, permisos por rol aplicados en el servidor y reflejados en la interfaz, copias de seguridad automáticas con réplica a otro disco. Todo configurable por fichero TOML o variables de entorno — ver [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ### Lo que resuelve
 
 - **Descontrol de stock** → saldos por (ubicación, producto, lote) con mínimos, máximos y alertas automáticas.

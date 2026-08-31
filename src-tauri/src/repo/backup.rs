@@ -45,6 +45,25 @@ const PREFIJO: &str = "rustock-";
 /// por fecha y no hace falta consultar el sistema de ficheros para saber cuál
 /// es la más reciente.
 pub fn crear(conn: &Connection, directorio: &Path, retener: usize) -> AppResult<Copia> {
+    crear_con_replica(conn, directorio, retener, None)
+}
+
+/// Como `crear`, y además deja una segunda copia en `replica`.
+///
+/// Una copia en el mismo disco que la base no protege del fallo más común, que
+/// es que ese disco muera. La réplica se escribe copiando el fichero ya
+/// terminado —no volcando la base dos veces— para que las dos copias sean
+/// byte a byte la misma, y no dos instantes distintos de una base viva.
+///
+/// Si la réplica falla, la copia principal **sigue siendo válida**: se avisa y
+/// se devuelve igual. Perder la segunda copia es un problema; tirar también la
+/// primera por eso sería peor.
+pub fn crear_con_replica(
+    conn: &Connection,
+    directorio: &Path,
+    retener: usize,
+    replica: Option<&Path>,
+) -> AppResult<Copia> {
     fs::create_dir_all(directorio)
         .map_err(|e| AppError::Backup(format!("no se pudo crear {}: {e}", directorio.display())))?;
 
@@ -53,6 +72,12 @@ pub fn crear(conn: &Connection, directorio: &Path, retener: usize) -> AppResult<
     let destino = directorio.join(&nombre);
 
     respaldar(conn, &destino)?;
+
+    if let Some(replica) = replica
+        && let Err(e) = replicar(&destino, &nombre, replica, retener)
+    {
+        eprintln!("[backup] la copia se hizo pero la réplica falló: {e}");
+    }
 
     if retener > 0 {
         podar(directorio, retener)?;
@@ -74,6 +99,19 @@ fn respaldar(conn: &Connection, destino: &Path) -> AppResult<()> {
     backup
         .run_to_completion(PAGINAS_POR_PASO, std::time::Duration::from_millis(50), None)
         .map_err(|e| AppError::Backup(format!("la copia no se completó: {e}")))?;
+    Ok(())
+}
+
+/// Copia el fichero ya terminado a la carpeta de réplica y poda allí también.
+fn replicar(origen: &Path, nombre: &str, replica: &Path, retener: usize) -> AppResult<()> {
+    fs::create_dir_all(replica)
+        .map_err(|e| AppError::Backup(format!("no se pudo crear {}: {e}", replica.display())))?;
+    fs::copy(origen, replica.join(nombre)).map_err(|e| {
+        AppError::Backup(format!("no se pudo replicar en {}: {e}", replica.display()))
+    })?;
+    if retener > 0 {
+        podar(replica, retener)?;
+    }
     Ok(())
 }
 
@@ -220,4 +258,41 @@ pub fn ruta_de(directorio: &Path, nombre: &str) -> AppResult<PathBuf> {
         )));
     }
     Ok(directorio.join(nombre))
+}
+
+/// Arranca el planificador de copias automáticas, si está configurado.
+///
+/// Un hilo que duerme y copia. No es un cron completo a propósito: «cada N
+/// horas» es lo que una instalación self-hosted necesita, y un planificador
+/// con sintaxis propia sería una cosa más que aprender, que configurar mal y
+/// que mantener. Quien necesite un horario exacto tiene el cron del sistema y
+/// el comando por API, que es la misma operación.
+///
+/// La primera copia se hace al arrancar: si el equipo se apaga cada noche, un
+/// intervalo de 24 horas sin copia inicial no llegaría a dispararse nunca.
+pub fn planificar(db: std::sync::Arc<crate::db::DbState>, config: &crate::config::Config) {
+    let cada = config.backup.cada_horas;
+    if cada == 0 {
+        return;
+    }
+    let directorio = config.directorio_backup();
+    let replica = config.backup.replica.clone();
+    let retener = config.backup.retener;
+    let intervalo = std::time::Duration::from_secs(cada * 3600);
+
+    std::thread::spawn(move || {
+        println!(
+            "[backup] copias automáticas cada {cada} h en {}",
+            directorio.display()
+        );
+        loop {
+            match crear_con_replica(&db.conn(), &directorio, retener, replica.as_deref()) {
+                Ok(copia) => println!("[backup] {} ({} bytes)", copia.nombre, copia.bytes),
+                // Un fallo no mata el planificador: el disco puede estar lleno
+                // hoy y libre mañana, y la copia de mañana sigue importando.
+                Err(e) => eprintln!("[backup] AVISO: la copia automática falló: {e}"),
+            }
+            std::thread::sleep(intervalo);
+        }
+    });
 }

@@ -66,6 +66,7 @@ pub fn run() {
             // Servidor HTTP: expone la misma lógica de negocio para poder
             // usar Rustock desde un navegador normal, sin el puente IPC de la
             // ventana de escritorio (ver src/server.rs).
+            repo::backup::planificar(db.clone(), &config);
             server::iniciar_con(db.clone(), config);
 
             app.manage(db);
@@ -124,6 +125,7 @@ pub fn run_web() {
         db_path.display(),
         config.datos.pool
     );
+    repo::backup::planificar(db.clone(), &config);
     server::iniciar_con(db, config);
     loop {
         std::thread::park();

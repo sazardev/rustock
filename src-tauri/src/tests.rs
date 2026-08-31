@@ -8614,3 +8614,96 @@ fn los_origenes_de_la_propia_maquina_se_admiten_sin_configurar() {
         assert!(!es_origen_local(origen), "{origen} NO es local");
     }
 }
+
+#[test]
+fn la_replica_deja_la_copia_en_dos_sitios_y_poda_los_dos() {
+    let (db, dir) = setup_en_disco();
+    let copias = dir.join("copias");
+    let replica = dir.join("otro-disco");
+    let conn = db.conn();
+
+    let copia =
+        crate::repo::backup::crear_con_replica(&conn, &copias, 2, Some(&replica)).expect("crear");
+
+    // La réplica es el mismo fichero, no otro volcado: dos volcados de una
+    // base viva serían dos instantes distintos.
+    let original = std::fs::read(&copia.ruta).expect("lee original");
+    let replicada = std::fs::read(replica.join(&copia.nombre)).expect("lee réplica");
+    assert_eq!(
+        original, replicada,
+        "la réplica es byte a byte la misma copia"
+    );
+    crate::repo::backup::verificar(&replica.join(&copia.nombre)).expect("la réplica es válida");
+
+    // La poda se aplica en los dos sitios, o la réplica crecería sin fin.
+    for _ in 0..2 {
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        crate::repo::backup::crear_con_replica(&conn, &copias, 2, Some(&replica)).expect("crear");
+    }
+    assert_eq!(
+        crate::repo::backup::listar(&copias).expect("listar").len(),
+        2
+    );
+    assert_eq!(
+        crate::repo::backup::listar(&replica).expect("listar").len(),
+        2
+    );
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn una_replica_que_falla_no_invalida_la_copia_principal() {
+    let (db, dir) = setup_en_disco();
+    let copias = dir.join("copias");
+    let conn = db.conn();
+
+    // Un fichero donde debería ir la carpeta: crear el directorio fallará.
+    let replica = dir.join("replica-imposible");
+    std::fs::write(&replica, b"no soy una carpeta").expect("escribe");
+
+    // Perder la segunda copia es un problema; tirar también la primera por eso
+    // sería peor. La copia principal tiene que quedar hecha y ser válida.
+    let copia = crate::repo::backup::crear_con_replica(&conn, &copias, 0, Some(&replica))
+        .expect("la copia principal se hace igual");
+    crate::repo::backup::verificar(std::path::Path::new(&copia.ruta)).expect("y es válida");
+
+    drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn una_replica_en_el_mismo_disco_que_las_copias_avisa() {
+    use crate::config::{Backup, Config};
+
+    // Replicar dentro del propio directorio de copias no protege de nada: si
+    // ese disco muere se pierden las dos, que es justo el fallo del que la
+    // réplica debería salvar.
+    let config = Config {
+        datos: crate::config::Datos {
+            ruta: Some("/var/lib/rustock/rustock.db".into()),
+            ..Default::default()
+        },
+        backup: Backup {
+            replica: Some("/var/lib/rustock/copias/replica".into()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let avisos = config.advertencias();
+    assert!(
+        avisos.iter().any(|a| a.contains("réplica")),
+        "debería avisar: {avisos:?}"
+    );
+
+    // En otro disco, ningún aviso.
+    let bueno = Config {
+        backup: Backup {
+            replica: Some("/mnt/nas/rustock".into()),
+            ..Default::default()
+        },
+        ..config.clone()
+    };
+    assert!(!bueno.advertencias().iter().any(|a| a.contains("réplica")));
+}

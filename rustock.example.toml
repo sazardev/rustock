@@ -75,3 +75,17 @@ ttl_minutos = 480
 # Cuántas copias conservar al crear una nueva. 0 = no borrar ninguna.
 # RUSTOCK_BACKUP_RETENER
 retener = 7
+
+# Copiar automáticamente cada N horas. 0 = desactivado (las copias se piden a
+# mano o desde cron). La primera se hace al arrancar: con un intervalo de 24 h
+# y un equipo que se apaga cada noche, si no fuera así no se dispararía nunca.
+# RUSTOCK_BACKUP_CADA_HORAS
+cada_horas = 0
+
+# Segunda carpeta donde replicar cada copia: otro disco, o un recurso de red
+# montado. Una copia en el mismo disco que la base no protege del fallo más
+# común, que es que ese disco muera.
+# Esto NO es alta disponibilidad: no hay réplica en caliente ni relevo
+# automático. Es que la copia sobreviva al equipo.
+# RUSTOCK_BACKUP_REPLICA
+# replica = "/mnt/nas/rustock"

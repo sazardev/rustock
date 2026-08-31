@@ -1,0 +1,112 @@
+# Publica los binarios de una versión.
+#
+# Se dispara con el tag que crea `npm run release:*`. Cada sistema compila lo
+# suyo —no hay compilación cruzada de Tauri que valga la pena mantener— y todo
+# acaba en la misma release de GitHub.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  # Permite reintentar una publicación fallida sin crear otro tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a publicar (ej. v0.6.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.nombre }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Que falle macOS no debe impedir publicar Linux y Windows.
+      fail-fast: false
+      matrix:
+        include:
+          - nombre: Linux (deb, rpm)
+            os: ubuntu-latest
+            bundles: deb,rpm
+          - nombre: Windows (msi, exe)
+            os: windows-latest
+            bundles: msi,nsis
+          - nombre: macOS Apple Silicon (dmg)
+            os: macos-latest
+            bundles: dmg
+            target: aarch64-apple-darwin
+          - nombre: macOS Intel (dmg)
+            os: macos-13
+            bundles: dmg
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Dependencias de sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - run: npm ci
+
+      - name: Compilar
+        run: npx tauri build --bundles ${{ matrix.bundles }} ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+
+      # Se suben los instaladores, nunca el binario suelto ni los intermedios.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustock-${{ matrix.os }}${{ matrix.target && format('-{0}', matrix.target) || '' }}
+          path: |
+            src-tauri/target/**/release/bundle/**/*.deb
+            src-tauri/target/**/release/bundle/**/*.rpm
+            src-tauri/target/**/release/bundle/**/*.msi
+            src-tauri/target/**/release/bundle/**/*.exe
+            src-tauri/target/**/release/bundle/**/*.dmg
+          if-no-files-found: error
+
+  publicar:
+    name: Publicar en GitHub Releases
+    needs: build
+    # Se publica aunque alguna plataforma haya fallado: es mejor tener tres
+    # instaladores hoy que cuatro la semana que viene.
+    if: always() && contains(needs.build.result, 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+      - name: Crear la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          # El cuerpo sale del CHANGELOG, que ya está escrito y revisado: no
+          # tiene sentido redactar dos veces las mismas notas.
+          awk -v tag="${TAG#v}" '
+            $0 ~ "^## \\[" tag "\\]" { dentro = 1; next }
+            dentro && /^## \[/ { exit }
+            dentro { print }
+          ' CHANGELOG.md > notas.md
+          [ -s notas.md ] || echo "Ver CHANGELOG.md" > notas.md
+          gh release create "$TAG" --title "Rustock ${TAG#v}" --notes-file notas.md \
+            $(find artefactos -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.msi' \
+              -o -name '*.exe' -o -name '*.dmg' \) -print)

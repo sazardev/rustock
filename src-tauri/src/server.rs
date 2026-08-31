@@ -1212,10 +1212,11 @@ fn despachar(
                     "editar",
                 )?;
                 let config = Config::cargar()?;
-                ok(repo::backup::crear(
+                ok(repo::backup::crear_con_replica(
                     &conn,
                     &config.directorio_backup(),
                     config.backup.retener,
+                    config.backup.replica.as_deref(),
                 )?)
             })
         }

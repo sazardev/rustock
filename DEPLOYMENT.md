@@ -69,6 +69,8 @@ funcionar con un ajuste que nunca se aplicó.
 | `sesion.ttl_minutos` | `RUSTOCK_SESION_TTL_MINUTOS` | `480` |
 | `backup.directorio` | `RUSTOCK_BACKUP_DIR` | `copias/` junto a la base |
 | `backup.retener` | `RUSTOCK_BACKUP_RETENER` | `7` |
+| `backup.cada_horas` | `RUSTOCK_BACKUP_CADA_HORAS` | `0` (desactivado) |
+| `backup.replica` | `RUSTOCK_BACKUP_REPLICA` | — |
 
 ---
 
@@ -145,15 +147,45 @@ la peor forma de fallo, la silenciosa.
 
 ### Programarlas
 
-Rustock no trae planificador: usa el del sistema, que ya sabes operar.
+Rustock las hace solo:
+
+```toml
+[backup]
+cada_horas = 12
+retener = 7
+replica = "/mnt/nas/rustock"
+```
+
+La primera copia se hace al arrancar —con un intervalo de 24 h y un equipo que
+se apaga cada noche, si no fuera así no se dispararía nunca— y luego cada
+`cada_horas`. Con `retener = 7` se conservan las siete últimas y las viejas se
+van solas, tanto en el directorio principal como en la réplica.
+
+No es un cron completo a propósito: «cada N horas» es lo que una instalación
+self-hosted necesita, y una sintaxis propia sería una cosa más que aprender,
+que configurar mal y que mantener. Si necesitas un horario exacto, ahí está el
+cron del sistema llamando a la misma operación:
 
 ```cron
 0 2 * * * curl -sf -X POST http://127.0.0.1:1421/api/crear_copia_seguridad \
   -H "x-rustock-sesion: $RUSTOCK_TOKEN" || logger -t rustock "copia fallida"
 ```
 
-Con `backup.retener = 7` se conservan las siete últimas y las viejas se van
-solas.
+### Réplica en otro disco
+
+`backup.replica` deja una segunda copia en otra carpeta según se crea cada una:
+otro disco, o un recurso de red montado. Una copia en el mismo disco que la
+base no protege del fallo más común, que es que ese disco muera; Rustock avisa
+al arrancar si la réplica apunta dentro del propio directorio de copias.
+
+La réplica se escribe copiando el fichero ya terminado, no volcando la base dos
+veces, para que las dos copias sean byte a byte la misma y no dos instantes
+distintos de una base viva. Si la réplica falla, la copia principal sigue
+siendo válida: se avisa por `stderr` y la operación no se pierde.
+
+**Esto no es alta disponibilidad.** No hay réplica en caliente, ni relevo
+automático, ni segunda instancia atendiendo. Es recuperación ante desastre: que
+la copia sobreviva al equipo.
 
 ### Restaurar
 
@@ -248,11 +280,9 @@ Dicho aquí para que nadie lo descubra en producción:
   válido el día que exista, pero pedirlo falla al arrancar con un mensaje
   claro. La capa de datos son 439 sentencias SQL contra `rusqlite`; portarla es
   un proyecto en sí mismo, no un cambio de driver.
-- **Sin replicación ni alta disponibilidad.** Una instancia, un fichero. Tu
-  plan de continuidad son las copias del punto 5.
-- **Sin planificador de copias integrado** (usa cron, punto 5).
-- **Empaquetado solo `deb` y `rpm`.** Sin Windows ni macOS.
-- **La interfaz no oculta lo que tu rol no puede hacer.** El backend rechaza
-  con `SIN_PERMISO` y lo registra en auditoría —la seguridad es real—, pero un
-  operador ve botones que al pulsarlos le dirán que no. Es una carencia de
-  usabilidad, no de seguridad.
+- **Sin alta disponibilidad.** Una instancia atendiendo, un fichero. Hay
+  réplica de las copias (punto 5), que es recuperación ante desastre, no
+  continuidad: si el equipo cae, Rustock deja de estar disponible hasta que lo
+  levantes.
+- **El planificador es «cada N horas»**, no un cron completo. Para un horario
+  exacto, el cron del sistema (punto 5).

@@ -1621,7 +1621,12 @@ pub fn crear_copia_seguridad(
             "editar",
         )?;
         let config = crate::config::Config::cargar()?;
-        repo::backup::crear(&conn, &config.directorio_backup(), config.backup.retener)
+        repo::backup::crear_con_replica(
+            &conn,
+            &config.directorio_backup(),
+            config.backup.retener,
+            config.backup.replica.as_deref(),
+        )
     })
 }
 

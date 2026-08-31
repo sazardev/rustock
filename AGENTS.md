@@ -57,7 +57,11 @@ Env for backend: `RUSTOCK_SEED=1` (seed, debug only), `RUSTOCK_WEB_ONLY=1`, `RUS
 
 ### Deployment surface
 
-`src-tauri/src/config.rs` is the single source of deployment config: TOML file (`RUSTOCK_CONFIG`, else `rustock.toml` beside the DB) overridden by `RUSTOCK_*` env vars, `deny_unknown_fields` so a typo fails startup instead of being ignored. Defaults are the safe ones — loopback bind, empty CORS allowlist, sessions expiring — so exposing Rustock is always a deliberate act. `DbState` is a connection pool (`datos.pool`, default 8); `conn()` returns a guard that derefs to `Connection`, so the 491 call sites never learned about it. Backups go through the SQLite backup API (`repo/backup.rs`) — never `cp` the `.db`, WAL means it is incomplete on its own. User-facing guide: `DEPLOYMENT.md`; annotated sample: `rustock.example.toml`.
+`src-tauri/src/config.rs` is the single source of deployment config: TOML file (`RUSTOCK_CONFIG`, else `rustock.toml` beside the DB) overridden by `RUSTOCK_*` env vars, `deny_unknown_fields` so a typo fails startup instead of being ignored. Defaults are the safe ones — loopback bind, empty CORS allowlist, sessions expiring — so exposing Rustock is always a deliberate act. `DbState` is a connection pool (`datos.pool`, default 8); `conn()` returns a guard that derefs to `Connection`, so the 491 call sites never learned about it. Backups go through the SQLite backup API (`repo/backup.rs`) — never `cp` the `.db`, WAL means it is incomplete on its own. Backups can run on a schedule (`backup.cada_horas`, first one at startup) and replicate to a second directory — DR, not HA. User-facing guide: `DEPLOYMENT.md`; annotated sample: `rustock.example.toml`.
+
+### Permissions in the UI
+
+`security::PERMISOS` is the canonical catalogue of `(recurso, accion)` pairs; `mis_permisos` resolves the caller's set in one round trip and `session.ts` caches it (`usePuede`). A test scans every `puede(...)` call site in the source and fails if the pair is not declared, so a new check cannot go unnoticed by the UI. Gating is courtesy only — the backend re-checks every operation and audits denials — so unknown permissions or an unknown resource show MORE, never less. `.github/workflows/release.yml` builds installers per OS on a `v*` tag.
 
 ### CI (GitHub Actions)
 

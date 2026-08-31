@@ -133,6 +133,18 @@ pub struct Backup {
     pub directorio: Option<PathBuf>,
     /// Cuántas copias conservar al crear una nueva. `0` no borra ninguna.
     pub retener: usize,
+    /// Cada cuántas horas copiar automáticamente. `0` desactiva el
+    /// planificador y deja las copias en manos de quien las pida (a mano o
+    /// desde cron).
+    pub cada_horas: u64,
+    /// Segunda carpeta donde replicar cada copia según se crea.
+    ///
+    /// Pensada para un disco distinto o un recurso de red montado: una copia
+    /// que vive en el mismo disco que la base no protege del fallo más común,
+    /// que es que ese disco muera. No es alta disponibilidad —Rustock no tiene
+    /// réplica en caliente ni relevo automático—, es que la copia sobreviva al
+    /// equipo.
+    pub replica: Option<PathBuf>,
 }
 
 impl Default for Datos {
@@ -171,6 +183,8 @@ impl Default for Backup {
         Self {
             directorio: None,
             retener: BACKUP_RETENER_POR_DEFECTO,
+            cada_horas: 0,
+            replica: None,
         }
     }
 }
@@ -275,6 +289,12 @@ impl Config {
         if let Some(v) = var("RUSTOCK_BACKUP_RETENER") {
             self.backup.retener = numero(&v, "RUSTOCK_BACKUP_RETENER")?;
         }
+        if let Some(v) = var("RUSTOCK_BACKUP_CADA_HORAS") {
+            self.backup.cada_horas = numero(&v, "RUSTOCK_BACKUP_CADA_HORAS")?;
+        }
+        if let Some(v) = var("RUSTOCK_BACKUP_REPLICA") {
+            self.backup.replica = Some(PathBuf::from(v));
+        }
         Ok(())
     }
 
@@ -378,6 +398,15 @@ impl Config {
                  navegador de quien tenga sesión. Enumera los orígenes que necesites."
                     .into(),
             );
+        }
+        if let Some(replica) = &self.backup.replica
+            && replica.starts_with(self.directorio_backup())
+        {
+            avisos.push(format!(
+                "la réplica ({}) está dentro del directorio de copias: si ese disco falla se \
+                 pierden las dos. Apunta a otro disco o a un recurso de red.",
+                replica.display()
+            ));
         }
         if self.sesion.ttl_minutos == 0 {
             avisos.push(
