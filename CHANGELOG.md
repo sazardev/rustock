@@ -4,6 +4,29 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [0.7.1] - 2026-08-31
+
+### Bug Fixes
+
+- **permisos:** Faltaban por gatear aprobar, anular, cerrar inventario y sucursales
+
+- **landing:** La portada se veía mitad en inglés y mitad en castellano
+
+
+### CI
+
+- **release:** Saca macOS Intel de la matriz, que bloqueaba la publicación
+
+
+### Documentación
+
+- **roadmap:** Pon al día lo hecho y quita una promesa que el código no cumple
+
+
+### Performance
+
+- **server:** Un solo hilo atendía en serie y una copia congelaba a todos
+
 ## [0.7.0] - 2026-08-31
 
 ### Documentación
