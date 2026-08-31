@@ -1,15 +1,14 @@
 /**
  * Idioma de la interfaz (SPEC §17).
  *
- * Rustock habla castellano e inglés. La elección se guarda en dos sitios y por
- * razones distintas:
+ * Rustock habla castellano e inglés. La elección se guarda **en el equipo**
+ * (`localStorage`), y eso tiene dos consecuencias que conviene saber:
  *
- * - **En el equipo** (`localStorage`), para poder pintar el primer frame en el
- *   idioma correcto: la preferencia del usuario vive en el backend y llega por
- *   red, así que sin copia local la pantalla de acceso saldría siempre en
- *   castellano y cambiaría de golpe al iniciar sesión.
- * - **En el perfil** (backend), para que la persona encuentre su idioma en
- *   cualquier equipo del almacén.
+ * - La pantalla de acceso ya sale en el idioma correcto, sin esperar a la red
+ *   ni cambiar de golpe al iniciar sesión.
+ * - No viaja con la persona: quien use Rustock desde dos equipos elige el
+ *   idioma en cada uno. Guardarlo en `preferencias_usuario` está pendiente
+ *   (ROADMAP, fase 12).
  *
  * Los diccionarios son objetos tipados, no un archivo de datos: `es` es la
  * fuente de verdad y TypeScript exige que `en` tenga exactamente las mismas

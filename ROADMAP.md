@@ -43,8 +43,9 @@
 - [x] CRUD de Producto/SKU, Categoría, UOM, Proveedor, Cliente, Lote
 - [x] Validaciones: códigos únicos/normalizados, desactivación (no borrado),
       ciclos reales en categorías, restricción de caja por producto/lote
-- [ ] UI por página (listado/detalle/nuevo/editar/eliminar) para cada una,
-      siguiendo DESIGN.md (cero modales) — **siguiente hito del proyecto**
+- [x] UI por página (listado/detalle/nuevo/editar/eliminar) para cada una,
+      siguiendo DESIGN.md (cero modales) — los 13 catálogos, con las acciones
+      ocultas según el permiso del rol
 
 **Criterio de salida:** navegación completa de catálogos con el estándar de
 consulta universal (filtros/orden/búsqueda/paginación) funcionando. Backend
@@ -60,7 +61,7 @@ listo (§15 aplicado a los 15 recursos principales); falta la UI.
       GERENTE, ENCARGADO_ALMACEN, OPERADOR, LECTOR)
 - [x] Permisos granulares `recurso:accion` aplicados a cada operación
       (incluidas las lecturas, antes sin gatear)
-- [ ] Páginas de gestión de usuarios/roles + perfil (UI pendiente)
+- [x] Páginas de gestión de usuarios/roles + perfil
 - [x] Registro de auditoría en cada operación, incluidos los intentos
       denegados (`SinPermiso`/`NoAutenticado`)
 
@@ -312,6 +313,7 @@ El servidor HTTP tenía **una sola sesión para todo el proceso**: la última pe
 ### Pendiente
 
 - [ ] **Prosa dentro de los datos**: 104 usos de `CampoRequerido`/`CampoInvalido` pasan una frase castellana como nombre del campo (`"límite en kg para la regla 'Sin tope'"`). Traducir el envoltorio no basta: hay que convertirlos a claves de campo estables.
-- [ ] **Cadenas de interfaz**: ~1 000 textos en 119 archivos `.tsx`.
-- [ ] **Prosa larga**: ayuda (26 guías + glosario), manual del cliente (8 partes) y landing — 6 854 líneas.
+- [x] **Cadenas de interfaz**: ~1 000 textos en 119 archivos `.tsx`.
+- [x] **Prosa larga**: ayuda (26 guías + glosario), manual del cliente (8 partes) y landing — 6 854 líneas.
 - [ ] Preferencia de idioma en el perfil (migración `preferencias_usuario.idioma`).
+      Hoy el idioma vive solo en `localStorage`: no viaja entre equipos.
