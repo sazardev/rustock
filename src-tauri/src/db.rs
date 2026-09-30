@@ -805,6 +805,27 @@ impl DbState {
         asegurar_columna(&tx, "racks", "ancho", "REAL NOT NULL DEFAULT 110")?;
         asegurar_columna(&tx, "racks", "profundidad", "REAL NOT NULL DEFAULT 56")?;
 
+        // Precisión real del mapa (1 unidad = 1 cm): niveles del rack, medidas
+        // de producto y medidas globales de la empresa. Solo aditivo.
+        asegurar_columna(&tx, "racks", "niveles", "INTEGER NOT NULL DEFAULT 3")?;
+        asegurar_columna(&tx, "racks", "alto_nivel", "REAL NOT NULL DEFAULT 80")?;
+        asegurar_columna(&tx, "racks", "alto_base", "REAL NOT NULL DEFAULT 15")?;
+        asegurar_columna(&tx, "productos", "largo_cm", "REAL")?;
+        asegurar_columna(&tx, "productos", "ancho_cm", "REAL")?;
+        asegurar_columna(&tx, "productos", "alto_cm", "REAL")?;
+        asegurar_columna(
+            &tx,
+            "configuracion_empresa",
+            "altura_persona_cm",
+            "REAL NOT NULL DEFAULT 170",
+        )?;
+        asegurar_columna(
+            &tx,
+            "configuracion_empresa",
+            "holgura_pasillo_cm",
+            "REAL NOT NULL DEFAULT 90",
+        )?;
+
         // Pasillo (Hito Pasillo): etiqueta opcional de agrupación dentro de la
         // zona del rack. Aditivo — no toca la FK obligatoria rack.zona_id.
         asegurar_columna(&tx, "racks", "pasillo_id", "TEXT REFERENCES pasillos(id)")?;

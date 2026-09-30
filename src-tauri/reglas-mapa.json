@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "unidad": "cm",
+  "lado_minimo": 10,
+  "paso_rejilla": 10,
+  "pares_prohibidos": [
+    ["zona", "zona"],
+    ["pasillo", "pasillo"],
+    ["rack", "rack"],
+    ["ubicacion", "ubicacion"],
+    ["pasillo", "rack"],
+    ["pasillo", "ubicacion"],
+    ["rack", "ubicacion"]
+  ],
+  "contencion_en_zona": ["pasillo", "rack", "ubicacion"],
+  "holgura_pasillo_cm_defecto": 90,
+  "altura_persona_cm_defecto": 170,
+  "rack": {
+    "niveles_defecto": 3,
+    "alto_nivel_cm_defecto": 80,
+    "alto_base_cm_defecto": 15
+  }
+}

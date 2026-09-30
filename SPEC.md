@@ -1008,9 +1008,14 @@ Además: acierto global, reparto entre cámara y lector de mano, tiempo medio de
 
 El plano del almacén (mapa 2D/3D) representa la geometría real de la operación; por eso el solape físico es una regla de negocio, no un detalle visual:
 
-- Todo elemento posicionado en el mapa (zona, pasillo, rack) ocupa un **rectángulo propio** (`pos_x`, `pos_y`, `ancho`, `profundidad`). Las ubicaciones son bins de tamaño fijo.
-- **Matriz de solapes prohibidos**: ningún elemento puede coincidir en el plano con otro del mismo tipo; un pasillo no puede tener racks ni ubicaciones encima (es espacio de tránsito); una ubicación no puede flotar sobre un rack ajeno. Tocarse por el borde es válido (elementos adyacentes).
-- **Contención permitida**: las zonas contienen a sus pasillos/racks/ubicaciones; esa coincidencia nunca se bloquea ni se exige.
+- **Unidad real:** toda medida del mapa está en **centímetros** (1 unidad = 1 cm). La escena 3D se dibuja en metros a partir de ellas; nada es "unidades arbitrarias".
+- Todo elemento posicionado en el mapa (zona, pasillo, rack y ubicación de piso) ocupa un **rectángulo propio** (`pos_x`, `pos_y`, `ancho`, `profundidad`).
+- **Racks con estructura:** un rack tiene `niveles`, `alto_nivel` y `alto_base` (cm); su altura total es `alto_base + niveles x alto_nivel`. Las **ubicaciones de un rack no son rectángulos sueltos**: se derivan dentro de su volumen por nivel (número de la sección: "1", "N2"...) y por bahía (orden por código dentro del nivel). Su `pos_x/pos_y` guardado se ignora y no participan en solapes. Solo las ubicaciones de piso (sin rack ni sección) son rectángulos.
+- **Matriz de solapes prohibidos** (fuente única: `src-tauri/reglas-mapa.json`, leída por Rust y por el frontend): ningún elemento puede coincidir en el plano con otro del mismo tipo; un pasillo no puede tener racks ni ubicaciones de piso encima (es espacio de tránsito); una ubicación de piso no puede flotar sobre un rack. Tocarse por el borde es válido (elementos adyacentes).
+- **Contención obligatoria:** pasillos, racks y ubicaciones de piso deben quedar **completos dentro de su zona** (error `FUERA_DE_ZONA`). Las zonas contienen a sus hijos; esa coincidencia nunca se bloquea.
+- **Tres estados de colocación:** `libre`, `advertencia` y `bloqueado`. Es advertencia (no error) un pasillo entre racks enfrentados más estrecho que `holgura_pasillo_cm` (por defecto 90 cm, configurable en la empresa); se permite guardar avisando. La evaluación autoritativa es `evaluar_posicion_mapa`; el frontend la refleja con el mismo JSON de reglas para dar feedback en vivo, incluso fuera del modo construcción.
+- **Productos a tamaño real:** el producto admite `largo_cm`, `ancho_cm`, `alto_cm`. Si faltan se estima un cubo desde `volumen_unitario` (m3) o una caja por defecto, y el mapa marca la medida como estimada.
+- **Persona:** `altura_persona_cm` (por defecto 170) fija la altura de ojos del recorrido en primera persona (estatura menos 10 cm).
 - La validación se aplica en **toda** mutación de posición/tamaño y en toda creación desde el mapa; el rechazo nombra los dos elementos involucrados ("El rack 'RACK-01' se solapa con el pasillo 'PAS-01'").
 - Los elementos sin posición asignada aún no están en el plano: no participan hasta colocarse.
 - Un elemento inactivo libera su espacio: solo los activos reservan suelo.

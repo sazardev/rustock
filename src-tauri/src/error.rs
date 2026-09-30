@@ -116,6 +116,15 @@ pub enum AppError {
         codigo_b: String,
     },
 
+    #[error(
+        "El {tipo} '{codigo}' debe quedar completo dentro de su zona '{zona}'. Muévelo o reduce su tamaño para que no sobresalga"
+    )]
+    FueraDeZona {
+        tipo: &'static str,
+        codigo: String,
+        zona: String,
+    },
+
     #[error("El tamaño del {0} no es válido: ancho y profundidad deben ser mayores a {1} unidades")]
     DimensionInvalida(&'static str, i64),
 
@@ -169,6 +178,7 @@ impl AppError {
             Self::ConHistorial(_) => "CON_HISTORIAL",
             Self::CicloCategoria => "CICLO_CATEGORIA",
             Self::SolapeMapa { .. } => "SOLAPE_MAPA",
+            Self::FueraDeZona { .. } => "FUERA_DE_ZONA",
             Self::DimensionInvalida(..) => "DIMENSION_INVALIDA",
             Self::Db(_) => "ERROR_BASE_DE_DATOS",
             Self::Json(_) => "ERROR_SERIALIZACION",
@@ -222,6 +232,9 @@ impl AppError {
                 "tipoA": tipo_a, "codigoA": codigo_a,
                 "tipoB": tipo_b, "codigoB": codigo_b
             }),
+            Self::FueraDeZona { tipo, codigo, zona } => {
+                json!({ "tipo": tipo, "codigo": codigo, "zona": zona })
+            }
             Self::DimensionInvalida(entidad, minimo) => {
                 json!({ "entidad": entidad, "minimo": minimo })
             }

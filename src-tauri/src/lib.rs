@@ -9,6 +9,9 @@ pub mod domain;
 mod error;
 mod importar;
 mod mapa;
+// Regla pura compartida con el frontend; la usan los tests y la validación de capacidad.
+#[allow(dead_code)]
+mod mapa_celdas;
 mod query;
 mod repo;
 mod security;

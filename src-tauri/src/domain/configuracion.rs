@@ -105,6 +105,10 @@ pub struct ConfiguracionEmpresa {
     // Tema de la UI (DESIGN §3.1): paleta global y modo claro/oscuro.
     pub tema_id: String,
     pub modo_oscuro: bool,
+    /// Medidas globales del mapa (cm): estatura de la persona que camina y
+    /// holgura mínima recomendada entre racks enfrentados.
+    pub altura_persona_cm: f64,
+    pub holgura_pasillo_cm: f64,
     pub updated_by: Option<String>,
     pub updated_at: String,
 }
@@ -138,6 +142,8 @@ pub struct EditarConfiguracionEmpresa {
     pub tema_id: Option<String>,
     /// Modo oscuro global (interruptor claro/oscuro). `None` = no tocar.
     pub modo_oscuro: Option<bool>,
+    pub altura_persona_cm: Option<f64>,
+    pub holgura_pasillo_cm: Option<f64>,
 }
 
 impl EditarConfiguracionEmpresa {
@@ -186,6 +192,20 @@ impl EditarConfiguracionEmpresa {
         {
             return Err(AppError::CampoInvalido(
                 "longitud fuera de rango (-180 a 180)".into(),
+            ));
+        }
+        if let Some(a) = self.altura_persona_cm
+            && !(100.0..=250.0).contains(&a)
+        {
+            return Err(AppError::CampoInvalido(
+                "altura_persona_cm fuera de rango (100 a 250)".into(),
+            ));
+        }
+        if let Some(h) = self.holgura_pasillo_cm
+            && !(0.0..=1000.0).contains(&h)
+        {
+            return Err(AppError::CampoInvalido(
+                "holgura_pasillo_cm fuera de rango (0 a 1000)".into(),
             ));
         }
         if let Some(t) = &self.tema_id

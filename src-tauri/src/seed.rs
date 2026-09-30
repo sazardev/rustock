@@ -15,7 +15,7 @@ use crate::domain::ahora;
 use crate::domain::alerta::NuevoComentario;
 use crate::domain::catalogo::{
     NuevaCategoria, NuevaSeccion, NuevaUbicacion, NuevaUom, NuevaZona, NuevoAlmacen, NuevoCliente,
-    NuevoLote, NuevoProducto, NuevoProveedor, NuevoRack,
+    NuevoLote, NuevoPasillo, NuevoProducto, NuevoProveedor, NuevoRack, PosicionMapa,
 };
 use crate::domain::inventario::{NuevaSesionInventario, NuevoConteo};
 use crate::domain::movimiento::{NuevaLinea, NuevoMovimiento, NuevoTraslado};
@@ -222,7 +222,10 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             tipo: Some("estanteria".into()),
             zona_id: zona_picking.id.clone(),
             pasillo_id: None,
+            // Rack de 4 niveles (medidas por defecto en cm: base 15, 80 por nivel).
+            niveles: Some(4),
             created_by: Some(by.into()),
+            ..Default::default()
         },
     )?;
     let seccion_n1 = repo::catalogo::crear_seccion(
@@ -274,6 +277,99 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             created_by: Some(by.into()),
         },
     )?;
+    // Resto de la cuadrícula del rack: 4 niveles x 3 bahías (P1-P3). Las de los
+    // niveles 1 y 2 en P1 ya existen arriba (las usan los movimientos).
+    let seccion_n3 = repo::catalogo::crear_seccion(
+        conn,
+        &NuevaSeccion {
+            codigo: "RACK-A1-N3".into(),
+            nombre: Some("Nivel 3".into()),
+            nivel: Some("3".into()),
+            rack_id: rack_a1.id.clone(),
+            descripcion: None,
+            created_by: Some(by.into()),
+        },
+    )?;
+    let seccion_n4 = repo::catalogo::crear_seccion(
+        conn,
+        &NuevaSeccion {
+            codigo: "RACK-A1-N4".into(),
+            nombre: Some("Nivel 4".into()),
+            nivel: Some("4".into()),
+            rack_id: rack_a1.id.clone(),
+            descripcion: None,
+            created_by: Some(by.into()),
+        },
+    )?;
+    for (nivel, seccion_id) in [
+        (1, &seccion_n1.id),
+        (2, &seccion_n2.id),
+        (3, &seccion_n3.id),
+        (4, &seccion_n4.id),
+    ] {
+        for bahia in 1..=3 {
+            if bahia == 1 && nivel <= 2 {
+                continue;
+            }
+            repo::catalogo::crear_ubicacion(
+                conn,
+                &NuevaUbicacion {
+                    codigo: format!("RACK-A1-N{nivel}-P{bahia}"),
+                    nombre: Some(format!("Posición {bahia}")),
+                    seccion_id: Some(seccion_id.clone()),
+                    rack_id: None,
+                    zona_id: None,
+                    tipo: Some("PICKING".into()),
+                    capacidad_maxima: Some(5_000),
+                    created_by: Some(by.into()),
+                },
+            )?;
+        }
+    }
+
+    // Plano en cm: zonas y racks posicionados dentro de su zona; un pasillo de
+    // 80 cm entre RACK-A1 y RACK-A2 (menos que la holgura de 90 cm: sirve para
+    // probar la advertencia).
+    let pos = |x: f64, y: f64, ancho: f64, profundidad: f64| PosicionMapa {
+        pos_x: Some(x),
+        pos_y: Some(y),
+        pos_z: None,
+        altura: None,
+        ancho: Some(ancho),
+        profundidad: Some(profundidad),
+    };
+    repo::catalogo::mover_zona(conn, &zona_picking.id, &pos(0.0, 0.0, 600.0, 500.0), by)?;
+    repo::catalogo::mover_zona(conn, &zona_recepcion.id, &pos(700.0, 0.0, 300.0, 300.0), by)?;
+    repo::catalogo::mover_zona(
+        conn,
+        &zona_devolucion.id,
+        &pos(700.0, 350.0, 300.0, 300.0),
+        by,
+    )?;
+    repo::catalogo::mover_rack(conn, &rack_a1.id, &pos(60.0, 60.0, 330.0, 100.0), by)?;
+    let pasillo = repo::catalogo::crear_pasillo(
+        conn,
+        &NuevoPasillo {
+            codigo: "PAS-01".into(),
+            nombre: Some("Pasillo central".into()),
+            zona_id: zona_picking.id.clone(),
+            created_by: Some(by.into()),
+        },
+    )?;
+    repo::catalogo::mover_pasillo(conn, &pasillo.id, &pos(60.0, 160.0, 330.0, 80.0), by)?;
+    let rack_a2 = repo::catalogo::crear_rack(
+        conn,
+        &NuevoRack {
+            codigo: "RACK-A2".into(),
+            nombre: Some("Rack A2".into()),
+            tipo: Some("estanteria".into()),
+            zona_id: zona_picking.id.clone(),
+            created_by: Some(by.into()),
+            ..Default::default()
+        },
+    )?;
+    repo::catalogo::mover_rack(conn, &rack_a2.id, &pos(60.0, 240.0, 330.0, 100.0), by)?;
+
     let ubi_recepcion = repo::catalogo::crear_ubicacion(
         conn,
         &NuevaUbicacion {
@@ -317,6 +413,9 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             codigo_barras: Some("7750001000015".into()),
             peso_unitario: Some(0.008),
             volumen_unitario: None,
+            largo_cm: Some(3.0),
+            ancho_cm: Some(2.0),
+            alto_cm: Some(2.0),
             stock_minimo: Some(500),
             stock_maximo: Some(20_000),
             controla_lote: false,
@@ -339,6 +438,9 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             codigo_barras: Some("7750001000022".into()),
             peso_unitario: Some(0.003),
             volumen_unitario: None,
+            largo_cm: Some(2.5),
+            ancho_cm: Some(2.5),
+            alto_cm: Some(0.3),
             stock_minimo: Some(2_000),
             stock_maximo: None,
             controla_lote: false,
@@ -361,6 +463,9 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             codigo_barras: None,
             peso_unitario: Some(0.35),
             volumen_unitario: None,
+            largo_cm: Some(12.0),
+            ancho_cm: Some(12.0),
+            alto_cm: Some(5.0),
             stock_minimo: Some(20),
             stock_maximo: Some(500),
             controla_lote: true,
@@ -383,6 +488,9 @@ fn sembrar(conn: &Connection) -> AppResult<()> {
             codigo_barras: None,
             peso_unitario: Some(1.0),
             volumen_unitario: None,
+            largo_cm: Some(15.0),
+            ancho_cm: Some(15.0),
+            alto_cm: Some(12.0),
             stock_minimo: Some(10),
             stock_maximo: Some(200),
             controla_lote: true,

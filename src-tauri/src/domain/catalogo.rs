@@ -199,11 +199,17 @@ pub struct Rack {
     /// Tamaño del rectángulo en el plano (modo construcción, SPEC §3.3).
     pub ancho: f64,
     pub profundidad: f64,
+    /// Estructura vertical (1 unidad = 1 cm): nº de niveles, alto útil de cada
+    /// nivel y alto de la base. La altura total derivada es
+    /// `alto_base + niveles * alto_nivel` salvo `altura` explícita.
+    pub niveles: i64,
+    pub alto_nivel: f64,
+    pub alto_base: f64,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct NuevoRack {
     pub codigo: String,
     #[serde(default)]
@@ -213,6 +219,12 @@ pub struct NuevoRack {
     pub zona_id: String,
     #[serde(default)]
     pub pasillo_id: Option<String>,
+    #[serde(default)]
+    pub niveles: Option<i64>,
+    #[serde(default)]
+    pub alto_nivel: Option<f64>,
+    #[serde(default)]
+    pub alto_base: Option<f64>,
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
@@ -227,6 +239,44 @@ pub struct EditarRack {
     pub tipo: Option<String>,
     #[serde(default, deserialize_with = "deserialize_some")]
     pub pasillo_id: Option<Option<String>>,
+    pub niveles: Option<i64>,
+    pub alto_nivel: Option<f64>,
+    pub alto_base: Option<f64>,
+}
+
+/// Valida la estructura vertical de un rack (1-30 niveles, medidas positivas).
+pub fn validar_estructura_rack(
+    niveles: i64,
+    alto_nivel: f64,
+    alto_base: f64,
+) -> Result<(), crate::error::AppError> {
+    if !(1..=30).contains(&niveles) {
+        return Err(crate::error::AppError::CampoInvalido(
+            "niveles debe estar entre 1 y 30".into(),
+        ));
+    }
+    if !alto_nivel.is_finite() || alto_nivel <= 0.0 || !alto_base.is_finite() || alto_base < 0.0 {
+        return Err(crate::error::AppError::CampoInvalido(
+            "alto_nivel debe ser mayor a 0 y alto_base no puede ser negativo".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Valida medidas opcionales de producto en cm (positivas y finitas).
+pub fn validar_medidas_producto(
+    medidas: [(&str, Option<f64>); 3],
+) -> Result<(), crate::error::AppError> {
+    for (campo, v) in medidas {
+        if let Some(v) = v
+            && (!v.is_finite() || v <= 0.0)
+        {
+            return Err(crate::error::AppError::CampoInvalido(format!(
+                "{campo} debe ser un número mayor a 0"
+            )));
+        }
+    }
+    Ok(())
 }
 
 // ============ Sección (SPEC §3.4) ============
@@ -586,12 +636,16 @@ pub struct Producto {
     /// Costo unitario actual (valorización, Fase D). Se actualiza con el método
     /// configurado al aprobar entradas.
     pub costo_unitario: Option<f64>,
+    /// Medidas en cm (1 unidad = 1 cm) para dibujar el producto en el mapa 3D.
+    pub largo_cm: Option<f64>,
+    pub ancho_cm: Option<f64>,
+    pub alto_cm: Option<f64>,
     pub activo: bool,
     #[serde(flatten)]
     pub auditoria: Auditoria,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct NuevoProducto {
     pub sku: String,
     pub nombre: String,
@@ -623,6 +677,12 @@ pub struct NuevoProducto {
     /// Costo unitario inicial del producto (valorización, Fase D).
     #[serde(default)]
     pub costo_unitario: Option<f64>,
+    #[serde(default)]
+    pub largo_cm: Option<f64>,
+    #[serde(default)]
+    pub ancho_cm: Option<f64>,
+    #[serde(default)]
+    pub alto_cm: Option<f64>,
     /// Nunca llega por IPC: lo resuelve el comando desde la sesión activa (SPEC §4.1).
     #[serde(skip_deserializing, default)]
     pub created_by: Option<String>,
@@ -645,6 +705,11 @@ impl NuevoProducto {
                 "controla_lote (controla_vencimiento lo implica)".into(),
             ));
         }
+        validar_medidas_producto([
+            ("largo_cm", self.largo_cm),
+            ("ancho_cm", self.ancho_cm),
+            ("alto_cm", self.alto_cm),
+        ])?;
         Ok(())
     }
 
@@ -672,6 +737,9 @@ pub struct EditarProducto {
     pub controla_vencimiento: Option<bool>,
     pub perecedero: Option<bool>,
     pub costo_unitario: Option<f64>,
+    pub largo_cm: Option<f64>,
+    pub ancho_cm: Option<f64>,
+    pub alto_cm: Option<f64>,
 }
 
 // ============ Lote (SPEC §3.12) ============

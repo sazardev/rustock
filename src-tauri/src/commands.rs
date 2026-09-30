@@ -653,6 +653,21 @@ pub fn crear_en_mapa(
     })
 }
 
+/// Evalúa (sin escribir) dónde quedaría un elemento: libre, advertencia o
+/// bloqueado, con motivo legible. Solo lectura.
+#[tauri::command]
+pub fn evaluar_posicion_mapa(
+    db: State<'_, Arc<DbState>>,
+    sesion: State<'_, Arc<SesionState>>,
+    pedido: crate::mapa::EvaluarPosicionPedido,
+) -> AppResult<crate::mapa::EvaluacionPosicion> {
+    con_auditoria!(db, sesion, "evaluar_posicion_mapa", {
+        let conn = db.conn();
+        puede(&conn, Some(&sesion.usuario_id()?), "rack", "ver")?;
+        crate::mapa::evaluar_pedido(&conn, &pedido)
+    })
+}
+
 #[tauri::command]
 pub fn generar_layout_base(
     db: State<'_, Arc<DbState>>,
@@ -2620,6 +2635,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         desactivar_ubicacion,
         crear_en_mapa,
         generar_layout_base,
+        evaluar_posicion_mapa,
         listar_cajas,
         crear_caja,
         obtener_caja,

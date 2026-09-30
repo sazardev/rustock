@@ -46,6 +46,8 @@ fn map_configuracion(r: &rusqlite::Row<'_>) -> rusqlite::Result<ConfiguracionEmp
         modo_oscuro: r.get::<_, i64>(22)? != 0,
         updated_by: r.get(23)?,
         updated_at: r.get(24)?,
+        altura_persona_cm: r.get(25)?,
+        holgura_pasillo_cm: r.get(26)?,
     })
 }
 
@@ -57,7 +59,8 @@ pub fn obtener_configuracion_empresa(conn: &Connection) -> AppResult<Configuraci
                 dias_aviso_vencimiento, requiere_aprobacion, stock_minimo_default,
                 pais, ciudad, direccion, codigo_postal, razon_social,
                 documento_fiscal, direccion_fiscal, telefono, email_contacto,
-                sitio_web, latitud, longitud, tema_id, modo_oscuro, updated_by, updated_at
+                sitio_web, latitud, longitud, tema_id, modo_oscuro, updated_by, updated_at,
+                altura_persona_cm, holgura_pasillo_cm
          FROM configuracion_empresa WHERE id = ?1",
         [ID_FILA],
         map_configuracion,
@@ -98,7 +101,9 @@ pub fn guardar_configuracion_empresa(
             tema_id           = COALESCE(?21, tema_id),
             modo_oscuro       = COALESCE(?22, modo_oscuro),
             updated_by        = ?23,
-            updated_at        = ?24
+            updated_at        = ?24,
+            altura_persona_cm  = COALESCE(?26, altura_persona_cm),
+            holgura_pasillo_cm = COALESCE(?27, holgura_pasillo_cm)
          WHERE id = ?25",
         rusqlite::params![
             cambios.nombre.as_ref().and_then(|v| v.as_ref()),
@@ -129,6 +134,8 @@ pub fn guardar_configuracion_empresa(
             actor,
             ts,
             ID_FILA,
+            cambios.altura_persona_cm,
+            cambios.holgura_pasillo_cm,
         ],
     )?;
     EventoAuditoria::registrar(

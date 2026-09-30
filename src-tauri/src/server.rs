@@ -768,6 +768,12 @@ pub(crate) fn despachar(
             let conn = db.conn();
             ok(crate::mapa::crear_en_mapa(&conn, &pedido, &actor)?)
         }),
+        "evaluar_posicion_mapa" => con_auditoria!(db, sesion, "evaluar_posicion_mapa", {
+            let pedido: crate::mapa::EvaluarPosicionPedido = de_req(args, "pedido")?;
+            let conn = db.conn();
+            puede(&conn, Some(&sesion.usuario_id()?), "rack", "ver")?;
+            ok(crate::mapa::evaluar_pedido(&conn, &pedido)?)
+        }),
         "generar_layout_base" => con_auditoria!(db, sesion, "generar_layout_base", {
             let pedido: crate::mapa::LayoutBasePedido = de_req(args, "pedido")?;
             let actor = sesion.usuario_id()?;

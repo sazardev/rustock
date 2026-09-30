@@ -63,6 +63,7 @@ fn crear_arbol(conn: &rusqlite::Connection) -> (String, String, String) {
             zona_id: zona.id.clone(),
             pasillo_id: None,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("rack");
@@ -142,6 +143,7 @@ fn crear_uom_y_producto(conn: &rusqlite::Connection) -> (String, String) {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto");
@@ -1118,6 +1120,7 @@ fn producto_que_controla_lote_exige_lote() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto");
@@ -1915,6 +1918,7 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
             zona_id: zona.id.clone(),
             pasillo_id: None,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("rack");
@@ -1961,9 +1965,8 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
     assert_eq!(rack_movido.pos_x, Some(10.5));
     assert_eq!(rack_movido.codigo, rack.codigo);
 
-    // La ubicación cuelga del rack: con la regla de solapes (SPEC §14) no
-    // puede quedar sobre el rectángulo de su propio rack, así que va a un
-    // punto libre. Lo que se verifica aquí es persistencia de coordenadas.
+    // La ubicación cuelga del rack: se posiciona sola dentro de él (nivel y
+    // bahía), así que moverla en el mapa se rechaza con un mensaje claro.
     let pos_ubi = PosicionMapa {
         pos_x: Some(300.0),
         pos_y: Some(-3.0),
@@ -1972,15 +1975,11 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
         ancho: None,
         profundidad: None,
     };
-    let ubi_movida = repo::catalogo::mover_ubicacion(&conn, &ubi.id, &pos_ubi, "admin")
-        .expect("mover ubicacion");
-    assert_eq!(ubi_movida.pos_x, Some(300.0));
-    assert_eq!(ubi_movida.pos_y, Some(-3.0));
-    assert_eq!(ubi_movida.pos_z, Some(2.0));
-    assert_eq!(ubi_movida.altura, Some(1.8));
-    // Los campos de negocio no cambian por mover la posición.
-    assert_eq!(ubi_movida.capacidad_maxima, Some(50));
-    assert_eq!(ubi_movida.tipo, ubi.tipo);
+    let err = repo::catalogo::mover_ubicacion(&conn, &ubi.id, &pos_ubi, "admin").unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("se posiciona sola dentro de su rack")
+    );
 
     // Limpiar la posición: enviar None en todos los campos borra las coordenadas.
     let limpio = PosicionMapa {
@@ -1995,6 +1994,7 @@ fn mapa_mover_entidades_actualiza_posicion_sin_tocar_negocio() {
         repo::catalogo::mover_ubicacion(&conn, &ubi.id, &limpio, "admin").expect("limpiar pos");
     assert_eq!(ubi_limpia.pos_x, None);
     assert_eq!(ubi_limpia.capacidad_maxima, Some(50));
+    assert_eq!(ubi_limpia.tipo, ubi.tipo);
 }
 
 #[test]
@@ -2142,6 +2142,7 @@ fn rack_pasillo_debe_pertenecer_a_la_misma_zona() {
             zona_id: zona1.id.clone(),
             pasillo_id: Some(pasillo_zona2.id.clone()),
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect_err("pasillo de otra zona debe rechazarse");
@@ -2157,6 +2158,7 @@ fn rack_pasillo_debe_pertenecer_a_la_misma_zona() {
             zona_id: zona1.id.clone(),
             pasillo_id: None,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("rack sin pasillo");
@@ -2180,6 +2182,7 @@ fn rack_pasillo_debe_pertenecer_a_la_misma_zona() {
             nombre: None,
             tipo: None,
             pasillo_id: Some(Some(pasillo_zona1.id.clone())),
+            ..Default::default()
         },
         "admin",
     )
@@ -2194,6 +2197,7 @@ fn rack_pasillo_debe_pertenecer_a_la_misma_zona() {
             nombre: None,
             tipo: None,
             pasillo_id: Some(Some(pasillo_zona2.id.clone())),
+            ..Default::default()
         },
         "admin",
     )
@@ -2208,6 +2212,7 @@ fn rack_pasillo_debe_pertenecer_a_la_misma_zona() {
             nombre: None,
             tipo: None,
             pasillo_id: Some(None),
+            ..Default::default()
         },
         "admin",
     )
@@ -2241,6 +2246,7 @@ fn caja_restringida_rechaza_producto_distinto() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto2")
@@ -2339,6 +2345,7 @@ fn capacidad_maxima_agrega_todos_los_productos() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto2")
@@ -2444,6 +2451,7 @@ fn buscar_producto_por_codigo_barras() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto");
@@ -2578,6 +2586,7 @@ fn crear_producto_con_lote(
             controla_vencimiento: perecedero,
             perecedero,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto")
@@ -4613,6 +4622,7 @@ fn stock_minimo_default_genera_alerta_para_producto_sin_minimo() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto")
@@ -4866,6 +4876,7 @@ fn buscar_agrupa_por_recurso_y_prioriza_coincidencia_exacta() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto exacto")
@@ -4890,6 +4901,7 @@ fn buscar_agrupa_por_recurso_y_prioriza_coincidencia_exacta() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto variante")
@@ -5072,6 +5084,7 @@ fn sesion_planeada_se_inicia_a_en_curso() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto");
@@ -5183,6 +5196,7 @@ fn desactivar_y_usar_uom_inactiva_en_producto_rechazado() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect_err("uom inactiva rechazada");
@@ -5390,6 +5404,7 @@ fn editar_movimiento_controla_lote_exige_lote() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto con lote");
@@ -5517,6 +5532,7 @@ fn codigo_de_rack_es_unico_por_almacen_no_por_padre() {
             zona_id: zona_a.id.clone(),
             pasillo_id: None,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("rack en zona A");
@@ -5531,6 +5547,7 @@ fn codigo_de_rack_es_unico_por_almacen_no_por_padre() {
             zona_id: zona_b.id.clone(),
             pasillo_id: None,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect_err("código duplicado en el almacén");
@@ -5618,6 +5635,7 @@ fn traslado_inter_almacen_fallido_no_deja_movimientos_huérfanos() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("prod con lote");
@@ -5646,6 +5664,7 @@ fn traslado_inter_almacen_fallido_no_deja_movimientos_huérfanos() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("otro producto con lote");
@@ -6227,6 +6246,7 @@ fn resolver_escaneo_resuelve_producto_ubicacion_y_lote() {
             controla_vencimiento: false,
             perecedero: false,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("producto lote");
@@ -6549,6 +6569,7 @@ fn mover_rechaza_solape_entre_pasillos_y_permite_borde_compartido() {
             zona_id: zona_id.clone(),
             pasillo_id: None,
             created_by: Some("admin".into()),
+            ..Default::default()
         },
     )
     .expect("rack");
@@ -7844,6 +7865,7 @@ fn un_solo_producto_por_ubicacion() {
                 controla_vencimiento: false,
                 perecedero: false,
                 created_by: Some("admin".into()),
+                ..Default::default()
             },
         )
         .expect("producto2");
@@ -8068,6 +8090,11 @@ fn los_codigos_de_error_son_unicos_y_estables() {
             codigo_b: "B".into(),
         },
         AppError::DimensionInvalida("e", 10),
+        AppError::FueraDeZona {
+            tipo: "rack",
+            codigo: "R".into(),
+            zona: "Z".into(),
+        },
     ];
 
     let codigos: Vec<&str> = errores.iter().map(|e| e.codigo()).collect();
@@ -9210,5 +9237,503 @@ fn una_base_anterior_se_migra_al_abrirla() {
     assert_eq!(previos, 1);
 
     drop(conn);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+// ============ Mapa de precisión real (H1): reglas, contención, holgura, celdas ============
+
+fn rack_en_mapa(
+    conn: &rusqlite::Connection,
+    zona_id: &str,
+    codigo: &str,
+    x: f64,
+    y: f64,
+    ancho: f64,
+    profundo: f64,
+) -> String {
+    let rack = repo::catalogo::crear_rack(
+        conn,
+        &NuevoRack {
+            codigo: codigo.into(),
+            zona_id: zona_id.to_string(),
+            created_by: Some("admin".into()),
+            ..Default::default()
+        },
+    )
+    .expect("rack");
+    repo::catalogo::mover_rack(conn, &rack.id, &pos_mapa(x, y, ancho, profundo), "admin")
+        .expect("posicionar rack");
+    rack.id
+}
+
+fn ubicacion_de_piso(conn: &rusqlite::Connection, zona_id: &str, codigo: &str) -> String {
+    repo::catalogo::crear_ubicacion(
+        conn,
+        &NuevaUbicacion {
+            codigo: codigo.into(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: None,
+            zona_id: Some(zona_id.to_string()),
+            tipo: None,
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion de piso")
+    .id
+}
+
+#[test]
+fn las_reglas_del_mapa_salen_del_json_y_son_simetricas() {
+    let reglas = mapa::reglas();
+    assert_eq!(reglas.unidad, "cm");
+    assert_eq!(reglas.holgura_pasillo_cm_defecto, 90.0);
+    assert_eq!(reglas.altura_persona_cm_defecto, 170.0);
+    assert_eq!(reglas.rack.niveles_defecto, 3);
+    assert_eq!(mapa::lado_minimo(), reglas.lado_minimo);
+    assert!(mapa::requiere_contencion(TipoNodo::Rack));
+    assert!(mapa::requiere_contencion(TipoNodo::Pasillo));
+    assert!(mapa::requiere_contencion(TipoNodo::Ubicacion));
+    assert!(!mapa::requiere_contencion(TipoNodo::Zona));
+
+    assert!(!reglas.pares_prohibidos.is_empty());
+    for [a, b] in &reglas.pares_prohibidos {
+        let (ta, tb) = (
+            TipoNodo::desde_str(a).expect("tipo a"),
+            TipoNodo::desde_str(b).expect("tipo b"),
+        );
+        assert!(mapa::solape_prohibido(ta, tb), "{a}/{b}");
+        assert!(mapa::solape_prohibido(tb, ta), "{b}/{a} (simetría)");
+    }
+    // Zona con hijos: contención permitida, no está en la lista.
+    assert!(!mapa::solape_prohibido(TipoNodo::Zona, TipoNodo::Rack));
+    assert!(!mapa::solape_prohibido(TipoNodo::Rack, TipoNodo::Zona));
+}
+
+#[test]
+fn pasillo_rack_y_ubicacion_de_piso_deben_quedar_dentro_de_su_zona() {
+    let db = setup();
+    let conn = db.conn();
+    let (_almacen, zona_id) = almacen_con_zona(&conn); // zona 0,0 600x400
+
+    // Rack completo dentro y pegado al borde exacto: ok.
+    let rack = rack_en_mapa(&conn, &zona_id, "RACK-IN", 500.0, 300.0, 100.0, 100.0);
+    // Sobresale por la derecha: rechazado con el código de la zona.
+    let err =
+        repo::catalogo::mover_rack(&conn, &rack, &pos_mapa(520.0, 300.0, 100.0, 100.0), "admin")
+            .unwrap_err();
+    match &err {
+        crate::error::AppError::FueraDeZona { tipo, codigo, zona } => {
+            assert_eq!(*tipo, "rack");
+            assert_eq!(codigo, "RACK-IN");
+            assert_eq!(zona, "Z-01");
+        }
+        otro => panic!("esperaba FueraDeZona, got {otro:?}"),
+    }
+    assert!(err.to_string().contains("Z-01"));
+    assert_eq!(err.codigo(), "FUERA_DE_ZONA");
+    // Totalmente fuera.
+    assert!(matches!(
+        repo::catalogo::mover_rack(&conn, &rack, &pos_mapa(900.0, 900.0, 100.0, 100.0), "admin"),
+        Err(crate::error::AppError::FueraDeZona { .. })
+    ));
+
+    // Pasillo: dentro ok, sobresaliendo por arriba/izquierda no.
+    let pas = crear_pasillo_simple(&conn, &zona_id, "PAS-IN");
+    repo::catalogo::mover_pasillo(&conn, &pas, &pos_mapa(0.0, 0.0, 200.0, 60.0), "admin")
+        .expect("pasillo en la esquina de la zona");
+    assert!(matches!(
+        repo::catalogo::mover_pasillo(&conn, &pas, &pos_mapa(-10.0, 0.0, 200.0, 60.0), "admin"),
+        Err(crate::error::AppError::FueraDeZona { .. })
+    ));
+
+    // Ubicación de piso (70x48): dentro ok; fuera no.
+    let ubi = ubicacion_de_piso(&conn, &zona_id, "UBI-PISO");
+    repo::catalogo::mover_ubicacion(&conn, &ubi, &pos_mapa(300.0, 100.0, 70.0, 48.0), "admin")
+        .expect("ubicación de piso dentro");
+    assert!(matches!(
+        repo::catalogo::mover_ubicacion(&conn, &ubi, &pos_mapa(560.0, 100.0, 70.0, 48.0), "admin"),
+        Err(crate::error::AppError::FueraDeZona { .. })
+    ));
+}
+
+#[test]
+fn evaluar_posicion_distingue_libre_advertencia_y_bloqueado() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, zona_id) = almacen_con_zona(&conn);
+    let _a = rack_en_mapa(&conn, &zona_id, "RACK-A", 20.0, 20.0, 100.0, 60.0); // y 20..80
+
+    let evaluar = |y: f64, x: f64| {
+        mapa::evaluar_posicion(
+            &conn,
+            &almacen_id,
+            TipoNodo::Rack,
+            "",
+            &rect(x, y, 100.0, 60.0),
+        )
+        .expect("evaluar")
+    };
+
+    // Hueco de 120 cm (y=200) >= 90: libre.
+    let libre = evaluar(200.0, 20.0);
+    assert_eq!(libre.estado, mapa::EstadoPosicion::Libre);
+    assert!(libre.motivo.is_none() && libre.choque.is_none());
+    // Borde compartido (y=80, hueco 0): libre, es un rack adosado.
+    assert_eq!(evaluar(80.0, 20.0).estado, mapa::EstadoPosicion::Libre);
+    // Hueco de 60 cm (y=140): advertencia con el rack vecino, no error.
+    let adv = evaluar(140.0, 20.0);
+    assert_eq!(adv.estado, mapa::EstadoPosicion::Advertencia);
+    assert_eq!(adv.choque.as_deref(), Some("RACK-A"));
+    assert!(adv.motivo.expect("motivo").contains("60"));
+    // En diagonal (sin enfrentarse): libre.
+    assert_eq!(evaluar(140.0, 220.0).estado, mapa::EstadoPosicion::Libre);
+    // Solape: bloqueado y nombra el choque.
+    let choca = evaluar(50.0, 60.0);
+    assert_eq!(choca.estado, mapa::EstadoPosicion::Bloqueado);
+    assert_eq!(choca.choque.as_deref(), Some("RACK-A"));
+    // Fuera de la zona (600x400): bloqueado y nombra la zona.
+    let fuera = evaluar(350.0, 20.0);
+    assert_eq!(fuera.estado, mapa::EstadoPosicion::Bloqueado);
+    assert_eq!(fuera.choque.as_deref(), Some("Z-01"));
+    assert!(fuera.motivo.expect("motivo").contains("Z-01"));
+    // Con el centro fuera de toda zona (elemento nuevo): bloqueado igualmente.
+    assert_eq!(evaluar(380.0, 20.0).estado, mapa::EstadoPosicion::Bloqueado);
+    // Tamaño inválido: bloqueado.
+    let chico = mapa::evaluar_posicion(
+        &conn,
+        &almacen_id,
+        TipoNodo::Rack,
+        "",
+        &rect(300.0, 300.0, 5.0, 5.0),
+    )
+    .expect("evaluar");
+    assert_eq!(chico.estado, mapa::EstadoPosicion::Bloqueado);
+
+    // La advertencia NO impide guardar: mover_rack la acepta.
+    let b = rack_en_mapa(&conn, &zona_id, "RACK-B", 20.0, 140.0, 100.0, 60.0);
+    // Y evaluarse a sí mismo no lo bloquea (se excluye por id).
+    let propio = mapa::evaluar_posicion(
+        &conn,
+        &almacen_id,
+        TipoNodo::Rack,
+        &b,
+        &rect(20.0, 140.0, 100.0, 60.0),
+    )
+    .expect("evaluar propio");
+    assert_eq!(propio.estado, mapa::EstadoPosicion::Advertencia);
+
+    // La holgura sale de la configuración de la empresa: con 50 cm ya es libre.
+    repo::configuracion::guardar_configuracion_empresa(
+        &conn,
+        &crate::domain::configuracion::EditarConfiguracionEmpresa {
+            holgura_pasillo_cm: Some(50.0),
+            ..Default::default()
+        },
+        "admin",
+    )
+    .expect("config");
+    let propio = mapa::evaluar_posicion(
+        &conn,
+        &almacen_id,
+        TipoNodo::Rack,
+        &b,
+        &rect(20.0, 140.0, 100.0, 60.0),
+    )
+    .expect("evaluar propio");
+    assert_eq!(propio.estado, mapa::EstadoPosicion::Libre);
+
+    // Por el punto de entrada del comando (JSON del frontend).
+    let pedido: mapa::EvaluarPosicionPedido = serde_json::from_value(serde_json::json!({
+        "almacen_id": almacen_id, "tipo": "rack", "x": 60.0, "y": 50.0,
+        "ancho": 100.0, "profundidad": 60.0
+    }))
+    .expect("pedido");
+    let r = mapa::evaluar_pedido(&conn, &pedido).expect("pedido");
+    assert_eq!(
+        serde_json::to_value(&r).expect("json")["estado"],
+        "bloqueado"
+    );
+}
+
+#[test]
+fn las_ubicaciones_de_rack_no_participan_de_los_solapes() {
+    let db = setup();
+    let conn = db.conn();
+    let (almacen_id, zona_id) = almacen_con_zona(&conn);
+    let rack = rack_en_mapa(&conn, &zona_id, "RACK-U", 20.0, 20.0, 300.0, 100.0);
+    let de_rack = repo::catalogo::crear_ubicacion(
+        &conn,
+        &NuevaUbicacion {
+            codigo: "RACK-U-N1-P1".into(),
+            nombre: None,
+            seccion_id: None,
+            rack_id: Some(rack.clone()),
+            zona_id: None,
+            tipo: None,
+            capacidad_maxima: None,
+            created_by: Some("admin".into()),
+        },
+    )
+    .expect("ubicacion de rack");
+
+    // Posición heredada de datos viejos (rectángulo suelto) en zona libre.
+    conn.execute(
+        "UPDATE ubicaciones SET pos_x = 400, pos_y = 250 WHERE id = ?1",
+        [&de_rack.id],
+    )
+    .expect("dato heredado");
+
+    // Una ubicación de piso puede ocupar ese mismo sitio: la de rack ya no es rectángulo.
+    let piso = ubicacion_de_piso(&conn, &zona_id, "UBI-PISO-2");
+    repo::catalogo::mover_ubicacion(&conn, &piso, &pos_mapa(400.0, 250.0, 70.0, 48.0), "admin")
+        .expect("no choca con la ubicación de rack");
+    // Y un rack tampoco choca con ella.
+    let libre = mapa::evaluar_posicion(
+        &conn,
+        &almacen_id,
+        TipoNodo::Rack,
+        "",
+        &rect(390.0, 240.0, 100.0, 100.0),
+    )
+    .expect("evaluar");
+    assert_eq!(libre.estado, mapa::EstadoPosicion::Bloqueado); // choca con la de PISO
+    assert_eq!(libre.choque.as_deref(), Some("UBI-PISO-2"));
+    repo::catalogo::mover_ubicacion(&conn, &piso, &pos_mapa(100.0, 300.0, 70.0, 48.0), "admin")
+        .expect("mover la de piso");
+    let libre = mapa::evaluar_posicion(
+        &conn,
+        &almacen_id,
+        TipoNodo::Rack,
+        "",
+        &rect(390.0, 240.0, 100.0, 100.0),
+    )
+    .expect("evaluar");
+    assert_eq!(libre.estado, mapa::EstadoPosicion::Libre);
+
+    // Mover una ubicación de rack se rechaza con mensaje claro (comando y evaluación).
+    let err = repo::catalogo::mover_ubicacion(
+        &conn,
+        &de_rack.id,
+        &pos_mapa(30.0, 30.0, 70.0, 48.0),
+        "admin",
+    )
+    .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("se posiciona sola dentro de su rack")
+    );
+    let ev = mapa::evaluar_posicion(
+        &conn,
+        &almacen_id,
+        TipoNodo::Ubicacion,
+        &de_rack.id,
+        &rect(30.0, 30.0, 70.0, 48.0),
+    )
+    .expect("evaluar");
+    assert_eq!(ev.estado, mapa::EstadoPosicion::Bloqueado);
+    assert!(ev.motivo.expect("motivo").contains("se posiciona sola"));
+}
+
+#[test]
+fn derivar_celdas_rack_ordena_por_nivel_y_bahia() {
+    use crate::mapa_celdas::{Celda, EntradaCelda, derivar_celdas_rack, nivel_de_texto};
+    let e = |id: &str, codigo: &str, nivel: Option<&str>| EntradaCelda {
+        ubicacion_id: id.into(),
+        codigo: codigo.into(),
+        seccion_nivel: nivel.map(String::from),
+    };
+    assert_eq!(nivel_de_texto(Some("2")), 2);
+    assert_eq!(nivel_de_texto(Some("N3")), 3);
+    assert_eq!(nivel_de_texto(Some("Nivel 4")), 4);
+    assert_eq!(nivel_de_texto(Some("0")), 1);
+    assert_eq!(nivel_de_texto(Some("PB")), 1);
+    assert_eq!(nivel_de_texto(None), 1);
+
+    let celdas = derivar_celdas_rack(&[
+        e("d", "R-N2-P2", Some("2")),
+        e("a", "R-N1-P2", Some("N1")),
+        e("c", "R-N2-P1", Some("2")),
+        e("b", "R-N1-P1", Some("1")),
+        e("f", "R-N1-P3", Some("1")),
+        e("g", "R-SUELTA", None), // sin sección: nivel 1, ordenada por código
+    ]);
+    let esperado = |id: &str, nivel, bahia, n_bahias| Celda {
+        ubicacion_id: id.into(),
+        nivel,
+        bahia,
+        n_bahias,
+    };
+    assert_eq!(
+        celdas,
+        vec![
+            esperado("b", 1, 1, 4),
+            esperado("a", 1, 2, 4),
+            esperado("f", 1, 3, 4),
+            esperado("g", 1, 4, 4),
+            esperado("c", 2, 1, 2),
+            esperado("d", 2, 2, 2),
+        ]
+    );
+    assert!(derivar_celdas_rack(&[]).is_empty());
+}
+
+#[test]
+fn celdas_de_rack_lee_la_cuadricula_del_seed() {
+    let db = DbState::init_in_memory().expect("db");
+    let conn = db.conn();
+    crate::security::seed_roles(&conn).expect("roles");
+    crate::seed::sembrar_si_vacio(&conn).expect("seed");
+    let rack_id: String = conn
+        .query_row("SELECT id FROM racks WHERE codigo = 'RACK-A1'", [], |r| {
+            r.get(0)
+        })
+        .expect("rack");
+    let celdas = crate::mapa_celdas::celdas_de_rack(&conn, &rack_id).expect("celdas");
+    assert_eq!(celdas.len(), 12, "4 niveles x 3 bahías");
+    assert!(
+        celdas
+            .iter()
+            .all(|c| c.n_bahias == 3 && (1..=4).contains(&c.nivel))
+    );
+    let rack = repo::catalogo::obtener_rack(&conn, &rack_id)
+        .expect("q")
+        .expect("existe");
+    assert_eq!(rack.niveles, 4);
+    assert_eq!((rack.alto_nivel, rack.alto_base), (80.0, 15.0));
+    let tornillo: (Option<f64>, Option<f64>, Option<f64>) = conn
+        .query_row(
+            "SELECT largo_cm, ancho_cm, alto_cm FROM productos WHERE sku = 'SKU-1001'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .expect("producto");
+    assert!(tornillo.0.is_some() && tornillo.1.is_some() && tornillo.2.is_some());
+}
+
+#[test]
+fn las_migraciones_del_mapa_son_idempotentes_y_conservan_datos() {
+    let dir = std::env::temp_dir().join(format!("rustock-mig-mapa-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    let ruta = dir.join("rustock.db");
+
+    let rack_id;
+    {
+        let db = DbState::abrir(&ruta, 1, 5_000).expect("primera apertura");
+        let conn = db.conn();
+        crate::security::seed_roles(&conn).expect("roles");
+        crate::repo::seguridad::bootstrap_admin(&conn, "admin", "Administrador", "admin1234")
+            .expect("admin");
+        let (_a, zona_id) = almacen_con_zona(&conn);
+        rack_id = rack_en_mapa(&conn, &zona_id, "RACK-MIG", 10.0, 10.0, 100.0, 60.0);
+        conn.execute("UPDATE racks SET niveles = 5 WHERE id = ?1", [&rack_id])
+            .expect("nivel propio");
+    }
+    // Segunda apertura: las migraciones vuelven a correr sin fallar ni pisar datos.
+    let db = DbState::abrir(&ruta, 1, 5_000).expect("segunda apertura");
+    let conn = db.conn();
+    for (tabla, columna) in [
+        ("racks", "niveles"),
+        ("racks", "alto_nivel"),
+        ("racks", "alto_base"),
+        ("productos", "largo_cm"),
+        ("productos", "ancho_cm"),
+        ("productos", "alto_cm"),
+        ("configuracion_empresa", "altura_persona_cm"),
+        ("configuracion_empresa", "holgura_pasillo_cm"),
+    ] {
+        let n: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info(?1) WHERE name = ?2",
+                [tabla, columna],
+                |r| r.get(0),
+            )
+            .expect("pragma");
+        assert_eq!(n, 1, "falta {tabla}.{columna} (o está duplicada)");
+    }
+    let rack = repo::catalogo::obtener_rack(&conn, &rack_id)
+        .expect("q")
+        .expect("existe");
+    assert_eq!(rack.niveles, 5, "migrar no pisa datos");
+    assert_eq!((rack.alto_nivel, rack.alto_base), (80.0, 15.0));
+    let cfg = repo::configuracion::obtener_configuracion_empresa(&conn).expect("config");
+    assert_eq!(cfg.altura_persona_cm, 170.0);
+    assert_eq!(cfg.holgura_pasillo_cm, 90.0);
+
+    // Medidas de producto: opcionales, se guardan, se editan y se validan.
+    let (uom_id, _p) = crear_uom_y_producto(&conn);
+    let producto = repo::catalogo::crear_producto(
+        &conn,
+        &NuevoProducto {
+            sku: "SKU-CM".into(),
+            nombre: "Caja".into(),
+            uom_base_id: uom_id,
+            largo_cm: Some(40.0),
+            ancho_cm: Some(30.0),
+            created_by: Some("admin".into()),
+            ..Default::default()
+        },
+    )
+    .expect("producto");
+    assert_eq!(
+        (producto.largo_cm, producto.ancho_cm, producto.alto_cm),
+        (Some(40.0), Some(30.0), None)
+    );
+    let editado = repo::catalogo::editar_producto(
+        &conn,
+        &producto.id,
+        &EditarProducto {
+            alto_cm: Some(25.0),
+            ..Default::default()
+        },
+        "admin",
+    )
+    .expect("editar");
+    assert_eq!(
+        (editado.largo_cm, editado.ancho_cm, editado.alto_cm),
+        (Some(40.0), Some(30.0), Some(25.0))
+    );
+    assert!(
+        repo::catalogo::editar_producto(
+            &conn,
+            &producto.id,
+            &EditarProducto {
+                largo_cm: Some(-1.0),
+                ..Default::default()
+            },
+            "admin",
+        )
+        .is_err()
+    );
+
+    // Estructura de rack: se edita y se valida.
+    let r = repo::catalogo::editar_rack(
+        &conn,
+        &rack_id,
+        &EditarRack {
+            niveles: Some(4),
+            alto_nivel: Some(120.0),
+            ..Default::default()
+        },
+        "admin",
+    )
+    .expect("editar rack");
+    assert_eq!((r.niveles, r.alto_nivel), (4, 120.0));
+    assert!(
+        repo::catalogo::editar_rack(
+            &conn,
+            &rack_id,
+            &EditarRack {
+                niveles: Some(0),
+                ..Default::default()
+            },
+            "admin",
+        )
+        .is_err()
+    );
+
+    drop(conn);
+    drop(db);
     std::fs::remove_dir_all(&dir).ok();
 }

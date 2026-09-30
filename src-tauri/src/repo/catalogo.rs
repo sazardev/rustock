@@ -471,6 +471,13 @@ pub fn mover_pasillo(
             profundo: profundidad,
         };
         crate::mapa::validar_dimensiones(crate::mapa::TipoNodo::Pasillo, &rect)?;
+        crate::mapa::validar_contencion(
+            conn,
+            &actual.zona_id,
+            crate::mapa::TipoNodo::Pasillo,
+            &actual.codigo,
+            &rect,
+        )?;
         crate::mapa::validar_colisiones(
             conn,
             &almacen_de_zona(conn, &actual.zona_id)?,
@@ -589,12 +596,17 @@ pub fn crear_rack(conn: &Connection, nuevo: &NuevoRack) -> AppResult<Rack> {
         return Err(AppError::CodigoDuplicado(codigo));
     }
     let almacen_id = almacen_de_zona(conn, &nuevo.zona_id)?;
+    let niveles = nuevo.niveles.unwrap_or(3);
+    let alto_nivel = nuevo.alto_nivel.unwrap_or(80.0);
+    let alto_base = nuevo.alto_base.unwrap_or(15.0);
+    crate::domain::catalogo::validar_estructura_rack(niveles, alto_nivel, alto_base)?;
     conn.execute(
-        "INSERT INTO racks (id, codigo, nombre, tipo, zona_id, pasillo_id, almacen_id, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8, ?9, ?10, ?10)",
+        "INSERT INTO racks (id, codigo, nombre, tipo, zona_id, pasillo_id, almacen_id, activo, created_at, updated_at, created_by, updated_by,
+                niveles, alto_nivel, alto_base)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8, ?9, ?10, ?10, ?11, ?12, ?13)",
         rusqlite::params![
             id, codigo, nuevo.nombre, nuevo.tipo, nuevo.zona_id, nuevo.pasillo_id, almacen_id, ts, ts,
-            nuevo.created_by
+            nuevo.created_by, niveles, alto_nivel, alto_base
         ],
     )?;
     crate::domain::seguridad::EventoAuditoria::registrar(
@@ -614,7 +626,8 @@ pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
     let mut stmt = conn.prepare(
         "SELECT id, codigo, nombre, tipo, zona_id, pasillo_id, activo,
                 pos_x, pos_y, pos_z, altura, ancho, profundidad,
-                created_by, created_at, updated_by, updated_at
+                created_by, created_at, updated_by, updated_at,
+                niveles, alto_nivel, alto_base
          FROM racks WHERE id = ?1",
     )?;
     let mut rows = stmt.query_map([id], |r| {
@@ -632,6 +645,9 @@ pub fn obtener_rack(conn: &Connection, id: &str) -> AppResult<Option<Rack>> {
             altura: r.get(10)?,
             ancho: r.get(11)?,
             profundidad: r.get(12)?,
+            niveles: r.get(17)?,
+            alto_nivel: r.get(18)?,
+            alto_base: r.get(19)?,
             auditoria: crate::domain::Auditoria {
                 created_by: r.get(13)?,
                 created_at: r.get(14)?,
@@ -662,6 +678,13 @@ pub fn mover_rack(conn: &Connection, id: &str, pos: &PosicionMapa, actor: &str) 
             profundo: profundidad,
         };
         crate::mapa::validar_dimensiones(crate::mapa::TipoNodo::Rack, &rect)?;
+        crate::mapa::validar_contencion(
+            conn,
+            &actual.zona_id,
+            crate::mapa::TipoNodo::Rack,
+            &actual.codigo,
+            &rect,
+        )?;
         crate::mapa::validar_colisiones(
             conn,
             &almacen_de_zona(conn, &actual.zona_id)?,
@@ -698,10 +721,15 @@ pub fn editar_rack(
     if let Some(pasillo_id) = &pasillo_id {
         validar_pasillo_de_zona(conn, pasillo_id, &actual.zona_id)?;
     }
+    let niveles = cambios.niveles.unwrap_or(actual.niveles);
+    let alto_nivel = cambios.alto_nivel.unwrap_or(actual.alto_nivel);
+    let alto_base = cambios.alto_base.unwrap_or(actual.alto_base);
+    crate::domain::catalogo::validar_estructura_rack(niveles, alto_nivel, alto_base)?;
     let ts = ahora();
     conn.execute(
-        "UPDATE racks SET nombre = ?2, tipo = ?3, pasillo_id = ?4, updated_at = ?5, updated_by = ?6 WHERE id = ?1",
-        rusqlite::params![id, nombre, tipo, pasillo_id, ts, actor],
+        "UPDATE racks SET nombre = ?2, tipo = ?3, pasillo_id = ?4, updated_at = ?5, updated_by = ?6,
+                niveles = ?7, alto_nivel = ?8, alto_base = ?9 WHERE id = ?1",
+        rusqlite::params![id, nombre, tipo, pasillo_id, ts, actor, niveles, alto_nivel, alto_base],
     )?;
     let despues = obtener_rack(conn, id)?.expect("existe");
     crate::domain::seguridad::EventoAuditoria::registrar(
@@ -988,6 +1016,16 @@ pub fn mover_ubicacion(
     verificar_activo(conn, "ubicaciones", id, "ubicación")?;
     let actual = obtener_ubicacion(conn, id)?
         .ok_or_else(|| AppError::NoEncontrado("ubicación", id.to_string()))?;
+    // Las ubicaciones de un rack se derivan dentro del rack (nivel y bahía):
+    // no tienen posición propia en el mapa.
+    // Limpiar la posición (todo `None`) sí se permite: no borra nada útil.
+    if (actual.rack_id.is_some() || actual.seccion_id.is_some())
+        && (pos.pos_x.is_some() || pos.pos_y.is_some())
+    {
+        return Err(AppError::CampoInvalido(
+            crate::mapa::MSG_UBICACION_DE_RACK.into(),
+        ));
+    }
     let x = pos.pos_x.or(actual.pos_x);
     let y = pos.pos_y.or(actual.pos_y);
     if let (Some(x), Some(y)) = (x, y) {
@@ -997,6 +1035,15 @@ pub fn mover_ubicacion(
             ancho: crate::mapa::UBICACION_ANCHO,
             profundo: crate::mapa::UBICACION_PROFUNDIDAD,
         };
+        if let Some(zona_id) = &actual.zona_id {
+            crate::mapa::validar_contencion(
+                conn,
+                zona_id,
+                crate::mapa::TipoNodo::Ubicacion,
+                &actual.codigo,
+                &rect,
+            )?;
+        }
         crate::mapa::validar_colisiones(
             conn,
             &resolver_almacen_id_de_ubicacion(conn, id)?,
@@ -1778,14 +1825,16 @@ pub fn crear_producto(conn: &Connection, nuevo: &NuevoProducto) -> AppResult<Pro
     conn.execute(
         "INSERT INTO productos (id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
                 codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
-                controla_lote, controla_vencimiento, perecedero, costo_unitario, activo, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 1, ?18, ?19, ?20, ?20)",
+                controla_lote, controla_vencimiento, perecedero, costo_unitario, activo, created_at, updated_at, created_by, updated_by,
+                largo_cm, ancho_cm, alto_cm)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, 1, ?18, ?19, ?20, ?20, ?21, ?22, ?23)",
         rusqlite::params![
             id, sku, nuevo.nombre.trim(), nuevo.descripcion, nuevo.categoria_id, nuevo.uom_base_id,
             nuevo.uom_venta_id, nuevo.uom_compra_id, nuevo.codigo_barras, nuevo.peso_unitario,
             nuevo.volumen_unitario, nuevo.stock_minimo, nuevo.stock_maximo,
             nuevo.controla_lote as i64, nuevo.controla_vencimiento as i64, nuevo.perecedero as i64,
-            nuevo.costo_unitario, ts, ts, nuevo.created_by
+            nuevo.costo_unitario, ts, ts, nuevo.created_by, nuevo.largo_cm, nuevo.ancho_cm,
+            nuevo.alto_cm
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado(sku))?;
@@ -1797,7 +1846,8 @@ pub fn obtener_producto(conn: &Connection, id: &str) -> AppResult<Option<Product
         "SELECT id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
                 codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
                 controla_lote, controla_vencimiento, perecedero, costo_unitario, activo,
-                created_by, created_at, updated_by, updated_at
+                created_by, created_at, updated_by, updated_at,
+                largo_cm, ancho_cm, alto_cm
          FROM productos WHERE id = ?1",
     )?;
     let mut rows = stmt.query_map([id], map_producto)?;
@@ -1830,6 +1880,9 @@ fn map_producto(r: &rusqlite::Row<'_>) -> rusqlite::Result<Producto> {
             updated_by: r.get(20)?,
             updated_at: r.get(21)?,
         },
+        largo_cm: r.get(22)?,
+        ancho_cm: r.get(23)?,
+        alto_cm: r.get(24)?,
     })
 }
 
@@ -1868,6 +1921,14 @@ pub fn editar_producto(
         .unwrap_or(actual.controla_vencimiento);
     let perecedero = cambios.perecedero.unwrap_or(actual.perecedero);
     let costo_unitario = cambios.costo_unitario.or(actual.costo_unitario);
+    let largo_cm = cambios.largo_cm.or(actual.largo_cm);
+    let ancho_cm = cambios.ancho_cm.or(actual.ancho_cm);
+    let alto_cm = cambios.alto_cm.or(actual.alto_cm);
+    crate::domain::catalogo::validar_medidas_producto([
+        ("largo_cm", largo_cm),
+        ("ancho_cm", ancho_cm),
+        ("alto_cm", alto_cm),
+    ])?;
     if controla_vencimiento && !controla_lote {
         return Err(AppError::CampoRequerido(
             "controla_lote (controla_vencimiento lo implica)".into(),
@@ -1925,12 +1986,14 @@ pub fn editar_producto(
         "UPDATE productos SET nombre = ?2, descripcion = ?3, categoria_id = ?4, uom_venta_id = ?5,
                 uom_compra_id = ?6, codigo_barras = ?7, peso_unitario = ?8, volumen_unitario = ?9,
                 stock_minimo = ?10, stock_maximo = ?11, controla_lote = ?12, controla_vencimiento = ?13,
-                perecedero = ?14, costo_unitario = ?15, updated_at = ?16, updated_by = ?17
+                perecedero = ?14, costo_unitario = ?15, updated_at = ?16, updated_by = ?17,
+                largo_cm = ?18, ancho_cm = ?19, alto_cm = ?20
          WHERE id = ?1",
         rusqlite::params![
             id, nombre, descripcion, categoria_id, uom_venta_id, uom_compra_id, codigo_barras,
             peso_unitario, volumen_unitario, stock_minimo, stock_maximo, controla_lote as i64,
-            controla_vencimiento as i64, perecedero as i64, costo_unitario, ts, actor
+            controla_vencimiento as i64, perecedero as i64, costo_unitario, ts, actor,
+            largo_cm, ancho_cm, alto_cm
         ],
     )
     .map_err(|_| AppError::CodigoDuplicado("codigo_barras".into()))?;
@@ -1979,7 +2042,8 @@ pub fn buscar_producto_por_codigo_barras(
         "SELECT id, sku, nombre, descripcion, categoria_id, uom_base_id, uom_venta_id, uom_compra_id,
                 codigo_barras, peso_unitario, volumen_unitario, stock_minimo, stock_maximo,
                 controla_lote, controla_vencimiento, perecedero, costo_unitario, activo,
-                created_by, created_at, updated_by, updated_at
+                created_by, created_at, updated_by, updated_at,
+                largo_cm, ancho_cm, alto_cm
          FROM productos WHERE codigo_barras = ?1",
     )?;
     let mut rows = stmt.query_map([codigo_barras], map_producto)?;

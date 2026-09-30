@@ -855,6 +855,23 @@ pub static RACK_SCHEMA: ResourceSchema = ResourceSchema {
             true,
             false,
         ),
+        col("niveles", "r.niveles", ColTipo::Entero, true, true, false),
+        col(
+            "alto_nivel",
+            "r.alto_nivel",
+            ColTipo::Real,
+            false,
+            false,
+            false,
+        ),
+        col(
+            "alto_base",
+            "r.alto_base",
+            ColTipo::Real,
+            false,
+            false,
+            false,
+        ),
         col(
             "created_by",
             "r.created_by",
@@ -1143,6 +1160,9 @@ pub static PRODUCTO_SCHEMA: ResourceSchema = ResourceSchema {
             true,
             false,
         ),
+        col("largo_cm", "p.largo_cm", ColTipo::Real, false, false, false),
+        col("ancho_cm", "p.ancho_cm", ColTipo::Real, false, false, false),
+        col("alto_cm", "p.alto_cm", ColTipo::Real, false, false, false),
         col(
             "stock_minimo",
             "p.stock_minimo",
