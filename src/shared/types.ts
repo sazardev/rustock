@@ -221,6 +221,10 @@ export interface Rack extends Auditoria, PosicionMapa, TamanioMapa {
   /** Etiqueta opcional dentro de un pasillo de la misma zona (SPEC §3.3b). */
   pasillo_id: string | null;
   activo: boolean;
+  /** Estructura vertical (1 unidad = 1 cm): niveles, alto útil por nivel y alto de la base. */
+  niveles: number;
+  alto_nivel: number;
+  alto_base: number;
 }
 
 export interface NuevoRack {
@@ -229,6 +233,12 @@ export interface NuevoRack {
   tipo?: string | null;
   zona_id: string;
   pasillo_id?: string | null;
+  /** Defecto 3. */
+  niveles?: number | null;
+  /** cm, defecto 80. */
+  alto_nivel?: number | null;
+  /** cm, defecto 15. */
+  alto_base?: number | null;
 }
 
 /** `pasillo_id`: `undefined` = no tocar, `null` = quitar, string = reasignar. */
@@ -236,6 +246,9 @@ export interface EditarRack {
   nombre?: string | null;
   tipo?: string | null;
   pasillo_id?: string | null;
+  niveles?: number | null;
+  alto_nivel?: number | null;
+  alto_base?: number | null;
 }
 
 // ============ Sección (SPEC §3.4) ============
@@ -451,6 +464,10 @@ export interface Producto extends Auditoria {
   controla_lote: boolean;
   controla_vencimiento: boolean;
   perecedero: boolean;
+  /** Medidas en cm (1 unidad = 1 cm); nulas si no se han capturado. */
+  largo_cm: number | null;
+  ancho_cm: number | null;
+  alto_cm: number | null;
   activo: boolean;
 }
 
@@ -470,6 +487,9 @@ export interface NuevoProducto {
   controla_lote?: boolean;
   controla_vencimiento?: boolean;
   perecedero?: boolean;
+  largo_cm?: number | null;
+  ancho_cm?: number | null;
+  alto_cm?: number | null;
 }
 
 export interface EditarProducto {
@@ -486,6 +506,9 @@ export interface EditarProducto {
   controla_lote?: boolean | null;
   controla_vencimiento?: boolean | null;
   perecedero?: boolean | null;
+  largo_cm?: number | null;
+  ancho_cm?: number | null;
+  alto_cm?: number | null;
 }
 
 // ============ Lote (SPEC §3.12) ============
@@ -1198,6 +1221,10 @@ export interface ConfiguracionEmpresa {
   tema_id: string;
   /** Modo oscuro global (interruptor claro/oscuro). */
   modo_oscuro: boolean;
+  /** Estatura de la persona que camina el mapa 3D, en cm (defecto 170). */
+  altura_persona_cm: number;
+  /** Holgura mínima recomendada entre racks enfrentados, en cm (defecto 90). */
+  holgura_pasillo_cm: number;
   updated_by: string | null;
   updated_at: string;
 }
@@ -1227,6 +1254,28 @@ export interface EditarConfiguracionEmpresa {
   tema_id?: string;
   /** Modo oscuro global. */
   modo_oscuro?: boolean;
+  altura_persona_cm?: number;
+  holgura_pasillo_cm?: number;
+}
+
+/** Entrada de `evaluar_posicion_mapa` (sin escribir nada). `id` ausente = elemento nuevo. */
+export interface EvaluarPosicionPedido {
+  almacen_id: string;
+  tipo: "zona" | "pasillo" | "rack" | "ubicacion";
+  id?: string | null;
+  x: number;
+  y: number;
+  ancho: number;
+  profundidad: number;
+}
+
+export type EstadoPosicion = "libre" | "advertencia" | "bloqueado";
+
+export interface EvaluacionPosicion {
+  estado: EstadoPosicion;
+  motivo: string | null;
+  /** Código del elemento con el que choca o de la zona que no lo contiene. */
+  choque: string | null;
 }
 
 /** Preferencias de la sesión activa resueltas (fallbacks de la empresa aplicados). */

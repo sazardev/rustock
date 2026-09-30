@@ -35,6 +35,8 @@ import type {
   EditarPasillo,
   EditarProveedor,
   EditarRack,
+  EvaluacionPosicion,
+  EvaluarPosicionPedido,
   EditarSeccion,
   EditarSucursal,
   EditarUbicacion,
@@ -213,6 +215,12 @@ export const editarRack = (id: string, cambios: EditarRack): Promise<Rack> =>
 export const moverRack = (id: string, pos: PosicionMapaEditable): Promise<Rack> =>
   invoke("mover_rack", { id, pos });
 export const desactivarRack = (id: string): Promise<void> => invoke("desactivar_rack", { id });
+
+/** Evalúa una posición del mapa contra las reglas del backend (libre,
+ * advertencia o bloqueado) sin guardar nada. Es la referencia autoritativa:
+ * el motor del frontend la refleja para dar feedback en vivo. */
+export const evaluarPosicionMapa = (pedido: EvaluarPosicionPedido): Promise<EvaluacionPosicion> =>
+  invoke("evaluar_posicion_mapa", { pedido });
 
 // ============ Sección ============
 

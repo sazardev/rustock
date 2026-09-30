@@ -163,8 +163,14 @@ const SeccionFormPage = lazyPage(() => import("../pages/SeccionFormPage"), "Secc
 const CajaFormPage = lazyPage(() => import("../pages/CajaFormPage"), "CajaFormPage");
 const LoteFormPage = lazyPage(() => import("../pages/LoteFormPage"), "LoteFormPage");
 const ImportarPage = lazyPage(() => import("../pages/ImportarPage"), "ImportarPage");
-const AlmacenMapaPage = lazyPage(() => import("../pages/AlmacenMapaPage"), "AlmacenMapaPage");
-const AlmacenMapa3DPage = lazyPage(() => import("../pages/AlmacenMapa3DPage"), "AlmacenMapa3DPage");
+const AlmacenMapaPage = lazyPage(
+  () => import("../pages/mapa2d/AlmacenMapaPage"),
+  "AlmacenMapaPage",
+);
+const AlmacenMapa3DPage = lazyPage(
+  () => import("../pages/mapa3d/AlmacenMapa3DPage"),
+  "AlmacenMapa3DPage",
+);
 const MapaAsistentePage = lazyPage(() => import("../pages/MapaAsistentePage"), "MapaAsistentePage");
 const AyudaIndexPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaIndexPage");
 const AyudaGlosarioPage = lazyPage(() => import("../pages/ayuda/AyudaPages"), "AyudaGlosarioPage");

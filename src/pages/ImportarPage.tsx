@@ -35,7 +35,7 @@ function tiposDe(t: Diccionario): Array<{ valor: TipoImportacion; etiqueta: stri
 
 const ENCABEZADOS: Record<TipoImportacion, string> = {
   PRODUCTOS:
-    "sku,nombre,uom_base,descripcion,categoria,codigo_barras,peso,volumen,stock_minimo,stock_maximo,controla_lote,controla_vencimiento,perecedero,uom_venta,uom_compra",
+    "sku,nombre,uom_base,descripcion,categoria,codigo_barras,peso,volumen,stock_minimo,stock_maximo,controla_lote,controla_vencimiento,perecedero,uom_venta,uom_compra,largo_cm,ancho_cm,alto_cm",
   UBICACIONES: "codigo,nombre,tipo,capacidad_maxima,ubicado_en",
   STOCK_INICIAL: "sku,cantidad,ubicacion,lote,vencimiento,origen_lote,documento",
 };

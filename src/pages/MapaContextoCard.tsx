@@ -236,6 +236,12 @@ function NodoLink({ tipo, nodo }: { tipo: TipoContexto; nodo: NodoSimple }) {
 /** Vista cenital fija (sin pan/zoom/drag) de un nodo y sus hermanos. */
 function MiniMapa({ hermanos, actualId }: { hermanos: NodoSimple[]; actualId: string }) {
   const t = useT();
+  // Sin hermanos con posición (consulta cargando o vacía) no hay encuadre que
+  // calcular: `Math.min()` de una lista vacía es Infinity y produce un
+  // `viewBox` inválido.
+  if (hermanos.length === 0) {
+    return null;
+  }
   const xs = hermanos.map((h) => h.pos_x!);
   const ys = hermanos.map((h) => h.pos_y!);
   const minX = Math.min(...xs) - 40;

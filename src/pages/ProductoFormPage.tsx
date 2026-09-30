@@ -16,6 +16,13 @@ import { invalidarRecurso } from "../shared/invalidar";
 import { catalogoDetalle, catalogoLista, catalogoNuevo } from "../app/route-paths";
 import { mensajeError } from "../shared/format";
 import { useT, type Diccionario } from "../shared/i18n";
+import { MedidasProductoCard } from "./producto/MedidasProductoCard";
+import {
+  MEDIDAS_VACIAS,
+  esquemaMedidas,
+  medidasANumeros,
+  medidasAValores,
+} from "./producto/medidas-producto";
 import {
   CrearRapido,
   usePeticionCreacion,
@@ -56,6 +63,7 @@ function esquemaDe(t: Diccionario) {
     controla_lote: z.boolean(),
     controla_vencimiento: z.boolean(),
     perecedero: z.boolean(),
+    ...esquemaMedidas(t.formularios.producto.medidaInvalida),
   });
 }
 
@@ -80,6 +88,7 @@ const VALORES_INICIALES: FormValues = {
   controla_lote: false,
   controla_vencimiento: false,
   perecedero: false,
+  ...MEDIDAS_VACIAS,
 };
 
 function numeroONull(valor: string | undefined): number | null {
@@ -207,6 +216,7 @@ export function ProductoFormPage() {
         controla_lote: p.controla_lote,
         controla_vencimiento: p.controla_vencimiento,
         perecedero: p.perecedero,
+        ...medidasAValores(p),
       });
     }
   }, [productoQuery.data, reset]);
@@ -232,6 +242,7 @@ export function ProductoFormPage() {
         controla_lote: p.controla_lote,
         controla_vencimiento: p.controla_vencimiento,
         perecedero: p.perecedero,
+        ...medidasAValores(p),
       });
     }
   }, [origenQuery.data, reset]);
@@ -253,6 +264,7 @@ export function ProductoFormPage() {
             controla_lote: v.controla_lote,
             controla_vencimiento: v.controla_vencimiento,
             perecedero: v.perecedero,
+            ...medidasANumeros(v),
           })
         : crearProducto({
             sku: v.sku,
@@ -270,6 +282,7 @@ export function ProductoFormPage() {
             controla_lote: v.controla_lote,
             controla_vencimiento: v.controla_vencimiento,
             perecedero: v.perecedero,
+            ...medidasANumeros(v),
           }),
     onSuccess: (producto) => {
       descartar();
@@ -496,6 +509,8 @@ export function ProductoFormPage() {
             </div>
           </Card.Body>
         </Card>
+
+        <MedidasProductoCard register={(n) => register(n)} errors={errors} />
 
         <FormActions>
           <Button type="submit" variant="primary" disabled={isSubmitting || guardarMut.isPending}>

@@ -7,7 +7,7 @@
 `SPEC.md` (business logic) → `DESIGN.md` (UI, non-negotiable) → `STACK.md` (perf/stack) → `ROADMAP.md` (phase order) → `VERSIONING.md` (SemVer + Conventional Commits) → `MEMORY.md` (session state, update at milestones). If docs conflict with code/config, trust executable source.
 
 Key DESIGN constraints (enforced by `scripts/design-guard.mjs`):
-- `border-radius` only `var(--radius-sm/md/lg/xl/full)`; `box-shadow` only `var(--shadow-*)`; zero `0` or literals forbidden. No `backdrop-filter: blur` outside `layout.css` topbar, no gradients, no `filter:blur`.
+- `border-radius` only `var(--radius-sm/md/lg/xl/full)`; `box-shadow` only `var(--shadow-*)`; zero `0` or literals forbidden. No `backdrop-filter: blur` outside `src/styles/layout/topbar.css`, no gradients, no `filter:blur`.
 - Zero modals/popovers/drawers/`alert/confirm/prompt` — every action is a page with deep link (`/recursos/:id/eliminar`).
 - Zero emojis. Icons only `lucide-react` via `src/shared/ui/Icon.tsx` (49 canonical names, DESIGN §6.13 + 7 chrome/mapa).
 - Fonts only `Geist Sans` (UI) + `Geist Mono` (data) via `tokens.css:64`; fallbacks `Inter/JetBrains Mono/SFMono`. No literal `font-family`.
@@ -38,7 +38,7 @@ Env for backend: `RUSTOCK_SEED=1` (seed, debug only), `RUSTOCK_WEB_ONLY=1`, `RUS
 
 ## Architecture
 
-- Entry: `src/main.tsx` → `src/App.tsx` (`RouterProvider` + `ToastProvider`). CSS `src/styles/index.css` order: tokens → reset → base → utilities → layout → components → responsive.
+- Entry: `src/main.tsx` → `src/App.tsx` (`RouterProvider` + `ToastProvider`). CSS `src/styles/index.css` order: tokens → reset → base → utilities → layout → components → responsive → tv. `layout/` and `components/` are folders: one file per component or screen, stitched by an `index.css` whose `@import` order IS the cascade (never reorder; new files go in `index.css` at the right spot). Device scale (`tv.css`) only redefines tokens; `html[data-dispositivo]` is set by `src/shared/dispositivo/`.
 - Router: `react-router` 8 (not `react-router-dom`). Shell `src/app/AppLayout.tsx`, routes `src/app/router.tsx`, nav `src/app/nav.ts`, pages `src/pages/` (`PageHeader` + content, one task per page). `src/app/route-paths.ts` centralizes `PATH`.
 - UI kit `src/shared/ui/` barrel `index.ts` — `Icon` (canonical map), `Button`, `Field`/`Input`/`Select`, `Table` (virtualized >80 rows via `@tanstack/react-virtual`), `AppShell`/`Topbar`/`Sidebar`/`Brand`/`Breadcrumbs`, `Toast`, etc. All styles via `src/styles/*.css` classes, never hardcoded tokens in JSX.
 - Shared `src/shared/`: `api.ts`/`backend.ts` (Tauri `invoke` + HTTP `fetch` fallback), `types.ts` (snake_case mirrors Rust serde), `session.ts`/`preferencias.ts`/`tema.ts` (zustand), `format.ts`, `seo.tsx`.

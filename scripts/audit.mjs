@@ -478,8 +478,6 @@ for (const rel of srcFiles) {
 // —el papel es blanco y la tinta negra, con independencia del tema de la
 // interfaz: usar un token ahí pintaría la etiqueta en negro bajo modo oscuro.
 const HEX_ALLOWLIST = new Set([
-  "src/pages/AlmacenMapa3DPage.tsx",
-  "src/pages/mapa-almacen-datos.ts",
   "src/shared/descargar.ts",
 ]);
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/g;

@@ -50,10 +50,12 @@ export type EntradaHistorial =
 
 export const HISTORIAL_MAX = 50;
 
-/** Estado completo de posición/tamaño de un nodo. */
-export const snapshotDe = (n: NodoMapa): SnapshotPos => ({
-  pos_x: n.pos_x,
-  pos_y: n.pos_y,
+/** Estado completo de posición/tamaño de un nodo. Un nodo sin posición
+ * guardada se ve en su posición base (rejilla de respaldo): el snapshot debe
+ * capturar ESA posición visible, o deshacer lo mandaría a 0,0. */
+export const snapshotDe = (n: NodoMapa, posicionBase?: { x: number; y: number }): SnapshotPos => ({
+  pos_x: n.pos_x ?? posicionBase?.x ?? null,
+  pos_y: n.pos_y ?? posicionBase?.y ?? null,
   pos_z: n.pos_z,
   altura: n.altura,
   ancho: n.ancho,
