@@ -4,6 +4,21 @@ Todos los cambios notables de Rustock se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado [SemVer](https://semver.org/lang/es/).
+## [0.9.0] - 2026-09-30
+
+### Features
+
+- **dispositivo:** Soporte de TV con navegación por D-pad y escala de 10 pies
+
+- **mapa:** Unidades reales, contención en zona y evaluación de colocación
+
+- **mapa:** 3D y 2D a escala real con stock, caminata en primera persona y personalización
+
+
+### Refactor
+
+- **ui:** Modulariza los estilos, parte las páginas gigantes y mejora el móvil
+
 ## [0.8.1] - 2026-08-31
 
 ### Documentación
