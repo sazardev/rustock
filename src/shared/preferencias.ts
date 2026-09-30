@@ -12,7 +12,7 @@ import * as backend from "./backend";
 import { useTema } from "./tema";
 import type { EditarPreferenciasUsuario, PreferenciasResueltas } from "./types";
 
-/** Escalas de fuente aplicadas al `font-size` del root (todo el CSS usa rem). */
+/** Escalas de fuente de la preferencia del usuario (todo el CSS usa rem). */
 export const TAMANIO_FUENTE_PX: Record<string, string> = {
   PEQUENA: "87.5%", // 14px
   MEDIA: "100%", // 16px (defecto del diseño)
@@ -27,8 +27,11 @@ interface PreferenciasState {
 }
 
 function aplicarFuente(tamano: string | undefined): void {
-  const escala = TAMANIO_FUENTE_PX[tamano ?? "MEDIA"] ?? TAMANIO_FUENTE_PX.MEDIA;
-  document.documentElement.style.fontSize = escala;
+  const porcentaje = TAMANIO_FUENTE_PX[tamano ?? "MEDIA"] ?? TAMANIO_FUENTE_PX.MEDIA;
+  // Factor, no `font-size`: el dispositivo aporta su propia escala (tv.css) y
+  // `base.css` multiplica ambas.
+  const factor = Number.parseFloat(porcentaje) / 100;
+  document.documentElement.style.setProperty("--escala-usuario", String(factor));
 }
 
 export const usePreferencias = create<PreferenciasState>((set) => ({
