@@ -2,7 +2,7 @@
 @import "./reset.css";
 @import "./base.css";
 @import "./utilities.css";
-@import "./layout.css";
-@import "./components.css";
-@import "./palette.css";
+@import "./layout/index.css";
+@import "./components/index.css";
 @import "./responsive.css";
+@import "./tv.css";

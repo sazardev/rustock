@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { movimientoDetalle } from "../app/route-paths";
 import { useT, type Diccionario } from "../shared/i18n";
 import { obtenerDashboard, obtenerKpisGenerales, listarMovimientos } from "../shared/backend";
 import { esPaginado, type Movimiento } from "../shared/types";
@@ -54,6 +56,7 @@ function columnasDe(t: Diccionario): Array<TableColumn<Movimiento>> {
 
 export function DashboardPage() {
   const t = useT();
+  const navigate = useNavigate();
   const columns = columnasDe(t);
   const dashboardQuery = useQuery({
     queryKey: ["dashboard"],
@@ -101,7 +104,8 @@ export function DashboardPage() {
         },
         {
           label: t.dashboard.movimientosHoy,
-          value: `${formatearNumero(resumen.movimientos_hoy)} (E:${resumen.movimientos_hoy_por_tipo.entradas} S:${resumen.movimientos_hoy_por_tipo.salidas} T:${resumen.movimientos_hoy_por_tipo.traslados} A:${resumen.movimientos_hoy_por_tipo.ajustes})`,
+          value: formatearNumero(resumen.movimientos_hoy),
+          hint: t.dashboard.movimientosHoyDesglose(resumen.movimientos_hoy_por_tipo),
           code: true,
         },
         {
@@ -187,20 +191,21 @@ export function DashboardPage() {
       <Card title={t.dashboard.indicadoresClave}>
         <Card.Body>
           {dashboardQuery.isLoading ? (
-            <p className="text-base text-gray-500">Cargando…</p>
+            <p className="text-base text-gray-500">{t.comun.cargando}</p>
           ) : (
             <DetailList items={kpiItems} className="detail-list--stats" />
           )}
         </Card.Body>
       </Card>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card title={t.dashboard.movimientosRecientes}>
           <Table
             columns={columns}
             rows={movimientos}
             rowKey={(m) => m.id}
             loading={movimientosQuery.isLoading}
+            onRowClick={(m) => navigate(movimientoDetalle(m.id))}
             emptyTitle={t.dashboard.sinMovimientos}
             emptyDescription={t.dashboard.sinMovimientosDesc}
           />
@@ -208,7 +213,7 @@ export function DashboardPage() {
         <Card title={t.dashboard.indicadoresAdicionales}>
           <Card.Body>
             {kpisQuery.isLoading ? (
-              <p className="text-base text-gray-500">Cargando…</p>
+              <p className="text-base text-gray-500">{t.comun.cargando}</p>
             ) : (
               <DetailList items={kpiGeneralItems} />
             )}

@@ -1,0 +1,439 @@
+/* ============ Controles con panel propio (DESIGN §6.4.1) ============
+ * Select, calendario y reloj comparten el mismo esqueleto: un disparador que
+ * se ve exactamente igual que un campo de formulario, y un panel flotante
+ * anclado a él. El control nativo sigue existiendo debajo, oculto, como
+ * fuente de verdad del valor — el panel es presentación, no reemplazo. */
+
+/* El control nativo queda accesible al formulario pero fuera de la vista y
+   fuera del orden de tabulación. No se usa `display: none` para que siga
+   participando en el envío nativo y en el autocompletado del navegador. */
+.select__nativo,
+.datepicker__nativo,
+.timepicker__nativo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.select,
+.datepicker,
+.timepicker {
+  position: relative;
+}
+
+.select__trigger,
+.datepicker__trigger,
+.timepicker__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.select__trigger:disabled,
+.datepicker__trigger:disabled,
+.timepicker__trigger:disabled {
+  cursor: not-allowed;
+}
+
+.select__valor,
+.datepicker__valor,
+.timepicker__valor {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Sin valor elegido el texto es un marcador, no un dato: mismo color que un
+   placeholder de input, para que no se lea como una respuesta ya dada. */
+.select__trigger--placeholder .select__valor,
+.datepicker__trigger--vacio .datepicker__valor,
+.timepicker__trigger--vacio .timepicker__valor {
+  color: var(--color-gray-400);
+}
+
+.select__arrow,
+.datepicker__icono,
+.timepicker__icono {
+  flex-shrink: 0;
+  color: var(--color-gray-400);
+  transition: var(--transition-transform);
+}
+
+.select__arrow--abierto {
+  transform: rotate(180deg);
+}
+
+.select__trigger[aria-expanded="true"],
+.datepicker__trigger[aria-expanded="true"],
+.timepicker__trigger[aria-expanded="true"] {
+  border-color: var(--color-blue-500);
+}
+
+/* Panel flotante compartido: única superposición permitida en un formulario.
+   No bloquea la página, se cierra con Escape o al pulsar fuera, y devuelve el
+   foco al control que lo abrió. */
+.panel-flotante {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: panel-flotante-in var(--duration-fast) var(--ease-out);
+}
+
+@keyframes panel-flotante-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Lista del select ---- */
+.select__lista {
+  padding: var(--space-1);
+}
+
+.select__opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-700);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-instant) var(--ease-standard);
+}
+
+/* Una sola marca de "dónde estoy": la opción activa es la que responderá a
+   Enter, venga el foco del teclado o del cursor. */
+.select__opcion--activa {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.select__opcion--elegida {
+  font-weight: var(--fw-medium);
+  color: var(--color-gray-900);
+}
+
+.select__opcion-texto {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.select__opcion-marca {
+  flex-shrink: 0;
+  color: var(--color-blue-500);
+}
+
+.select__vacio {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  text-align: center;
+}
+
+/* ---- Calendario ---- */
+.calendario {
+  width: 17.5rem;
+  padding: var(--space-2);
+}
+
+.calendario__barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-2);
+}
+
+.calendario__mes {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--color-gray-900);
+  text-transform: capitalize;
+}
+
+.calendario__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-500);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.calendario__nav:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.calendario__nav--siguiente {
+  transform: rotate(180deg);
+}
+
+.calendario__semana,
+.calendario__rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+}
+
+.calendario__dia-nombre {
+  padding: var(--space-1) 0;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  color: var(--color-gray-400);
+  text-align: center;
+}
+
+.calendario__dia {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height-sm);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-700);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--duration-instant) var(--ease-standard);
+}
+
+.calendario__dia:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+/* Los días del mes vecino se muestran para no romper la rejilla, pero se
+   retiran visualmente: son contexto, no destino. */
+.calendario__dia--fuera {
+  color: var(--color-gray-300);
+}
+
+/* Hoy se marca con peso, no con color: el acento se reserva a la elección. */
+.calendario__dia--hoy {
+  font-weight: var(--fw-semibold);
+  color: var(--color-gray-900);
+}
+
+.calendario__dia--elegido,
+.calendario__dia--elegido:hover {
+  background-color: var(--color-blue-500);
+  color: var(--color-white);
+  font-weight: var(--fw-medium);
+}
+
+.calendario__hora {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-width) solid var(--color-gray-100);
+}
+
+.calendario__hora-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  color: var(--color-gray-500);
+}
+
+.calendario__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-width) solid var(--color-gray-100);
+}
+
+.calendario__accion {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-600);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.calendario__accion:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.calendario__accion--principal {
+  color: var(--color-blue-500);
+}
+
+.calendario__accion--principal:hover {
+  background-color: var(--color-blue-50);
+  color: var(--color-blue-600);
+}
+
+/* ---- Reloj (dos columnas) ---- */
+.reloj {
+  padding: var(--space-2);
+}
+
+.reloj__columnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+  max-height: 12rem;
+}
+
+.reloj__columna {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--space-1);
+}
+
+.reloj__celda {
+  flex-shrink: 0;
+  min-width: 3rem;
+  height: var(--control-height-sm);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-700);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--duration-instant) var(--ease-standard);
+}
+
+.reloj__celda:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.reloj__celda--elegida,
+.reloj__celda--elegida:hover {
+  background-color: var(--color-blue-500);
+  color: var(--color-white);
+}
+
+.reloj__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-width) solid var(--color-gray-100);
+}
+
+/* En pantalla táctil los paneles se abren a lo ancho del control y con
+   destinos más grandes: se manejan con el pulgar. */
+@media (pointer: coarse) {
+  .select__opcion,
+  .calendario__dia,
+  .reloj__celda {
+    min-height: var(--tap-target);
+    height: auto;
+  }
+
+  .reloj__columnas {
+    max-height: 14rem;
+  }
+}
+
+.checkbox,
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.checkbox__input,
+.radio__input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: var(--border-width) solid var(--color-gray-300);
+  background-color: var(--color-surface);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.checkbox__input {
+  border-radius: var(--radius-sm);
+}
+
+.radio__input {
+  border-radius: var(--radius-full);
+}
+
+.checkbox__input:checked,
+.radio__input:checked {
+  background-color: var(--color-blue-500);
+  border-color: var(--color-blue-500);
+}
+
+.checkbox__input:focus-visible,
+.radio__input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+
+.checkbox__label,
+.radio__label {
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  user-select: none;
+}

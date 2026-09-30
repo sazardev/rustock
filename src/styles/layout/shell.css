@@ -1,0 +1,105 @@
+.app-shell {
+  height: 100%;
+  display: grid;
+  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-columns: var(--width-sidebar) minmax(0, 1fr);
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar content";
+  background-color: var(--color-surface);
+  overflow: hidden;
+  transition: grid-template-columns var(--duration-base) var(--ease-out);
+}
+
+.app-shell--sidebar-collapsed {
+  grid-template-columns: var(--width-sidebar-compact) minmax(0, 1fr);
+}
+
+.app-shell__topbar {
+  grid-area: topbar;
+  position: relative;
+  z-index: var(--z-topbar);
+}
+
+.app-shell__sidebar {
+  grid-area: sidebar;
+  min-height: 0;
+  position: relative;
+  background-color: var(--color-gray-50);
+}
+
+/* Control de colapso: anclado al borde derecho del drawer, no a la barra
+   superior — colapsar/expandir es una acción de la navegación. Aparece al
+   pasar el cursor por la navegación; el foco de teclado siempre lo revela. */
+.sidebar__collapse-toggle {
+  position: absolute;
+  top: 50%;
+  right: -0.6875rem;
+  transform: translateY(-50%);
+  z-index: calc(var(--z-sidebar) + 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  padding: 0;
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  color: var(--color-gray-500);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    var(--transition-elevate);
+}
+
+.app-shell__sidebar:hover .sidebar__collapse-toggle,
+.sidebar__collapse-toggle:focus-visible {
+  opacity: 1;
+}
+
+/* Sin hover no hay descubrimiento: con puntero grueso el control es visible
+   siempre (DESIGN §10). */
+@media (pointer: coarse) {
+  .sidebar__collapse-toggle {
+    opacity: 1;
+  }
+}
+
+.sidebar__collapse-toggle:hover {
+  border-color: var(--color-gray-300);
+  color: var(--color-gray-900);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar__collapse-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+@media (max-width: 47.99rem) {
+  .sidebar__collapse-toggle {
+    display: none;
+  }
+}
+
+.app-shell__content {
+  grid-area: content;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  /* El scroll del contenido es la superficie desplazable del sistema: se
+     ancla al inicio para que un cambio de datos no mueva la vista bajo el
+     cursor (DESIGN §8.5). */
+  overflow-anchor: auto;
+}
+
+.app-shell__nav-backdrop {
+  display: none;
+  border: 0;
+  cursor: default;
+}

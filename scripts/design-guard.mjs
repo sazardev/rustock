@@ -7,7 +7,7 @@
  *  2. Sin border-radius fuera de los tokens --radius-sm/md/lg/xl/full.
  *  3. box-shadow solo con los tokens --shadow-xs/sm/md/lg/focus-ring/glow-primary (o "none").
  *  4. Sin gradientes en CSS.
- *  5. Sin filter: blur() en ningún lugar; backdrop-filter: blur() solo permitido en layout.css
+ *  5. Sin filter: blur() en ningún lugar; backdrop-filter: blur() solo permitido en layout/topbar.css
  *     (el cristal de la barra superior al hacer scroll, DESIGN §3.5/§4.2).
  *  6. Sin ventanas nativas de JS (alert/confirm/prompt) que funcionen como modales.
  *  7. Sin fuentes fuera de Geist Sans / Geist Mono (y sus fallbacks declarados).
@@ -176,9 +176,9 @@ for (const filePath of FILES) {
       const lineNo = content.slice(0, content.match(FILTER_BLUR_RE).index).split("\n").length;
       errors.push(`${ctx(lineNo - 1)} — filter: blur prohibido (DESIGN §3.5)`);
     }
-    if (BACKDROP_BLUR_RE.test(content) && !rel.endsWith("layout.css")) {
+    if (BACKDROP_BLUR_RE.test(content) && !rel.endsWith("layout/topbar.css")) {
       const lineNo = content.slice(0, content.match(BACKDROP_BLUR_RE).index).split("\n").length;
-      errors.push(`${ctx(lineNo - 1)} — backdrop-filter: blur solo permitido en layout.css (barra superior en scroll, DESIGN §3.5/§4.2)`);
+      errors.push(`${ctx(lineNo - 1)} — backdrop-filter: blur solo permitido en layout/topbar.css (barra superior en scroll, DESIGN §3.5/§4.2)`);
     }
     let fm;
     FONT_RE.lastIndex = 0;

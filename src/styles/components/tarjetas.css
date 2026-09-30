@@ -1,0 +1,237 @@
+/* ============ Tarjetas y secciones ============
+ * Por defecto una `card` no es una caja: es una sección del documento,
+ * separada por aire y presentada por su título. La caja (borde + superficie)
+ * queda para lo que de verdad se levanta del lienzo: mosaicos pulsables,
+ * bloques destacados y paneles de estado. */
+.card {
+  background-color: transparent;
+  border: 0;
+  border-radius: var(--radius-lg);
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 0 var(--space-3);
+}
+
+.card__title {
+  font-size: var(--text-base);
+  line-height: var(--text-base--lh);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-snug);
+  color: var(--color-gray-900);
+}
+
+.card__body {
+  padding: 0;
+}
+
+.card__body--flush {
+  padding: 0;
+}
+
+/* Bloque destacado: superficie hundida para notas, resúmenes y contexto que
+   acompaña sin interrumpir la lectura. */
+.card--muted {
+  background-color: var(--color-surface-muted);
+  border: var(--border-width) solid var(--color-gray-200);
+}
+
+.card--muted .card__header {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+
+.card--muted .card__body {
+  padding: var(--space-4);
+}
+
+.card--muted .card__header + .card__body {
+  padding-top: 0;
+}
+
+/* Mosaico pulsable: la única tarjeta con caja y elevación — se levanta al
+   apuntarla porque va a llevar a otra página. */
+.card--interactive {
+  cursor: pointer;
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-200);
+  transition: var(--transition-elevate);
+}
+
+.card--interactive .card__header {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+
+.card--interactive .card__body {
+  padding: var(--space-4);
+}
+
+.card--interactive .card__header + .card__body {
+  padding-top: 0;
+}
+
+.card--interactive:hover {
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.card--interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-xs);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Formulario en columna: el aire entre campos lo pone el formulario, no cada
+   campo con un margen propio (DESIGN §3.3). */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+.password {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password__control {
+  padding-right: var(--space-8);
+}
+
+.password__toggle {
+  position: absolute;
+  right: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-400);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.password__toggle:hover {
+  color: var(--color-gray-900);
+  background-color: var(--color-gray-100);
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
+  font-weight: var(--fw-medium);
+  color: var(--color-gray-700);
+}
+
+.field__label--required::after {
+  content: " *";
+  color: var(--color-danger-500);
+}
+
+.field__control {
+  display: block;
+  width: 100%;
+  height: var(--control-height-lg);
+  padding: 0 var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--control-height-lg);
+  color: var(--color-gray-900);
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.field__control::placeholder {
+  color: var(--color-gray-400);
+}
+
+.field__control:hover:not(:disabled) {
+  border-color: var(--color-gray-300);
+}
+
+.field__control:focus-visible {
+  border-color: var(--color-blue-500);
+  box-shadow: var(--shadow-focus-ring);
+  outline: none;
+}
+
+.field__control:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+.field__control:disabled {
+  background-color: var(--color-gray-100);
+  border-color: var(--color-gray-200);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+}
+
+.field__control[readonly] {
+  background-color: var(--color-surface-muted);
+  color: var(--color-gray-500);
+}
+
+.field--error .field__control {
+  border-color: var(--color-danger-500);
+}
+
+.field--error .field__label {
+  color: var(--color-danger-600);
+}
+
+.field__help {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--lh);
+  color: var(--color-gray-500);
+}
+
+.field__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--lh);
+  color: var(--color-danger-600);
+}
+
+.field__error-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.field__control--code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.01em;
+}
+
+.field__control--number {
+  font-family: var(--font-mono);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.field__control--textarea {
+  height: auto;
+  min-height: var(--space-16);
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  line-height: var(--text-sm--lh);
+  resize: vertical;
+}

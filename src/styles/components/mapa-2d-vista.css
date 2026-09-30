@@ -1,0 +1,226 @@
+/* ============ Mapa 2D: controles de vista, capas, escala y distribución ============ */
+
+.mapa-2d-layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (min-width: 1280px) {
+  .mapa-2d-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  }
+}
+
+.mapa-estado {
+  color: var(--color-gray-500);
+  font-size: var(--text-sm);
+}
+
+.mapa-lienzo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mapa-lienzo__area {
+  position: relative;
+}
+
+.mapa-almacen__lienzo:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+/* Fila de controles de vista: una sola línea; si no cabe, se desplaza. */
+.mapa-vista {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.mapa-vista::-webkit-scrollbar {
+  display: none;
+}
+
+.mapa-vista > * {
+  flex-shrink: 0;
+}
+
+.mapa-herramienta--icono {
+  justify-content: center;
+  min-width: var(--size-sm);
+  padding: 0;
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+@media (pointer: coarse) {
+  .mapa-herramienta,
+  .mapa-panel__cerrar {
+    min-height: var(--tap-target);
+  }
+
+  .mapa-herramienta--icono {
+    min-width: var(--tap-target);
+  }
+}
+
+/* Barra de escala gráfica (abajo a la izquierda del lienzo). */
+.mapa-escala {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-gray-700);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+.mapa-escala__barra {
+  display: block;
+  height: 6px;
+  border: 1px solid var(--color-gray-700);
+  border-top: 0;
+}
+
+.mapa-lienzo__vacio {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--color-gray-500);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+/* Paneles inline (capas, atajos): empujan el lienzo, no lo tapan. */
+.mapa-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-8);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+.mapa-panel__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mapa-panel__titulo {
+  margin: 0;
+  color: var(--color-gray-600);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mapa-panel__nota {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+}
+
+.mapa-panel__cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-sm);
+  height: var(--size-sm);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-600);
+  cursor: pointer;
+}
+
+.mapa-panel__cerrar:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-800);
+}
+
+.mapa-panel__cerrar:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.mapa-capas {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mapa-capas__fila {
+  display: contents;
+}
+
+.mapa-capas__nombre {
+  font-size: var(--text-sm);
+  color: var(--color-gray-800);
+}
+
+.mapa-segmentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.mapa-atajos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-2) var(--space-6);
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.mapa-atajos__fila {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.mapa-atajos__fila dt {
+  flex: 0 0 auto;
+  min-width: 7rem;
+}
+
+.mapa-atajos__fila dd {
+  margin: 0;
+  color: var(--color-gray-700);
+  font-size: var(--text-sm);
+}
+
+/* Móvil: los atajos de teclado no aplican; la tabla se apila. */
+@media (max-width: 47.99rem) {
+  .mapa-capas {
+    grid-template-columns: 1fr auto auto;
+    width: 100%;
+  }
+
+  .mapa-atajos__fila {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+}

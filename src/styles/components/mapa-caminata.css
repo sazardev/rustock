@@ -1,0 +1,261 @@
+/* ============ HUD de la caminata en primera persona (mapa 3D) ============ */
+/* Todo en linea sobre el lienzo, sin modales. La capa no captura el puntero:
+   solo el joystick y la zona de mirar (tactil) lo hacen. */
+
+.caminata {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  color: var(--color-gray-800);
+}
+
+.caminata__mirilla {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--color-surface);
+  border-radius: var(--radius-full);
+  background: var(--color-ink-900);
+  box-shadow: var(--shadow-sm);
+}
+
+.caminata__esquina {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: calc(100% - 2 * var(--space-3));
+  pointer-events: none;
+}
+
+.caminata__minimapa {
+  display: block;
+  width: 200px;
+  height: 200px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: var(--color-surface);
+}
+
+.caminata__rotulo {
+  position: absolute;
+  top: calc(50% + var(--space-6));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+}
+
+.caminata__rotulo-linea {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-gray-900);
+}
+
+.caminata__rotulo-detalle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+}
+
+.caminata__indicador {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.caminata__indicador-valor {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-gray-900);
+}
+
+.caminata__indicador-estado {
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+}
+
+.caminata__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-1);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  animation: caminata-aparecer 240ms ease-out;
+}
+
+.caminata__cabecera .btn kbd {
+  margin-left: var(--space-1);
+}
+
+.caminata__teclas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0 var(--space-2);
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+}
+
+.caminata kbd {
+  display: inline-block;
+  min-width: 1.5rem;
+  margin-right: var(--space-1);
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-gray-900);
+}
+
+.caminata__captura {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+}
+
+/* Fundido: opaco -> transparente al entrar; parpadeo suave al salir. */
+.caminata__fundido {
+  position: absolute;
+  inset: 0;
+  background: var(--color-ink-950);
+  opacity: 0;
+}
+
+.caminata__fundido--entrada {
+  animation: caminata-fundido-entrada 420ms ease-out;
+}
+
+.caminata__fundido--salida {
+  animation: caminata-fundido-salida 700ms ease-in-out;
+}
+
+@keyframes caminata-fundido-entrada {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes caminata-fundido-salida {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes caminata-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--space-2)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Controles tactiles: joystick izquierdo y mitad derecha para mirar. */
+.caminata__zona-mirar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.caminata__joystick {
+  position: absolute;
+  left: var(--space-8);
+  bottom: var(--space-8);
+  width: 128px;
+  height: 128px;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  opacity: 0.85;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.caminata__joystick-palanca {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: var(--radius-full);
+  background: var(--color-blue-500);
+  box-shadow: var(--shadow-md);
+}
+
+/* Pantallas bajas o estrechas: minimapa mas chico para no tapar el joystick. */
+@media (max-height: 640px), (max-width: 640px) {
+  .caminata__minimapa {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caminata__fundido--entrada,
+  .caminata__fundido--salida,
+  .caminata__cabecera {
+    animation: none;
+  }
+}

@@ -45,6 +45,11 @@ export interface TableProps<T> {
   emptyAction?: ReactNode;
   loading?: boolean;
   className?: string;
+  /** Forma en pantallas estrechas: `cards` apila cada fila como pares
+   *  etiqueta/valor; `scroll` conserva la tabla con desplazamiento horizontal.
+   *  Por defecto `cards`, salvo que la tabla ordene (la cabecera es su único
+   *  control de orden y en `cards` queda oculta). */
+  mobileLayout?: "cards" | "scroll";
 }
 
 /** Umbral a partir del cual la tabla virtualiza sus filas (STACK §4.6): con
@@ -72,11 +77,15 @@ export function Table<T>({
   emptyAction,
   loading = false,
   className,
+  mobileLayout,
 }: TableProps<T>) {
   const t = useT();
   const allSelected = rows.length > 0 && rows.every((row) => selectedKeys.includes(rowKey(row)));
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualize = rows.length > VIRTUALIZE_UMBRAL && !loading;
+  // La virtualización posiciona las filas por altura fija: no admite filas de
+  // altura variable, así que esas tablas siguen con desplazamiento.
+  const tarjetas = (mobileLayout ?? (onSortChange ? "scroll" : "cards")) === "cards" && !virtualize;
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -154,6 +163,7 @@ export function Table<T>({
         {columns.map((column) => (
           <td
             key={column.key}
+            data-label={typeof column.header === "string" ? column.header : undefined}
             className={cn(
               column.align === "right" && "text-right",
               column.align === "center" && "text-center",
@@ -176,7 +186,9 @@ export function Table<T>({
       ref={scrollRef}
       className={cn("table-wrap", virtualize && "table-wrap--virtual", className)}
     >
-      <table className={cn("table", onRowClick && "table--clickable")}>
+      <table
+        className={cn("table", onRowClick && "table--clickable", tarjetas && "table--tarjetas")}
+      >
         <thead>
           <tr>
             {selectable ? (

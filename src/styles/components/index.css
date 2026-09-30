@@ -1,0 +1,42 @@
+/* Indice de componentes. El orden es la cascada: no reordenar. */
+@import "./botones.css"; /* Botones */
+@import "./encabezado-pagina.css"; /* Encabezado de pagina y entrada de ruta */
+@import "./escaner.css"; /* Escaner y panel de escaneos (SPEC 14.3) */
+@import "./selector-idioma.css"; /* Selector de idioma (SPEC 17) */
+@import "./reglas-negocio.css"; /* Reglas de negocio (SPEC 16) */
+@import "./etiquetas.css"; /* Etiquetas e impresion (SPEC 14.3.5) */
+@import "./avisos-plataforma.css"; /* Franja de avisos de plataforma */
+@import "./tarjetas.css"; /* Tarjetas, secciones y mosaicos */
+@import "./controles-panel.css"; /* Select, fecha y hora con panel propio (DESIGN 6.4.1) */
+@import "./tablas.css"; /* Tablas */
+@import "./tablas-movil.css"; /* Tablas en pantallas estrechas */
+@import "./insignias.css"; /* Insignias */
+@import "./esqueleto.css"; /* Esqueletos de carga */
+@import "./toasts.css"; /* Toasts y avisos */
+@import "./error-panel.css"; /* Panel de error */
+@import "./paginacion.css"; /* Paginacion */
+@import "./barra-filtros.css"; /* Barra de filtros */
+@import "./formularios.css"; /* Formulario en columna */
+@import "./detalle.css"; /* Lista de detalle e indicadores */
+@import "./iconos-enlaces.css"; /* Iconos y enlaces */
+@import "./busqueda.css"; /* Busqueda */
+@import "./graficas.css"; /* Graficas de reportes */
+@import "./selector-tema.css"; /* Selector de tema (DESIGN 3.1) */
+@import "./selector-modo.css"; /* Selector de modo claro/oscuro */
+@import "./ayuda-notas.css"; /* Notas y avisos de Ayuda */
+@import "./ayuda-indice.css"; /* Grid de documentacion de Ayuda */
+@import "./arbol-almacen.css"; /* Arbol fisico del almacen */
+@import "./mapa-2d.css"; /* Mapa 2D de almacenes */
+@import "./mapa-contexto.css"; /* Tarjeta de contexto de mapa */
+@import "./favoritos.css"; /* Favoritos de filtros */
+@import "./mapa-construccion.css"; /* Modo construccion del mapa */
+@import "./mapa-2d-vista.css"; /* Mapa 2D: vista, capas, escala */
+@import "./mapa-2d-detalle.css"; /* Mapa 2D: detalle y alzado de rack */
+@import "./mapa-3d.css"; /* Mapa 3D inmersivo */
+@import "./mapa-3d-barra.css"; /* Barra de herramientas del 3D */
+@import "./mapa-3d-panel.css"; /* Panel de personalizacion del 3D */
+@import "./mapa-caminata.css"; /* HUD de la caminata en primera persona */
+@import "./manual.css"; /* Manual del cliente (impresion y navegacion) */
+@import "./paleta-comandos.css"; /* Paleta de comandos (DESIGN 6.10, 8.2) */
+@import "./tecla-kbd.css"; /* Indicador de tecla (keycap) */
+@import "./paleta-disparador.css"; /* Disparador de la barra superior */

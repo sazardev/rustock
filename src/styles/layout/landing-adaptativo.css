@@ -1,0 +1,62 @@
+/* Movimiento reducido: sin animaciones ni desplazamientos */
+@media (prefers-reduced-motion: reduce) {
+  .landing {
+    scroll-behavior: auto;
+  }
+
+  .landing__hero-item {
+    opacity: 1;
+    animation: none;
+  }
+
+  .landing__reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .landing__feature:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .landing__grid,
+  .landing__pasos,
+  .landing__principles,
+  .landing__stats,
+  .landing__mock-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing__pasos::before {
+    display: none;
+  }
+
+  .landing__nav-links {
+    display: none;
+  }
+
+  .landing__hero {
+    padding-top: var(--space-12);
+  }
+
+  .landing__mock-stage {
+    padding: var(--space-4);
+  }
+
+  .landing__mock-chip--top,
+  .landing__mock-chip--bottom {
+    display: none;
+  }
+
+  .landing__mock-row--head,
+  .landing__mock-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .landing__mock-row--head .landing__mock-tipo,
+  .landing__mock-row .landing__mock-tipo {
+    display: none;
+  }
+}

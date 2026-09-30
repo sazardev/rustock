@@ -1,0 +1,30 @@
+.icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  color: inherit;
+}
+
+.icon--sm {
+  width: var(--size-xs);
+  height: var(--size-xs);
+}
+
+.icon--lg {
+  width: var(--size-lg);
+  height: var(--size-lg);
+}
+
+.link {
+  color: var(--color-blue-500);
+  text-decoration: none;
+  text-underline-offset: 0.18em;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.link:hover {
+  color: var(--color-blue-400);
+  text-decoration: underline;
+}

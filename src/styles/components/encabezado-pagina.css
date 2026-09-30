@@ -1,0 +1,85 @@
+/* ============ Encabezado de página ============
+ * Bloque de título al estilo documento: el nombre de la página vive en el
+ * lienzo, no solo en el breadcrumb. Es el ancla de lectura de cada ruta y
+ * el punto donde las acciones de página quedan a la vista sin competir. */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.page-header__texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.page-header__title {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--lh);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-gray-900);
+}
+
+.page-header__desc {
+  max-width: var(--width-prose);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
+  color: var(--color-gray-500);
+  text-wrap: pretty;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* Entrada de página — una sola vez por navegación. El lienzo sube unos
+   píxeles mientras aparece: continuidad entre rutas, no espectáculo. La
+   aplica AppShell al contenedor del contenido, así toda ruta la hereda
+   aunque no use PageHeader (DESIGN §8.5). */
+.page-enter {
+  /* `backwards` evita el destello de un fotograma a opacidad completa antes
+     de que arranque la animación. */
+  animation: page-enter var(--duration-page) var(--ease-out) backwards;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .page-header__title {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--lh);
+  }
+
+  /* En móvil la acción principal ocupa el ancho: es el destino del pulgar. */
+  .page-header__actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .page-header__actions > .btn {
+    flex: 1 1 auto;
+  }
+}

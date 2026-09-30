@@ -1,0 +1,68 @@
+/* ============ Barra de herramientas del mapa 3D ============ */
+/* Grupos logicos separados por una linea. Cada boton es un icono con tooltip;
+   el texto solo aparece en barras anchas (container query de la capa de UI). */
+
+.mapa3d-barra {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.mapa3d-barra__grupo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.mapa3d-barra__grupo + .mapa3d-barra__grupo {
+  margin-left: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-gray-200);
+}
+
+.mapa3d-barra__boton {
+  min-width: var(--control-height-sm);
+  justify-content: center;
+}
+
+.mapa3d-barra__texto {
+  display: none;
+}
+
+@container (min-width: 72rem) {
+  .mapa3d-barra__boton--texto .mapa3d-barra__texto {
+    display: inline;
+  }
+}
+
+/* Tactil: destinos de pulgar. */
+@media (pointer: coarse) {
+  .mapa3d-barra__boton {
+    min-width: 2.5rem;
+    min-height: var(--tap-target);
+  }
+
+  .mapa3d-barra {
+    justify-content: flex-start;
+  }
+}
+
+/* Movil: una sola fila que se desplaza en horizontal. */
+@media (max-width: 640px) {
+  .mapa3d-full__barra {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+
+  .mapa3d-barra {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .mapa3d-barra__grupo {
+    flex-shrink: 0;
+  }
+}

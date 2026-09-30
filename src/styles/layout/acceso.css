@@ -1,0 +1,72 @@
+/* ============ Pantallas de acceso (DESIGN §7) ============
+ * Columna estrecha centrada sobre el lienzo blanco. Sin tarjeta, sin caja:
+ * en esta pantalla no hay ninguna otra tarea que competir con el formulario,
+ * así que no hace falta encerrarlo para señalarlo. */
+.auth {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--page-padding-x);
+  padding-top: max(var(--space-8), var(--safe-top));
+  padding-bottom: max(var(--space-8), var(--safe-bottom));
+  background-color: var(--color-surface);
+}
+
+.auth__panel {
+  width: 100%;
+  max-width: 22rem;
+  animation: shell-rise var(--duration-page) var(--ease-out) backwards;
+}
+
+.auth__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-900);
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-snug);
+  text-decoration: none;
+}
+
+.auth__marca:hover {
+  color: var(--color-gray-900);
+  text-decoration: none;
+}
+
+.auth__intro {
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-6);
+}
+
+.auth__titulo {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--lh);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-gray-900);
+}
+
+.auth__descripcion {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
+  color: var(--color-gray-500);
+  text-wrap: pretty;
+}
+
+.auth__pie {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-gray-100);
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  text-align: center;
+}
+
+@media (max-width: 47.99rem) {
+  .auth {
+    align-items: flex-start;
+  }
+}

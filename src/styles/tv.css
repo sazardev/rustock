@@ -1,0 +1,61 @@
+/* ============ Televisión (10-foot UI) ============
+ * El usuario está a dos o tres metros y maneja un mando con D-pad: no hay
+ * cursor ni hover, y el único indicador de "dónde estoy" es el foco. Por eso
+ * esta hoja no declara componentes: solo redefine tokens, y todo el sistema
+ * hereda la escala sin versión paralela (DESIGN §1, "la misma app en
+ * cualquier dispositivo"). `<html data-dispositivo="tv">` lo fija
+ * `shared/dispositivo/iniciar.ts`. */
+:root[data-dispositivo="tv"] {
+  /* Todo el sistema está en rem: un solo factor escala tipografía, controles
+     y espaciado a la vez. Se multiplica con la preferencia del usuario (ver
+     `tokens.css`); no se escribe `font-size`, que el store pisaría. */
+  --escala-dispositivo: 1.25;
+
+  /* Overscan: muchos televisores recortan el borde de la imagen. Las zonas
+     seguras del shell ya se suman con max() (DESIGN §3.3), así que basta
+     con declararlas aquí. */
+  --safe-top: 2.5vh;
+  --safe-right: 2.5vw;
+  --safe-bottom: 2.5vh;
+  --safe-left: 2.5vw;
+
+  --control-height-sm: 2.5rem;
+  --control-height: 2.75rem;
+  --control-height-lg: 3.25rem;
+  --tap-target: 3.25rem;
+  --topbar-height: 3.5rem;
+
+  /* El foco es el cursor: más grueso y con el acento pleno para leerse a
+     distancia sobre cualquier fondo. Hay dos mecanismos — el contorno global
+     (`base.css`) y la sombra de los campos — y ambos se elevan a la vez. */
+  --focus-ring-width: 4px;
+  --focus-ring-color: var(--color-blue-500);
+  --shadow-focus-ring: 0 0 0 3px var(--color-white), 0 0 0 6px var(--color-blue-500);
+}
+
+/* Sin hover no hay descubrimiento: lo que solo aparecía al apuntar se muestra
+   siempre, igual que con puntero grueso. */
+:root[data-dispositivo="tv"] .sidebar__collapse-toggle,
+:root[data-dispositivo="tv"] .table .cell--actions .btn {
+  opacity: 1;
+}
+
+:root[data-dispositivo="tv"] .select__opcion,
+:root[data-dispositivo="tv"] .calendario__dia,
+:root[data-dispositivo="tv"] .reloj__celda {
+  min-height: var(--tap-target);
+  height: auto;
+}
+
+/* Con D-pad el puntero no se desplaza sobre el texto: no hay selección
+   accidental que proteger, pero sí un arrastre de desplazamiento que evitar. */
+:root[data-dispositivo="tv"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+:root[data-dispositivo="tv"] input,
+:root[data-dispositivo="tv"] textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

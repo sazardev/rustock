@@ -1,0 +1,15 @@
+/* Indice de layout. El orden es la cascada: no reordenar. */
+@import "./acceso.css"; /* Pantallas de acceso (DESIGN 7) */
+@import "./landing-hero.css"; /* Landing: cabecera, hero y entrada */
+@import "./landing-maqueta.css"; /* Landing: maqueta del producto */
+@import "./landing-secciones.css"; /* Landing: secciones, caracteristicas, principios, CTA */
+@import "./landing-footer.css"; /* Landing: footer */
+@import "./landing-comparativa.css"; /* Landing: comparativa */
+@import "./landing-precios.css"; /* Landing: precios */
+@import "./landing-testimonios-faq.css"; /* Landing: testimonios y FAQ */
+@import "./landing-adaptativo.css"; /* Landing: movimiento reducido y movil */
+@import "./shell.css"; /* Estructura del shell */
+@import "./topbar.css"; /* Barra superior */
+@import "./sidebar.css"; /* Navegacion lateral */
+@import "./breadcrumbs.css"; /* Migas de pan */
+@import "./ritmo-documento.css"; /* Ritmo vertical del documento */

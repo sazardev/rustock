@@ -1,0 +1,119 @@
+/* ============ Ritmo vertical del documento ============
+ * Las páginas se escriben como fragmentos (encabezado, panel de error,
+ * secciones, paginación) sin envoltorio propio. El aire entre esos bloques
+ * lo pone el lienzo, una sola vez y para todas las rutas — así ninguna
+ * página inventa su propio margen y todas respiran igual (DESIGN §7). */
+.content__inner > * + * {
+  margin-top: var(--section-gap);
+}
+
+/* Tras el título de la página el salto es mayor: separa la identidad de la
+   ruta del contenido que administra. */
+.content__inner > .page-header + * {
+  margin-top: var(--page-gap);
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  z-index: calc(var(--z-topbar) + 1);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-blue-500);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  color: var(--color-blue-500);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.skip-link:focus {
+  top: calc(var(--space-2) + var(--safe-top));
+  color: var(--color-blue-600);
+  text-decoration: none;
+}
+
+@media (max-width: 63.99rem) {
+  /* La tablet siempre muestra el sidebar compacto; el resto del aspecto
+     compacto (divisores, labels ocultos, tooltip) lo aplica .sidebar--collapsed */
+  .app-shell {
+    grid-template-columns: var(--width-sidebar-compact) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "content";
+  }
+
+  .app-shell__sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(var(--width-sidebar), 84vw);
+    z-index: var(--z-sidebar);
+    transform: translateX(-100%);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .app-shell__sidebar .sidebar {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-shell--nav-open .app-shell__sidebar {
+    transform: translateX(0);
+  }
+
+  .app-shell__nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-sidebar) - 1);
+    background-color: var(--scrim-overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  .app-shell--nav-open .app-shell__nav-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* En el drawer el pulgar manda: los destinos de toque crecen al mínimo
+     recomendado y el texto vuelve a alinearse a la izquierda. */
+  .sidebar {
+    padding-top: max(var(--space-2), var(--safe-top));
+  }
+
+  .sidebar__group-title {
+    text-align: left;
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .sidebar__item {
+    justify-content: flex-start;
+    min-height: var(--tap-target);
+    padding: 0 var(--space-3);
+    font-size: var(--text-base);
+  }
+
+  .sidebar__item-label {
+    display: inline;
+  }
+
+  .topbar__breadcrumbs {
+    display: none;
+  }
+
+  .topbar__user-role {
+    display: none;
+  }
+}

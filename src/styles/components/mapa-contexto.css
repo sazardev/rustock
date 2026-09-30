@@ -1,0 +1,29 @@
+/* ============ Tarjeta de contexto de mapa (detalle de zona/rack/etc) ============ */
+
+.mapa-contexto__lienzo {
+  width: 100%;
+  height: 220px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--color-gray-50);
+}
+
+.mapa-contexto__etiqueta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 100%;
+  font-size: 10px;
+  color: var(--color-gray-800);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.mapa-contexto__apilado {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

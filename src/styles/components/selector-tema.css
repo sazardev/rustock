@@ -1,0 +1,54 @@
+/* ============ Selector de tema (DESIGN §3.1) ============ */
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.theme-picker__paleta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition-elevate);
+}
+
+.theme-picker__paleta:hover {
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-picker__paleta.is-selected {
+  border-color: var(--color-blue-500);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.theme-picker__muestras {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.theme-picker__muestra {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-full);
+}
+
+.theme-picker__muestra--heredar {
+  background: var(--color-surface-muted);
+}
+
+.theme-picker__nombre {
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+}

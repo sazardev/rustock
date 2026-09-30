@@ -7,6 +7,8 @@ export interface DetailItem {
   value: ReactNode;
   code?: boolean;
   num?: boolean;
+  /** Texto secundario bajo el valor (desglose, unidad, contexto). */
+  hint?: ReactNode;
 }
 
 export interface DetailListProps {
@@ -28,6 +30,7 @@ export function DetailList({ items, className }: DetailListProps) {
             ) : (
               <span className="detail-list__value">{item.value}</span>
             )}
+            {item.hint ? <span className="detail-list__hint">{item.hint}</span> : null}
           </dd>
         </div>
       ))}

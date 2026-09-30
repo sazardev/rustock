@@ -190,4 +190,11 @@
 
   --focus-ring-width: 2px;
   --focus-ring-color: var(--color-blue-300);
+
+  /* Escala tipográfica global (todo el CSS usa rem). Son dos factores
+     independientes que se multiplican en `html`: la preferencia del usuario
+     (`preferencias.ts`) y la del dispositivo (`tv.css`). Ninguno escribe
+     `font-size` directamente, para que no se pisen entre sí. */
+  --escala-usuario: 1;
+  --escala-dispositivo: 1;
 }

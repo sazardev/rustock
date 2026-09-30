@@ -1,0 +1,80 @@
+/* ============ Grid de documentación del índice de Ayuda ============ */
+
+.ayuda-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+
+.ayuda-grid__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--color-surface);
+  border: var(--border-width) solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  transition: var(--transition-elevate);
+}
+
+.ayuda-grid__card:hover {
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.ayuda-grid__card:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-xs);
+}
+
+.ayuda-grid__card:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--space-1);
+}
+
+.ayuda-grid__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-md);
+  height: var(--size-md);
+  color: var(--color-gray-500);
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+/* El acento aparece al apuntar el mosaico, no en reposo (DESIGN §1). */
+.ayuda-grid__card:hover .ayuda-grid__icon {
+  color: var(--color-blue-600);
+  background-color: var(--color-blue-50);
+}
+
+.ayuda-grid__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ayuda-grid__titulo {
+  color: var(--color-gray-900);
+}
+
+.ayuda-grid__resumen {
+  line-height: var(--text-sm--lh);
+}
+
+.ayuda-grid__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-blue-500);
+}
+
+.ayuda-grid__cta .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}

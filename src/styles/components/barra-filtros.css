@@ -1,0 +1,59 @@
+.filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--page-padding-x);
+  padding-left: max(var(--page-padding-x), var(--safe-left));
+  padding-right: max(var(--page-padding-x), var(--safe-right));
+  background-color: var(--color-surface);
+  border-bottom: var(--border-width) solid var(--color-gray-200);
+}
+
+.filter-bar__field {
+  flex: 0 1 14rem;
+  min-width: 10rem;
+}
+
+.filter-bar__field--grow {
+  flex: 1 1 16rem;
+}
+
+.filter-bar__action {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* En pantallas estrechas los campos apilados se comían unos 200px antes del
+   título. Una sola fila desplazable los deja a un gesto de distancia: la acción
+   principal va primero y el campo siguiente asoma para avisar de que hay más. */
+@media (max-width: 47.99rem) {
+  .filter-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .filter-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-bar__field,
+  .filter-bar__field--grow {
+    flex: 0 0 11rem;
+    min-width: 0;
+  }
+
+  .filter-bar__action {
+    order: -1;
+    margin-left: 0;
+  }
+}
+
+.filter-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}

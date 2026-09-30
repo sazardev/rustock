@@ -1,0 +1,156 @@
+/* Landing page — presentación pública del producto (DESIGN §4, sin shell) */
+.landing {
+  height: 100%;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  background-color: var(--color-gray-50);
+}
+
+.landing__container {
+  width: 100%;
+  max-width: var(--width-max-content);
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+
+/* Header */
+.landing__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.landing__header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-height);
+}
+
+.landing__brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-800);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.landing__brand-link:hover {
+  color: var(--color-gray-800);
+  text-decoration: none;
+}
+
+.landing__brand-name {
+  font-size: var(--text-base);
+  line-height: var(--text-base--lh);
+}
+
+.landing__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.landing__nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.landing__nav-link {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.landing__nav-link:hover {
+  color: var(--color-gray-900);
+  text-decoration: none;
+}
+
+/* Hero */
+.landing__hero {
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-12);
+  text-align: center;
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.landing__hero-badge {
+  display: inline-flex;
+  margin-bottom: var(--space-6);
+}
+
+.landing__hero-title {
+  max-width: 46rem;
+  margin: 0 auto;
+  font-size: clamp(2rem, 4.5vw + 1rem, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: var(--fw-bold);
+  color: var(--color-gray-900);
+  text-wrap: balance;
+  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "ss01" 1;
+}
+
+.landing__hero-accent {
+  color: var(--color-blue-500);
+}
+
+.landing__lead {
+  max-width: 40rem;
+  margin: var(--space-6) auto 0;
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--lh);
+  color: var(--color-gray-500);
+}
+
+.landing__cta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  flex-wrap: wrap;
+}
+
+/* Entrada escalonada compartida — landing hero y montaje de páginas internas */
+@keyframes shell-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing__hero-item {
+  opacity: 0;
+  animation: shell-rise 600ms var(--ease-standard) forwards;
+}
+
+.landing__hero-item--1 {
+  animation-delay: 70ms;
+}
+
+.landing__hero-item--2 {
+  animation-delay: 140ms;
+}
+
+.landing__hero-item--3 {
+  animation-delay: 210ms;
+}
+
+.landing__hero-item--4 {
+  animation-delay: 320ms;
+}

@@ -1,0 +1,59 @@
+/* ============ Notas y avisos de la sección Ayuda ============ */
+
+.ayuda-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.ayuda-nota__icon {
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+}
+
+.ayuda-nota__text {
+  min-width: 0;
+}
+
+.ayuda-nota--info {
+  background-color: var(--color-info-bg);
+  border-color: var(--color-blue-200);
+}
+
+.ayuda-nota--info .ayuda-nota__icon {
+  color: var(--color-info-text);
+}
+
+.ayuda-nota--info .ayuda-nota__text {
+  color: var(--color-info-text);
+}
+
+.ayuda-nota--warning {
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-500);
+}
+
+.ayuda-nota--warning .ayuda-nota__icon {
+  color: var(--color-warning-text);
+}
+
+.ayuda-nota--warning .ayuda-nota__text {
+  color: var(--color-warning-text);
+}
+
+.ayuda-nota--success {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-500);
+}
+
+.ayuda-nota--success .ayuda-nota__icon {
+  color: var(--color-success-text);
+}
+
+.ayuda-nota--success .ayuda-nota__text {
+  color: var(--color-success-text);
+}

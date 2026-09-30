@@ -1,0 +1,39 @@
+/* ============ Reglas de negocio (SPEC §16) ============
+ * Una regla se lee como una frase: el nombre arriba y debajo, en gris, lo que
+ * de verdad hace. Sin eso la tabla obliga a reconstruir la regla mentalmente
+ * a partir de cuatro columnas. */
+.reglas__frase {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.reglas__nombre {
+  font-weight: var(--fw-medium);
+  color: var(--color-gray-900);
+}
+
+.reglas__detalle {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--lh);
+  color: var(--color-gray-500);
+  text-wrap: pretty;
+}
+
+.reglas__ejemplos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
+  color: var(--color-gray-600);
+}
+
+.reglas__ejemplos strong {
+  color: var(--color-gray-900);
+  font-weight: var(--fw-medium);
+}

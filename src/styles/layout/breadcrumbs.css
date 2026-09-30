@@ -1,0 +1,111 @@
+/* ============ Migas de pan ============ */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.breadcrumbs__item-row {
+  display: contents;
+}
+
+.breadcrumbs__item {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--color-gray-500);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.breadcrumbs__item:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+  text-decoration: none;
+}
+
+.breadcrumbs__item--current,
+.breadcrumbs__item--current:hover {
+  background-color: transparent;
+  color: var(--color-gray-900);
+  font-weight: var(--fw-medium);
+}
+
+.breadcrumbs__sep {
+  color: var(--color-gray-300);
+}
+
+/* Breadcrumb inteligente: historial de navegación + migas en una sola línea (DESIGN §4.5) */
+.breadcrumbs__smart {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.breadcrumbs__nav {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbs__history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-400);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.breadcrumbs__history-btn:hover:not(:disabled) {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.breadcrumbs__history-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.breadcrumbs__history-btn:disabled {
+  color: var(--color-gray-300);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Destino del portal de FilterBar (ver FilterBar.tsx): pegado a la barra
+   superior, mismo ancho que ella (fuera del max-width centrado de
+   `.content__inner`) y sticky para permanecer visible al hacer scroll —
+   estilo Google Docs, donde el toolbar es una extensión fija del menú, no
+   parte del documento que se desplaza. Vacío en páginas sin FilterBar. */
+.toolbar-slot {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.toolbar-slot:empty {
+  display: none;
+}
+
+.content {
+  min-height: 100%;
+  padding: var(--page-padding-y) var(--page-padding-x);
+  padding-left: max(var(--page-padding-x), var(--safe-left));
+  padding-right: max(var(--page-padding-x), var(--safe-right));
+  padding-bottom: calc(var(--space-16) + var(--safe-bottom));
+}
+
+.content__inner {
+  max-width: var(--width-max-content);
+  margin: 0 auto;
+}

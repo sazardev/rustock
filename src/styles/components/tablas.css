@@ -1,0 +1,185 @@
+/* ============ Tablas ============
+ * La tabla no es una caja: es texto alineado. Sin marco exterior, sin
+ * cabecera en mayúsculas gritando; solo hairlines que guían el ojo y una
+ * cabecera fija que no abandona al usuario al desplazarse. */
+.table {
+  width: 100%;
+  background-color: transparent;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  line-height: var(--text-xs--lh);
+  letter-spacing: var(--tracking-normal);
+  text-align: left;
+  white-space: nowrap;
+  color: var(--color-gray-500);
+  background-color: var(--color-surface);
+  border-bottom: var(--border-width) solid var(--color-gray-200);
+}
+
+.table .th--sortable {
+  user-select: none;
+  white-space: nowrap;
+}
+
+.th__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: var(--transition);
+}
+
+.th__sort-btn:hover {
+  color: var(--color-gray-900);
+}
+
+.th__sort-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+.table td {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--lh);
+  color: var(--color-gray-700);
+  border-bottom: var(--border-width) solid var(--color-gray-100);
+}
+
+.table tbody tr {
+  transition: background-color var(--duration-instant) var(--ease-standard);
+}
+
+/* El realce de fila es neutro: el acento de óxido no se gasta en un hover. */
+.table tbody tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+.table .tr--selected,
+.table .tr--selected:hover {
+  background-color: var(--color-blue-50);
+}
+
+.table .tr--selected td:first-child {
+  border-left: var(--border-width-2) solid var(--color-blue-500);
+  padding-left: calc(var(--space-3) - var(--border-width-2));
+}
+
+.table--clickable tbody tr {
+  cursor: pointer;
+}
+
+.table--clickable tbody tr:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-ring);
+  background-color: var(--color-gray-50);
+}
+
+.table .cell--code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-normal);
+  color: var(--color-gray-900);
+}
+
+.table .cell--num {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: right;
+  color: var(--color-gray-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.table .cell--actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Las acciones de fila viven en reposo, no en hover: en pantalla táctil no
+   existe el hover, así que aparecen atenuadas y ganan contraste al apuntar
+   la fila (DESIGN §6.9). */
+.table .cell--actions .btn {
+  margin-left: var(--space-1);
+  opacity: 0.65;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.table tbody tr:hover .cell--actions .btn,
+.table tbody tr:focus-within .cell--actions .btn {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .table .cell--actions .btn {
+    opacity: 1;
+  }
+}
+
+.table .table__select {
+  width: var(--space-6);
+  padding-right: var(--space-1);
+  padding-left: var(--space-3);
+}
+
+.table__sort-icon {
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  color: var(--color-gray-400);
+}
+
+.table__sort-icon--asc {
+  transform: rotate(180deg);
+}
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* El scroll horizontal se anuncia con un borde propio para que no parezca
+   que la tabla está cortada por accidente. */
+.table-wrap {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+/* Tabla virtualizada (STACK §4.6): contenedor de scroll vertical con altura
+   acotada; solo se renderizan las filas visibles + overscan. Las filas
+   separadoras (`table__spacer`) reservan el alto total para que el scroll
+   sea continuo. */
+.table-wrap--virtual {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+
+/* Cabecera fija — solo dentro de la tabla virtualizada.
+   `.table-wrap` declara `overflow-x: auto`, y por especificación eso hace que
+   `overflow-y` compute a `auto`: el contenedor pasa a ser el "scrollport" del
+   sticky. En la tabla normal ese contenedor no hace scroll vertical (crece
+   con su contenido), así que una cabecera pegajosa ahí no se ancla al lienzo
+   — se queda flotando sobre las filas. Solo `.table-wrap--virtual` tiene
+   scroll vertical propio, y ahí sí funciona como debe. */
+.table-wrap--virtual .table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table__spacer {
+  border: 0;
+  padding: 0;
+}
