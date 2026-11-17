@@ -67,3 +67,10 @@
 .favoritos__chip-quitar:hover {
   color: var(--color-danger-500);
 }
+
+@media (pointer: coarse) {
+  .favoritos__chip-aplicar,
+  .favoritos__chip-quitar {
+    min-height: var(--control-height-sm);
+  }
+}

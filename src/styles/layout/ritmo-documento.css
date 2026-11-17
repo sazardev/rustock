@@ -36,14 +36,7 @@
 }
 
 @media (max-width: 63.99rem) {
-  /* La tablet siempre muestra el sidebar compacto; el resto del aspecto
-     compacto (divisores, labels ocultos, tooltip) lo aplica .sidebar--collapsed */
-  .app-shell {
-    grid-template-columns: var(--width-sidebar-compact) minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 47.99rem) {
+  /* Móvil y tablet: una sola columna, la navegación vive en el drawer. */
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -52,18 +45,19 @@
   }
 
   .app-shell__sidebar {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: min(var(--width-sidebar), 84vw);
+    width: min(var(--width-sidebar), calc(84vw - var(--safe-left)));
+    padding-left: var(--safe-left);
+    padding-bottom: var(--safe-bottom);
     z-index: var(--z-sidebar);
+    box-shadow: var(--shadow-lg);
     transform: translateX(-100%);
     transition: transform var(--duration-base) var(--ease-out);
-  }
-
-  .app-shell__sidebar .sidebar {
-    box-shadow: var(--shadow-lg);
   }
 
   .app-shell--nav-open .app-shell__sidebar {
@@ -86,33 +80,15 @@
     pointer-events: auto;
   }
 
-  /* En el drawer el pulgar manda: los destinos de toque crecen al mínimo
-     recomendado y el texto vuelve a alinearse a la izquierda. */
-  .sidebar {
+  .drawer-nav {
     padding-top: max(var(--space-2), var(--safe-top));
   }
+}
 
-  .sidebar__group-title {
-    text-align: left;
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
-  }
-
-  .sidebar__item {
-    justify-content: flex-start;
-    min-height: var(--tap-target);
-    padding: 0 var(--space-3);
-    font-size: var(--text-base);
-  }
-
-  .sidebar__item-label {
-    display: inline;
-  }
-
-  .topbar__breadcrumbs {
-    display: none;
-  }
-
+@media (max-width: 47.99rem) {
+  /* En móvil el breadcrumb es chrome que estorba: el título de la página ya
+     identifica la ruta (DESIGN §4.5, §6.8). */
+  .topbar__breadcrumbs,
   .topbar__user-role {
     display: none;
   }

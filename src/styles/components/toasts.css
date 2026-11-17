@@ -77,9 +77,15 @@
 }
 
 @media (max-width: 47.99rem) {
-  .toast,
   .toast-region {
-    right: var(--space-4);
-    bottom: var(--space-4);
+    left: max(var(--space-4), var(--safe-left));
+    right: max(var(--space-4), var(--safe-right));
+    bottom: max(var(--space-4), var(--safe-bottom));
+  }
+
+  /* Ocupa todo el ancho disponible: en el piso el mensaje se lee de un vistazo,
+     sin una columna estrecha pegada a la esquina. */
+  .toast-region .toast {
+    width: 100%;
   }
 }

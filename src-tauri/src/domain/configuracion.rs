@@ -7,9 +7,83 @@
 //! sidebar) y de presentación (zona horaria / formato de fecha propios, con
 //! `None` = heredar de la empresa).
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
+
+/// Dispositivos con configuración de navegación propia. El frontend resuelve
+/// cuál aplica según tipo de puntero y ancho de ventana (DESIGN §12).
+pub const DISPOSITIVOS_NAV: [&str; 4] = ["movil", "tablet", "escritorio", "tv"];
+
+/// Secciones (grupos de módulos) personalizables del drawer.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NavSecciones {
+    #[serde(default)]
+    pub ocultas: Vec<String>,
+    #[serde(default)]
+    pub orden: Vec<String>,
+    /// Secciones que el usuario fuerza a mostrar aunque el rol las oculte.
+    #[serde(default)]
+    pub visibles: Vec<String>,
+}
+
+/// Configuración completa de la navegación para un ámbito (usuario, dispositivo
+/// o rol). Se guarda como JSON en SQLite; los arrays vacíos son decisiones
+/// explícitas, la ausencia del ámbito es herencia.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NavConfig {
+    #[serde(default)]
+    pub fijados: Vec<String>,
+    #[serde(default)]
+    pub ocultos: Vec<String>,
+    #[serde(default)]
+    pub orden: Vec<String>,
+    #[serde(default)]
+    pub secciones: NavSecciones,
+}
+
+fn validar_nav_config(cfg: &NavConfig) -> AppResult<()> {
+    for ruta in cfg
+        .fijados
+        .iter()
+        .chain(cfg.ocultos.iter())
+        .chain(cfg.orden.iter())
+    {
+        if !ruta.starts_with('/') {
+            return Err(AppError::CampoInvalido(format!(
+                "la navegación solo admite rutas absolutas: '{ruta}'"
+            )));
+        }
+    }
+    for grupo in cfg
+        .secciones
+        .ocultas
+        .iter()
+        .chain(cfg.secciones.orden.iter())
+        .chain(cfg.secciones.visibles.iter())
+    {
+        if grupo.is_empty() || grupo.len() > 80 {
+            return Err(AppError::CampoInvalido(
+                "identificador de sección de navegación inválido".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validar_nav_map(map: &BTreeMap<String, NavConfig>, claves: &[&str]) -> AppResult<()> {
+    for (clave, cfg) in map {
+        if !claves.contains(&clave.as_str()) {
+            return Err(AppError::CampoInvalido(format!(
+                "ámbito de navegación desconocido: '{clave}'"
+            )));
+        }
+        validar_nav_config(cfg)?;
+    }
+    Ok(())
+}
 
 /// Zonas horarias soportadas por la UI (SPEC §14.4: fechas en zona configurada).
 /// Se validan contra IANA; esta lista es la que expone la UI.
@@ -109,6 +183,9 @@ pub struct ConfiguracionEmpresa {
     /// holgura mínima recomendada entre racks enfrentados.
     pub altura_persona_cm: f64,
     pub holgura_pasillo_cm: f64,
+    /// Navegación por defecto de cada rol: el ADMIN decide qué módulos y
+    /// secciones ve cada rol; el usuario puede sobrescribirlo (DESIGN §12).
+    pub nav_roles: BTreeMap<String, NavConfig>,
     pub updated_by: Option<String>,
     pub updated_at: String,
 }
@@ -144,6 +221,8 @@ pub struct EditarConfiguracionEmpresa {
     pub modo_oscuro: Option<bool>,
     pub altura_persona_cm: Option<f64>,
     pub holgura_pasillo_cm: Option<f64>,
+    /// Defaults de navegación por rol. `None` = no tocar.
+    pub nav_roles: Option<BTreeMap<String, NavConfig>>,
 }
 
 impl EditarConfiguracionEmpresa {
@@ -215,6 +294,18 @@ impl EditarConfiguracionEmpresa {
                 "tema '{t}' no existe en la lista de paletas"
             )));
         }
+        if let Some(roles) = &self.nav_roles {
+            validar_nav_map(
+                roles,
+                &[
+                    "ADMIN",
+                    "GERENTE",
+                    "ENCARGADO_ALMACEN",
+                    "OPERADOR",
+                    "LECTOR",
+                ],
+            )?;
+        }
         Ok(())
     }
 }
@@ -234,6 +325,16 @@ pub struct PreferenciasUsuario {
     pub modo_oscuro: Option<bool>,
     /// ¿Mostrar sugerencias de Ayuda en el command palette (Ctrl+K)?
     pub ayuda_en_palette: bool,
+    /// Hrefs fijados en el drawer, en JSON. `None` = sin fijados.
+    pub nav_fijados: Option<String>,
+    /// Hrefs ocultos por el usuario, en JSON.
+    pub nav_ocultos: Option<String>,
+    /// Secciones ocultas / reordenadas / forzadas visibles, en JSON.
+    pub nav_secciones: Option<String>,
+    /// Configuraciones completas por dispositivo, en JSON.
+    pub nav_dispositivos: Option<String>,
+    /// Si los cambios del drawer se guardan solo en el dispositivo actual.
+    pub nav_guardar_dispositivo: bool,
     pub updated_at: String,
 }
 
@@ -259,23 +360,50 @@ pub struct PreferenciasResueltas {
     pub modo_oscuro_heredado: bool,
     /// ¿Mostrar sugerencias de Ayuda en el command palette (Ctrl+K)?
     pub ayuda_en_palette: bool,
+    /// Hrefs fijados en el drawer, ya resueltos y validados.
+    pub nav_fijados: Vec<String>,
+    /// Hrefs ocultos por el usuario.
+    pub nav_ocultos: Vec<String>,
+    /// Secciones personalizadas por el usuario.
+    pub nav_secciones: NavSecciones,
+    /// Configuración por dispositivo (sin resolver).
+    pub nav_dispositivos: BTreeMap<String, NavConfig>,
+    /// ¿Guardar los cambios del drawer solo en este dispositivo?
+    pub nav_guardar_dispositivo: bool,
+    /// Defaults por rol, para que la UI aplic la herencia usuario → rol.
+    pub nav_roles: BTreeMap<String, NavConfig>,
 }
 
 /// Cambios aceptados sobre las preferencias de un usuario. Todos opcionales.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct EditarPreferenciasUsuario {
     pub tamano_fuente: Option<String>,
+    // `deserialize_some`: clave ausente = no tocar; `null` = limpiar/heredar.
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
     pub orden_sidebar: Option<Option<String>>,
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
     pub zona_horaria: Option<Option<String>>,
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
     pub formato_fecha: Option<Option<String>>,
-    /// Paleta de tema propia: `None` = no tocar, `Some(None)` = heredar de la
-    /// empresa, `Some(Some(id))` = fijar paleta (se valida contra la lista).
+    /// Paleta de tema propia: ausente = no tocar, `null` = heredar de la
+    /// empresa, valor = fijar paleta (se valida contra la lista).
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
     pub tema_id: Option<Option<String>>,
-    /// Modo oscuro propio: `None` = no tocar, `Some(None)` = heredar,
-    /// `Some(Some(bool))` = fijar modo.
+    /// Modo oscuro propio: ausente = no tocar, `null` = heredar, valor = fijar.
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
     pub modo_oscuro: Option<Option<bool>>,
     /// Mostrar ayuda en el command palette: `None` = no tocar.
     pub ayuda_en_palette: Option<bool>,
+    /// Hrefs fijados en el drawer: ausente = no tocar, `null` = vaciar.
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
+    pub nav_fijados: Option<Option<Vec<String>>>,
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
+    pub nav_ocultos: Option<Option<Vec<String>>>,
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
+    pub nav_secciones: Option<Option<NavSecciones>>,
+    #[serde(default, deserialize_with = "super::catalogo::deserialize_some")]
+    pub nav_dispositivos: Option<Option<BTreeMap<String, NavConfig>>>,
+    pub nav_guardar_dispositivo: Option<bool>,
 }
 
 impl EditarPreferenciasUsuario {
@@ -307,6 +435,34 @@ impl EditarPreferenciasUsuario {
             return Err(AppError::CampoInvalido(format!(
                 "tema '{t}' no existe en la lista de paletas"
             )));
+        }
+        if let Some(Some(rutas)) = &self.nav_fijados {
+            if rutas.len() > 100 {
+                return Err(AppError::CampoInvalido(
+                    "nav_fijados no puede tener más de 100 entradas".into(),
+                ));
+            }
+            if rutas.iter().any(|r| !r.starts_with('/')) {
+                return Err(AppError::CampoInvalido(
+                    "nav_fijados solo admite rutas absolutas".into(),
+                ));
+            }
+        }
+        if let Some(Some(rutas)) = &self.nav_ocultos
+            && rutas.iter().any(|r| !r.starts_with('/'))
+        {
+            return Err(AppError::CampoInvalido(
+                "nav_ocultos solo admite rutas absolutas".into(),
+            ));
+        }
+        if let Some(Some(secciones)) = &self.nav_secciones {
+            validar_nav_config(&NavConfig {
+                secciones: secciones.clone(),
+                ..Default::default()
+            })?;
+        }
+        if let Some(Some(map)) = &self.nav_dispositivos {
+            validar_nav_map(map, &DISPOSITIVOS_NAV)?;
         }
         Ok(())
     }

@@ -12,6 +12,8 @@ export type CellAlign = "left" | "right" | "center";
 export interface TableColumn<T> {
   key: string;
   header: ReactNode;
+  /** Etiqueta textual para la vista de tarjetas cuando `header` no es texto. */
+  mobileLabel?: string;
   align?: CellAlign;
   code?: boolean;
   num?: boolean;
@@ -163,7 +165,7 @@ export function Table<T>({
         {columns.map((column) => (
           <td
             key={column.key}
-            data-label={typeof column.header === "string" ? column.header : undefined}
+            data-label={typeof column.header === "string" ? column.header : column.mobileLabel}
             className={cn(
               column.align === "right" && "text-right",
               column.align === "center" && "text-center",

@@ -23,6 +23,10 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-synthesis: none;
+  /* El tamaño lo fijan los tokens y la preferencia del usuario: el navegador
+     móvil no debe reescalar el texto al girar la pantalla. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Sin resaltado azul del navegador al tocar en móvil: la retroalimentación
      táctil la da el propio componente (:active), no el sistema operativo. */
   -webkit-tap-highlight-color: transparent;

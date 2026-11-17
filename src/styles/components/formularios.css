@@ -28,4 +28,15 @@
   .form-grid__span-2 {
     grid-column: span 1;
   }
+
+  /* La acción principal queda abajo y a ancho completo: es el destino del
+     pulgar al terminar de llenar el formulario (DESIGN §7.3, §12). */
+  .form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .form-actions > .btn {
+    width: 100%;
+  }
 }

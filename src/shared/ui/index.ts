@@ -2,6 +2,7 @@ export { AvisoSistema } from "./AvisoSistema";
 
 export { SelectorIdioma } from "./SelectorIdioma";
 export type { SelectorIdiomaProps } from "./SelectorIdioma";
+export { hrefActivo } from "./Chrome";
 
 export { Icon, ICON_MAP } from "./Icon";
 export type { IconName, IconProps } from "./Icon";

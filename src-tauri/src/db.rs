@@ -671,6 +671,11 @@ impl DbState {
                 orden_sidebar TEXT,
                 zona_horaria TEXT,
                 formato_fecha TEXT,
+                nav_fijados TEXT,
+                nav_ocultos TEXT,
+                nav_secciones TEXT,
+                nav_dispositivos TEXT,
+                nav_guardar_dispositivo INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
             );
             "
@@ -719,6 +724,21 @@ impl DbState {
             "ayuda_en_palette",
             "INTEGER NOT NULL DEFAULT 1",
         )?;
+        // Navegación fijada en el drawer (JSON de hrefs). NULL = sin fijados.
+        asegurar_columna(&tx, "preferencias_usuario", "nav_fijados", "TEXT")?;
+        // Resto de la personalización del nav: ocultos, secciones, perfiles por
+        // dispositivo y ámbito de guardado. Migración aditiva, sin borrar la db.
+        asegurar_columna(&tx, "preferencias_usuario", "nav_ocultos", "TEXT")?;
+        asegurar_columna(&tx, "preferencias_usuario", "nav_secciones", "TEXT")?;
+        asegurar_columna(&tx, "preferencias_usuario", "nav_dispositivos", "TEXT")?;
+        asegurar_columna(
+            &tx,
+            "preferencias_usuario",
+            "nav_guardar_dispositivo",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        // Defaults de navegación por rol, decididos por el ADMIN.
+        asegurar_columna(&tx, "configuracion_empresa", "nav_roles", "TEXT")?;
         // UOM: la SPEC §3.9 no define `activo`, pero la matriz de permisos
         // contempla `uom:desactivar` (GERENTE). Se agrega con default activo
         // para dbs existentes (migración idempotente como las anteriores).

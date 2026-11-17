@@ -64,6 +64,9 @@
    siempre (DESIGN §10). */
 @media (pointer: coarse) {
   .sidebar__collapse-toggle {
+    width: var(--control-height-sm);
+    height: var(--control-height-sm);
+    right: calc(var(--control-height-sm) / -2);
     opacity: 1;
   }
 }
@@ -79,7 +82,7 @@
   box-shadow: var(--shadow-focus-ring);
 }
 
-@media (max-width: 47.99rem) {
+@media (max-width: 63.99rem) {
   .sidebar__collapse-toggle {
     display: none;
   }
@@ -89,6 +92,11 @@
   grid-area: content;
   min-width: 0;
   min-height: 0;
+  /* El lienzo es la superficie desplazable: suma las zonas seguras para que
+     el notch y la barra de gestos no se coman la última fila (DESIGN §12.1). */
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-behavior: smooth;

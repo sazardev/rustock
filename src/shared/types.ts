@@ -1195,6 +1195,23 @@ export interface CopiaSeguridad {
   creada_en: string;
 }
 
+/** Secciones del nav que el usuario puede ocultar, reordenar o forzar visible. */
+export interface NavSecciones {
+  ocultas: string[];
+  orden: string[];
+  visibles: string[];
+}
+
+/** Configuración de navegación completa para un usuario, dispositivo o rol. */
+export interface NavConfig {
+  fijados: string[];
+  ocultos: string[];
+  orden: string[];
+  secciones: NavSecciones;
+}
+
+export type DispositivoNav = "movil" | "tablet" | "escritorio" | "tv";
+
 export interface ConfiguracionEmpresa {
   id: string;
   nombre: string | null;
@@ -1225,6 +1242,8 @@ export interface ConfiguracionEmpresa {
   altura_persona_cm: number;
   /** Holgura mínima recomendada entre racks enfrentados, en cm (defecto 90). */
   holgura_pasillo_cm: number;
+  /** Navegación por defecto de cada rol (ADMIN la edita). */
+  nav_roles: Record<string, NavConfig>;
   updated_by: string | null;
   updated_at: string;
 }
@@ -1256,6 +1275,7 @@ export interface EditarConfiguracionEmpresa {
   modo_oscuro?: boolean;
   altura_persona_cm?: number;
   holgura_pasillo_cm?: number;
+  nav_roles?: Record<string, NavConfig>;
 }
 
 /** Entrada de `evaluar_posicion_mapa` (sin escribir nada). `id` ausente = elemento nuevo. */
@@ -1298,6 +1318,13 @@ export interface PreferenciasResueltas {
   modo_oscuro_heredado: boolean;
   /** ¿Mostrar sugerencias de Ayuda en el command palette (Ctrl+K)? */
   ayuda_en_palette: boolean;
+  /** Hrefs fijados en el drawer de navegación. */
+  nav_fijados: string[];
+  nav_ocultos: string[];
+  nav_secciones: NavSecciones;
+  nav_dispositivos: Record<string, NavConfig>;
+  nav_guardar_dispositivo: boolean;
+  nav_roles: Record<string, NavConfig>;
 }
 
 export interface EditarPreferenciasUsuario {
@@ -1314,6 +1341,12 @@ export interface EditarPreferenciasUsuario {
   modo_oscuro?: boolean | null;
   /** Mostrar ayuda en el command palette: omitir = no cambiar. */
   ayuda_en_palette?: boolean;
+  /** Módulos fijados: omitir = no cambiar, null = vaciar, array = fijar. */
+  nav_fijados?: string[] | null;
+  nav_ocultos?: string[] | null;
+  nav_secciones?: NavSecciones | null;
+  nav_dispositivos?: Record<string, NavConfig> | null;
+  nav_guardar_dispositivo?: boolean;
 }
 
 export interface EditarUsuario {

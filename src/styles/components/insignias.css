@@ -67,6 +67,14 @@
   opacity: 1;
 }
 
+@media (pointer: coarse) {
+  .badge__remove {
+    min-width: var(--control-height-sm);
+    min-height: var(--control-height-sm);
+    opacity: 1;
+  }
+}
+
 .empty {
   display: flex;
   flex-direction: column;

@@ -6,6 +6,7 @@ import { Button, ButtonLink, ErrorPanel, FormActions, Icon, PageHeader } from ".
 import { AplicacionCard } from "./configuracion/AplicacionCard";
 import { DocumentosCard } from "./configuracion/DocumentosCard";
 import { LogoCard } from "./configuracion/LogoCard";
+import { NavRolesCard } from "./configuracion/NavRolesCard";
 import { SeccionApariencia } from "./configuracion/SeccionApariencia";
 import { SeccionIdentidad } from "./configuracion/SeccionIdentidad";
 import { SeccionParametros } from "./configuracion/SeccionParametros";
@@ -103,6 +104,7 @@ export function ConfiguracionPage() {
         subida={archivos.docSubida}
         eliminar={archivos.docEliminar}
       />
+      <NavRolesCard config={config} />
       <AplicacionCard />
     </>
   );

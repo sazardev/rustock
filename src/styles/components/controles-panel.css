@@ -166,7 +166,7 @@
 
 /* ---- Calendario ---- */
 .calendario {
-  width: 17.5rem;
+  width: min(17.5rem, calc(100vw - var(--space-8)));
   padding: var(--space-2);
 }
 
@@ -373,14 +373,31 @@
   border-top: var(--border-width) solid var(--color-gray-100);
 }
 
-/* En pantalla táctil los paneles se abren a lo ancho del control y con
-   destinos más grandes: se manejan con el pulgar. */
+/* En pantalla táctil todos los destinos del panel crecen al mínimo
+   recomendado: se manejan con el pulgar, no con un cursor (DESIGN §10). */
 @media (pointer: coarse) {
   .select__opcion,
+  .calendario__nav,
   .calendario__dia,
+  .calendario__accion,
   .reloj__celda {
     min-height: var(--tap-target);
     height: auto;
+  }
+
+  .calendario__nav {
+    min-width: var(--tap-target);
+  }
+
+  .checkbox,
+  .radio {
+    min-height: var(--tap-target);
+  }
+
+  .checkbox__input,
+  .radio__input {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   .reloj__columnas {

@@ -2,6 +2,8 @@
 //! Cubren: catálogos, movimientos (ciclo de vida, saldos, anulación),
 //! validaciones e inventario físico.
 
+use std::collections::BTreeMap;
+
 use crate::db::DbState;
 use crate::domain::catalogo::*;
 use crate::domain::inventario::*;
@@ -4228,6 +4230,8 @@ fn preferencias_usuario_resueltas_con_fallback_de_empresa() {
         tema_id: Some(Some("bosque".into())),
         modo_oscuro: Some(Some(true)),
         ayuda_en_palette: Some(false),
+        nav_fijados: Some(Some(vec!["/dashboard".into(), "/movimientos".into()])),
+        ..Default::default()
     };
     repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &cambios).expect("guardar");
 
@@ -4249,6 +4253,11 @@ fn preferencias_usuario_resueltas_con_fallback_de_empresa() {
     assert!(
         !resueltas2.ayuda_en_palette,
         "preferencia de ayuda en el palette desactivada"
+    );
+    assert_eq!(
+        resueltas2.nav_fijados,
+        vec!["/dashboard", "/movimientos"],
+        "módulos fijados resueltos"
     );
 
     // Volver a heredar el tema: `Some(None)` limpia la preferencia propia.
@@ -4296,6 +4305,151 @@ fn preferencias_usuario_rechaza_valores_invalidos() {
         repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &tema_malo),
         Err(crate::error::AppError::CampoInvalido(_))
     ));
+
+    let nav_malo = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_fijados: Some(Some(vec!["/x".into(); 101])),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &nav_malo),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    let nav_relativo = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_fijados: Some(Some(vec!["dashboard".into()])),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &nav_relativo),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+}
+
+#[test]
+fn nav_personalizable_por_usuario_dispositivo_y_rol() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let cambios = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_ocultos: Some(Some(vec!["/clientes".into()])),
+        nav_secciones: Some(Some(crate::domain::configuracion::NavSecciones {
+            ocultas: vec!["g5".into()],
+            orden: vec!["g1".into(), "g0".into()],
+            visibles: vec!["/reportes".into()],
+        })),
+        nav_dispositivos: Some(Some(BTreeMap::from([(
+            "movil".to_string(),
+            crate::domain::configuracion::NavConfig {
+                fijados: vec!["/dashboard".into()],
+                ..Default::default()
+            },
+        )]))),
+        nav_guardar_dispositivo: Some(true),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &cambios).expect("guardar");
+
+    let res = repo::configuracion::preferencias_resueltas(&conn, &admin).expect("resueltas");
+    assert_eq!(res.nav_ocultos, vec!["/clientes"]);
+    assert_eq!(res.nav_secciones.ocultas, vec!["g5"]);
+    assert_eq!(res.nav_secciones.orden, vec!["g1", "g0"]);
+    assert!(res.nav_guardar_dispositivo);
+    assert_eq!(res.nav_dispositivos["movil"].fijados, vec!["/dashboard"]);
+
+    let roles = BTreeMap::from([(
+        "ADMIN".to_string(),
+        crate::domain::configuracion::NavConfig {
+            ocultos: vec!["/reportes".into()],
+            ..Default::default()
+        },
+    )]);
+    let config = crate::domain::configuracion::EditarConfiguracionEmpresa {
+        nav_roles: Some(roles),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_configuracion_empresa(&conn, &config, &admin).expect("config");
+    let res2 = repo::configuracion::preferencias_resueltas(&conn, &admin).expect("resueltas");
+    assert_eq!(res2.nav_roles["ADMIN"].ocultos, vec!["/reportes"]);
+    assert_eq!(
+        res2.nav_roles["ADMIN"].ocultos,
+        vec!["/reportes"],
+        "el rol aporta defaults sin borrar los del usuario"
+    );
+    assert_eq!(res2.nav_ocultos, vec!["/clientes"]);
+
+    // `null` en JSON debe significar «limpiar», no «no tocar» (mismo caso que
+    // `EditarCategoria.parent_id`): sin este helper el drawer no puede vaciar.
+    let limpiar: crate::domain::configuracion::EditarPreferenciasUsuario =
+        serde_json::from_str(r#"{"nav_dispositivos":null}"#).expect("json");
+    assert!(matches!(limpiar.nav_dispositivos, Some(None)));
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &limpiar).expect("limpiar");
+    assert!(
+        repo::configuracion::preferencias_resueltas(&conn, &admin)
+            .expect("resueltas")
+            .nav_dispositivos
+            .is_empty()
+    );
+}
+
+#[test]
+fn nav_rechaza_ambitos_y_rutas_invalidos() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let malo = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_dispositivos: Some(Some(BTreeMap::from([(
+            "telegram".to_string(),
+            crate::domain::configuracion::NavConfig::default(),
+        )]))),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &malo),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+
+    let ruta_mala = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_ocultos: Some(Some(vec!["sin-barra".into()])),
+        ..Default::default()
+    };
+    assert!(matches!(
+        repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &ruta_mala),
+        Err(crate::error::AppError::CampoInvalido(_))
+    ));
+}
+
+#[test]
+fn nav_fijados_se_guarda_y_se_puede_vaciar() {
+    let db = setup();
+    let conn = db.conn();
+    let admin = id_admin(&conn);
+
+    let fijar = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_fijados: Some(Some(vec!["/productos".into(), "/almacenes".into()])),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &fijar).expect("fijar");
+    assert_eq!(
+        repo::configuracion::preferencias_resueltas(&conn, &admin)
+            .expect("resueltas")
+            .nav_fijados,
+        vec!["/productos", "/almacenes"]
+    );
+
+    let vaciar = crate::domain::configuracion::EditarPreferenciasUsuario {
+        nav_fijados: Some(None),
+        ..Default::default()
+    };
+    repo::configuracion::guardar_preferencias_usuario(&conn, &admin, &vaciar).expect("vaciar");
+    assert!(
+        repo::configuracion::preferencias_resueltas(&conn, &admin)
+            .expect("resueltas")
+            .nav_fijados
+            .is_empty(),
+        "Some(None) limpia los fijados"
+    );
 }
 
 // ============ Temas de la UI (DESIGN §3.1) ============

@@ -14,9 +14,11 @@ import { EsqueletoDePagina } from "./shell/EsqueletoDePagina";
 import { MenuLateral } from "./shell/MenuLateral";
 import { useMediaQuery } from "./shell/useMediaQuery";
 import { useSidebarColapsable } from "./shell/useSidebarColapsable";
+import type { DispositivoNav } from "../shared/types";
 
+// Móvil y tablet comparten el drawer modular; el sidebar solo existe en PC.
+const DRAWER_QUERY = "(max-width: 63.99rem)";
 const MOBILE_QUERY = "(max-width: 47.99rem)";
-const TABLET_QUERY = "(max-width: 63.99rem)";
 
 // Sin props y con estado propio: memoizados para que un cambio del shell
 // (colapsar el sidebar, abrir el drawer) no los vuelva a renderizar.
@@ -28,8 +30,8 @@ const GestorSeo = memo(SeoManager);
 export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false);
   const { colapsado, alternar } = useSidebarColapsable();
-  const isMobile = useMediaQuery(MOBILE_QUERY);
-  const isTablet = useMediaQuery(TABLET_QUERY);
+  const conDrawer = useMediaQuery(DRAWER_QUERY);
+  const esMovil = useMediaQuery(MOBILE_QUERY);
   const usuario = useSession((s) => s.usuario);
   const cargandoSesion = useSession((s) => s.cargando);
   const refrescar = useSession((s) => s.refrescar);
@@ -62,9 +64,12 @@ export function AppLayout() {
     return <Navigate to={PATH.login} replace />;
   }
 
-  // El modo compacto aplica en escritorio colapsado o en tablet (nunca en el
-  // drawer móvil, que siempre se muestra expandido).
-  const sidebarCompact = !isMobile && (colapsado || isTablet);
+  // En drawer mode la navegación siempre se muestra expandida; en escritorio
+  // el sidebar respeta la preferencia de colapso.
+  const sidebarCompact = !conDrawer && colapsado;
+  const tipoPuntero = document.documentElement.dataset.dispositivo;
+  const dispositivo: DispositivoNav =
+    tipoPuntero === "tv" ? "tv" : conDrawer ? (esMovil ? "movil" : "tablet") : "escritorio";
 
   return (
     <>
@@ -79,7 +84,8 @@ export function AppLayout() {
           <MenuLateral
             compacto={sidebarCompact}
             colapsadoPreferido={colapsado}
-            esMovil={isMobile}
+            conDrawer={conDrawer}
+            dispositivo={dispositivo}
             onAlternar={alternar}
             onNavegar={cerrarNavegacion}
           />

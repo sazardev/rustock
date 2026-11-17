@@ -3,6 +3,7 @@
 @import "./encabezado-pagina.css"; /* Encabezado de pagina y entrada de ruta */
 @import "./escaner.css"; /* Escaner y panel de escaneos (SPEC 14.3) */
 @import "./selector-idioma.css"; /* Selector de idioma (SPEC 17) */
+@import "./drawer-nav.css"; /* Drawer de navegación modular (móvil y tablet) */
 @import "./reglas-negocio.css"; /* Reglas de negocio (SPEC 16) */
 @import "./etiquetas.css"; /* Etiquetas e impresion (SPEC 14.3.5) */
 @import "./avisos-plataforma.css"; /* Franja de avisos de plataforma */

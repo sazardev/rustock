@@ -8,7 +8,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 /// -> `None` (por `default`); clave presente (con `null` o un valor) ->
 /// siempre `Some(..)`, dejando que la deserialización interna de `Option<T>`
 /// decida entre `Some(None)` (limpiar) y `Some(Some(x))` (asignar).
-fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+pub(crate) fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     T: Deserialize<'de>,
     D: Deserializer<'de>,

@@ -28,11 +28,30 @@
 }
 
 /* Entrada gruesa (dedo, lápiz): todo lo pulsable alcanza el destino mínimo
-   recomendado, sin cambiar la densidad en escritorio (DESIGN §10). */
+   recomendado, sin cambiar la densidad en escritorio (DESIGN §10). Los campos
+   pasan a 16 px porque iOS amplía la página al enfocar un control más pequeño;
+   es la única razón para subir el texto de un input en pantalla táctil. */
 @media (pointer: coarse) {
   :root {
-    --control-height: 2.5rem;
-    --control-height-sm: 2.125rem;
+    --control-height: var(--tap-target);
+    --control-height-sm: 2.25rem;
+    --control-height-lg: var(--tap-target);
+  }
+
+  .field__control,
+  .field__control--code,
+  .field__control--textarea,
+  .select__trigger,
+  .datepicker__trigger,
+  .timepicker__trigger,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: var(--text-base);
+  }
+
+  .field__control--textarea {
+    line-height: var(--text-base--lh);
   }
 }
 

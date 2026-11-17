@@ -183,3 +183,37 @@
   border: 0;
   padding: 0;
 }
+
+/* La tabla virtualizada conserva el scroll horizontal en celular: es lo que
+   permite no renderizar miles de filas. La primera columna queda anclada para
+   que el identificador nunca se pierde de vista y las celdas se compactan. */
+@media (max-width: 47.99rem) {
+  .table th,
+  .table td {
+    padding: var(--space-2);
+  }
+
+  .table-wrap--virtual .table th:first-child,
+  .table-wrap--virtual .table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .table-wrap--virtual .table th:first-child {
+    z-index: 3;
+  }
+}
+
+@media (pointer: coarse) {
+  .table .cell--actions .btn {
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
+  }
+
+  .th__sort-btn {
+    min-height: var(--tap-target);
+  }
+}

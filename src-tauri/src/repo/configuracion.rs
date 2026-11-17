@@ -5,17 +5,34 @@
 //! nacen igualmente con valores por defecto en el primer acceso, para que la
 //! UI siempre tenga algo coherente que mostrar.
 
+use std::collections::BTreeMap;
+
 use rusqlite::Connection;
 
 use crate::domain::ahora;
 use crate::domain::configuracion::{
-    ConfiguracionEmpresa, EditarConfiguracionEmpresa, EditarPreferenciasUsuario,
-    PreferenciasResueltas, PreferenciasUsuario,
+    ConfiguracionEmpresa, EditarConfiguracionEmpresa, EditarPreferenciasUsuario, NavConfig,
+    NavSecciones, PreferenciasResueltas, PreferenciasUsuario,
 };
 use crate::domain::seguridad::EventoAuditoria;
 use crate::error::{AppError, AppResult};
 
 const ID_FILA: &str = "default";
+
+fn json_vec(raw: Option<&str>) -> Vec<String> {
+    raw.and_then(|s| serde_json::from_str(s).ok())
+        .unwrap_or_default()
+}
+
+fn json_secciones(raw: Option<&str>) -> NavSecciones {
+    raw.and_then(|s| serde_json::from_str(s).ok())
+        .unwrap_or_default()
+}
+
+fn json_nav_map(raw: Option<&str>) -> BTreeMap<String, NavConfig> {
+    raw.and_then(|s| serde_json::from_str(s).ok())
+        .unwrap_or_default()
+}
 
 // ============ Configuración de empresa ============
 
@@ -48,6 +65,7 @@ fn map_configuracion(r: &rusqlite::Row<'_>) -> rusqlite::Result<ConfiguracionEmp
         updated_at: r.get(24)?,
         altura_persona_cm: r.get(25)?,
         holgura_pasillo_cm: r.get(26)?,
+        nav_roles: json_nav_map(r.get::<_, Option<String>>(27)?.as_deref()),
     })
 }
 
@@ -60,7 +78,7 @@ pub fn obtener_configuracion_empresa(conn: &Connection) -> AppResult<Configuraci
                 pais, ciudad, direccion, codigo_postal, razon_social,
                 documento_fiscal, direccion_fiscal, telefono, email_contacto,
                 sitio_web, latitud, longitud, tema_id, modo_oscuro, updated_by, updated_at,
-                altura_persona_cm, holgura_pasillo_cm
+                altura_persona_cm, holgura_pasillo_cm, nav_roles
          FROM configuracion_empresa WHERE id = ?1",
         [ID_FILA],
         map_configuracion,
@@ -75,6 +93,12 @@ pub fn guardar_configuracion_empresa(
     actor: &str,
 ) -> AppResult<ConfiguracionEmpresa> {
     cambios.validar()?;
+    let nav_roles_json = cambios
+        .nav_roles
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()
+        .map_err(AppError::from)?;
     let ts = ahora();
     conn.execute(
         "UPDATE configuracion_empresa SET
@@ -103,7 +127,8 @@ pub fn guardar_configuracion_empresa(
             updated_by        = ?23,
             updated_at        = ?24,
             altura_persona_cm  = COALESCE(?26, altura_persona_cm),
-            holgura_pasillo_cm = COALESCE(?27, holgura_pasillo_cm)
+            holgura_pasillo_cm = COALESCE(?27, holgura_pasillo_cm),
+            nav_roles          = COALESCE(?28, nav_roles)
          WHERE id = ?25",
         rusqlite::params![
             cambios.nombre.as_ref().and_then(|v| v.as_ref()),
@@ -136,6 +161,7 @@ pub fn guardar_configuracion_empresa(
             ID_FILA,
             cambios.altura_persona_cm,
             cambios.holgura_pasillo_cm,
+            nav_roles_json,
         ],
     )?;
     EventoAuditoria::registrar(
@@ -163,6 +189,11 @@ fn map_preferencias(r: &rusqlite::Row<'_>) -> rusqlite::Result<PreferenciasUsuar
         tema_id: r.get(5)?,
         modo_oscuro: r.get::<_, Option<i64>>(6)?.map(|b| b != 0),
         ayuda_en_palette: r.get::<_, i64>(7)? != 0,
+        nav_fijados: r.get(9)?,
+        nav_ocultos: r.get(10)?,
+        nav_secciones: r.get(11)?,
+        nav_dispositivos: r.get(12)?,
+        nav_guardar_dispositivo: r.get::<_, i64>(13)? != 0,
         updated_at: r.get(8)?,
     })
 }
@@ -182,7 +213,8 @@ pub fn obtener_preferencias_usuario(
     )?;
     conn.query_row(
         "SELECT usuario_id, tamano_fuente, orden_sidebar, zona_horaria, formato_fecha,
-                tema_id, modo_oscuro, ayuda_en_palette, updated_at
+                tema_id, modo_oscuro, ayuda_en_palette, updated_at, nav_fijados,
+                nav_ocultos, nav_secciones, nav_dispositivos, nav_guardar_dispositivo
          FROM preferencias_usuario WHERE usuario_id = ?1",
         [usuario_id],
         map_preferencias,
@@ -199,34 +231,77 @@ pub fn guardar_preferencias_usuario(
     cambios: &EditarPreferenciasUsuario,
 ) -> AppResult<PreferenciasUsuario> {
     cambios.validar()?;
-    // Asegura la fila antes del UPDATE (si el usuario nunca entró antes).
-    obtener_preferencias_usuario(conn, usuario_id)?;
+    let actual = obtener_preferencias_usuario(conn, usuario_id)?;
+    // Los campos ausentes conservan su valor: el drawer guarda el orden y los
+    // fijados por separado, y no debe borrarle al usuario el tema ni la zona
+    // horaria. `Some(None)` sigue significando «volver a heredar / vaciar».
+    let nav_fijados = match &cambios.nav_fijados {
+        None => actual.nav_fijados,
+        Some(None) => None,
+        Some(Some(rutas)) => Some(serde_json::to_string(rutas).map_err(AppError::from)?),
+    };
+    let nav_ocultos = match &cambios.nav_ocultos {
+        None => actual.nav_ocultos,
+        Some(None) => None,
+        Some(Some(rutas)) => Some(serde_json::to_string(rutas).map_err(AppError::from)?),
+    };
+    let nav_secciones = match &cambios.nav_secciones {
+        None => actual.nav_secciones,
+        Some(None) => None,
+        Some(Some(secciones)) => Some(serde_json::to_string(secciones).map_err(AppError::from)?),
+    };
+    let nav_dispositivos = match &cambios.nav_dispositivos {
+        None => actual.nav_dispositivos,
+        Some(None) => None,
+        Some(Some(map)) => Some(serde_json::to_string(map).map_err(AppError::from)?),
+    };
+    let nav_guardar = cambios
+        .nav_guardar_dispositivo
+        .unwrap_or(actual.nav_guardar_dispositivo) as i64;
     let ts = ahora();
     conn.execute(
         "UPDATE preferencias_usuario SET
-            tamano_fuente   = COALESCE(?1, tamano_fuente),
-            orden_sidebar   = ?2,
-            zona_horaria    = ?3,
-            formato_fecha   = ?4,
-            tema_id         = ?5,
-            modo_oscuro     = ?6,
-            ayuda_en_palette = COALESCE(?7, ayuda_en_palette),
-            updated_at      = ?8
-         WHERE usuario_id = ?9",
+            tamano_fuente    = ?1,
+            orden_sidebar    = ?2,
+            zona_horaria     = ?3,
+            formato_fecha    = ?4,
+            tema_id          = ?5,
+            modo_oscuro      = ?6,
+            ayuda_en_palette = ?7,
+            nav_fijados      = ?8,
+            nav_ocultos      = ?11,
+            nav_secciones    = ?12,
+            nav_dispositivos = ?13,
+            nav_guardar_dispositivo = ?14,
+            updated_at       = ?9
+         WHERE usuario_id = ?10",
         rusqlite::params![
-            cambios.tamano_fuente.as_ref(),
-            cambios.orden_sidebar.as_ref().and_then(|v| v.as_ref()),
-            cambios.zona_horaria.as_ref().and_then(|v| v.as_ref()),
-            cambios.formato_fecha.as_ref().and_then(|v| v.as_ref()),
-            cambios.tema_id.as_ref().and_then(|v| v.as_ref()),
+            cambios
+                .tamano_fuente
+                .clone()
+                .unwrap_or(actual.tamano_fuente),
+            cambios
+                .orden_sidebar
+                .clone()
+                .unwrap_or(actual.orden_sidebar),
+            cambios.zona_horaria.clone().unwrap_or(actual.zona_horaria),
+            cambios
+                .formato_fecha
+                .clone()
+                .unwrap_or(actual.formato_fecha),
+            cambios.tema_id.clone().unwrap_or(actual.tema_id),
             cambios
                 .modo_oscuro
-                .as_ref()
-                .and_then(|v| v.as_ref())
-                .map(|b| *b as i64),
-            cambios.ayuda_en_palette.map(|b| b as i64),
+                .unwrap_or(actual.modo_oscuro)
+                .map(|b| b as i64),
+            cambios.ayuda_en_palette.unwrap_or(actual.ayuda_en_palette) as i64,
+            nav_fijados,
             ts,
             usuario_id,
+            nav_ocultos,
+            nav_secciones,
+            nav_dispositivos,
+            nav_guardar,
         ],
     )?;
     obtener_preferencias_usuario(conn, usuario_id)
@@ -268,6 +343,12 @@ pub fn preferencias_resueltas(
         modo_oscuro: prefs.modo_oscuro.unwrap_or(config.modo_oscuro),
         modo_oscuro_heredado: prefs.modo_oscuro.is_none(),
         ayuda_en_palette: prefs.ayuda_en_palette,
+        nav_fijados: json_vec(prefs.nav_fijados.as_deref()),
+        nav_ocultos: json_vec(prefs.nav_ocultos.as_deref()),
+        nav_secciones: json_secciones(prefs.nav_secciones.as_deref()),
+        nav_dispositivos: json_nav_map(prefs.nav_dispositivos.as_deref()),
+        nav_guardar_dispositivo: prefs.nav_guardar_dispositivo,
+        nav_roles: config.nav_roles,
     })
 }
 
